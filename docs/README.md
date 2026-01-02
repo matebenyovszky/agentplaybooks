@@ -1,15 +1,23 @@
 # AgentPlaybooks Documentation
 
 Welcome to the AgentPlaybooks documentation. This documentation is both:
-- Displayed on [GitHub](https://github.com/your-repo/agentplaybooks) as standard Markdown
-- Rendered beautifully on our website at [agentplaybooks.com/docs](https://agentplaybooks.com/docs)
+- Displayed on [GitHub](https://github.com/matebenyovszky/agentplaybooks) as standard Markdown
+- Rendered beautifully on our website at [agentplaybooks.ai/docs](https://agentplaybooks.ai/docs)
 
 ## Quick Links
 
+### Getting Started
 - [Getting Started](./getting-started.md) - First steps with AgentPlaybooks
 - [Architecture](./architecture.md) - System design and components
-- [API Reference](./api-reference.md) - Complete API documentation
+
+### Core Concepts
+- [Skills](./skills.md) - Structured capability definitions
+- [Memory](./memory.md) - Persistent key-value storage
 - [MCP Integration](./mcp-integration.md) - Model Context Protocol guide
+
+### Reference
+- [API Reference](./api-reference.md) - Complete API documentation
+- [Developer Guide](./developer-guide.md) - Contributing and development
 - [Self-Hosting](./self-hosting.md) - Deploy your own instance
 
 ## What is AgentPlaybooks?
@@ -33,5 +41,5 @@ AgentPlaybooks solves this by providing a central vault that any AI can access.
 
 ## Contributing
 
-This documentation is open source. Found an issue? [Edit on GitHub](https://github.com/your-repo/agentplaybooks/tree/main/docs).
+This documentation is open source. Found an issue? [Edit on GitHub](https://github.com/matebenyovszky/agentplaybooks/tree/main/docs).
 

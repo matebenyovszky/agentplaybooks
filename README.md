@@ -16,11 +16,27 @@ Give your AI agents, GPTs, and robots a platform-independent vault. Store skills
 
 ## Tech Stack
 
-- **Frontend**: Next.js 16 + React 19 + Tailwind CSS + Framer Motion
-- **Backend**: Cloudflare Workers (via OpenNext adapter)
-- **Database**: Supabase (PostgreSQL + Auth + RLS)
-- **UI Components**: Aceternity UI
-- **i18n**: next-intl (EN, HU, DE, ES)
+| Category | Technology | Purpose |
+|----------|------------|---------|
+| **Framework** | [Next.js 16](https://nextjs.org/) + [React 19](https://react.dev/) | Server-side rendering, App Router |
+| **Styling** | [Tailwind CSS 4](https://tailwindcss.com/) | Utility-first CSS |
+| **Animation** | [Framer Motion](https://www.framer.com/motion/) | Smooth animations |
+| **UI Components** | [Aceternity UI](https://ui.aceternity.com/) | Modern, accessible components |
+| **Icons** | [Lucide React](https://lucide.dev/) | Icon library |
+| **API** | [Hono](https://hono.dev/) | Fast, lightweight edge framework |
+| **Database** | [Supabase](https://supabase.com/) | PostgreSQL + Auth + RLS |
+| **i18n** | [next-intl](https://next-intl-docs.vercel.app/) | Multi-language (EN, HU, DE, ES) |
+| **Docs** | [MDX](https://mdxjs.com/) | Markdown + React components |
+| **Hosting** | [Cloudflare Pages](https://pages.cloudflare.com/) | Edge deployment, global CDN |
+| **Adapter** | [@opennextjs/cloudflare](https://opennext.js.org/) | Next.js → Cloudflare |
+
+## Live Demo
+
+🌐 **Website**: [agentplaybooks.ai](https://agentplaybooks.ai)
+
+📚 **Documentation**: [agentplaybooks.ai/docs](https://agentplaybooks.ai/docs)
+
+🔗 **GitHub**: [github.com/matebenyovszky/agentplaybooks](https://github.com/matebenyovszky/agentplaybooks)
 
 ## Getting Started
 
@@ -35,7 +51,7 @@ Give your AI agents, GPTs, and robots a platform-independent vault. Store skills
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-repo/agentplaybooks.git
+git clone https://github.com/matebenyovszky/agentplaybooks.git
 cd agentplaybooks
 
 # Install dependencies
