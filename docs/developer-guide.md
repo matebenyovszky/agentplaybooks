@@ -184,39 +184,82 @@ All database access uses Supabase RLS:
 
 ## Development Tasks
 
-### Task: Playbook Editor UI
+### Task: Playbook Editor UI ✅ COMPLETED
 
 **Goal:** Create the UI for editing playbooks
 
-**Files to modify/create:**
-- `src/app/dashboard/playbook/[id]/page.tsx` - Main editor page
-- `src/components/playbook/` - Editor components
-  - `PersonaEditor.tsx` - Edit system prompts
-  - `SkillEditor.tsx` - Edit skills with JSON schema
-  - `McpServerEditor.tsx` - Configure MCP servers
-  - `MemoryEditor.tsx` - Key-value editor
-  - `ApiKeyManager.tsx` - Generate/revoke keys
+**Files created:**
 
-**Requirements:**
-1. Load playbook data from Supabase on mount
-2. Tabbed interface for Personas, Skills, MCP, Memory, Settings
-3. Real-time save (debounced)
-4. JSON schema editor for skill definitions
-5. Copy button for API endpoints
-6. Test skill/persona preview
+```
+src/components/playbook/
+├── index.ts              # Barrel export
+├── PersonaEditor.tsx     # System prompt editor with auto-save
+├── SkillEditor.tsx       # JSON schema editor (visual + raw)
+├── McpServerEditor.tsx   # Tools & resources editor
+├── MemoryEditor.tsx      # Key-value editor with search
+└── ApiKeyManager.tsx     # Generate/revoke API keys
+```
 
-**API endpoints to use:**
-- `GET /api/playbooks/:id` - Load playbook
-- `PUT /api/playbooks/:id` - Update playbook
-- `POST /api/playbooks/:id/personas` - Add persona
-- `POST /api/playbooks/:id/skills` - Add skill
-- etc.
+**Component Details:**
 
-**UI Components available:**
-- `Sidebar` - Already implemented
-- `BentoGrid` - For feature cards
-- `Card` - For individual items
-- Tailwind for styling
+#### PersonaEditor
+- Expandable card with inline name editing
+- Auto-resizing textarea for system prompts
+- Metadata JSON editor
+- Debounced auto-save (1.5s delay)
+- Copy to clipboard for prompts
+- Delete with confirmation dialog
+
+#### SkillEditor  
+- Two view modes: **Visual Editor** & **JSON Schema**
+- Visual mode: Add/remove parameters, set types, descriptions
+- Parameter types: string, number, integer, boolean, array, object
+- Required field toggling
+- Examples JSON array editor
+- Real-time JSON validation with error display
+
+#### McpServerEditor
+- Tabbed interface: Tools | Resources
+- Add tools with name, description, inputSchema
+- Add resources with URI, name, mimeType
+- JSON editors for advanced editing
+- Link to MCP documentation
+
+#### MemoryEditor
+- Search/filter memories by key or value
+- Add new memory entries
+- Edit in modal dialog with JSON validation
+- Refresh button for latest data
+- Timestamp display (updated_at)
+
+#### ApiKeyManager
+- Permission-based key creation modal
+- Available permissions: memory, skills, personas (read/write)
+- One-time key display with copy warning
+- Key list with prefix and permission badges
+- Revoke keys with confirmation
+
+**Main Editor Page:** `src/app/dashboard/playbook/[id]/page.tsx`
+
+Features:
+- Sticky header with save status indicator
+- Tabbed navigation: Personas | Skills | MCP | Memory | API Keys | Settings
+- Debounced auto-save for playbook settings
+- Public/Private toggle in header
+- Settings tab with:
+  - Description textarea
+  - Visibility controls (Private/Public)
+  - All API endpoints with copy buttons
+  - Danger zone for playbook deletion
+- Animated tab transitions (Framer Motion)
+
+**Demo Mode:** `src/app/demo/playbook/page.tsx`
+
+- Full editor experience without authentication
+- localStorage persistence for demo data
+- "Demo Mode" banner with sign-up CTA
+- Same components as authenticated editor
+- Prompt to register when saving
 
 ### Task: API Endpoints ✅ COMPLETED
 

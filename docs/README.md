@@ -7,10 +7,13 @@ Welcome to the AgentPlaybooks documentation. This documentation is both:
 ## Quick Links
 
 ### Getting Started
+- [What is a Playbook?](./playbooks.md) - Understanding the core concept
 - [Getting Started](./getting-started.md) - First steps with AgentPlaybooks
+- [Platform Integrations](./platform-integrations.md) - Connect to ChatGPT, Claude, Gemini, Grok & more
 - [Architecture](./architecture.md) - System design and components
 
 ### Core Concepts
+- [Playbooks](./playbooks.md) - Complete agent operating environment
 - [Skills](./skills.md) - Structured capability definitions
 - [Memory](./memory.md) - Persistent key-value storage
 - [MCP Integration](./mcp-integration.md) - Model Context Protocol guide

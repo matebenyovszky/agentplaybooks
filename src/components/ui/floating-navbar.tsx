@@ -6,12 +6,11 @@ import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { Home, ChevronDown } from "lucide-react";
 import { locales, localeNames, localeFlags, type Locale } from "@/i18n/config";
+import { useTranslations } from "next-intl";
 
 export const FloatingNav = ({
   navItems,
   className,
-  currentLocale = "en",
-  onLocaleChange,
 }: {
   navItems: {
     name: string;
@@ -19,12 +18,24 @@ export const FloatingNav = ({
     icon?: React.ReactNode;
   }[];
   className?: string;
-  currentLocale?: Locale;
-  onLocaleChange?: (locale: Locale) => void;
 }) => {
+  const t = useTranslations();
   const [visible, setVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
+  const [currentLocale, setCurrentLocale] = useState<Locale>("en");
+
+  // Read locale from cookie on mount
+  useEffect(() => {
+    const cookieLocale = document.cookie
+      .split("; ")
+      .find((row) => row.startsWith("NEXT_LOCALE="))
+      ?.split("=")[1] as Locale | undefined;
+    
+    if (cookieLocale && locales.includes(cookieLocale)) {
+      setCurrentLocale(cookieLocale);
+    }
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -54,15 +65,12 @@ export const FloatingNav = ({
     }
   }, [langMenuOpen]);
 
-  const handleLocaleSelect = (locale: Locale) => {
+  const handleLocaleSelect = (newLocale: Locale) => {
     setLangMenuOpen(false);
-    if (onLocaleChange) {
-      onLocaleChange(locale);
-    } else {
-      // Default behavior: set cookie and reload
-      document.cookie = `NEXT_LOCALE=${locale};path=/;max-age=31536000`;
-      window.location.reload();
-    }
+    setCurrentLocale(newLocale);
+    // Set cookie and reload to apply new locale
+    document.cookie = `NEXT_LOCALE=${newLocale};path=/;max-age=31536000`;
+    window.location.reload();
   };
 
   return (
@@ -154,7 +162,7 @@ export const FloatingNav = ({
           href="/login"
           className="border text-sm font-medium relative border-neutral-200 dark:border-amber-500/30 text-black dark:text-white px-4 py-2 rounded-full hover:border-amber-500 transition-colors"
         >
-          <span>Sign In</span>
+          <span>{t("common.signIn")}</span>
           <span className="absolute inset-x-0 w-1/2 mx-auto -bottom-px bg-gradient-to-r from-transparent via-amber-500 to-transparent h-px" />
         </Link>
       </motion.div>

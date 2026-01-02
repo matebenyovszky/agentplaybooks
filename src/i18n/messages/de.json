@@ -16,7 +16,8 @@
     "hero": {
       "title": "Das Universelle Gedächtnis Ihrer KI",
       "subtitle": "Geben Sie Ihren KI-Agenten, GPTs und Robotern einen plattformunabhängigen Tresor. Speichern Sie Skills, Personas und MCP-Server - wechseln Sie zwischen KI-Plattformen, ohne etwas zu verlieren.",
-      "cta": "Kostenlos Starten"
+      "cta": "Kostenlos Starten",
+      "tryDemo": "Demo Testen"
     },
     "features": {
       "title": "Alles, Was Ihre KI Braucht",
@@ -141,14 +142,35 @@
     }
   },
   "explore": {
-    "title": "Entdecken",
+    "title": "Öffentliche Playbooks Entdecken",
+    "subtitle": "Entdecken Sie von der Community geteilte KI-Konfigurationen. Markieren Sie Ihre Favoriten und laden Sie sie in jedem Format herunter.",
     "skills": "Skills",
+    "personas": "Personas",
     "mcp": "MCP-Server",
     "search": "Suchen...",
+    "searchPlaybooks": "Playbooks nach Name oder Beschreibung suchen...",
     "tags": "Tags",
     "verified": "Verifiziert",
     "addToPlaybook": "Zu Playbook Hinzufügen",
-    "usageCount": "{count} mal verwendet"
+    "usageCount": "{count} mal verwendet",
+    "playbooks": "Playbooks gefunden",
+    "sortBy": "Sortieren nach",
+    "mostStarred": "Am meisten markiert",
+    "mostRecent": "Neueste",
+    "alphabetical": "Alphabetisch",
+    "download": "Herunterladen",
+    "noPlaybooks": "Keine öffentlichen Playbooks gefunden",
+    "noPlaybooksDesc": "Seien Sie der Erste, der ein Playbook mit der Community teilt!",
+    "createFirst": "Erstellen Sie Ihr erstes Playbook",
+    "createOwn": "Erstellen Sie Ihr eigenes Playbook",
+    "createOwnDesc": "Erstellen und teilen Sie Ihre KI-Konfiguration mit der Welt. Probieren Sie zuerst die Demo aus oder registrieren Sie sich für Cloud-Speicher."
+  },
+  "demo": {
+    "banner": "Demo-Modus",
+    "bannerDesc": "Änderungen werden lokal gespeichert. Registrieren Sie sich für Cloud-Speicher.",
+    "resetDemo": "Demo Zurücksetzen",
+    "saveToCloud": "In Cloud Speichern",
+    "autoSaved": "Automatisch lokal gespeichert"
   }
 }
 

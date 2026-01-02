@@ -16,7 +16,8 @@
     "hero": {
       "title": "La Memoria Universal de tu IA",
       "subtitle": "Dale a tus agentes de IA, GPTs y robots una bóveda independiente de plataforma. Almacena habilidades, personas y servidores MCP - cambia entre plataformas de IA sin perder nada.",
-      "cta": "Empieza Gratis"
+      "cta": "Empieza Gratis",
+      "tryDemo": "Probar Demo"
     },
     "features": {
       "title": "Todo lo que tu IA Necesita",
@@ -141,14 +142,35 @@
     }
   },
   "explore": {
-    "title": "Explorar",
+    "title": "Explorar Playbooks Públicos",
+    "subtitle": "Descubre configuraciones de IA compartidas por la comunidad. Marca tus favoritos y descarga en cualquier formato.",
     "skills": "Habilidades",
+    "personas": "personas",
     "mcp": "Servidores MCP",
     "search": "Buscar...",
+    "searchPlaybooks": "Buscar playbooks por nombre o descripción...",
     "tags": "Etiquetas",
     "verified": "Verificado",
     "addToPlaybook": "Añadir a Playbook",
-    "usageCount": "Usado {count} veces"
+    "usageCount": "Usado {count} veces",
+    "playbooks": "playbooks encontrados",
+    "sortBy": "Ordenar por",
+    "mostStarred": "Más Destacados",
+    "mostRecent": "Más Recientes",
+    "alphabetical": "Alfabético",
+    "download": "Descargar",
+    "noPlaybooks": "No se encontraron playbooks públicos",
+    "noPlaybooksDesc": "¡Sé el primero en compartir un playbook con la comunidad!",
+    "createFirst": "Crea Tu Primer Playbook",
+    "createOwn": "Crea Tu Propio Playbook",
+    "createOwnDesc": "Construye y comparte tu configuración de IA con el mundo. Prueba primero la demo o regístrate para guardar en la nube."
+  },
+  "demo": {
+    "banner": "Modo Demo",
+    "bannerDesc": "Los cambios se guardan localmente. Regístrate para guardar en la nube.",
+    "resetDemo": "Reiniciar Demo",
+    "saveToCloud": "Guardar en la Nube",
+    "autoSaved": "Guardado automáticamente en local"
   }
 }
 

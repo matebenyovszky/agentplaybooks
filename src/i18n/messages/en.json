@@ -16,7 +16,41 @@
     "hero": {
       "title": "Your AI's Universal Memory",
       "subtitle": "Give your AI agents, GPTs, and robots a platform-independent vault. Store skills, personas, and MCP servers - switch between AI platforms without losing anything.",
-      "cta": "Start Building Free"
+      "cta": "Start Building Free",
+      "tryDemo": "Try Demo"
+    },
+    "whatIsPlaybook": {
+      "title": "What is a Playbook?",
+      "subtitle": "A Playbook is the complete operating environment for an AI agent - everything it needs to work effectively, all in one place.",
+      "description": "Think of it as an AI's \"work profile\" that travels with it across any platform.",
+      "components": {
+        "persona": {
+          "title": "Persona",
+          "subtitle": "Personality & Style",
+          "description": "The agent's base personality, communication style, and system prompt. This defines HOW the agent behaves and responds."
+        },
+        "skills": {
+          "title": "Skills",
+          "subtitle": "Knowledge & Capabilities",
+          "description": "Structured task definitions and knowledge the agent can use. Skills define WHAT the agent knows and can do. Later: attach documents for deeper knowledge."
+        },
+        "mcp": {
+          "title": "MCP Servers",
+          "subtitle": "Tools & Integrations",
+          "description": "External tools and APIs the agent can access via Model Context Protocol. Code execution happens at the agent itself - these are the connections."
+        },
+        "canvas": {
+          "title": "Canvas",
+          "subtitle": "Working Documents",
+          "description": "Structured markdown documents that serve as the agent's workspace. Notes, drafts, project files - persistent documents the agent can read and write."
+        },
+        "memory": {
+          "title": "Memory",
+          "subtitle": "Persistent Context",
+          "description": "Key-value storage for remembering facts, preferences, and state across sessions. The agent's long-term memory."
+        }
+      },
+      "cta": "Create Your First Playbook"
     },
     "features": {
       "title": "Everything Your AI Needs",
@@ -31,6 +65,10 @@
       "mcp": {
         "title": "MCP Servers",
         "description": "Configure Model Context Protocol servers for tools and resources"
+      },
+      "canvas": {
+        "title": "Canvas",
+        "description": "Structured markdown documents as the agent's persistent workspace"
       },
       "memory": {
         "title": "Memory",
@@ -109,6 +147,7 @@
       "personas": "Personas",
       "skills": "Skills",
       "mcp": "MCP Servers",
+      "canvas": "Canvas",
       "memory": "Memory",
       "apiKeys": "API Keys",
       "settings": "Settings"
@@ -118,7 +157,17 @@
     "preview": "Preview",
     "addPersona": "Add Persona",
     "addSkill": "Add Skill",
-    "addMCP": "Add MCP Server"
+    "addMCP": "Add MCP Server",
+    "addCanvas": "Add Canvas"
+  },
+  "canvas": {
+    "title": "Canvas Documents",
+    "description": "Structured markdown documents for your agent's workspace",
+    "empty": "No canvas documents yet",
+    "emptyDescription": "Create markdown documents that your agent can read and write to",
+    "addNew": "New Document",
+    "untitled": "Untitled Document",
+    "lastModified": "Last modified"
   },
   "apiKeys": {
     "title": "API Keys",
@@ -141,14 +190,35 @@
     }
   },
   "explore": {
-    "title": "Explore",
+    "title": "Explore Public Playbooks",
+    "subtitle": "Discover AI configurations shared by the community. Star your favorites and download in any format.",
     "skills": "Skills",
+    "personas": "personas",
     "mcp": "MCP Servers",
     "search": "Search...",
+    "searchPlaybooks": "Search playbooks by name or description...",
     "tags": "Tags",
     "verified": "Verified",
     "addToPlaybook": "Add to Playbook",
-    "usageCount": "Used {count} times"
+    "usageCount": "Used {count} times",
+    "playbooks": "playbooks found",
+    "sortBy": "Sort by",
+    "mostStarred": "Most Starred",
+    "mostRecent": "Most Recent",
+    "alphabetical": "Alphabetical",
+    "download": "Download",
+    "noPlaybooks": "No public playbooks found",
+    "noPlaybooksDesc": "Be the first to share a playbook with the community!",
+    "createFirst": "Create Your First Playbook",
+    "createOwn": "Create Your Own Playbook",
+    "createOwnDesc": "Build and share your AI configuration with the world. Try the demo first or sign up to save to the cloud."
+  },
+  "demo": {
+    "banner": "Demo Mode",
+    "bannerDesc": "Changes are saved locally. Sign up to save to the cloud.",
+    "resetDemo": "Reset Demo",
+    "saveToCloud": "Save to Cloud",
+    "autoSaved": "Auto-saved locally"
   }
 }
 

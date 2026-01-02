@@ -126,6 +126,7 @@ Body: {"key": "memory_name", "value": {...}}
 
 ## Next Steps
 
+- [Platform Integrations](./platform-integrations.md) - Detailed guide for ChatGPT, Claude, Gemini, Grok, and API integrations
 - [Explore the public repository](/explore) for pre-built skills
 - Read the [API Reference](./api-reference.md) for all endpoints
 - Learn about [MCP Integration](./mcp-integration.md) for Claude

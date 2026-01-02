@@ -16,7 +16,41 @@
     "hero": {
       "title": "Az AI Univerzális Memóriája",
       "subtitle": "Adj AI agentjeidnek, GPT-idnek és robotjaidnak egy platformfüggetlen tárhelyet. Tárold a skilleket, personákat és MCP szervereket - válts AI platformot anélkül, hogy bármit elveszítenél.",
-      "cta": "Kezdj Ingyen"
+      "cta": "Kezdj Ingyen",
+      "tryDemo": "Próbáld Ki"
+    },
+    "whatIsPlaybook": {
+      "title": "Mi az a Playbook?",
+      "subtitle": "A Playbook az AI agent teljes működési környezete - minden, amire szüksége van a hatékony munkához, egy helyen.",
+      "description": "Gondolj rá úgy, mint az AI \"munkaprofiljára\", ami vele utazik bármely platformra.",
+      "components": {
+        "persona": {
+          "title": "Persona",
+          "subtitle": "Személyiség és Stílus",
+          "description": "Az agent alap személyisége, kommunikációs stílusa és system prompt. Ez határozza meg, HOGYAN viselkedik és válaszol az agent."
+        },
+        "skills": {
+          "title": "Skillek",
+          "subtitle": "Tudás és Képességek",
+          "description": "Strukturált feladatdefiníciók és tudás, amit az agent használhat. A skillek határozzák meg, MIT tud az agent. Később: dokumentumok csatolása mélyebb tudáshoz."
+        },
+        "mcp": {
+          "title": "MCP Szerverek",
+          "subtitle": "Eszközök és Integrációk",
+          "description": "Külső eszközök és API-k, amiket az agent elérhet a Model Context Protocol-on keresztül. A kódfuttatás magánál az agentnél történik - ezek a csatlakozások."
+        },
+        "canvas": {
+          "title": "Canvas",
+          "subtitle": "Munkadokumentumok",
+          "description": "Strukturált markdown dokumentumok, amik az agent munkaterületeként szolgálnak. Jegyzetek, vázlatok, projektfájlok - perzisztens dokumentumok, amiket az agent olvashat és írhat."
+        },
+        "memory": {
+          "title": "Memória",
+          "subtitle": "Perzisztens Kontextus",
+          "description": "Kulcs-érték tároló tények, preferenciák és állapot megjegyzésére munkamenetek között. Az agent hosszú távú memóriája."
+        }
+      },
+      "cta": "Hozd Létre Első Playbookodat"
     },
     "features": {
       "title": "Minden, Amire AI-odnak Szüksége Van",
@@ -31,6 +65,10 @@
       "mcp": {
         "title": "MCP Szerverek",
         "description": "Konfigurálj Model Context Protocol szervereket eszközökhöz és erőforrásokhoz"
+      },
+      "canvas": {
+        "title": "Canvas",
+        "description": "Strukturált markdown dokumentumok az agent perzisztens munkaterületeként"
       },
       "memory": {
         "title": "Memória",
@@ -109,6 +147,7 @@
       "personas": "Personák",
       "skills": "Skillek",
       "mcp": "MCP Szerverek",
+      "canvas": "Canvas",
       "memory": "Memória",
       "apiKeys": "API Kulcsok",
       "settings": "Beállítások"
@@ -118,7 +157,17 @@
     "preview": "Előnézet",
     "addPersona": "Persona Hozzáadása",
     "addSkill": "Skill Hozzáadása",
-    "addMCP": "MCP Szerver Hozzáadása"
+    "addMCP": "MCP Szerver Hozzáadása",
+    "addCanvas": "Canvas Hozzáadása"
+  },
+  "canvas": {
+    "title": "Canvas Dokumentumok",
+    "description": "Strukturált markdown dokumentumok az agent munkaterületeként",
+    "empty": "Még nincsenek canvas dokumentumok",
+    "emptyDescription": "Hozz létre markdown dokumentumokat, amiket az agent olvashat és írhat",
+    "addNew": "Új Dokumentum",
+    "untitled": "Névtelen Dokumentum",
+    "lastModified": "Utolsó módosítás"
   },
   "apiKeys": {
     "title": "API Kulcsok",
@@ -141,14 +190,35 @@
     }
   },
   "explore": {
-    "title": "Felfedezés",
+    "title": "Publikus Playbookok Felfedezése",
+    "subtitle": "Fedezd fel a közösség által megosztott AI konfigurációkat. Csillagozd meg kedvenceidet és töltsd le bármilyen formátumban.",
     "skills": "Skillek",
+    "personas": "persona",
     "mcp": "MCP Szerverek",
     "search": "Keresés...",
+    "searchPlaybooks": "Keresés név vagy leírás alapján...",
     "tags": "Címkék",
     "verified": "Ellenőrzött",
     "addToPlaybook": "Hozzáadás Playbookhoz",
-    "usageCount": "{count} alkalommal használva"
+    "usageCount": "{count} alkalommal használva",
+    "playbooks": "playbook találat",
+    "sortBy": "Rendezés",
+    "mostStarred": "Legtöbb Csillag",
+    "mostRecent": "Legújabb",
+    "alphabetical": "Betűrend",
+    "download": "Letöltés",
+    "noPlaybooks": "Nem található publikus playbook",
+    "noPlaybooksDesc": "Légy te az első, aki megoszt egy playbookot a közösséggel!",
+    "createFirst": "Első Playbook Létrehozása",
+    "createOwn": "Hozz Létre Saját Playbookot",
+    "createOwnDesc": "Építsd és oszd meg AI konfigurációdat a világgal. Próbáld ki a demót először, vagy regisztrálj a felhőmentéshez."
+  },
+  "demo": {
+    "banner": "Demó Mód",
+    "bannerDesc": "A változások helyben mentődnek. Regisztrálj a felhőmentéshez.",
+    "resetDemo": "Demó Visszaállítása",
+    "saveToCloud": "Mentés Felhőbe",
+    "autoSaved": "Automatikusan mentve helyben"
   }
 }
 

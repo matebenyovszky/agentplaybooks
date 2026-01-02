@@ -13,11 +13,23 @@ export interface Database {
           description: string | null;
           config: Record<string, unknown>;
           is_public: boolean;
+          star_count: number;
+          tags: string[];
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<Database["public"]["Tables"]["playbooks"]["Row"], "id" | "created_at" | "updated_at">;
+        Insert: Omit<Database["public"]["Tables"]["playbooks"]["Row"], "id" | "created_at" | "updated_at" | "star_count">;
         Update: Partial<Database["public"]["Tables"]["playbooks"]["Insert"]>;
+      };
+      playbook_stars: {
+        Row: {
+          id: string;
+          playbook_id: string;
+          user_id: string;
+          created_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["playbook_stars"]["Row"], "id" | "created_at">;
+        Update: Partial<Database["public"]["Tables"]["playbook_stars"]["Insert"]>;
       };
       personas: {
         Row: {
@@ -56,6 +68,21 @@ export interface Database {
         };
         Insert: Omit<Database["public"]["Tables"]["mcp_servers"]["Row"], "id" | "created_at">;
         Update: Partial<Database["public"]["Tables"]["mcp_servers"]["Insert"]>;
+      };
+      canvas: {
+        Row: {
+          id: string;
+          playbook_id: string;
+          name: string;
+          slug: string;
+          content: string;
+          metadata: Record<string, unknown>;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["canvas"]["Row"], "id" | "created_at" | "updated_at">;
+        Update: Partial<Database["public"]["Tables"]["canvas"]["Insert"]>;
       };
       memories: {
         Row: {
@@ -136,11 +163,22 @@ export interface Database {
 
 // Convenience types
 export type Playbook = Database["public"]["Tables"]["playbooks"]["Row"];
+export type PlaybookStar = Database["public"]["Tables"]["playbook_stars"]["Row"];
 export type Persona = Database["public"]["Tables"]["personas"]["Row"];
 export type Skill = Database["public"]["Tables"]["skills"]["Row"];
 export type MCPServer = Database["public"]["Tables"]["mcp_servers"]["Row"];
+export type Canvas = Database["public"]["Tables"]["canvas"]["Row"];
 export type Memory = Database["public"]["Tables"]["memories"]["Row"];
 export type ApiKey = Database["public"]["Tables"]["api_keys"]["Row"];
 export type PublicSkill = Database["public"]["Tables"]["public_skills"]["Row"];
 export type PublicMCPServer = Database["public"]["Tables"]["public_mcp_servers"]["Row"];
+
+// Extended types for Explore page
+export interface PublicPlaybook extends Playbook {
+  personas_count: number;
+  skills_count: number;
+  mcp_servers_count: number;
+  author_email?: string;
+  is_starred?: boolean;
+}
 

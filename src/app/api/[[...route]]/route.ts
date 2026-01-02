@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { handle } from "hono/vercel";
 import { cors } from "hono/cors";
 import { createServerClient } from "@/lib/supabase/client";
+import type { ApiKey } from "@/lib/supabase/types";
 import { hashApiKey, generateApiKey, generateGuid, getKeyPrefix } from "@/lib/utils";
 import { cookies } from "next/headers";
 
@@ -14,6 +15,10 @@ type Bindings = {
 
 type Variables = {
   user: { id: string } | null;
+};
+
+type ApiKeyWithPlaybook = ApiKey & {
+  playbooks: { id: string; guid: string };
 };
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>().basePath("/api");
@@ -86,7 +91,7 @@ async function requireAuth(c: any): Promise<{ id: string } | null> {
 }
 
 // Helper: Validate API key for agent endpoints
-async function validateApiKey(c: any, requiredPermission: string) {
+async function validateApiKey(c: any, requiredPermission: string): Promise<ApiKeyWithPlaybook | null> {
   const authHeader = c.req.header("Authorization");
   if (!authHeader?.startsWith("Bearer apb_")) {
     return null;
@@ -96,24 +101,34 @@ async function validateApiKey(c: any, requiredPermission: string) {
   const keyHash = await hashApiKey(apiKey);
   const supabase = getServiceSupabase();
 
-  const { data } = await supabase
+  const { data: apiKeyData } = await supabase
     .from("api_keys")
-    .select("*, playbooks!inner(id, guid)")
+    .select("*")
     .eq("key_hash", keyHash)
     .eq("is_active", true)
     .single();
 
-  if (!data) {
+  if (!apiKeyData) {
     return null;
   }
 
   // Check expiration
-  if (data.expires_at && new Date(data.expires_at) < new Date()) {
+  if (apiKeyData.expires_at && new Date(apiKeyData.expires_at) < new Date()) {
     return null;
   }
 
   // Check permission
-  if (!data.permissions.includes(requiredPermission) && !data.permissions.includes("full")) {
+  if (!apiKeyData.permissions.includes(requiredPermission) && !apiKeyData.permissions.includes("full")) {
+    return null;
+  }
+
+  const { data: playbook } = await supabase
+    .from("playbooks")
+    .select("id, guid")
+    .eq("id", apiKeyData.playbook_id)
+    .single();
+
+  if (!playbook) {
     return null;
   }
 
@@ -121,9 +136,9 @@ async function validateApiKey(c: any, requiredPermission: string) {
   await supabase
     .from("api_keys")
     .update({ last_used_at: new Date().toISOString() })
-    .eq("id", data.id);
+    .eq("id", apiKeyData.id);
 
-  return data;
+  return { ...apiKeyData, playbooks: playbook };
 }
 
 // Helper: Check if user owns playbook
@@ -1158,7 +1173,175 @@ app.put("/agent/:guid/personas/:id", async (c) => {
 });
 
 // ============================================
-// PUBLIC REPOSITORY ENDPOINTS
+// PUBLIC PLAYBOOKS ENDPOINTS
+// ============================================
+
+// GET /api/public/playbooks - List public playbooks with star counts
+app.get("/public/playbooks", async (c) => {
+  const search = c.req.query("search");
+  const sort = c.req.query("sort") || "stars"; // stars, newest, name
+  const limit = parseInt(c.req.query("limit") || "50");
+  const supabase = getServiceSupabase();
+
+  let query = supabase
+    .from("playbooks")
+    .select(`
+      id, guid, name, description, config, star_count, created_at, updated_at, user_id,
+      personas:personas(count),
+      skills:skills(count),
+      mcp_servers:mcp_servers(count)
+    `)
+    .eq("is_public", true);
+
+  if (search) {
+    query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
+  }
+
+  switch (sort) {
+    case "newest":
+      query = query.order("created_at", { ascending: false });
+      break;
+    case "name":
+      query = query.order("name", { ascending: true });
+      break;
+    case "stars":
+    default:
+      query = query.order("star_count", { ascending: false, nullsFirst: false });
+      break;
+  }
+
+  const { data, error } = await query.limit(limit);
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  // Transform count objects to numbers
+  const playbooks = (data || []).map((p: any) => ({
+    ...p,
+    persona_count: p.personas?.[0]?.count || 0,
+    skill_count: p.skills?.[0]?.count || 0,
+    mcp_server_count: p.mcp_servers?.[0]?.count || 0,
+    personas: undefined,
+    skills: undefined,
+    mcp_servers: undefined,
+  }));
+
+  return c.json(playbooks);
+});
+
+// GET /api/playbooks/:id/star - Check if user starred the playbook
+app.get("/playbooks/:id/star", async (c) => {
+  const user = await getAuthenticatedUser(c);
+  if (!user) {
+    return c.json({ starred: false });
+  }
+
+  const playbookId = c.req.param("id");
+  const supabase = getServiceSupabase();
+
+  const { data } = await supabase
+    .from("playbook_stars")
+    .select("id")
+    .eq("playbook_id", playbookId)
+    .eq("user_id", user.id)
+    .single();
+
+  return c.json({ starred: !!data });
+});
+
+// POST /api/playbooks/:id/star - Star or unstar a playbook
+app.post("/playbooks/:id/star", async (c) => {
+  const user = await requireAuth(c);
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const playbookId = c.req.param("id");
+  const supabase = getServiceSupabase();
+
+  // Check if playbook exists and is public
+  const { data: playbook } = await supabase
+    .from("playbooks")
+    .select("id, is_public")
+    .eq("id", playbookId)
+    .single();
+
+  if (!playbook) {
+    return c.json({ error: "Playbook not found" }, 404);
+  }
+
+  if (!playbook.is_public) {
+    return c.json({ error: "Cannot star private playbooks" }, 403);
+  }
+
+  // Check if already starred
+  const { data: existingStar } = await supabase
+    .from("playbook_stars")
+    .select("id")
+    .eq("playbook_id", playbookId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (existingStar) {
+    // Unstar
+    const { error } = await supabase
+      .from("playbook_stars")
+      .delete()
+      .eq("id", existingStar.id);
+
+    if (error) {
+      return c.json({ error: error.message }, 500);
+    }
+
+    return c.json({ starred: false, message: "Playbook unstarred" });
+  } else {
+    // Star
+    const { error } = await supabase
+      .from("playbook_stars")
+      .insert({
+        playbook_id: playbookId,
+        user_id: user.id,
+      });
+
+    if (error) {
+      return c.json({ error: error.message }, 500);
+    }
+
+    return c.json({ starred: true, message: "Playbook starred" });
+  }
+});
+
+// GET /api/user/starred - Get user's starred playbooks
+app.get("/user/starred", async (c) => {
+  const user = await requireAuth(c);
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const supabase = getServiceSupabase();
+
+  const { data, error } = await supabase
+    .from("playbook_stars")
+    .select(`
+      playbook_id,
+      playbooks:playbook_id(
+        id, guid, name, description, star_count, created_at, updated_at
+      )
+    `)
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  const playbooks = (data || []).map((s: any) => s.playbooks).filter(Boolean);
+  return c.json(playbooks);
+});
+
+// ============================================
+// PUBLIC REPOSITORY ENDPOINTS (Skills & MCP - legacy)
 // ============================================
 
 // GET /api/public/skills
