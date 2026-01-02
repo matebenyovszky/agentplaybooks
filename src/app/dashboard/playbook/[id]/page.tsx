@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useState, use, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { createBrowserClient } from "@/lib/supabase/client";
-import { generateApiKey, hashApiKey, getKeyPrefix } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { 
   ArrowLeft,
   Brain,
@@ -18,19 +18,44 @@ import {
   Globe,
   Lock,
   Plus,
-  Trash2,
   Copy,
   Check,
   Eye,
-  EyeOff
+  EyeOff,
+  ExternalLink,
+  Loader2
 } from "lucide-react";
 import type { Playbook, Persona, Skill, MCPServer, Memory, ApiKey } from "@/lib/supabase/types";
 
+// Import editor components
+import { PersonaEditor } from "@/components/playbook/PersonaEditor";
+import { SkillEditor } from "@/components/playbook/SkillEditor";
+import { McpServerEditor } from "@/components/playbook/McpServerEditor";
+import { MemoryEditor } from "@/components/playbook/MemoryEditor";
+import { ApiKeyManager } from "@/components/playbook/ApiKeyManager";
+
 type TabType = "personas" | "skills" | "mcp" | "memory" | "apiKeys" | "settings";
+
+// Debounce hook
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+
+  return debouncedValue;
+}
 
 export default function PlaybookEditorPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const t = useTranslations();
+  
+  // State
   const [playbook, setPlaybook] = useState<Playbook | null>(null);
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
@@ -40,23 +65,49 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
   const [activeTab, setActiveTab] = useState<TabType>("personas");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [newApiKey, setNewApiKey] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<string | null>(null);
+  const [hasChanges, setHasChanges] = useState(false);
+
+  // Track changes for debounced save
+  const debouncedPlaybook = useDebounce(playbook, 1500);
 
   useEffect(() => {
     loadPlaybook();
   }, [id]);
+
+  // Auto-save playbook changes
+  useEffect(() => {
+    if (!debouncedPlaybook || !hasChanges) return;
+
+    const save = async () => {
+      setSaving(true);
+      const supabase = createBrowserClient();
+      await supabase
+        .from("playbooks")
+        .update({
+          name: debouncedPlaybook.name,
+          description: debouncedPlaybook.description,
+          is_public: debouncedPlaybook.is_public,
+        })
+        .eq("id", id);
+      
+      setSaving(false);
+      setHasChanges(false);
+    };
+
+    save();
+  }, [debouncedPlaybook, hasChanges, id]);
 
   const loadPlaybook = async () => {
     const supabase = createBrowserClient();
 
     const [playbookRes, personasRes, skillsRes, mcpRes, memoriesRes, keysRes] = await Promise.all([
       supabase.from("playbooks").select("*").eq("id", id).single(),
-      supabase.from("personas").select("*").eq("playbook_id", id),
-      supabase.from("skills").select("*").eq("playbook_id", id),
-      supabase.from("mcp_servers").select("*").eq("playbook_id", id),
-      supabase.from("memories").select("*").eq("playbook_id", id),
-      supabase.from("api_keys").select("*").eq("playbook_id", id),
+      supabase.from("personas").select("*").eq("playbook_id", id).order("created_at"),
+      supabase.from("skills").select("*").eq("playbook_id", id).order("created_at"),
+      supabase.from("mcp_servers").select("*").eq("playbook_id", id).order("created_at"),
+      supabase.from("memories").select("*").eq("playbook_id", id).order("updated_at", { ascending: false }),
+      supabase.from("api_keys").select("*").eq("playbook_id", id).order("created_at", { ascending: false }),
     ]);
 
     if (playbookRes.data) setPlaybook(playbookRes.data as Playbook);
@@ -68,7 +119,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
     setLoading(false);
   };
 
-  const handleSave = async () => {
+  const handleManualSave = async () => {
     if (!playbook) return;
     setSaving(true);
     
@@ -83,8 +134,16 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
       .eq("id", id);
 
     setSaving(false);
+    setHasChanges(false);
   };
 
+  const updatePlaybook = useCallback((updates: Partial<Playbook>) => {
+    if (!playbook) return;
+    setPlaybook({ ...playbook, ...updates });
+    setHasChanges(true);
+  }, [playbook]);
+
+  // Add handlers
   const handleAddPersona = async () => {
     const name = prompt("Persona name:");
     if (!name) return;
@@ -107,7 +166,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
   };
 
   const handleAddSkill = async () => {
-    const name = prompt("Skill name:");
+    const name = prompt("Skill name (snake_case):");
     if (!name) return;
 
     const supabase = createBrowserClient();
@@ -117,7 +176,13 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
         playbook_id: id,
         name,
         description: "",
-        definition: { parameters: { type: "object", properties: {} } },
+        definition: { 
+          parameters: { 
+            type: "object", 
+            properties: {},
+            required: []
+          } 
+        },
         examples: [],
       })
       .select()
@@ -150,104 +215,85 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
     }
   };
 
-  const handleGenerateApiKey = async () => {
-    const name = prompt("API Key name (optional):");
-    const key = generateApiKey();
-    const keyHash = await hashApiKey(key);
-    const prefix = getKeyPrefix(key);
-
-    const supabase = createBrowserClient();
-    const { data, error } = await supabase
-      .from("api_keys")
-      .insert({
-        playbook_id: id,
-        key_hash: keyHash,
-        key_prefix: prefix,
-        name: name || null,
-        permissions: ["memory:read", "memory:write", "skills:read", "personas:read"],
-        is_active: true,
-      })
-      .select()
-      .single();
-
-    if (!error && data) {
-      setApiKeys([...apiKeys, data as ApiKey]);
-      setNewApiKey(key);
-    }
-  };
-
-  const handleRevokeApiKey = async (keyId: string) => {
-    if (!confirm("Are you sure you want to revoke this API key?")) return;
-
-    const supabase = createBrowserClient();
-    await supabase.from("api_keys").delete().eq("id", keyId);
-    setApiKeys(apiKeys.filter(k => k.id !== keyId));
-  };
-
+  // Delete handlers
   const handleDeletePersona = async (personaId: string) => {
-    if (!confirm("Delete this persona?")) return;
-    
     const supabase = createBrowserClient();
     await supabase.from("personas").delete().eq("id", personaId);
     setPersonas(personas.filter(p => p.id !== personaId));
   };
 
   const handleDeleteSkill = async (skillId: string) => {
-    if (!confirm("Delete this skill?")) return;
-    
     const supabase = createBrowserClient();
     await supabase.from("skills").delete().eq("id", skillId);
     setSkills(skills.filter(s => s.id !== skillId));
   };
 
   const handleDeleteMCP = async (mcpId: string) => {
-    if (!confirm("Delete this MCP server?")) return;
-    
     const supabase = createBrowserClient();
     await supabase.from("mcp_servers").delete().eq("id", mcpId);
     setMcpServers(mcpServers.filter(m => m.id !== mcpId));
   };
 
-  const copyToClipboard = (text: string) => {
+  // Clipboard
+  const copyToClipboard = useCallback((text: string, key: string) => {
     navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setCopied(key);
+    setTimeout(() => setCopied(null), 2000);
+  }, []);
+
+  // Get base URL for API endpoints
+  const getBaseUrl = () => {
+    if (typeof window !== "undefined") {
+      return window.location.origin;
+    }
+    return "https://agentplaybooks.ai";
   };
 
   const tabs = [
-    { id: "personas" as TabType, label: t("editor.tabs.personas"), icon: Brain, count: personas.length },
-    { id: "skills" as TabType, label: t("editor.tabs.skills"), icon: Zap, count: skills.length },
-    { id: "mcp" as TabType, label: t("editor.tabs.mcp"), icon: Server, count: mcpServers.length },
-    { id: "memory" as TabType, label: t("editor.tabs.memory"), icon: Database, count: memories.length },
-    { id: "apiKeys" as TabType, label: t("editor.tabs.apiKeys"), icon: Key, count: apiKeys.length },
-    { id: "settings" as TabType, label: t("editor.tabs.settings"), icon: Settings, count: 0 },
+    { id: "personas" as TabType, label: t("editor.tabs.personas"), icon: Brain, count: personas.length, color: "blue" },
+    { id: "skills" as TabType, label: t("editor.tabs.skills"), icon: Zap, count: skills.length, color: "purple" },
+    { id: "mcp" as TabType, label: t("editor.tabs.mcp"), icon: Server, count: mcpServers.length, color: "pink" },
+    { id: "memory" as TabType, label: t("editor.tabs.memory"), icon: Database, count: memories.length, color: "teal" },
+    { id: "apiKeys" as TabType, label: t("editor.tabs.apiKeys"), icon: Key, count: apiKeys.length, color: "amber" },
+    { id: "settings" as TabType, label: t("editor.tabs.settings"), icon: Settings, count: 0, color: "slate" },
   ];
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="animate-spin h-8 w-8 border-2 border-indigo-500 border-t-transparent rounded-full" />
+      <div className="min-h-screen bg-[#0a0f1a] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 text-blue-500 animate-spin" />
+          <p className="text-slate-400">Loading playbook...</p>
+        </div>
       </div>
     );
   }
 
   if (!playbook) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <p className="text-neutral-400">Playbook not found</p>
+      <div className="min-h-screen bg-[#0a0f1a] flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-xl text-slate-400 mb-4">Playbook not found</p>
+          <Link 
+            href="/dashboard"
+            className="text-blue-400 hover:text-blue-300 transition-colors"
+          >
+            ← Back to Dashboard
+          </Link>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-[#0a0f1a] text-white">
       {/* Header */}
-      <header className="border-b border-neutral-800 px-6 py-4">
+      <header className="sticky top-0 z-40 border-b border-blue-900/30 bg-[#0a0f1a]/90 backdrop-blur-md px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link
               href="/dashboard"
-              className="p-2 hover:bg-neutral-800 rounded-lg transition-colors"
+              className="p-2 hover:bg-slate-800/50 rounded-lg transition-colors text-slate-400 hover:text-white"
             >
               <ArrowLeft className="h-5 w-5" />
             </Link>
@@ -255,36 +301,66 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
               <input
                 type="text"
                 value={playbook.name}
-                onChange={(e) => setPlaybook({ ...playbook, name: e.target.value })}
-                className="text-xl font-bold bg-transparent border-none focus:outline-none"
+                onChange={(e) => updatePlaybook({ name: e.target.value })}
+                className={cn(
+                  "text-xl font-bold bg-transparent border-none focus:outline-none",
+                  "text-white placeholder:text-slate-500",
+                  "hover:bg-slate-800/50 focus:bg-slate-800/70 rounded px-2 py-1 -ml-2"
+                )}
               />
-              <div className="flex items-center gap-2 text-sm text-neutral-400">
+              <div className="flex items-center gap-2 text-sm text-slate-500 px-2">
                 <code className="font-mono">/{playbook.guid}</code>
                 <button
-                  onClick={() => copyToClipboard(`${window.location.origin}/api/playbooks/${playbook.guid}`)}
+                  onClick={() => copyToClipboard(`${getBaseUrl()}/api/playbooks/${playbook.guid}`, "api-url")}
                   className="p-1 hover:text-white transition-colors"
+                  title="Copy API URL"
                 >
-                  {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                  {copied === "api-url" ? (
+                    <Check className="h-3 w-3 text-green-400" />
+                  ) : (
+                    <Copy className="h-3 w-3" />
+                  )}
                 </button>
               </div>
             </div>
           </div>
+          
           <div className="flex items-center gap-3">
+            {/* Status indicators */}
+            {hasChanges && !saving && (
+              <span className="text-amber-400 text-sm">Unsaved changes</span>
+            )}
+            {saving && (
+              <span className="flex items-center gap-2 text-blue-400 text-sm">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Saving...
+              </span>
+            )}
+            
+            {/* Public/Private toggle */}
             <button
-              onClick={() => setPlaybook({ ...playbook, is_public: !playbook.is_public })}
-              className={`px-3 py-2 rounded-lg flex items-center gap-2 text-sm ${
+              onClick={() => updatePlaybook({ is_public: !playbook.is_public })}
+              className={cn(
+                "px-3 py-2 rounded-lg flex items-center gap-2 text-sm transition-colors",
                 playbook.is_public 
-                  ? "bg-green-500/10 text-green-400 border border-green-500/20" 
-                  : "bg-neutral-800 text-neutral-400 border border-neutral-700"
-              }`}
+                  ? "bg-green-500/10 text-green-400 border border-green-500/20 hover:bg-green-500/20" 
+                  : "bg-slate-800/50 text-slate-400 border border-slate-700/50 hover:border-slate-600"
+              )}
             >
               {playbook.is_public ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
               {playbook.is_public ? "Public" : "Private"}
             </button>
+            
+            {/* Save button */}
             <button
-              onClick={handleSave}
-              disabled={saving}
-              className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg font-semibold flex items-center gap-2"
+              onClick={handleManualSave}
+              disabled={saving || !hasChanges}
+              className={cn(
+                "px-4 py-2 rounded-lg font-semibold flex items-center gap-2 transition-all",
+                hasChanges
+                  ? "bg-gradient-to-r from-amber-600 to-amber-400 text-slate-900 shadow-lg shadow-amber-500/25"
+                  : "bg-slate-800 text-slate-400"
+              )}
             >
               <Save className="h-4 w-4" />
               {saving ? "Saving..." : t("editor.save")}
@@ -294,23 +370,34 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
       </header>
 
       {/* Tabs */}
-      <div className="border-b border-neutral-800">
+      <div className="border-b border-blue-900/30 bg-[#0a0f1a]/50">
         <div className="max-w-7xl mx-auto px-6">
-          <nav className="flex gap-1 -mb-px">
+          <nav className="flex gap-1 -mb-px overflow-x-auto">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-4 py-3 flex items-center gap-2 text-sm font-medium border-b-2 transition-colors ${
+                className={cn(
+                  "px-4 py-3 flex items-center gap-2 text-sm font-medium border-b-2 transition-all whitespace-nowrap",
                   activeTab === tab.id
-                    ? "border-indigo-500 text-white"
-                    : "border-transparent text-neutral-400 hover:text-white"
-                }`}
+                    ? `border-${tab.color}-500 text-white`
+                    : "border-transparent text-slate-400 hover:text-white hover:border-slate-700"
+                )}
+                style={{
+                  borderBottomColor: activeTab === tab.id 
+                    ? tab.color === "blue" ? "#3b82f6" 
+                      : tab.color === "purple" ? "#a855f7" 
+                      : tab.color === "pink" ? "#ec4899" 
+                      : tab.color === "teal" ? "#14b8a6" 
+                      : tab.color === "amber" ? "#f59e0b" 
+                      : "#64748b"
+                    : "transparent"
+                }}
               >
                 <tab.icon className="h-4 w-4" />
                 {tab.label}
                 {tab.count > 0 && (
-                  <span className="px-2 py-0.5 bg-neutral-800 rounded-full text-xs">
+                  <span className="px-2 py-0.5 bg-slate-800 rounded-full text-xs">
                     {tab.count}
                   </span>
                 )}
@@ -322,406 +409,383 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
 
       {/* Content */}
       <main className="max-w-7xl mx-auto px-6 py-8">
-        {/* Personas Tab */}
-        {activeTab === "personas" && (
-          <div>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold">{t("editor.tabs.personas")}</h2>
-              <button
-                onClick={handleAddPersona}
-                className="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 rounded-lg flex items-center gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                {t("editor.addPersona")}
-              </button>
-            </div>
-            {personas.length === 0 ? (
-              <EmptyState message="No personas yet" />
-            ) : (
-              <div className="space-y-4">
-                {personas.map((persona) => (
-                  <PersonaCard
-                    key={persona.id}
-                    persona={persona}
-                    onDelete={() => handleDeletePersona(persona.id)}
-                    onUpdate={(updated) => {
-                      setPersonas(personas.map(p => p.id === updated.id ? updated : p));
-                    }}
-                  />
-                ))}
+        <AnimatePresence mode="wait">
+          {/* Personas Tab */}
+          {activeTab === "personas" && (
+            <motion.div
+              key="personas"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+            >
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold flex items-center gap-2">
+                  <Brain className="h-5 w-5 text-blue-400" />
+                  {t("editor.tabs.personas")}
+                </h2>
+                <button
+                  onClick={handleAddPersona}
+                  className={cn(
+                    "px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium",
+                    "bg-blue-600/20 text-blue-400 border border-blue-500/30",
+                    "hover:bg-blue-600/30 transition-colors"
+                  )}
+                >
+                  <Plus className="h-4 w-4" />
+                  {t("editor.addPersona")}
+                </button>
               </div>
-            )}
-          </div>
-        )}
-
-        {/* Skills Tab */}
-        {activeTab === "skills" && (
-          <div>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold">{t("editor.tabs.skills")}</h2>
-              <button
-                onClick={handleAddSkill}
-                className="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 rounded-lg flex items-center gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                {t("editor.addSkill")}
-              </button>
-            </div>
-            {skills.length === 0 ? (
-              <EmptyState message="No skills yet" />
-            ) : (
-              <div className="space-y-4">
-                {skills.map((skill) => (
-                  <SkillCard
-                    key={skill.id}
-                    skill={skill}
-                    onDelete={() => handleDeleteSkill(skill.id)}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* MCP Tab */}
-        {activeTab === "mcp" && (
-          <div>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold">{t("editor.tabs.mcp")}</h2>
-              <button
-                onClick={handleAddMCP}
-                className="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 rounded-lg flex items-center gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                {t("editor.addMCP")}
-              </button>
-            </div>
-            {mcpServers.length === 0 ? (
-              <EmptyState message="No MCP servers yet" />
-            ) : (
-              <div className="space-y-4">
-                {mcpServers.map((mcp) => (
-                  <MCPCard
-                    key={mcp.id}
-                    mcp={mcp}
-                    onDelete={() => handleDeleteMCP(mcp.id)}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Memory Tab */}
-        {activeTab === "memory" && (
-          <div>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold">{t("editor.tabs.memory")}</h2>
-            </div>
-            {memories.length === 0 ? (
-              <EmptyState message="No memories yet. AI agents can write memories via the API." />
-            ) : (
-              <div className="space-y-4">
-                {memories.map((memory) => (
-                  <div
-                    key={memory.id}
-                    className="p-4 bg-neutral-900 border border-neutral-800 rounded-lg"
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <code className="text-indigo-400 font-mono">{memory.key}</code>
-                      <span className="text-xs text-neutral-500">
-                        {new Date(memory.updated_at).toLocaleString()}
-                      </span>
-                    </div>
-                    <pre className="text-sm text-neutral-300 bg-neutral-800 p-3 rounded overflow-x-auto">
-                      {JSON.stringify(memory.value, null, 2)}
-                    </pre>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* API Keys Tab */}
-        {activeTab === "apiKeys" && (
-          <div>
-            <div className="flex justify-between items-center mb-6">
-              <div>
-                <h2 className="text-xl font-semibold">{t("apiKeys.title")}</h2>
-                <p className="text-sm text-neutral-400 mt-1">{t("apiKeys.description")}</p>
-              </div>
-              <button
-                onClick={handleGenerateApiKey}
-                className="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 rounded-lg flex items-center gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                {t("apiKeys.generate")}
-              </button>
-            </div>
-
-            {/* New key modal */}
-            {newApiKey && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg"
-              >
-                <p className="text-yellow-400 text-sm mb-2">{t("apiKeys.copyWarning")}</p>
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 p-3 bg-neutral-900 rounded font-mono text-sm break-all">
-                    {newApiKey}
-                  </code>
-                  <button
-                    onClick={() => {
-                      copyToClipboard(newApiKey);
-                      setNewApiKey(null);
-                    }}
-                    className="p-3 bg-neutral-800 hover:bg-neutral-700 rounded"
-                  >
-                    <Copy className="h-4 w-4" />
-                  </button>
+              
+              {personas.length === 0 ? (
+                <EmptyState 
+                  icon={Brain}
+                  message="No personas yet" 
+                  description="Personas define AI personalities and system prompts."
+                  color="blue"
+                />
+              ) : (
+                <div className="space-y-4">
+                  {personas.map((persona) => (
+                    <PersonaEditor
+                      key={persona.id}
+                      persona={persona}
+                      onDelete={() => handleDeletePersona(persona.id)}
+                      onUpdate={(updated) => {
+                        setPersonas(personas.map(p => p.id === updated.id ? updated : p));
+                      }}
+                    />
+                  ))}
                 </div>
-              </motion.div>
-            )}
+              )}
+            </motion.div>
+          )}
 
-            {apiKeys.length === 0 ? (
-              <EmptyState message="No API keys yet" />
-            ) : (
-              <div className="space-y-4">
-                {apiKeys.map((key) => (
-                  <div
-                    key={key.id}
-                    className="p-4 bg-neutral-900 border border-neutral-800 rounded-lg flex items-center justify-between"
-                  >
-                    <div>
-                      <div className="flex items-center gap-3 mb-1">
-                        <code className="font-mono text-neutral-300">{key.key_prefix}</code>
-                        {key.name && <span className="text-sm text-neutral-400">({key.name})</span>}
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {key.permissions.map((perm) => (
-                          <span
-                            key={perm}
-                            className="px-2 py-0.5 bg-neutral-800 rounded text-xs text-neutral-400"
-                          >
-                            {perm}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
+          {/* Skills Tab */}
+          {activeTab === "skills" && (
+            <motion.div
+              key="skills"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+            >
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold flex items-center gap-2">
+                  <Zap className="h-5 w-5 text-purple-400" />
+                  {t("editor.tabs.skills")}
+                </h2>
+                <button
+                  onClick={handleAddSkill}
+                  className={cn(
+                    "px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium",
+                    "bg-purple-600/20 text-purple-400 border border-purple-500/30",
+                    "hover:bg-purple-600/30 transition-colors"
+                  )}
+                >
+                  <Plus className="h-4 w-4" />
+                  {t("editor.addSkill")}
+                </button>
+              </div>
+              
+              {skills.length === 0 ? (
+                <EmptyState 
+                  icon={Zap}
+                  message="No skills yet" 
+                  description="Skills define structured capabilities using JSON Schema."
+                  color="purple"
+                />
+              ) : (
+                <div className="space-y-4">
+                  {skills.map((skill) => (
+                    <SkillEditor
+                      key={skill.id}
+                      skill={skill}
+                      onDelete={() => handleDeleteSkill(skill.id)}
+                      onUpdate={(updated) => {
+                        setSkills(skills.map(s => s.id === updated.id ? updated : s));
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {/* MCP Tab */}
+          {activeTab === "mcp" && (
+            <motion.div
+              key="mcp"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+            >
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold flex items-center gap-2">
+                  <Server className="h-5 w-5 text-pink-400" />
+                  {t("editor.tabs.mcp")}
+                </h2>
+                <button
+                  onClick={handleAddMCP}
+                  className={cn(
+                    "px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium",
+                    "bg-pink-600/20 text-pink-400 border border-pink-500/30",
+                    "hover:bg-pink-600/30 transition-colors"
+                  )}
+                >
+                  <Plus className="h-4 w-4" />
+                  {t("editor.addMCP")}
+                </button>
+              </div>
+              
+              {mcpServers.length === 0 ? (
+                <EmptyState 
+                  icon={Server}
+                  message="No MCP servers yet" 
+                  description="MCP servers provide tools and resources for AI agents."
+                  color="pink"
+                />
+              ) : (
+                <div className="space-y-4">
+                  {mcpServers.map((mcp) => (
+                    <McpServerEditor
+                      key={mcp.id}
+                      mcpServer={mcp}
+                      onDelete={() => handleDeleteMCP(mcp.id)}
+                      onUpdate={(updated) => {
+                        setMcpServers(mcpServers.map(m => m.id === updated.id ? updated : m));
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {/* Memory Tab */}
+          {activeTab === "memory" && (
+            <motion.div
+              key="memory"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+            >
+              <MemoryEditor
+                playbook_id={id}
+                memories={memories}
+                onUpdate={setMemories}
+              />
+            </motion.div>
+          )}
+
+          {/* API Keys Tab */}
+          {activeTab === "apiKeys" && (
+            <motion.div
+              key="apiKeys"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+            >
+              <ApiKeyManager
+                playbook_id={id}
+                apiKeys={apiKeys}
+                onUpdate={setApiKeys}
+              />
+            </motion.div>
+          )}
+
+          {/* Settings Tab */}
+          {activeTab === "settings" && (
+            <motion.div
+              key="settings"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="max-w-3xl"
+            >
+              <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+                <Settings className="h-5 w-5 text-slate-400" />
+                {t("editor.tabs.settings")}
+              </h2>
+              
+              <div className="space-y-6">
+                {/* Description */}
+                <div className={cn(
+                  "p-5 rounded-xl",
+                  "bg-gradient-to-br from-slate-900/80 to-slate-800/80",
+                  "border border-slate-700/50"
+                )}>
+                  <label className="block text-sm font-medium text-slate-400 mb-2">
+                    Description
+                  </label>
+                  <textarea
+                    value={playbook.description || ""}
+                    onChange={(e) => updatePlaybook({ description: e.target.value })}
+                    className={cn(
+                      "w-full p-3 rounded-lg",
+                      "bg-slate-900/70 border border-slate-700/50",
+                      "text-slate-200 placeholder:text-slate-600",
+                      "focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20",
+                      "resize-y min-h-[100px]"
+                    )}
+                    placeholder="Describe what this playbook is for..."
+                  />
+                </div>
+
+                {/* Visibility */}
+                <div className={cn(
+                  "p-5 rounded-xl",
+                  "bg-gradient-to-br from-slate-900/80 to-slate-800/80",
+                  "border border-slate-700/50"
+                )}>
+                  <label className="block text-sm font-medium text-slate-400 mb-4">
+                    Visibility
+                  </label>
+                  <div className="flex gap-4">
                     <button
-                      onClick={() => handleRevokeApiKey(key.id)}
-                      className="p-2 text-red-400 hover:bg-red-500/10 rounded transition-colors"
+                      onClick={() => updatePlaybook({ is_public: false })}
+                      className={cn(
+                        "flex-1 p-4 rounded-xl border flex items-center gap-3 transition-all",
+                        !playbook.is_public
+                          ? "border-blue-500/50 bg-blue-500/10"
+                          : "border-slate-700/50 bg-slate-900/50 hover:border-slate-600"
+                      )}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Lock className="h-5 w-5" />
+                      <div className="text-left">
+                        <p className="font-medium">Private</p>
+                        <p className="text-sm text-slate-400">Only you can access</p>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => updatePlaybook({ is_public: true })}
+                      className={cn(
+                        "flex-1 p-4 rounded-xl border flex items-center gap-3 transition-all",
+                        playbook.is_public
+                          ? "border-green-500/50 bg-green-500/10"
+                          : "border-slate-700/50 bg-slate-900/50 hover:border-slate-600"
+                      )}
+                    >
+                      <Globe className="h-5 w-5" />
+                      <div className="text-left">
+                        <p className="font-medium">Public</p>
+                        <p className="text-sm text-slate-400">Anyone with the link</p>
+                      </div>
                     </button>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+                </div>
 
-        {/* Settings Tab */}
-        {activeTab === "settings" && (
-          <div className="max-w-2xl">
-            <h2 className="text-xl font-semibold mb-6">{t("editor.tabs.settings")}</h2>
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm text-neutral-400 mb-2">Description</label>
-                <textarea
-                  value={playbook.description || ""}
-                  onChange={(e) => setPlaybook({ ...playbook, description: e.target.value })}
-                  className="w-full p-3 bg-neutral-900 border border-neutral-800 rounded-lg focus:outline-none focus:border-indigo-500"
-                  rows={4}
-                  placeholder="Describe what this playbook is for..."
-                />
-              </div>
-              <div>
-                <label className="block text-sm text-neutral-400 mb-2">Visibility</label>
-                <div className="flex gap-4">
+                {/* API Endpoints */}
+                <div className={cn(
+                  "p-5 rounded-xl",
+                  "bg-gradient-to-br from-slate-900/80 to-slate-800/80",
+                  "border border-slate-700/50"
+                )}>
+                  <h3 className="font-medium mb-4 flex items-center gap-2">
+                    <ExternalLink className="h-4 w-4 text-slate-400" />
+                    API Endpoints
+                  </h3>
+                  <div className="space-y-2">
+                    {[
+                      { method: "GET", path: `/api/playbooks/${playbook.guid}`, desc: "JSON format" },
+                      { method: "GET", path: `/api/playbooks/${playbook.guid}?format=openapi`, desc: "OpenAPI for GPTs" },
+                      { method: "GET", path: `/api/playbooks/${playbook.guid}?format=mcp`, desc: "MCP manifest" },
+                      { method: "GET", path: `/api/playbooks/${playbook.guid}?format=markdown`, desc: "Markdown docs" },
+                      { method: "GET", path: `/api/mcp/${playbook.guid}`, desc: "MCP server" },
+                      { method: "POST", path: `/api/agent/${playbook.guid}/memory`, desc: "Write memory (API key)" },
+                    ].map(({ method, path, desc }) => (
+                      <div 
+                        key={path}
+                        className="flex items-center gap-3 p-3 bg-slate-900/70 rounded-lg border border-slate-700/50 group"
+                      >
+                        <span className={cn(
+                          "text-xs font-mono px-2 py-0.5 rounded",
+                          method === "GET" ? "bg-green-500/20 text-green-400" : "bg-blue-500/20 text-blue-400"
+                        )}>
+                          {method}
+                        </span>
+                        <code className="flex-1 text-sm text-slate-300 font-mono truncate">
+                          {path}
+                        </code>
+                        <span className="text-xs text-slate-500 hidden sm:block">
+                          {desc}
+                        </span>
+                        <button
+                          onClick={() => copyToClipboard(`${getBaseUrl()}${path}`, path)}
+                          className="p-1.5 text-slate-500 hover:text-white opacity-0 group-hover:opacity-100 transition-all"
+                        >
+                          {copied === path ? (
+                            <Check className="h-4 w-4 text-green-400" />
+                          ) : (
+                            <Copy className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Danger Zone */}
+                <div className={cn(
+                  "p-5 rounded-xl",
+                  "bg-gradient-to-br from-red-950/30 to-red-900/20",
+                  "border border-red-900/30"
+                )}>
+                  <h3 className="font-medium text-red-400 mb-2">Danger Zone</h3>
+                  <p className="text-sm text-slate-400 mb-4">
+                    Deleting this playbook will remove all associated personas, skills, MCP servers, memories, and API keys.
+                  </p>
                   <button
-                    onClick={() => setPlaybook({ ...playbook, is_public: false })}
-                    className={`flex-1 p-4 rounded-lg border flex items-center gap-3 ${
-                      !playbook.is_public
-                        ? "border-indigo-500 bg-indigo-500/10"
-                        : "border-neutral-800 bg-neutral-900"
-                    }`}
+                    onClick={async () => {
+                      if (!confirm("Are you SURE you want to delete this entire playbook? This cannot be undone!")) return;
+                      if (!confirm("Really? This will delete ALL data in this playbook.")) return;
+                      
+                      const supabase = createBrowserClient();
+                      await supabase.from("playbooks").delete().eq("id", id);
+                      window.location.href = "/dashboard";
+                    }}
+                    className="px-4 py-2 bg-red-600/20 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-600/30 transition-colors"
                   >
-                    <Lock className="h-5 w-5" />
-                    <div className="text-left">
-                      <p className="font-medium">Private</p>
-                      <p className="text-sm text-neutral-400">Only you can access</p>
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => setPlaybook({ ...playbook, is_public: true })}
-                    className={`flex-1 p-4 rounded-lg border flex items-center gap-3 ${
-                      playbook.is_public
-                        ? "border-indigo-500 bg-indigo-500/10"
-                        : "border-neutral-800 bg-neutral-900"
-                    }`}
-                  >
-                    <Globe className="h-5 w-5" />
-                    <div className="text-left">
-                      <p className="font-medium">Public</p>
-                      <p className="text-sm text-neutral-400">Anyone with the link</p>
-                    </div>
+                    Delete Playbook
                   </button>
                 </div>
               </div>
-
-              <div className="pt-6 border-t border-neutral-800">
-                <h3 className="font-medium mb-4">API Endpoints</h3>
-                <div className="space-y-2 text-sm font-mono">
-                  <div className="p-3 bg-neutral-900 rounded">
-                    <span className="text-green-400">GET</span> /api/playbooks/{playbook.guid}
-                  </div>
-                  <div className="p-3 bg-neutral-900 rounded">
-                    <span className="text-green-400">GET</span> /api/playbooks/{playbook.guid}?format=openapi
-                  </div>
-                  <div className="p-3 bg-neutral-900 rounded">
-                    <span className="text-green-400">GET</span> /api/playbooks/{playbook.guid}?format=mcp
-                  </div>
-                  <div className="p-3 bg-neutral-900 rounded">
-                    <span className="text-blue-400">POST</span> /api/agent/{playbook.guid}/memory
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
     </div>
   );
 }
 
-function EmptyState({ message }: { message: string }) {
-  return (
-    <div className="text-center py-12 text-neutral-500">
-      {message}
-    </div>
-  );
-}
-
-function PersonaCard({ 
-  persona, 
-  onDelete,
-  onUpdate 
+// Empty state component
+function EmptyState({ 
+  icon: Icon, 
+  message, 
+  description,
+  color 
 }: { 
-  persona: Persona; 
-  onDelete: () => void;
-  onUpdate: (p: Persona) => void;
+  icon: React.ComponentType<{ className?: string }>; 
+  message: string;
+  description: string;
+  color: string;
 }) {
-  const [editing, setEditing] = useState(false);
-  const [prompt, setPrompt] = useState(persona.system_prompt);
-
-  const handleSave = async () => {
-    const supabase = createBrowserClient();
-    await supabase
-      .from("personas")
-      .update({ system_prompt: prompt })
-      .eq("id", persona.id);
-    
-    onUpdate({ ...persona, system_prompt: prompt });
-    setEditing(false);
+  const colorMap: Record<string, string> = {
+    blue: "text-blue-700",
+    purple: "text-purple-700",
+    pink: "text-pink-700",
+    teal: "text-teal-700",
+    amber: "text-amber-700",
+    slate: "text-slate-700"
   };
 
   return (
-    <div className="p-4 bg-neutral-900 border border-neutral-800 rounded-lg">
-      <div className="flex justify-between items-start mb-3">
-        <div className="flex items-center gap-2">
-          <Brain className="h-5 w-5 text-indigo-400" />
-          <h3 className="font-semibold">{persona.name}</h3>
-        </div>
-        <button
-          onClick={onDelete}
-          className="p-1 text-neutral-500 hover:text-red-400 transition-colors"
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
-      </div>
-      {editing ? (
-        <div>
-          <textarea
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            className="w-full p-3 bg-neutral-800 border border-neutral-700 rounded-lg focus:outline-none focus:border-indigo-500 text-sm"
-            rows={6}
-          />
-          <div className="flex justify-end gap-2 mt-2">
-            <button
-              onClick={() => setEditing(false)}
-              className="px-3 py-1 text-sm text-neutral-400"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSave}
-              className="px-3 py-1 bg-indigo-500 rounded text-sm"
-            >
-              Save
-            </button>
-          </div>
-        </div>
-      ) : (
-        <p
-          onClick={() => setEditing(true)}
-          className="text-sm text-neutral-400 cursor-pointer hover:text-neutral-300 whitespace-pre-wrap"
-        >
-          {persona.system_prompt}
-        </p>
-      )}
-    </div>
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="p-12 text-center bg-slate-900/50 rounded-xl border border-dashed border-slate-700"
+    >
+      <Icon className={cn("h-12 w-12 mx-auto mb-4", colorMap[color] || "text-slate-700")} />
+      <h3 className="text-lg font-medium text-slate-400 mb-2">{message}</h3>
+      <p className="text-sm text-slate-500">{description}</p>
+    </motion.div>
   );
 }
-
-function SkillCard({ skill, onDelete }: { skill: Skill; onDelete: () => void }) {
-  return (
-    <div className="p-4 bg-neutral-900 border border-neutral-800 rounded-lg">
-      <div className="flex justify-between items-start">
-        <div className="flex items-center gap-2">
-          <Zap className="h-5 w-5 text-purple-400" />
-          <h3 className="font-semibold">{skill.name}</h3>
-        </div>
-        <button
-          onClick={onDelete}
-          className="p-1 text-neutral-500 hover:text-red-400 transition-colors"
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
-      </div>
-      {skill.description && (
-        <p className="text-sm text-neutral-400 mt-2">{skill.description}</p>
-      )}
-    </div>
-  );
-}
-
-function MCPCard({ mcp, onDelete }: { mcp: MCPServer; onDelete: () => void }) {
-  return (
-    <div className="p-4 bg-neutral-900 border border-neutral-800 rounded-lg">
-      <div className="flex justify-between items-start">
-        <div className="flex items-center gap-2">
-          <Server className="h-5 w-5 text-pink-400" />
-          <h3 className="font-semibold">{mcp.name}</h3>
-        </div>
-        <button
-          onClick={onDelete}
-          className="p-1 text-neutral-500 hover:text-red-400 transition-colors"
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
-      </div>
-      {mcp.description && (
-        <p className="text-sm text-neutral-400 mt-2">{mcp.description}</p>
-      )}
-      <div className="flex gap-4 mt-3 text-sm text-neutral-500">
-        <span>{Array.isArray(mcp.tools) ? mcp.tools.length : 0} tools</span>
-        <span>{Array.isArray(mcp.resources) ? mcp.resources.length : 0} resources</span>
-      </div>
-    </div>
-  );
-}
-

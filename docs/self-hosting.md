@@ -15,7 +15,7 @@ The easiest way to self-host AgentPlaybooks.
 
 ### Step 1: Fork the Repository
 
-Fork [github.com/your-repo/agentplaybooks](https://github.com/your-repo/agentplaybooks) to your account.
+Fork [github.com/matebenyovszky/agentplaybooks](https://github.com/matebenyovszky/agentplaybooks) to your account.
 
 ### Step 2: Create Supabase Project
 

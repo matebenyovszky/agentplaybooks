@@ -218,50 +218,88 @@ All database access uses Supabase RLS:
 - `Card` - For individual items
 - Tailwind for styling
 
-### Task: API Endpoints
+### Task: API Endpoints ✅ COMPLETED
 
 **Goal:** Implement CRUD operations for playbooks
 
-**Files to modify/create:**
-- `src/app/api/[[...route]]/route.ts` - Main API file
+**Files:**
+- `src/app/api/[[...route]]/route.ts` - Main API file (Hono framework)
 
-**Endpoints to implement:**
+**Implemented Endpoints:**
 
 ```typescript
-// Playbooks
+// Playbooks (JWT auth required for mutations)
 GET    /api/playbooks              // List user's playbooks
 POST   /api/playbooks              // Create playbook
-GET    /api/playbooks/:guid        // Get playbook (public or owned)
+GET    /api/playbooks/:guid        // Get playbook (public or owned) + format param
 PUT    /api/playbooks/:id          // Update playbook
 DELETE /api/playbooks/:id          // Delete playbook
 
-// Personas
+// Personas (JWT auth required)
 GET    /api/playbooks/:id/personas
 POST   /api/playbooks/:id/personas
 PUT    /api/playbooks/:id/personas/:pid
 DELETE /api/playbooks/:id/personas/:pid
 
-// Skills
+// Skills (JWT auth required)
 GET    /api/playbooks/:id/skills
 POST   /api/playbooks/:id/skills
 PUT    /api/playbooks/:id/skills/:sid
 DELETE /api/playbooks/:id/skills/:sid
 
-// Memory
-GET    /api/playbooks/:guid/memory
-GET    /api/playbooks/:guid/memory/:key
-PUT    /api/playbooks/:guid/memory/:key  // Requires API key
-DELETE /api/playbooks/:guid/memory/:key  // Requires API key
+// Memory (API key or JWT for writes)
+GET    /api/playbooks/:guid/memory          // Public read for public playbooks
+PUT    /api/playbooks/:guid/memory/:key     // Requires API key or owner
+DELETE /api/playbooks/:guid/memory/:key     // Requires API key or owner
 
-// API Keys
+// API Keys (JWT auth, owner only)
 GET    /api/playbooks/:id/api-keys
-POST   /api/playbooks/:id/api-keys       // Returns plain key once
+POST   /api/playbooks/:id/api-keys          // Returns plain key ONCE
 DELETE /api/playbooks/:id/api-keys/:kid
+
+// Legacy Agent Endpoints (API key required)
+GET    /api/agent/:guid/memory
+POST   /api/agent/:guid/memory
+DELETE /api/agent/:guid/memory/:key
+POST   /api/agent/:guid/skills
+PUT    /api/agent/:guid/skills/:id
+POST   /api/agent/:guid/personas
+PUT    /api/agent/:guid/personas/:id
 
 // Public Repository
 GET    /api/public/skills
-GET    /api/public/mcp-servers
+GET    /api/public/skills/:id
+GET    /api/public/mcp
+GET    /api/public/mcp/:id
+
+// Health Check
+GET    /api/health
 ```
+
+**Format Parameter:**
+
+The `GET /api/playbooks/:guid` endpoint supports multiple output formats:
+
+| Format | Use Case |
+|--------|----------|
+| `json` (default) | Custom agents, direct API use |
+| `openapi` | ChatGPT Custom Actions |
+| `mcp` | Claude, Cursor MCP integration |
+| `anthropic` | Anthropic tool definitions |
+| `markdown` | Human-readable documentation |
+
+**Authentication Flow:**
+
+1. **JWT Auth** - For dashboard/management (from Supabase session)
+2. **API Key Auth** - For AI agent write-back (`Bearer apb_live_xxx`)
+3. **Public Access** - No auth needed for public playbook reads
+
+**Key Implementation Details:**
+
+- Uses `getServiceSupabase()` to bypass RLS where needed
+- API keys stored as SHA-256 hash, validated against hash
+- Ownership checked before all mutations
+- Legacy `/api/agent/*` endpoints maintained for backward compatibility
 
 ## Testing
 

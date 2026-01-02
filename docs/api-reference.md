@@ -5,10 +5,32 @@ Complete reference for all AgentPlaybooks API endpoints.
 ## Base URL
 
 ```
-https://agentplaybooks.com/api
+https://agentplaybooks.ai/api
 ```
 
 For self-hosted instances, replace with your domain.
+
+---
+
+## Authentication
+
+AgentPlaybooks supports two authentication methods:
+
+### 1. User Authentication (JWT)
+
+For dashboard and management endpoints. Pass Supabase JWT token:
+
+```http
+Authorization: Bearer <supabase_jwt_token>
+```
+
+### 2. API Key Authentication
+
+For agent/AI write-back endpoints. Use playbook-specific API keys:
+
+```http
+Authorization: Bearer apb_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
 
 ---
 
@@ -28,7 +50,7 @@ GET /api/playbooks/:guid
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `format` | string | `json` | Output format: `json`, `openapi`, `mcp`, `markdown` |
+| `format` | string | `json` | Output format: `json`, `openapi`, `mcp`, `anthropic`, `markdown` |
 
 **Response (JSON):**
 
@@ -73,71 +95,38 @@ Returns an OpenAPI 3.1 specification suitable for ChatGPT Custom Actions.
 
 Returns an MCP-compatible server manifest with tools and resources.
 
+**Response (Anthropic):**
+
+Returns Anthropic-compatible tool definitions with system prompt.
+
+```json
+{
+  "playbook": {
+    "name": "My AI Assistant",
+    "description": "...",
+    "guid": "abc123def456"
+  },
+  "system_prompt": "## Coder\n\nYou are a helpful...",
+  "tools": [
+    {
+      "name": "code_review",
+      "description": "Review code for issues",
+      "input_schema": { ... }
+    }
+  ],
+  "mcp_servers": [...]
+}
+```
+
 **Response (Markdown):**
 
 Returns a human-readable Markdown document.
 
-### Get Personas
+### Get Memory (Public Read)
 
 ```http
-GET /api/playbooks/:guid/personas
-```
-
-**Response:**
-
-```json
-[
-  {
-    "id": "uuid",
-    "name": "Coder",
-    "system_prompt": "You are a helpful coding assistant...",
-    "metadata": {}
-  }
-]
-```
-
-### Get Skills
-
-```http
-GET /api/playbooks/:guid/skills
-```
-
-**Response:**
-
-```json
-[
-  {
-    "id": "uuid",
-    "name": "code_review",
-    "description": "Review code for issues",
-    "definition": {
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "code": { "type": "string" }
-        }
-      }
-    },
-    "examples": []
-  }
-]
-```
-
----
-
-## Agent Endpoints (API Key Required)
-
-These endpoints require a valid API key in the Authorization header.
-
-```http
-Authorization: Bearer apb_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-```
-
-### Read Memory
-
-```http
-GET /api/agent/:guid/memory
-GET /api/agent/:guid/memory?key=specific_key
+GET /api/playbooks/:guid/memory
+GET /api/playbooks/:guid/memory?key=specific_key
 ```
 
 **Response:**
@@ -152,14 +141,214 @@ GET /api/agent/:guid/memory?key=specific_key
 ]
 ```
 
-### Write Memory
+---
+
+## Authenticated Endpoints (User JWT Required)
+
+These endpoints require a valid Supabase JWT token for the logged-in user.
+
+### List Playbooks
 
 ```http
-POST /api/agent/:guid/memory
+GET /api/playbooks
+```
+
+**Response:**
+
+```json
+[
+  {
+    "id": "uuid",
+    "guid": "abc123def456",
+    "name": "My AI Assistant",
+    "description": "A helpful coding assistant",
+    "is_public": false,
+    "persona_count": 2,
+    "skill_count": 5,
+    "mcp_server_count": 1,
+    "created_at": "2024-01-15T10:00:00Z",
+    "updated_at": "2024-01-15T12:00:00Z"
+  }
+]
+```
+
+### Create Playbook
+
+```http
+POST /api/playbooks
 Content-Type: application/json
 
 {
-  "key": "user_preferences",
+  "name": "My New Playbook",
+  "description": "Optional description",
+  "is_public": false,
+  "config": {}
+}
+```
+
+**Response (201):**
+
+```json
+{
+  "id": "uuid",
+  "guid": "xyz789abc123",
+  "name": "My New Playbook",
+  "description": "Optional description",
+  "is_public": false,
+  "config": {},
+  "created_at": "2024-01-15T10:00:00Z",
+  "updated_at": "2024-01-15T10:00:00Z"
+}
+```
+
+### Update Playbook
+
+```http
+PUT /api/playbooks/:id
+Content-Type: application/json
+
+{
+  "name": "Updated Name",
+  "description": "Updated description",
+  "is_public": true
+}
+```
+
+### Delete Playbook
+
+```http
+DELETE /api/playbooks/:id
+```
+
+**Response:**
+
+```json
+{ "success": true }
+```
+
+---
+
+## Personas CRUD (Authenticated)
+
+Manage personas within a playbook you own.
+
+### List Personas
+
+```http
+GET /api/playbooks/:id/personas
+```
+
+### Create Persona
+
+```http
+POST /api/playbooks/:id/personas
+Content-Type: application/json
+
+{
+  "name": "Coder",
+  "system_prompt": "You are a helpful coding assistant...",
+  "metadata": {}
+}
+```
+
+**Response (201):**
+
+```json
+{
+  "id": "uuid",
+  "playbook_id": "uuid",
+  "name": "Coder",
+  "system_prompt": "You are a helpful coding assistant...",
+  "metadata": {},
+  "created_at": "2024-01-15T10:00:00Z"
+}
+```
+
+### Update Persona
+
+```http
+PUT /api/playbooks/:id/personas/:pid
+Content-Type: application/json
+
+{
+  "name": "Updated Name",
+  "system_prompt": "Updated prompt..."
+}
+```
+
+### Delete Persona
+
+```http
+DELETE /api/playbooks/:id/personas/:pid
+```
+
+---
+
+## Skills CRUD (Authenticated)
+
+Manage skills within a playbook you own.
+
+### List Skills
+
+```http
+GET /api/playbooks/:id/skills
+```
+
+### Create Skill
+
+```http
+POST /api/playbooks/:id/skills
+Content-Type: application/json
+
+{
+  "name": "code_review",
+  "description": "Review code for issues",
+  "definition": {
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "code": { "type": "string", "description": "Code to review" },
+        "language": { "type": "string", "description": "Programming language" }
+      },
+      "required": ["code"]
+    }
+  },
+  "examples": []
+}
+```
+
+### Update Skill
+
+```http
+PUT /api/playbooks/:id/skills/:sid
+Content-Type: application/json
+
+{
+  "description": "Updated description",
+  "definition": { ... }
+}
+```
+
+### Delete Skill
+
+```http
+DELETE /api/playbooks/:id/skills/:sid
+```
+
+---
+
+## Memory Write Endpoints (API Key or Owner)
+
+Write operations require either an API key with `memory:write` permission or owner authentication.
+
+### Write Memory
+
+```http
+PUT /api/playbooks/:guid/memory/:key
+Authorization: Bearer apb_live_xxx
+Content-Type: application/json
+
+{
   "value": { "theme": "dark", "language": "en" }
 }
 ```
@@ -181,13 +370,125 @@ Content-Type: application/json
 ### Delete Memory
 
 ```http
-DELETE /api/agent/:guid/memory/:key
+DELETE /api/playbooks/:guid/memory/:key
+Authorization: Bearer apb_live_xxx
 ```
 
 **Response:**
 
 ```json
 { "success": true }
+```
+
+---
+
+## API Keys Management (Authenticated)
+
+Manage API keys for your playbooks. Only the playbook owner can access these endpoints.
+
+### List API Keys
+
+```http
+GET /api/playbooks/:id/api-keys
+```
+
+**Response:**
+
+```json
+[
+  {
+    "id": "uuid",
+    "key_prefix": "apb_live_xxx...",
+    "name": "Production Key",
+    "permissions": ["memory:read", "memory:write"],
+    "last_used_at": "2024-01-15T10:00:00Z",
+    "expires_at": null,
+    "is_active": true,
+    "created_at": "2024-01-01T00:00:00Z"
+  }
+]
+```
+
+### Create API Key
+
+```http
+POST /api/playbooks/:id/api-keys
+Content-Type: application/json
+
+{
+  "name": "Production Key",
+  "permissions": ["memory:read", "memory:write", "skills:write"],
+  "expires_at": "2025-01-01T00:00:00Z"
+}
+```
+
+**Available Permissions:**
+
+| Permission | Description |
+|------------|-------------|
+| `memory:read` | Read memory entries |
+| `memory:write` | Write/delete memory entries |
+| `skills:write` | Add/update skills |
+| `personas:write` | Add/update personas |
+| `full` | All permissions |
+
+**Response (201):**
+
+```json
+{
+  "id": "uuid",
+  "key_prefix": "apb_live_xxx...",
+  "name": "Production Key",
+  "permissions": ["memory:read", "memory:write", "skills:write"],
+  "expires_at": "2025-01-01T00:00:00Z",
+  "is_active": true,
+  "created_at": "2024-01-15T10:00:00Z",
+  "key": "apb_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "warning": "Save this key now! It will not be shown again."
+}
+```
+
+⚠️ **Important:** The full API key is only returned once at creation. Store it securely!
+
+### Delete API Key
+
+```http
+DELETE /api/playbooks/:id/api-keys/:kid
+```
+
+---
+
+## Agent Endpoints (Legacy - API Key Required)
+
+These legacy endpoints are maintained for backward compatibility.
+
+```http
+Authorization: Bearer apb_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+### Read Memory
+
+```http
+GET /api/agent/:guid/memory
+GET /api/agent/:guid/memory?key=specific_key
+```
+
+### Write Memory
+
+```http
+POST /api/agent/:guid/memory
+Content-Type: application/json
+
+{
+  "key": "user_preferences",
+  "value": { "theme": "dark", "language": "en" }
+}
+```
+
+### Delete Memory
+
+```http
+DELETE /api/agent/:guid/memory/:key
 ```
 
 ### Add Skill
@@ -215,11 +516,6 @@ Content-Type: application/json
 
 ```http
 PUT /api/agent/:guid/skills/:id
-Content-Type: application/json
-
-{
-  "description": "Updated description"
-}
 ```
 
 ### Add Persona
@@ -241,11 +537,6 @@ Content-Type: application/json
 
 ```http
 PUT /api/agent/:guid/personas/:id
-Content-Type: application/json
-
-{
-  "system_prompt": "Updated system prompt..."
-}
 ```
 
 ---
@@ -348,11 +639,40 @@ GET /api/public/skills?search=code+review
 ]
 ```
 
+### Get Skill Details
+
+```http
+GET /api/public/skills/:id
+```
+
 ### Browse MCP Servers
 
 ```http
 GET /api/public/mcp
 GET /api/public/mcp?tags=database,automation
+```
+
+### Get MCP Server Details
+
+```http
+GET /api/public/mcp/:id
+```
+
+---
+
+## Health Check
+
+```http
+GET /api/health
+```
+
+**Response:**
+
+```json
+{
+  "status": "ok",
+  "timestamp": "2024-01-15T10:00:00.000Z"
+}
 ```
 
 ---
@@ -372,10 +692,11 @@ All endpoints return consistent error responses:
 | Code | Description |
 |------|-------------|
 | 200 | Success |
+| 201 | Created |
 | 400 | Bad Request - Invalid parameters |
-| 401 | Unauthorized - Invalid or missing API key |
-| 403 | Forbidden - API key doesn't match playbook |
-| 404 | Not Found - Playbook doesn't exist or is private |
+| 401 | Unauthorized - Invalid or missing authentication |
+| 403 | Forbidden - No permission for this resource |
+| 404 | Not Found - Resource doesn't exist or is private |
 | 500 | Internal Server Error |
 
 ---
@@ -385,6 +706,7 @@ All endpoints return consistent error responses:
 | Endpoint Type | Limit |
 |---------------|-------|
 | Public reads | 100 requests/minute/IP |
+| Authenticated reads | 200 requests/minute/user |
 | Agent writes | 60 requests/minute/API key |
 | MCP endpoints | 100 requests/minute/IP |
 
@@ -396,3 +718,35 @@ X-RateLimit-Remaining: 95
 X-RateLimit-Reset: 1705312800
 ```
 
+---
+
+## Endpoint Summary
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `GET` | `/api/playbooks` | JWT | List user's playbooks |
+| `POST` | `/api/playbooks` | JWT | Create playbook |
+| `GET` | `/api/playbooks/:guid` | Public* | Get playbook (format param) |
+| `PUT` | `/api/playbooks/:id` | JWT | Update playbook |
+| `DELETE` | `/api/playbooks/:id` | JWT | Delete playbook |
+| `GET` | `/api/playbooks/:id/personas` | JWT/Public* | List personas |
+| `POST` | `/api/playbooks/:id/personas` | JWT | Create persona |
+| `PUT` | `/api/playbooks/:id/personas/:pid` | JWT | Update persona |
+| `DELETE` | `/api/playbooks/:id/personas/:pid` | JWT | Delete persona |
+| `GET` | `/api/playbooks/:id/skills` | JWT/Public* | List skills |
+| `POST` | `/api/playbooks/:id/skills` | JWT | Create skill |
+| `PUT` | `/api/playbooks/:id/skills/:sid` | JWT | Update skill |
+| `DELETE` | `/api/playbooks/:id/skills/:sid` | JWT | Delete skill |
+| `GET` | `/api/playbooks/:guid/memory` | Public* | Read memory |
+| `PUT` | `/api/playbooks/:guid/memory/:key` | API Key/JWT | Write memory |
+| `DELETE` | `/api/playbooks/:guid/memory/:key` | API Key/JWT | Delete memory |
+| `GET` | `/api/playbooks/:id/api-keys` | JWT | List API keys |
+| `POST` | `/api/playbooks/:id/api-keys` | JWT | Create API key |
+| `DELETE` | `/api/playbooks/:id/api-keys/:kid` | JWT | Delete API key |
+| `GET` | `/api/public/skills` | None | Browse public skills |
+| `GET` | `/api/public/mcp` | None | Browse public MCP servers |
+| `GET` | `/api/mcp/:guid` | Public* | MCP manifest |
+| `POST` | `/api/mcp/:guid` | Public* | MCP JSON-RPC |
+| `GET` | `/api/health` | None | Health check |
+
+*Public endpoints work without auth for public playbooks, or with JWT for private playbooks you own.

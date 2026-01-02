@@ -9,7 +9,7 @@ This guide will help you create your first playbook and connect it to an AI agen
 
 ## Step 1: Create an Account
 
-1. Go to [agentplaybooks.com](https://agentplaybooks.com)
+1. Go to [agentplaybooks.ai](https://agentplaybooks.ai)
 2. Click "Get Started" or "Sign In"
 3. Register with email, Google, or GitHub
 
@@ -69,7 +69,7 @@ Skills define specific capabilities or tasks your AI can perform.
 
 1. Go to the **Settings** tab
 2. Toggle **"Public"** to make your playbook accessible
-3. Copy your playbook URL: `https://agentplaybooks.com/api/playbooks/YOUR_GUID`
+3. Copy your playbook URL: `https://agentplaybooks.ai/api/playbooks/YOUR_GUID`
 
 ## Step 6: Connect to Your AI
 
@@ -80,7 +80,7 @@ Skills define specific capabilities or tasks your AI can perform.
 
 ```
 Before responding, fetch my playbook for context:
-GET https://agentplaybooks.com/api/playbooks/YOUR_GUID?format=markdown
+GET https://agentplaybooks.ai/api/playbooks/YOUR_GUID?format=markdown
 
 Use the personas and skills defined there.
 ```
@@ -90,7 +90,7 @@ Use the personas and skills defined there.
 Use the MCP endpoint directly:
 
 ```
-GET https://agentplaybooks.com/api/mcp/YOUR_GUID
+GET https://agentplaybooks.ai/api/mcp/YOUR_GUID
 ```
 
 ### For Custom Agents
@@ -99,13 +99,13 @@ Fetch the playbook in your preferred format:
 
 ```bash
 # JSON (default)
-curl https://agentplaybooks.com/api/playbooks/YOUR_GUID
+curl https://agentplaybooks.ai/api/playbooks/YOUR_GUID
 
 # OpenAPI spec
-curl https://agentplaybooks.com/api/playbooks/YOUR_GUID?format=openapi
+curl https://agentplaybooks.ai/api/playbooks/YOUR_GUID?format=openapi
 
 # MCP format
-curl https://agentplaybooks.com/api/playbooks/YOUR_GUID?format=mcp
+curl https://agentplaybooks.ai/api/playbooks/YOUR_GUID?format=mcp
 ```
 
 ## Step 7: Enable AI Write-Back (Optional)
@@ -119,7 +119,7 @@ Let your AI store information in the playbook's memory:
 
 ```
 You can store memories at:
-POST https://agentplaybooks.com/api/agent/YOUR_GUID/memory
+POST https://agentplaybooks.ai/api/agent/YOUR_GUID/memory
 Authorization: Bearer YOUR_API_KEY
 Body: {"key": "memory_name", "value": {...}}
 ```

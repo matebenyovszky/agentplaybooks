@@ -142,7 +142,7 @@ export default function DocsPage() {
 
           <div className="mt-8 pt-8 border-t border-neutral-800">
             <a
-              href="https://github.com/your-repo/agentplaybooks"
+              href="https://github.com/matebenyovszky/agentplaybooks"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 px-3 py-2 text-sm text-neutral-400 hover:text-white transition-colors"
@@ -188,7 +188,7 @@ export default function DocsPage() {
           {/* Edit on GitHub */}
           <div className="mt-12 pt-8 border-t border-neutral-800">
             <a
-              href={`https://github.com/your-repo/agentplaybooks/edit/main/docs/${page === "readme" ? "README.md" : `${page}.md`}`}
+              href={`https://github.com/matebenyovszky/agentplaybooks/edit/main/docs/${page === "readme" ? "README.md" : `${page}.md`}`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors"

@@ -142,7 +142,7 @@ export default function LandingPage() {
               <ArrowRight className="h-5 w-5" />
             </Link>
             <a
-              href="https://github.com/your-repo/agentplaybooks"
+              href="https://github.com/matebenyovszky/agentplaybooks"
               target="_blank"
               rel="noopener noreferrer"
               className="px-8 py-4 border border-blue-800 rounded-full font-semibold text-lg hover:bg-blue-950/50 hover:border-blue-600 transition-colors flex items-center justify-center gap-2"

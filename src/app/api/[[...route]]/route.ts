@@ -1258,7 +1258,7 @@ app.get("/public/mcp/:id", async (c) => {
 // ============================================
 
 function formatAsOpenAPI(playbook: any) {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://agentplaybooks.com";
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://agentplaybooks.ai";
   
   const tools = playbook.skills.map((skill: any) => ({
     type: "function",

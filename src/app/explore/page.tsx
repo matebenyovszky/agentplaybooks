@@ -272,12 +272,12 @@ function MCPCard({ mcp, index }: { mcp: PublicMCPServer; index: number }) {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05 }}
-      className="p-5 bg-neutral-900 border border-neutral-800 rounded-xl hover:border-neutral-700 transition-colors"
+      className="p-5 bg-blue-950/30 border border-blue-900/50 rounded-xl hover:border-amber-500/30 transition-colors"
     >
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
-          <div className="p-2 bg-pink-500/10 rounded-lg">
-            <Server className="h-5 w-5 text-pink-400" />
+          <div className="p-2 bg-blue-500/10 rounded-lg">
+            <Server className="h-5 w-5 text-blue-400" />
           </div>
           <h3 className="font-semibold">{mcp.name}</h3>
         </div>
@@ -287,12 +287,12 @@ function MCPCard({ mcp, index }: { mcp: PublicMCPServer; index: number }) {
       </div>
 
       {mcp.description && (
-        <p className="text-sm text-neutral-400 mb-4 line-clamp-2">
+        <p className="text-sm text-slate-400 mb-4 line-clamp-2">
           {mcp.description}
         </p>
       )}
 
-      <div className="flex gap-4 mb-4 text-sm text-neutral-500">
+      <div className="flex gap-4 mb-4 text-sm text-slate-500">
         <span>{Array.isArray(mcp.tools) ? mcp.tools.length : 0} tools</span>
         <span>{Array.isArray(mcp.resources) ? mcp.resources.length : 0} resources</span>
       </div>
@@ -301,7 +301,7 @@ function MCPCard({ mcp, index }: { mcp: PublicMCPServer; index: number }) {
         {mcp.tags?.slice(0, 3).map((tag) => (
           <span
             key={tag}
-            className="px-2 py-0.5 bg-neutral-800 rounded text-xs text-neutral-400"
+            className="px-2 py-0.5 bg-blue-900/30 rounded text-xs text-slate-400"
           >
             {tag}
           </span>
@@ -309,11 +309,11 @@ function MCPCard({ mcp, index }: { mcp: PublicMCPServer; index: number }) {
       </div>
 
       <div className="flex items-center justify-between">
-        <span className="flex items-center gap-1 text-sm text-neutral-500">
+        <span className="flex items-center gap-1 text-sm text-slate-500">
           <TrendingUp className="h-4 w-4" />
           {mcp.usage_count} uses
         </span>
-        <button className="px-3 py-1.5 bg-indigo-500/10 text-indigo-400 rounded-lg text-sm hover:bg-indigo-500/20 transition-colors">
+        <button className="px-3 py-1.5 bg-amber-500/10 text-amber-400 rounded-lg text-sm hover:bg-amber-500/20 transition-colors">
           {t("explore.addToPlaybook")}
         </button>
       </div>

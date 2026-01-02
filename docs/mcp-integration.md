@@ -15,7 +15,7 @@ AgentPlaybooks provides an MCP-compatible server endpoint for each public playbo
 After creating and publishing a playbook, your MCP endpoint is:
 
 ```
-https://agentplaybooks.com/api/mcp/YOUR_GUID
+https://agentplaybooks.ai/api/mcp/YOUR_GUID
 ```
 
 ### 2. Configure Your MCP Client
@@ -29,7 +29,7 @@ Add to your `claude_desktop_config.json`:
   "mcpServers": {
     "my-playbook": {
       "command": "curl",
-      "args": ["-s", "https://agentplaybooks.com/api/mcp/YOUR_GUID"]
+      "args": ["-s", "https://agentplaybooks.ai/api/mcp/YOUR_GUID"]
     }
   }
 }
@@ -42,7 +42,7 @@ Or use an MCP HTTP transport:
   "mcpServers": {
     "my-playbook": {
       "transport": "http",
-      "url": "https://agentplaybooks.com/api/mcp/YOUR_GUID"
+      "url": "https://agentplaybooks.ai/api/mcp/YOUR_GUID"
     }
   }
 }
@@ -61,7 +61,7 @@ const client = new Client({
 // Connect to playbook
 await client.connect({
   transport: "http",
-  url: "https://agentplaybooks.com/api/mcp/YOUR_GUID"
+  url: "https://agentplaybooks.ai/api/mcp/YOUR_GUID"
 });
 
 // List available tools
