@@ -1,0 +1,154 @@
+{
+  "common": {
+    "appName": "AgentPlaybooks",
+    "tagline": "Platform-independent memory and toolkit for AI agents",
+    "getStarted": "Get Started",
+    "signIn": "Sign In",
+    "signUp": "Sign Up",
+    "signOut": "Sign Out",
+    "dashboard": "Dashboard",
+    "explore": "Explore",
+    "docs": "Documentation",
+    "enterprise": "Enterprise",
+    "pricing": "Pricing"
+  },
+  "landing": {
+    "hero": {
+      "title": "Your AI's Universal Memory",
+      "subtitle": "Give your AI agents, GPTs, and robots a platform-independent vault. Store skills, personas, and MCP servers - switch between AI platforms without losing anything.",
+      "cta": "Start Building Free"
+    },
+    "features": {
+      "title": "Everything Your AI Needs",
+      "personas": {
+        "title": "Personas",
+        "description": "Define system prompts and AI personalities that work across any platform"
+      },
+      "skills": {
+        "title": "Skills",
+        "description": "Create reusable capabilities and task definitions in Anthropic skill format"
+      },
+      "mcp": {
+        "title": "MCP Servers",
+        "description": "Configure Model Context Protocol servers for tools and resources"
+      },
+      "memory": {
+        "title": "Memory",
+        "description": "Persistent key-value storage your AI can read and write to"
+      },
+      "formats": {
+        "title": "Multi-Format Export",
+        "description": "JSON, OpenAPI for GPTs, MCP protocol, or human-readable Markdown"
+      },
+      "api": {
+        "title": "API Key Access",
+        "description": "Let your AI write back - update memory, skills, and personas programmatically"
+      }
+    },
+    "howItWorks": {
+      "title": "How It Works",
+      "step1": {
+        "title": "Create a Playbook",
+        "description": "Define your personas, skills, and MCP configurations in one place"
+      },
+      "step2": {
+        "title": "Publish & Share",
+        "description": "Get a unique URL that serves your playbook in any format"
+      },
+      "step3": {
+        "title": "Connect Your AI",
+        "description": "Give the URL to your GPT, Claude, or any AI agent"
+      }
+    },
+    "publicRepo": {
+      "title": "Community Repository",
+      "description": "Browse and add pre-built skills and MCP servers created by the community",
+      "browseSkills": "Browse Skills",
+      "browseMCP": "Browse MCP Servers"
+    }
+  },
+  "enterprise": {
+    "hero": {
+      "title": "Enterprise AI Orchestration",
+      "subtitle": "Standardize how your team works with AI. Create shared playbooks for onboarding, best practices, and consistent AI behavior across your organization."
+    },
+    "features": {
+      "onboarding": {
+        "title": "AI-Powered Onboarding",
+        "description": "New employees or AI agents instantly learn your processes by downloading standardized playbooks"
+      },
+      "bestPractices": {
+        "title": "Codified Best Practices",
+        "description": "Turn tribal knowledge into structured skills that any AI can follow"
+      },
+      "consistency": {
+        "title": "Consistent AI Behavior",
+        "description": "Every team member's AI assistant follows the same guidelines and procedures"
+      },
+      "governance": {
+        "title": "AI Governance",
+        "description": "Control what skills and capabilities are available to AI agents in your organization"
+      }
+    },
+    "cta": "Contact Sales"
+  },
+  "dashboard": {
+    "welcome": "Welcome back",
+    "myPlaybooks": "My Playbooks",
+    "createPlaybook": "Create Playbook",
+    "noPlaybooks": "You don't have any playbooks yet",
+    "playbookCard": {
+      "personas": "personas",
+      "skills": "skills",
+      "public": "Public",
+      "private": "Private"
+    }
+  },
+  "editor": {
+    "tabs": {
+      "personas": "Personas",
+      "skills": "Skills",
+      "mcp": "MCP Servers",
+      "memory": "Memory",
+      "apiKeys": "API Keys",
+      "settings": "Settings"
+    },
+    "save": "Save",
+    "publish": "Publish",
+    "preview": "Preview",
+    "addPersona": "Add Persona",
+    "addSkill": "Add Skill",
+    "addMCP": "Add MCP Server"
+  },
+  "apiKeys": {
+    "title": "API Keys",
+    "description": "Generate keys to let AI agents write back to this playbook",
+    "generate": "Generate New Key",
+    "name": "Key Name",
+    "permissions": "Permissions",
+    "created": "Created",
+    "lastUsed": "Last Used",
+    "revoke": "Revoke",
+    "copyWarning": "Copy this key now - you won't see it again!",
+    "permissionLabels": {
+      "memory:read": "Read Memory",
+      "memory:write": "Write Memory",
+      "skills:read": "Read Skills",
+      "skills:write": "Write Skills",
+      "personas:read": "Read Personas",
+      "personas:write": "Write Personas",
+      "full": "Full Access"
+    }
+  },
+  "explore": {
+    "title": "Explore",
+    "skills": "Skills",
+    "mcp": "MCP Servers",
+    "search": "Search...",
+    "tags": "Tags",
+    "verified": "Verified",
+    "addToPlaybook": "Add to Playbook",
+    "usageCount": "Used {count} times"
+  }
+}
+

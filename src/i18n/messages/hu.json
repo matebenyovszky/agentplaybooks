@@ -1,0 +1,154 @@
+{
+  "common": {
+    "appName": "AgentPlaybooks",
+    "tagline": "Platformfüggetlen memória és eszköztár AI agenteknek",
+    "getStarted": "Kezdés",
+    "signIn": "Bejelentkezés",
+    "signUp": "Regisztráció",
+    "signOut": "Kijelentkezés",
+    "dashboard": "Irányítópult",
+    "explore": "Felfedezés",
+    "docs": "Dokumentáció",
+    "enterprise": "Vállalati",
+    "pricing": "Árazás"
+  },
+  "landing": {
+    "hero": {
+      "title": "Az AI Univerzális Memóriája",
+      "subtitle": "Adj AI agentjeidnek, GPT-idnek és robotjaidnak egy platformfüggetlen tárhelyet. Tárold a skilleket, personákat és MCP szervereket - válts AI platformot anélkül, hogy bármit elveszítenél.",
+      "cta": "Kezdj Ingyen"
+    },
+    "features": {
+      "title": "Minden, Amire AI-odnak Szüksége Van",
+      "personas": {
+        "title": "Personák",
+        "description": "Definiálj system promptokat és AI személyiségeket, amelyek bármely platformon működnek"
+      },
+      "skills": {
+        "title": "Skillek",
+        "description": "Hozz létre újrafelhasználható képességeket és feladatdefiníciókat Anthropic skill formátumban"
+      },
+      "mcp": {
+        "title": "MCP Szerverek",
+        "description": "Konfigurálj Model Context Protocol szervereket eszközökhöz és erőforrásokhoz"
+      },
+      "memory": {
+        "title": "Memória",
+        "description": "Perzisztens kulcs-érték tároló, amit AI-od olvashat és írhat"
+      },
+      "formats": {
+        "title": "Többféle Formátum",
+        "description": "JSON, OpenAPI GPT-khez, MCP protokoll, vagy ember által olvasható Markdown"
+      },
+      "api": {
+        "title": "API Kulcs Hozzáférés",
+        "description": "Engedd, hogy AI-od visszaírjon - frissítse a memóriát, skilleket és personákat programozottan"
+      }
+    },
+    "howItWorks": {
+      "title": "Hogyan Működik",
+      "step1": {
+        "title": "Hozz Létre Playbookot",
+        "description": "Definiáld a personákat, skilleket és MCP konfigurációkat egy helyen"
+      },
+      "step2": {
+        "title": "Publikálj és Oszd Meg",
+        "description": "Kapj egy egyedi URL-t, ami bármilyen formátumban szolgálja a playbokodat"
+      },
+      "step3": {
+        "title": "Csatlakoztasd AI-odat",
+        "description": "Add meg az URL-t GPT-dnek, Claude-nak vagy bármely AI agentnek"
+      }
+    },
+    "publicRepo": {
+      "title": "Közösségi Repository",
+      "description": "Böngéssz és adj hozzá előre elkészített skilleket és MCP szervereket a közösségtől",
+      "browseSkills": "Skillek Böngészése",
+      "browseMCP": "MCP Szerverek Böngészése"
+    }
+  },
+  "enterprise": {
+    "hero": {
+      "title": "Vállalati AI Orchestráció",
+      "subtitle": "Szabványosítsd, hogyan dolgozik csapatod az AI-val. Hozz létre megosztott playbookokat betanításhoz, legjobb gyakorlatokhoz és konzisztens AI viselkedéshez a szervezeteden belül."
+    },
+    "features": {
+      "onboarding": {
+        "title": "AI-Támogatott Betanítás",
+        "description": "Új munkatársak vagy AI agentek azonnal megtanulják folyamataidat szabványos playbookok letöltésével"
+      },
+      "bestPractices": {
+        "title": "Kodifikált Legjobb Gyakorlatok",
+        "description": "Alakítsd a csapattudást strukturált skillekké, amit bármely AI követni tud"
+      },
+      "consistency": {
+        "title": "Konzisztens AI Viselkedés",
+        "description": "Minden csapattag AI asszisztense ugyanazokat az irányelveket és eljárásokat követi"
+      },
+      "governance": {
+        "title": "AI Governance",
+        "description": "Kontrollálj, milyen skillek és képességek érhetők el AI agentjeid számára szervezetedben"
+      }
+    },
+    "cta": "Kapcsolat"
+  },
+  "dashboard": {
+    "welcome": "Üdv újra",
+    "myPlaybooks": "Playbookjaim",
+    "createPlaybook": "Playbook Létrehozása",
+    "noPlaybooks": "Még nincsenek playbookjaid",
+    "playbookCard": {
+      "personas": "persona",
+      "skills": "skill",
+      "public": "Publikus",
+      "private": "Privát"
+    }
+  },
+  "editor": {
+    "tabs": {
+      "personas": "Personák",
+      "skills": "Skillek",
+      "mcp": "MCP Szerverek",
+      "memory": "Memória",
+      "apiKeys": "API Kulcsok",
+      "settings": "Beállítások"
+    },
+    "save": "Mentés",
+    "publish": "Publikálás",
+    "preview": "Előnézet",
+    "addPersona": "Persona Hozzáadása",
+    "addSkill": "Skill Hozzáadása",
+    "addMCP": "MCP Szerver Hozzáadása"
+  },
+  "apiKeys": {
+    "title": "API Kulcsok",
+    "description": "Generálj kulcsokat, hogy AI agentjeid visszaírhassanak ebbe a playbookba",
+    "generate": "Új Kulcs Generálása",
+    "name": "Kulcs Neve",
+    "permissions": "Jogosultságok",
+    "created": "Létrehozva",
+    "lastUsed": "Utoljára Használva",
+    "revoke": "Visszavonás",
+    "copyWarning": "Másold ki most - többet nem fogod látni!",
+    "permissionLabels": {
+      "memory:read": "Memória Olvasás",
+      "memory:write": "Memória Írás",
+      "skills:read": "Skill Olvasás",
+      "skills:write": "Skill Írás",
+      "personas:read": "Persona Olvasás",
+      "personas:write": "Persona Írás",
+      "full": "Teljes Hozzáférés"
+    }
+  },
+  "explore": {
+    "title": "Felfedezés",
+    "skills": "Skillek",
+    "mcp": "MCP Szerverek",
+    "search": "Keresés...",
+    "tags": "Címkék",
+    "verified": "Ellenőrzött",
+    "addToPlaybook": "Hozzáadás Playbookhoz",
+    "usageCount": "{count} alkalommal használva"
+  }
+}
+

@@ -1,0 +1,154 @@
+{
+  "common": {
+    "appName": "AgentPlaybooks",
+    "tagline": "Memoria y kit de herramientas independiente de plataforma para agentes de IA",
+    "getStarted": "Comenzar",
+    "signIn": "Iniciar Sesión",
+    "signUp": "Registrarse",
+    "signOut": "Cerrar Sesión",
+    "dashboard": "Panel",
+    "explore": "Explorar",
+    "docs": "Documentación",
+    "enterprise": "Empresas",
+    "pricing": "Precios"
+  },
+  "landing": {
+    "hero": {
+      "title": "La Memoria Universal de tu IA",
+      "subtitle": "Dale a tus agentes de IA, GPTs y robots una bóveda independiente de plataforma. Almacena habilidades, personas y servidores MCP - cambia entre plataformas de IA sin perder nada.",
+      "cta": "Empieza Gratis"
+    },
+    "features": {
+      "title": "Todo lo que tu IA Necesita",
+      "personas": {
+        "title": "Personas",
+        "description": "Define prompts de sistema y personalidades de IA que funcionan en cualquier plataforma"
+      },
+      "skills": {
+        "title": "Habilidades",
+        "description": "Crea capacidades reutilizables y definiciones de tareas en formato de habilidad Anthropic"
+      },
+      "mcp": {
+        "title": "Servidores MCP",
+        "description": "Configura servidores de Model Context Protocol para herramientas y recursos"
+      },
+      "memory": {
+        "title": "Memoria",
+        "description": "Almacenamiento persistente clave-valor que tu IA puede leer y escribir"
+      },
+      "formats": {
+        "title": "Exportación Multi-Formato",
+        "description": "JSON, OpenAPI para GPTs, protocolo MCP, o Markdown legible por humanos"
+      },
+      "api": {
+        "title": "Acceso con Clave API",
+        "description": "Deja que tu IA escriba de vuelta - actualiza memoria, habilidades y personas programáticamente"
+      }
+    },
+    "howItWorks": {
+      "title": "Cómo Funciona",
+      "step1": {
+        "title": "Crea un Playbook",
+        "description": "Define tus personas, habilidades y configuraciones MCP en un solo lugar"
+      },
+      "step2": {
+        "title": "Publica y Comparte",
+        "description": "Obtén una URL única que sirve tu playbook en cualquier formato"
+      },
+      "step3": {
+        "title": "Conecta tu IA",
+        "description": "Dale la URL a tu GPT, Claude o cualquier agente de IA"
+      }
+    },
+    "publicRepo": {
+      "title": "Repositorio Comunitario",
+      "description": "Explora y añade habilidades pre-construidas y servidores MCP creados por la comunidad",
+      "browseSkills": "Explorar Habilidades",
+      "browseMCP": "Explorar Servidores MCP"
+    }
+  },
+  "enterprise": {
+    "hero": {
+      "title": "Orquestación de IA Empresarial",
+      "subtitle": "Estandariza cómo trabaja tu equipo con IA. Crea playbooks compartidos para incorporación, mejores prácticas y comportamiento de IA consistente en tu organización."
+    },
+    "features": {
+      "onboarding": {
+        "title": "Incorporación con IA",
+        "description": "Nuevos empleados o agentes de IA aprenden instantáneamente tus procesos descargando playbooks estandarizados"
+      },
+      "bestPractices": {
+        "title": "Mejores Prácticas Codificadas",
+        "description": "Convierte el conocimiento tribal en habilidades estructuradas que cualquier IA puede seguir"
+      },
+      "consistency": {
+        "title": "Comportamiento de IA Consistente",
+        "description": "El asistente de IA de cada miembro del equipo sigue las mismas directrices y procedimientos"
+      },
+      "governance": {
+        "title": "Gobernanza de IA",
+        "description": "Controla qué habilidades y capacidades están disponibles para los agentes de IA en tu organización"
+      }
+    },
+    "cta": "Contactar Ventas"
+  },
+  "dashboard": {
+    "welcome": "Bienvenido de nuevo",
+    "myPlaybooks": "Mis Playbooks",
+    "createPlaybook": "Crear Playbook",
+    "noPlaybooks": "Aún no tienes playbooks",
+    "playbookCard": {
+      "personas": "personas",
+      "skills": "habilidades",
+      "public": "Público",
+      "private": "Privado"
+    }
+  },
+  "editor": {
+    "tabs": {
+      "personas": "Personas",
+      "skills": "Habilidades",
+      "mcp": "Servidores MCP",
+      "memory": "Memoria",
+      "apiKeys": "Claves API",
+      "settings": "Configuración"
+    },
+    "save": "Guardar",
+    "publish": "Publicar",
+    "preview": "Vista Previa",
+    "addPersona": "Añadir Persona",
+    "addSkill": "Añadir Habilidad",
+    "addMCP": "Añadir Servidor MCP"
+  },
+  "apiKeys": {
+    "title": "Claves API",
+    "description": "Genera claves para que los agentes de IA puedan escribir en este playbook",
+    "generate": "Generar Nueva Clave",
+    "name": "Nombre de Clave",
+    "permissions": "Permisos",
+    "created": "Creada",
+    "lastUsed": "Último Uso",
+    "revoke": "Revocar",
+    "copyWarning": "¡Copia esta clave ahora - no la verás de nuevo!",
+    "permissionLabels": {
+      "memory:read": "Leer Memoria",
+      "memory:write": "Escribir Memoria",
+      "skills:read": "Leer Habilidades",
+      "skills:write": "Escribir Habilidades",
+      "personas:read": "Leer Personas",
+      "personas:write": "Escribir Personas",
+      "full": "Acceso Completo"
+    }
+  },
+  "explore": {
+    "title": "Explorar",
+    "skills": "Habilidades",
+    "mcp": "Servidores MCP",
+    "search": "Buscar...",
+    "tags": "Etiquetas",
+    "verified": "Verificado",
+    "addToPlaybook": "Añadir a Playbook",
+    "usageCount": "Usado {count} veces"
+  }
+}
+

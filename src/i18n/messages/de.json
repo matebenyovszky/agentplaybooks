@@ -1,0 +1,154 @@
+{
+  "common": {
+    "appName": "AgentPlaybooks",
+    "tagline": "Plattformunabhängiger Speicher und Toolkit für KI-Agenten",
+    "getStarted": "Loslegen",
+    "signIn": "Anmelden",
+    "signUp": "Registrieren",
+    "signOut": "Abmelden",
+    "dashboard": "Dashboard",
+    "explore": "Entdecken",
+    "docs": "Dokumentation",
+    "enterprise": "Unternehmen",
+    "pricing": "Preise"
+  },
+  "landing": {
+    "hero": {
+      "title": "Das Universelle Gedächtnis Ihrer KI",
+      "subtitle": "Geben Sie Ihren KI-Agenten, GPTs und Robotern einen plattformunabhängigen Tresor. Speichern Sie Skills, Personas und MCP-Server - wechseln Sie zwischen KI-Plattformen, ohne etwas zu verlieren.",
+      "cta": "Kostenlos Starten"
+    },
+    "features": {
+      "title": "Alles, Was Ihre KI Braucht",
+      "personas": {
+        "title": "Personas",
+        "description": "Definieren Sie System-Prompts und KI-Persönlichkeiten, die auf jeder Plattform funktionieren"
+      },
+      "skills": {
+        "title": "Skills",
+        "description": "Erstellen Sie wiederverwendbare Fähigkeiten und Aufgabendefinitionen im Anthropic-Skill-Format"
+      },
+      "mcp": {
+        "title": "MCP-Server",
+        "description": "Konfigurieren Sie Model Context Protocol Server für Tools und Ressourcen"
+      },
+      "memory": {
+        "title": "Speicher",
+        "description": "Persistenter Key-Value-Speicher, den Ihre KI lesen und beschreiben kann"
+      },
+      "formats": {
+        "title": "Multi-Format-Export",
+        "description": "JSON, OpenAPI für GPTs, MCP-Protokoll oder menschenlesbares Markdown"
+      },
+      "api": {
+        "title": "API-Schlüssel-Zugang",
+        "description": "Lassen Sie Ihre KI zurückschreiben - aktualisieren Sie Speicher, Skills und Personas programmatisch"
+      }
+    },
+    "howItWorks": {
+      "title": "So Funktioniert Es",
+      "step1": {
+        "title": "Erstellen Sie ein Playbook",
+        "description": "Definieren Sie Ihre Personas, Skills und MCP-Konfigurationen an einem Ort"
+      },
+      "step2": {
+        "title": "Veröffentlichen & Teilen",
+        "description": "Erhalten Sie eine eindeutige URL, die Ihr Playbook in jedem Format bereitstellt"
+      },
+      "step3": {
+        "title": "Verbinden Sie Ihre KI",
+        "description": "Geben Sie die URL Ihrem GPT, Claude oder jedem KI-Agenten"
+      }
+    },
+    "publicRepo": {
+      "title": "Community-Repository",
+      "description": "Durchsuchen und fügen Sie vorgefertigte Skills und MCP-Server der Community hinzu",
+      "browseSkills": "Skills Durchsuchen",
+      "browseMCP": "MCP-Server Durchsuchen"
+    }
+  },
+  "enterprise": {
+    "hero": {
+      "title": "Enterprise-KI-Orchestrierung",
+      "subtitle": "Standardisieren Sie, wie Ihr Team mit KI arbeitet. Erstellen Sie gemeinsame Playbooks für Onboarding, Best Practices und konsistentes KI-Verhalten in Ihrer Organisation."
+    },
+    "features": {
+      "onboarding": {
+        "title": "KI-gestütztes Onboarding",
+        "description": "Neue Mitarbeiter oder KI-Agenten lernen sofort Ihre Prozesse durch das Herunterladen standardisierter Playbooks"
+      },
+      "bestPractices": {
+        "title": "Kodifizierte Best Practices",
+        "description": "Verwandeln Sie Stammwissen in strukturierte Skills, denen jede KI folgen kann"
+      },
+      "consistency": {
+        "title": "Konsistentes KI-Verhalten",
+        "description": "Der KI-Assistent jedes Teammitglieds folgt den gleichen Richtlinien und Verfahren"
+      },
+      "governance": {
+        "title": "KI-Governance",
+        "description": "Kontrollieren Sie, welche Skills und Fähigkeiten KI-Agenten in Ihrer Organisation zur Verfügung stehen"
+      }
+    },
+    "cta": "Kontakt"
+  },
+  "dashboard": {
+    "welcome": "Willkommen zurück",
+    "myPlaybooks": "Meine Playbooks",
+    "createPlaybook": "Playbook Erstellen",
+    "noPlaybooks": "Sie haben noch keine Playbooks",
+    "playbookCard": {
+      "personas": "Personas",
+      "skills": "Skills",
+      "public": "Öffentlich",
+      "private": "Privat"
+    }
+  },
+  "editor": {
+    "tabs": {
+      "personas": "Personas",
+      "skills": "Skills",
+      "mcp": "MCP-Server",
+      "memory": "Speicher",
+      "apiKeys": "API-Schlüssel",
+      "settings": "Einstellungen"
+    },
+    "save": "Speichern",
+    "publish": "Veröffentlichen",
+    "preview": "Vorschau",
+    "addPersona": "Persona Hinzufügen",
+    "addSkill": "Skill Hinzufügen",
+    "addMCP": "MCP-Server Hinzufügen"
+  },
+  "apiKeys": {
+    "title": "API-Schlüssel",
+    "description": "Generieren Sie Schlüssel, damit KI-Agenten in dieses Playbook zurückschreiben können",
+    "generate": "Neuen Schlüssel Generieren",
+    "name": "Schlüsselname",
+    "permissions": "Berechtigungen",
+    "created": "Erstellt",
+    "lastUsed": "Zuletzt Verwendet",
+    "revoke": "Widerrufen",
+    "copyWarning": "Kopieren Sie diesen Schlüssel jetzt - Sie werden ihn nicht wieder sehen!",
+    "permissionLabels": {
+      "memory:read": "Speicher Lesen",
+      "memory:write": "Speicher Schreiben",
+      "skills:read": "Skills Lesen",
+      "skills:write": "Skills Schreiben",
+      "personas:read": "Personas Lesen",
+      "personas:write": "Personas Schreiben",
+      "full": "Vollzugriff"
+    }
+  },
+  "explore": {
+    "title": "Entdecken",
+    "skills": "Skills",
+    "mcp": "MCP-Server",
+    "search": "Suchen...",
+    "tags": "Tags",
+    "verified": "Verifiziert",
+    "addToPlaybook": "Zu Playbook Hinzufügen",
+    "usageCount": "{count} mal verwendet"
+  }
+}
+

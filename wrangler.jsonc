@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "agentplaybooks",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2025-01-01",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // Environment variables (secrets should be set via wrangler secret)
+  "vars": {
+    "NEXT_PUBLIC_SUPABASE_URL": "https://bydcjwxfiiolmnddzbpy.supabase.co"
+  }
+}
+
