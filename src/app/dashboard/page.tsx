@@ -124,18 +124,24 @@ export default function DashboardPage() {
         <SidebarBody className="justify-between gap-10 border-r border-blue-900/30">
           <div className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
             {/* Logo */}
-            <Link href="/" className="flex items-center gap-2 py-2">
-              <div className="h-8 w-8 bg-gradient-to-br from-blue-600 to-amber-500 rounded-lg" />
+            <Link href="/" className="flex items-center gap-3 py-2 px-2 mb-2">
+              <div className="h-9 w-9 shrink-0 bg-gradient-to-br from-blue-500 to-amber-400 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">AP</span>
+              </div>
               <motion.span
-                animate={{ opacity: sidebarOpen ? 1 : 0 }}
-                className="text-lg font-bold gradient-text whitespace-pre"
+                animate={{ 
+                  opacity: sidebarOpen ? 1 : 0,
+                  width: sidebarOpen ? "auto" : 0
+                }}
+                transition={{ duration: 0.2 }}
+                className="text-lg font-bold text-amber-400 whitespace-nowrap overflow-hidden"
               >
                 AgentPlaybooks
               </motion.span>
             </Link>
 
             {/* Navigation */}
-            <div className="mt-8 flex flex-col gap-2">
+            <div className="mt-4 flex flex-col gap-1">
               {sidebarLinks.map((link, idx) => (
                 <SidebarLink key={idx} link={link} />
               ))}
