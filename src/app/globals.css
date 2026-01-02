@@ -1,8 +1,38 @@
 @import "tailwindcss";
 
+/* 
+  Color Palette: Dark Blue + Ochre/Golden (inspired by owl in twilight)
+  Primary: Deep navy/midnight blue
+  Accent: Ochre/Amber/Golden yellow
+*/
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  
+  /* Primary - Deep Blue */
+  --primary-50: #eff6ff;
+  --primary-100: #dbeafe;
+  --primary-200: #bfdbfe;
+  --primary-300: #93c5fd;
+  --primary-400: #60a5fa;
+  --primary-500: #3b82f6;
+  --primary-600: #1e40af;
+  --primary-700: #1e3a8a;
+  --primary-800: #172554;
+  --primary-900: #0f172a;
+  --primary-950: #020617;
+  
+  /* Accent - Ochre/Amber/Golden */
+  --accent-50: #fffbeb;
+  --accent-100: #fef3c7;
+  --accent-200: #fde68a;
+  --accent-300: #fcd34d;
+  --accent-400: #fbbf24;
+  --accent-500: #d97706;
+  --accent-600: #b45309;
+  --accent-700: #92400e;
+  --accent-800: #78350f;
+  --accent-900: #451a03;
 }
 
 @theme inline {
@@ -14,8 +44,8 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #0a0f1a;
+    --foreground: #f1f5f9;
   }
 }
 
@@ -48,28 +78,37 @@ body {
 }
 
 .bg-dot-thick-neutral-800 {
-  background-image: radial-gradient(circle, #262626 1px, transparent 1px);
+  background-image: radial-gradient(circle, #1e3a5f 1px, transparent 1px);
   background-size: 16px 16px;
 }
 
-.bg-dot-thick-indigo-500 {
-  background-image: radial-gradient(circle, #6366f1 1px, transparent 1px);
+.bg-dot-thick-primary {
+  background-image: radial-gradient(circle, var(--primary-600) 1px, transparent 1px);
   background-size: 16px 16px;
 }
 
-/* Gradient text */
+/* Gradient text - Deep Blue to Amber/Golden */
 .gradient-text {
-  background: linear-gradient(to right, #6366f1, #a855f7, #ec4899);
+  background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 25%, #fbbf24 75%, #d97706 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
+/* Alternative gradient for buttons etc */
+.gradient-primary {
+  background: linear-gradient(135deg, var(--primary-700) 0%, var(--primary-600) 50%, var(--accent-500) 100%);
+}
+
+.gradient-accent {
+  background: linear-gradient(135deg, var(--accent-500) 0%, var(--accent-400) 100%);
+}
+
 /* Glass effect */
 .glass {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(15, 23, 42, 0.7);
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.15);
 }
 
 /* Scrollbar styling */
@@ -83,10 +122,10 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #374151;
+  background: var(--primary-700);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #4b5563;
+  background: var(--primary-600);
 }

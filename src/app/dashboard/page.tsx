@@ -112,20 +112,20 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="animate-spin h-8 w-8 border-2 border-indigo-500 border-t-transparent rounded-full" />
+      <div className="min-h-screen bg-[#0a0f1a] flex items-center justify-center">
+        <div className="animate-spin h-8 w-8 border-2 border-amber-500 border-t-transparent rounded-full" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black text-white flex">
+    <div className="min-h-screen bg-[#0a0f1a] text-white flex">
       <Sidebar open={sidebarOpen} setOpen={setSidebarOpen}>
-        <SidebarBody className="justify-between gap-10 border-r border-neutral-800">
+        <SidebarBody className="justify-between gap-10 border-r border-blue-900/30">
           <div className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2 py-2">
-              <div className="h-8 w-8 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg" />
+              <div className="h-8 w-8 bg-gradient-to-br from-blue-600 to-amber-500 rounded-lg" />
               <motion.span
                 animate={{ opacity: sidebarOpen ? 1 : 0 }}
                 className="text-lg font-bold gradient-text whitespace-pre"
@@ -143,9 +143,9 @@ export default function DashboardPage() {
           </div>
 
           {/* User section */}
-          <div className="border-t border-neutral-800 pt-4">
+          <div className="border-t border-blue-900/30 pt-4">
             <div className="flex items-center gap-3 mb-4">
-              <div className="h-10 w-10 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold">
+              <div className="h-10 w-10 bg-gradient-to-br from-blue-600 to-amber-500 rounded-full flex items-center justify-center text-white font-semibold">
                 {user?.email?.charAt(0).toUpperCase()}
               </div>
               <motion.div
@@ -159,7 +159,7 @@ export default function DashboardPage() {
             </div>
             <button
               onClick={handleSignOut}
-              className="flex items-center gap-2 text-neutral-400 hover:text-white transition-colors w-full py-2"
+              className="flex items-center gap-2 text-slate-400 hover:text-amber-400 transition-colors w-full py-2"
             >
               <LogOut className="h-5 w-5" />
               <motion.span
@@ -181,11 +181,11 @@ export default function DashboardPage() {
               <h1 className="text-3xl font-bold">
                 {t("dashboard.welcome")}, {user?.email?.split("@")[0]}
               </h1>
-              <p className="text-neutral-400 mt-1">{t("dashboard.myPlaybooks")}</p>
+              <p className="text-slate-400 mt-1">{t("dashboard.myPlaybooks")}</p>
             </div>
             <button
               onClick={handleCreatePlaybook}
-              className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg font-semibold flex items-center gap-2 hover:opacity-90 transition-opacity"
+              className="px-4 py-2 bg-gradient-to-r from-amber-600 to-amber-400 text-slate-900 rounded-lg font-semibold flex items-center gap-2 hover:opacity-90 transition-opacity shadow-lg shadow-amber-500/25"
             >
               <Plus className="h-5 w-5" />
               {t("dashboard.createPlaybook")}
@@ -198,16 +198,16 @@ export default function DashboardPage() {
               animate={{ opacity: 1, y: 0 }}
               className="text-center py-16"
             >
-              <BookOpen className="h-16 w-16 text-neutral-600 mx-auto mb-4" />
-              <h2 className="text-xl font-semibold text-neutral-400 mb-2">
+              <BookOpen className="h-16 w-16 text-blue-800 mx-auto mb-4" />
+              <h2 className="text-xl font-semibold text-slate-400 mb-2">
                 {t("dashboard.noPlaybooks")}
               </h2>
-              <p className="text-neutral-500 mb-6">
+              <p className="text-slate-500 mb-6">
                 Create your first playbook to get started
               </p>
               <button
                 onClick={handleCreatePlaybook}
-                className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg font-semibold inline-flex items-center gap-2"
+                className="px-6 py-3 bg-gradient-to-r from-amber-600 to-amber-400 text-slate-900 rounded-lg font-semibold inline-flex items-center gap-2 shadow-lg shadow-amber-500/25"
               >
                 <Plus className="h-5 w-5" />
                 {t("dashboard.createPlaybook")}
@@ -224,17 +224,17 @@ export default function DashboardPage() {
                 >
                   <Link
                     href={`/dashboard/playbook/${playbook.id}`}
-                    className="block p-6 bg-neutral-900 border border-neutral-800 rounded-xl hover:border-neutral-700 transition-colors"
+                    className="block p-6 bg-blue-950/30 border border-blue-900/50 rounded-xl hover:border-amber-500/30 transition-colors"
                   >
                     <div className="flex items-start justify-between mb-4">
                       <h3 className="text-lg font-semibold">{playbook.name}</h3>
                       {playbook.is_public ? (
-                        <span className="flex items-center gap-1 text-xs text-green-400 bg-green-500/10 px-2 py-1 rounded-full">
+                        <span className="flex items-center gap-1 text-xs text-amber-400 bg-amber-500/10 px-2 py-1 rounded-full">
                           <Eye className="h-3 w-3" />
                           {t("dashboard.playbookCard.public")}
                         </span>
                       ) : (
-                        <span className="flex items-center gap-1 text-xs text-neutral-400 bg-neutral-800 px-2 py-1 rounded-full">
+                        <span className="flex items-center gap-1 text-xs text-slate-400 bg-blue-900/30 px-2 py-1 rounded-full">
                           <Lock className="h-3 w-3" />
                           {t("dashboard.playbookCard.private")}
                         </span>
@@ -242,12 +242,12 @@ export default function DashboardPage() {
                     </div>
                     
                     {playbook.description && (
-                      <p className="text-sm text-neutral-400 mb-4 line-clamp-2">
+                      <p className="text-sm text-slate-400 mb-4 line-clamp-2">
                         {playbook.description}
                       </p>
                     )}
 
-                    <div className="flex items-center gap-4 text-sm text-neutral-500">
+                    <div className="flex items-center gap-4 text-sm text-slate-500">
                       <span className="flex items-center gap-1">
                         <Brain className="h-4 w-4" />
                         0 {t("dashboard.playbookCard.personas")}
@@ -258,8 +258,8 @@ export default function DashboardPage() {
                       </span>
                     </div>
 
-                    <div className="mt-4 pt-4 border-t border-neutral-800">
-                      <code className="text-xs text-neutral-500 font-mono">
+                    <div className="mt-4 pt-4 border-t border-blue-900/30">
+                      <code className="text-xs text-slate-500 font-mono">
                         /{playbook.guid}
                       </code>
                     </div>

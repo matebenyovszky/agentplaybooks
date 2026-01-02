@@ -21,9 +21,24 @@ import {
   Github,
   Globe
 } from "lucide-react";
+import { useEffect, useState } from "react";
+import type { Locale } from "@/i18n/config";
 
 export default function LandingPage() {
   const t = useTranslations();
+  const [currentLocale, setCurrentLocale] = useState<Locale>("en");
+
+  useEffect(() => {
+    // Get locale from cookie or browser
+    const cookieLocale = document.cookie
+      .split("; ")
+      .find((row) => row.startsWith("NEXT_LOCALE="))
+      ?.split("=")[1] as Locale | undefined;
+    
+    if (cookieLocale) {
+      setCurrentLocale(cookieLocale);
+    }
+  }, []);
 
   const navItems = [
     { name: t("common.explore"), link: "/explore", icon: <Globe className="h-4 w-4" /> },
@@ -35,32 +50,32 @@ export default function LandingPage() {
     {
       title: t("landing.features.personas.title"),
       description: t("landing.features.personas.description"),
-      icon: <Brain className="h-6 w-6 text-indigo-500" />,
+      icon: <Brain className="h-6 w-6 text-blue-400" />,
     },
     {
       title: t("landing.features.skills.title"),
       description: t("landing.features.skills.description"),
-      icon: <Zap className="h-6 w-6 text-purple-500" />,
+      icon: <Zap className="h-6 w-6 text-amber-500" />,
     },
     {
       title: t("landing.features.mcp.title"),
       description: t("landing.features.mcp.description"),
-      icon: <Server className="h-6 w-6 text-pink-500" />,
+      icon: <Server className="h-6 w-6 text-blue-500" />,
     },
     {
       title: t("landing.features.memory.title"),
       description: t("landing.features.memory.description"),
-      icon: <Database className="h-6 w-6 text-blue-500" />,
+      icon: <Database className="h-6 w-6 text-amber-400" />,
     },
     {
       title: t("landing.features.formats.title"),
       description: t("landing.features.formats.description"),
-      icon: <FileJson className="h-6 w-6 text-green-500" />,
+      icon: <FileJson className="h-6 w-6 text-blue-300" />,
     },
     {
       title: t("landing.features.api.title"),
       description: t("landing.features.api.description"),
-      icon: <Key className="h-6 w-6 text-yellow-500" />,
+      icon: <Key className="h-6 w-6 text-amber-600" />,
     },
   ];
 
@@ -86,12 +101,12 @@ export default function LandingPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-black text-white overflow-hidden">
-      <FloatingNav navItems={navItems} />
+    <div className="min-h-screen bg-[#0a0f1a] text-white overflow-hidden">
+      <FloatingNav navItems={navItems} currentLocale={currentLocale} />
 
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center justify-center px-4">
-        <Spotlight className="-top-40 left-0 md:left-60 md:-top-20" fill="white" />
+        <Spotlight className="-top-40 left-0 md:left-60 md:-top-20" fill="#fbbf24" />
         
         <div className="relative z-10 max-w-5xl mx-auto text-center">
           <motion.div
@@ -121,7 +136,7 @@ export default function LandingPage() {
           >
             <Link
               href="/login"
-              className="px-8 py-4 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full font-semibold text-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+              className="px-8 py-4 bg-gradient-to-r from-amber-600 to-amber-400 rounded-full font-semibold text-lg text-slate-900 hover:opacity-90 transition-opacity flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25"
             >
               {t("landing.hero.cta")}
               <ArrowRight className="h-5 w-5" />
@@ -130,7 +145,7 @@ export default function LandingPage() {
               href="https://github.com/your-repo/agentplaybooks"
               target="_blank"
               rel="noopener noreferrer"
-              className="px-8 py-4 border border-neutral-700 rounded-full font-semibold text-lg hover:bg-neutral-900 transition-colors flex items-center justify-center gap-2"
+              className="px-8 py-4 border border-blue-800 rounded-full font-semibold text-lg hover:bg-blue-950/50 hover:border-blue-600 transition-colors flex items-center justify-center gap-2"
             >
               <Github className="h-5 w-5" />
               GitHub
@@ -147,7 +162,7 @@ export default function LandingPage() {
             {["JSON", "OpenAPI", "MCP", "Markdown"].map((format) => (
               <span
                 key={format}
-                className="px-3 py-1 text-sm bg-neutral-900 border border-neutral-800 rounded-full text-neutral-400"
+                className="px-3 py-1 text-sm bg-blue-950/50 border border-blue-800/50 rounded-full text-blue-300"
               >
                 {format}
               </span>
@@ -156,8 +171,8 @@ export default function LandingPage() {
         </div>
 
         {/* Gradient orbs */}
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-500/20 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl" />
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-600/15 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl" />
       </section>
 
       {/* Features Section */}
@@ -187,7 +202,7 @@ export default function LandingPage() {
       </section>
 
       {/* How It Works Section */}
-      <section className="py-24 px-4 bg-neutral-950">
+      <section className="py-24 px-4 bg-[#070b14]">
         <div className="max-w-6xl mx-auto">
           <motion.h2
             initial={{ opacity: 0 }}
@@ -206,14 +221,14 @@ export default function LandingPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
-                className="relative p-6 rounded-2xl bg-neutral-900 border border-neutral-800"
+                className="relative p-6 rounded-2xl bg-blue-950/30 border border-blue-900/50"
               >
-                <div className="absolute -top-4 -left-4 w-12 h-12 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full flex items-center justify-center font-bold text-lg">
+                <div className="absolute -top-4 -left-4 w-12 h-12 bg-gradient-to-br from-amber-500 to-amber-600 rounded-full flex items-center justify-center font-bold text-lg text-slate-900 shadow-lg shadow-amber-500/25">
                   {step.step}
                 </div>
-                <div className="mt-4 mb-4 text-indigo-400">{step.icon}</div>
+                <div className="mt-4 mb-4 text-amber-400">{step.icon}</div>
                 <h3 className="text-xl font-semibold mb-2">{step.title}</h3>
-                <p className="text-neutral-400">{step.description}</p>
+                <p className="text-slate-400">{step.description}</p>
               </motion.div>
             ))}
           </div>
@@ -235,7 +250,7 @@ export default function LandingPage() {
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
-            className="text-xl text-neutral-400 mb-10"
+            className="text-xl text-slate-400 mb-10"
           >
             {t("landing.publicRepo.description")}
           </motion.p>
@@ -247,16 +262,16 @@ export default function LandingPage() {
           >
             <Link
               href="/explore/skills"
-              className="px-6 py-3 bg-neutral-900 border border-neutral-700 rounded-full hover:bg-neutral-800 transition-colors flex items-center justify-center gap-2"
+              className="px-6 py-3 bg-blue-950/50 border border-blue-800/50 rounded-full hover:bg-blue-900/50 hover:border-blue-700 transition-colors flex items-center justify-center gap-2"
             >
-              <Zap className="h-5 w-5 text-purple-500" />
+              <Zap className="h-5 w-5 text-amber-500" />
               {t("landing.publicRepo.browseSkills")}
             </Link>
             <Link
               href="/explore/mcp"
-              className="px-6 py-3 bg-neutral-900 border border-neutral-700 rounded-full hover:bg-neutral-800 transition-colors flex items-center justify-center gap-2"
+              className="px-6 py-3 bg-blue-950/50 border border-blue-800/50 rounded-full hover:bg-blue-900/50 hover:border-blue-700 transition-colors flex items-center justify-center gap-2"
             >
-              <Server className="h-5 w-5 text-pink-500" />
+              <Server className="h-5 w-5 text-blue-400" />
               {t("landing.publicRepo.browseMCP")}
             </Link>
           </motion.div>
@@ -264,16 +279,16 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="py-12 px-4 border-t border-neutral-800">
+      <footer className="py-12 px-4 border-t border-blue-900/30">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="text-2xl font-bold gradient-text">
             {t("common.appName")}
           </div>
-          <div className="text-neutral-500 text-sm">
+          <div className="text-slate-500 text-sm">
             © {new Date().getFullYear()} AgentPlaybooks. All rights reserved.
           </div>
           <div className="flex gap-4">
-            <a href="https://github.com" className="text-neutral-400 hover:text-white transition-colors">
+            <a href="https://github.com" className="text-slate-400 hover:text-amber-400 transition-colors">
               <Github className="h-5 w-5" />
             </a>
           </div>
