@@ -16,7 +16,7 @@
     "hero": {
       "title": "Your AI's Universal Memory",
       "subtitle": "Give your AI agents, GPTs, and robots a platform-independent vault. Store skills, personas, and MCP servers - switch between AI platforms without losing anything.",
-      "cta": "Start Building Free",
+      "cta": "Explore Playbooks",
       "tryDemo": "Try Demo"
     },
     "whatIsPlaybook": {
@@ -68,15 +68,16 @@
       },
       "canvas": {
         "title": "Canvas",
-        "description": "Structured markdown documents as the agent's persistent workspace"
+        "description": "Structured markdown documents as the agent's persistent workspace",
+        "comingSoon": true
       },
       "memory": {
         "title": "Memory",
         "description": "Persistent key-value storage your AI can read and write to"
       },
       "formats": {
-        "title": "Multi-Format Export",
-        "description": "JSON, OpenAPI for GPTs, MCP protocol, or human-readable Markdown"
+        "title": "AI Platform Compatible",
+        "description": "Works with every major AI platform - OpenAI Actions, Anthropic MCP & Skills, Gemini Functions, and more"
       },
       "api": {
         "title": "API Key Access",
@@ -103,6 +104,37 @@
       "description": "Browse and add pre-built skills and MCP servers created by the community",
       "browseSkills": "Browse Skills",
       "browseMCP": "Browse MCP Servers"
+    },
+    "useCases": {
+      "title": "Sound Familiar?",
+      "subtitle": "Real problems that AgentPlaybooks solves",
+      "cases": {
+        "switchPlatform": {
+          "question": "Want to switch from ChatGPT to Gemini, but can't take your memory and conversations with you?",
+          "answer": "Your playbook travels with you. All personas, skills, and memories are stored platform-independently - just point your new AI to your playbook URL."
+        },
+        "portableSkills": {
+          "question": "Built amazing skills in Claude, but want to use them in other platforms too?",
+          "answer": "Skills in your playbook work everywhere. Export in Anthropic format, OpenAPI for GPTs, or any other format - your investment isn't locked to one vendor."
+        },
+        "missingActions": {
+          "question": "Love Grok but miss ChatGPT's custom actions and integrations?",
+          "answer": "Define your MCP servers and tools in your playbook - any AI that supports tool use can access them, regardless of platform."
+        },
+        "teamConsistency": {
+          "question": "Your team uses different AI platforms, but needs consistent behavior?",
+          "answer": "Share a playbook URL. Everyone's AI - whether Claude, GPT, or local LLM - follows the same guidelines and has access to the same skills."
+        },
+        "futureProof": {
+          "question": "Worried about being locked into today's AI platform?",
+          "answer": "AgentPlaybooks is open source with standard formats. Your playbooks will work with tomorrow's AIs and robots - we're building for the future."
+        },
+        "localLlm": {
+          "question": "Running local LLMs but want the same capabilities as cloud services?",
+          "answer": "Point your local model to your playbook. Same skills, same persona, same memory - just running on your hardware."
+        }
+      },
+      "cta": "Solve These Problems Today"
     }
   },
   "enterprise": {

@@ -39,6 +39,8 @@ function getDefaultDemoData(): DemoData {
       description: "A helpful AI assistant configured with personas, skills, and memory. Try editing this playbook to see how it works!",
       config: {},
       is_public: true,
+      star_count: 0,
+      tags: [],
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     },

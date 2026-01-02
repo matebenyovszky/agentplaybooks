@@ -460,8 +460,9 @@ export default function EnterprisePage() {
               <span className="text-xs text-purple-300 uppercase tracking-wider font-medium">Coming Soon to Enterprise</span>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
               {[
+                { icon: Shield, label: "Agent Gateway", desc: "Centralized MCP/skill proxy" },
                 { icon: LayoutDashboard, label: "Dynamic Canvas", desc: "Visual agent workflows" },
                 { icon: Layers, label: "Workspaces", desc: "Team collaboration" },
                 { icon: Code2, label: "Sandbox Apps", desc: "Code execution environments" },

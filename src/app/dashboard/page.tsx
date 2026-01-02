@@ -96,17 +96,17 @@ export default function DashboardPage() {
     {
       label: t("dashboard.myPlaybooks"),
       href: "/dashboard",
-      icon: <BookOpen className="h-5 w-5 text-neutral-400" />,
+      icon: <BookOpen className="h-5 w-5 text-blue-400" />,
     },
     {
       label: t("common.explore"),
       href: "/explore",
-      icon: <Globe className="h-5 w-5 text-neutral-400" />,
+      icon: <Globe className="h-5 w-5 text-emerald-400" />,
     },
     {
       label: "Settings",
       href: "/dashboard/settings",
-      icon: <Settings className="h-5 w-5 text-neutral-400" />,
+      icon: <Settings className="h-5 w-5 text-slate-400" />,
     },
   ];
 
@@ -143,28 +143,39 @@ export default function DashboardPage() {
           </div>
 
           {/* User section */}
-          <div className="border-t border-blue-900/30 pt-4">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="h-10 w-10 bg-gradient-to-br from-blue-600 to-amber-500 rounded-full flex items-center justify-center text-white font-semibold">
+          <div className="border-t border-blue-900/30 pt-4 mt-4">
+            <div className="flex items-center gap-3 mb-3 px-2">
+              <div className="h-9 w-9 shrink-0 bg-gradient-to-br from-blue-500 to-amber-400 rounded-full flex items-center justify-center text-white font-semibold text-sm">
                 {user?.email?.charAt(0).toUpperCase()}
               </div>
               <motion.div
-                animate={{ opacity: sidebarOpen ? 1 : 0 }}
-                className="whitespace-pre"
+                animate={{ 
+                  opacity: sidebarOpen ? 1 : 0,
+                  width: sidebarOpen ? "auto" : 0
+                }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden min-w-0"
               >
-                <p className="text-sm font-medium truncate max-w-[150px]">
+                <p className="text-sm font-medium text-slate-200 truncate max-w-[160px]">
+                  {user?.email?.split("@")[0]}
+                </p>
+                <p className="text-xs text-slate-500 truncate max-w-[160px]">
                   {user?.email}
                 </p>
               </motion.div>
             </div>
             <button
               onClick={handleSignOut}
-              className="flex items-center gap-2 text-slate-400 hover:text-amber-400 transition-colors w-full py-2"
+              className="flex items-center gap-3 text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all w-full py-2.5 px-2 rounded-lg"
             >
-              <LogOut className="h-5 w-5" />
+              <LogOut className="h-5 w-5 shrink-0" />
               <motion.span
-                animate={{ opacity: sidebarOpen ? 1 : 0 }}
-                className="whitespace-pre"
+                animate={{ 
+                  opacity: sidebarOpen ? 1 : 0,
+                  width: sidebarOpen ? "auto" : 0
+                }}
+                transition={{ duration: 0.2 }}
+                className="text-sm font-medium whitespace-nowrap overflow-hidden"
               >
                 {t("common.signOut")}
               </motion.span>

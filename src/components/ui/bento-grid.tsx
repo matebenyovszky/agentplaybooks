@@ -28,12 +28,14 @@ export const BentoGridItem = ({
   description,
   header,
   icon,
+  comingSoon,
 }: {
   className?: string;
   title?: string | React.ReactNode;
   description?: string | React.ReactNode;
   header?: React.ReactNode;
   icon?: React.ReactNode;
+  comingSoon?: boolean;
 }) => {
   return (
     <motion.div
@@ -42,10 +44,16 @@ export const BentoGridItem = ({
       transition={{ duration: 0.5 }}
       viewport={{ once: true }}
       className={cn(
-        "row-span-1 rounded-xl group/bento hover:shadow-xl hover:shadow-amber-500/5 transition duration-200 shadow-input dark:shadow-none p-4 dark:bg-blue-950/30 dark:border-blue-900/50 bg-white border border-transparent justify-between flex flex-col space-y-4",
+        "row-span-1 rounded-xl group/bento hover:shadow-xl hover:shadow-amber-500/5 transition duration-200 shadow-input dark:shadow-none p-4 dark:bg-blue-950/30 dark:border-blue-900/50 bg-white border border-transparent justify-between flex flex-col space-y-4 relative",
+        comingSoon && "opacity-70",
         className
       )}
     >
+      {comingSoon && (
+        <span className="absolute top-2 right-2 px-2 py-0.5 text-[10px] font-medium bg-purple-500/20 text-purple-300 rounded-full border border-purple-500/30">
+          Coming Soon
+        </span>
+      )}
       {header}
       <div className="group-hover/bento:translate-x-2 transition duration-200">
         {icon}

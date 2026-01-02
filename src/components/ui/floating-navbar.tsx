@@ -101,9 +101,6 @@ export const FloatingNav = ({
           <Home className="h-4 w-4" />
         </Link>
 
-        {/* Separator */}
-        <div className="h-4 w-px bg-neutral-700" />
-
         {navItems.map((navItem, idx) => (
           <Link
             key={`link-${idx}`}
@@ -160,10 +157,9 @@ export const FloatingNav = ({
 
         <Link
           href="/login"
-          className="border text-sm font-medium relative border-neutral-200 dark:border-amber-500/30 text-black dark:text-white px-4 py-2 rounded-full hover:border-amber-500 transition-colors"
+          className="text-sm font-medium relative border border-amber-500/50 text-black dark:text-white px-4 py-2 rounded-full hover:border-amber-400 hover:bg-amber-500/10 transition-all"
         >
           <span>{t("common.signIn")}</span>
-          <span className="absolute inset-x-0 w-1/2 mx-auto -bottom-px bg-gradient-to-r from-transparent via-amber-500 to-transparent h-px" />
         </Link>
       </motion.div>
     </AnimatePresence>

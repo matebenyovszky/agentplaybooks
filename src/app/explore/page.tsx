@@ -227,14 +227,15 @@ export default function ExplorePage() {
             </div>
             
             <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-500">{t("explore.sortBy")}:</span>
+              <span className="text-sm text-slate-400">{t("explore.sortBy")}:</span>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as SortType)}
                 className={cn(
-                  "px-3 py-1.5 rounded-lg text-sm",
-                  "bg-blue-950/50 border border-blue-800/50",
-                  "text-slate-300 focus:outline-none focus:border-amber-500"
+                  "px-3 py-2 rounded-lg text-sm cursor-pointer",
+                  "bg-slate-800 border border-slate-600",
+                  "text-white focus:outline-none focus:border-amber-500",
+                  "[&>option]:bg-slate-800 [&>option]:text-white [&>option]:py-2"
                 )}
               >
                 <option value="stars">{t("explore.mostStarred")}</option>

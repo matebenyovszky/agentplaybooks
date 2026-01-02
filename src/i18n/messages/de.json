@@ -38,8 +38,8 @@
         "description": "Persistenter Key-Value-Speicher, den Ihre KI lesen und beschreiben kann"
       },
       "formats": {
-        "title": "Multi-Format-Export",
-        "description": "JSON, OpenAPI für GPTs, MCP-Protokoll oder menschenlesbares Markdown"
+        "title": "AI-Plattform Kompatibel",
+        "description": "Funktioniert mit jeder großen KI-Plattform - OpenAI Actions, Anthropic MCP & Skills, Gemini Functions und mehr"
       },
       "api": {
         "title": "API-Schlüssel-Zugang",

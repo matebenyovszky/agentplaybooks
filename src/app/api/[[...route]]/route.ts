@@ -101,12 +101,14 @@ async function validateApiKey(c: any, requiredPermission: string): Promise<ApiKe
   const keyHash = await hashApiKey(apiKey);
   const supabase = getServiceSupabase();
 
-  const { data: apiKeyData } = await supabase
+  const { data } = await supabase
     .from("api_keys")
     .select("*")
     .eq("key_hash", keyHash)
     .eq("is_active", true)
     .single();
+
+  const apiKeyData = data as ApiKey | null;
 
   if (!apiKeyData) {
     return null;

@@ -2,6 +2,29 @@
 
 This directory contains utility scripts for managing AgentPlaybooks data.
 
+## Quick Start
+
+```bash
+# Full seed (recommended for fresh install)
+npm run seed
+
+# Or via SQL directly
+psql $DATABASE_URL -f scripts/seed-full.sql
+
+# Reset everything and reseed (DELETES ALL DATA!)
+psql $DATABASE_URL -f scripts/reset-and-seed.sql
+```
+
+## Available Scripts
+
+| Script | Description |
+|--------|-------------|
+| `seed-data.ts` | TypeScript seed script (fetches from GitHub) |
+| `seed-full.sql` | Complete SQL seed (standalone, no GitHub) |
+| `reset-and-seed.sql` | Delete all data and reseed |
+| `github-skill-parser.ts` | Parse cursor rules from GitHub |
+| `seed-data.ps1` | PowerShell wrapper for Windows |
+
 ## Seed Script
 
 Seeds the database with sample skills and MCP servers.

@@ -1,163 +1,255 @@
 // Auto-generated types will be here
 // For now, define manually based on our schema
 
+export type McpTool = {
+  name: string;
+  description?: string;
+  inputSchema?: Record<string, unknown>;
+};
+
+export type McpResource = {
+  uri: string;
+  name: string;
+  description?: string;
+  mimeType?: string;
+};
+
+export type SkillDefinition = {
+  parameters?: {
+    type?: string;
+    properties?: Record<string, { type?: string; description?: string; enum?: string[]; [key: string]: unknown }>;
+    required?: string[];
+  };
+  [key: string]: unknown;
+};
+
+export type PlaybooksRow = {
+  id: string;
+  user_id: string;
+  guid: string;
+  name: string;
+  description: string | null;
+  config: Record<string, unknown>;
+  is_public: boolean;
+  star_count: number;
+  tags: string[];
+  created_at: string;
+  updated_at: string;
+};
+
+export type PlaybooksInsert = Partial<PlaybooksRow>;
+export type PlaybooksUpdate = Partial<PlaybooksRow>;
+
+export type PlaybookStarsRow = {
+  id: string;
+  playbook_id: string;
+  user_id: string;
+  created_at: string;
+};
+
+export type PlaybookStarsInsert = Partial<PlaybookStarsRow>;
+export type PlaybookStarsUpdate = Partial<PlaybookStarsRow>;
+
+export type PersonasRow = {
+  id: string;
+  playbook_id: string;
+  name: string;
+  system_prompt: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+};
+
+export type PersonasInsert = Partial<PersonasRow>;
+export type PersonasUpdate = Partial<PersonasRow>;
+
+export type SkillsRow = {
+  id: string;
+  playbook_id: string;
+  name: string;
+  description: string | null;
+  definition: SkillDefinition;
+  examples: Record<string, unknown>[];
+  created_at: string;
+};
+
+export type SkillsInsert = Partial<SkillsRow>;
+export type SkillsUpdate = Partial<SkillsRow>;
+
+export type MCPServersRow = {
+  id: string;
+  playbook_id: string;
+  name: string;
+  description: string | null;
+  tools: McpTool[];
+  resources: McpResource[];
+  created_at: string;
+};
+
+export type MCPServersInsert = Partial<MCPServersRow>;
+export type MCPServersUpdate = Partial<MCPServersRow>;
+
+export type CanvasRow = {
+  id: string;
+  playbook_id: string;
+  name: string;
+  slug: string;
+  content: string;
+  metadata: Record<string, unknown>;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CanvasInsert = Partial<CanvasRow>;
+export type CanvasUpdate = Partial<CanvasRow>;
+
+export type MemoriesRow = {
+  id: string;
+  playbook_id: string;
+  key: string;
+  value: Record<string, unknown>;
+  updated_at: string;
+};
+
+export type MemoriesInsert = Partial<MemoriesRow>;
+export type MemoriesUpdate = Partial<MemoriesRow>;
+
+export type ApiKeysRow = {
+  id: string;
+  playbook_id: string;
+  key_hash: string;
+  key_prefix: string;
+  name: string | null;
+  permissions: string[];
+  last_used_at: string | null;
+  expires_at: string | null;
+  is_active: boolean;
+  created_at: string;
+};
+
+export type ApiKeysInsert = Partial<ApiKeysRow>;
+export type ApiKeysUpdate = Partial<ApiKeysRow>;
+
+export type PublicSkillsRow = {
+  id: string;
+  original_skill_id: string | null;
+  author_id: string;
+  name: string;
+  description: string | null;
+  definition: SkillDefinition;
+  examples: Record<string, unknown>[];
+  tags: string[];
+  usage_count: number;
+  is_verified: boolean;
+  created_at: string;
+};
+
+export type PublicSkillsInsert = Partial<PublicSkillsRow>;
+export type PublicSkillsUpdate = Partial<PublicSkillsRow>;
+
+export type PublicMCPServersRow = {
+  id: string;
+  original_mcp_id: string | null;
+  author_id: string;
+  name: string;
+  description: string | null;
+  tools: McpTool[];
+  resources: McpResource[];
+  transport_type: string;
+  tags: string[];
+  usage_count: number;
+  is_verified: boolean;
+  created_at: string;
+};
+
+export type PublicMCPServersInsert = Partial<PublicMCPServersRow>;
+export type PublicMCPServersUpdate = Partial<PublicMCPServersRow>;
+
+export type PlaybookPublicItemsRow = {
+  id: string;
+  playbook_id: string;
+  item_type: "skill" | "mcp";
+  item_id: string;
+  added_at: string;
+};
+
+export type PlaybookPublicItemsInsert = Partial<PlaybookPublicItemsRow>;
+export type PlaybookPublicItemsUpdate = Partial<PlaybookPublicItemsRow>;
+
 export interface Database {
   public: {
     Tables: {
       playbooks: {
-        Row: {
-          id: string;
-          user_id: string;
-          guid: string;
-          name: string;
-          description: string | null;
-          config: Record<string, unknown>;
-          is_public: boolean;
-          star_count: number;
-          tags: string[];
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: Omit<Database["public"]["Tables"]["playbooks"]["Row"], "id" | "created_at" | "updated_at" | "star_count">;
-        Update: Partial<Database["public"]["Tables"]["playbooks"]["Insert"]>;
+        Row: PlaybooksRow;
+        Insert: PlaybooksInsert;
+        Update: PlaybooksUpdate;
+        Relationships: [];
       };
       playbook_stars: {
-        Row: {
-          id: string;
-          playbook_id: string;
-          user_id: string;
-          created_at: string;
-        };
-        Insert: Omit<Database["public"]["Tables"]["playbook_stars"]["Row"], "id" | "created_at">;
-        Update: Partial<Database["public"]["Tables"]["playbook_stars"]["Insert"]>;
+        Row: PlaybookStarsRow;
+        Insert: PlaybookStarsInsert;
+        Update: PlaybookStarsUpdate;
+        Relationships: [];
       };
       personas: {
-        Row: {
-          id: string;
-          playbook_id: string;
-          name: string;
-          system_prompt: string;
-          metadata: Record<string, unknown>;
-          created_at: string;
-        };
-        Insert: Omit<Database["public"]["Tables"]["personas"]["Row"], "id" | "created_at">;
-        Update: Partial<Database["public"]["Tables"]["personas"]["Insert"]>;
+        Row: PersonasRow;
+        Insert: PersonasInsert;
+        Update: PersonasUpdate;
+        Relationships: [];
       };
       skills: {
-        Row: {
-          id: string;
-          playbook_id: string;
-          name: string;
-          description: string | null;
-          definition: Record<string, unknown>;
-          examples: Record<string, unknown>[];
-          created_at: string;
-        };
-        Insert: Omit<Database["public"]["Tables"]["skills"]["Row"], "id" | "created_at">;
-        Update: Partial<Database["public"]["Tables"]["skills"]["Insert"]>;
+        Row: SkillsRow;
+        Insert: SkillsInsert;
+        Update: SkillsUpdate;
+        Relationships: [];
       };
       mcp_servers: {
-        Row: {
-          id: string;
-          playbook_id: string;
-          name: string;
-          description: string | null;
-          tools: Record<string, unknown>[];
-          resources: Record<string, unknown>[];
-          created_at: string;
-        };
-        Insert: Omit<Database["public"]["Tables"]["mcp_servers"]["Row"], "id" | "created_at">;
-        Update: Partial<Database["public"]["Tables"]["mcp_servers"]["Insert"]>;
+        Row: MCPServersRow;
+        Insert: MCPServersInsert;
+        Update: MCPServersUpdate;
+        Relationships: [];
       };
       canvas: {
-        Row: {
-          id: string;
-          playbook_id: string;
-          name: string;
-          slug: string;
-          content: string;
-          metadata: Record<string, unknown>;
-          sort_order: number;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: Omit<Database["public"]["Tables"]["canvas"]["Row"], "id" | "created_at" | "updated_at">;
-        Update: Partial<Database["public"]["Tables"]["canvas"]["Insert"]>;
+        Row: CanvasRow;
+        Insert: CanvasInsert;
+        Update: CanvasUpdate;
+        Relationships: [];
       };
       memories: {
-        Row: {
-          id: string;
-          playbook_id: string;
-          key: string;
-          value: Record<string, unknown>;
-          updated_at: string;
-        };
-        Insert: Omit<Database["public"]["Tables"]["memories"]["Row"], "id" | "updated_at">;
-        Update: Partial<Database["public"]["Tables"]["memories"]["Insert"]>;
+        Row: MemoriesRow;
+        Insert: MemoriesInsert;
+        Update: MemoriesUpdate;
+        Relationships: [];
       };
       api_keys: {
-        Row: {
-          id: string;
-          playbook_id: string;
-          key_hash: string;
-          key_prefix: string;
-          name: string | null;
-          permissions: string[];
-          last_used_at: string | null;
-          expires_at: string | null;
-          is_active: boolean;
-          created_at: string;
-        };
-        Insert: Omit<Database["public"]["Tables"]["api_keys"]["Row"], "id" | "created_at" | "last_used_at">;
-        Update: Partial<Database["public"]["Tables"]["api_keys"]["Insert"]>;
+        Row: ApiKeysRow;
+        Insert: ApiKeysInsert;
+        Update: ApiKeysUpdate;
+        Relationships: [];
       };
       public_skills: {
-        Row: {
-          id: string;
-          original_skill_id: string | null;
-          author_id: string;
-          name: string;
-          description: string | null;
-          definition: Record<string, unknown>;
-          examples: Record<string, unknown>[];
-          tags: string[];
-          usage_count: number;
-          is_verified: boolean;
-          created_at: string;
-        };
-        Insert: Omit<Database["public"]["Tables"]["public_skills"]["Row"], "id" | "created_at" | "usage_count">;
-        Update: Partial<Database["public"]["Tables"]["public_skills"]["Insert"]>;
+        Row: PublicSkillsRow;
+        Insert: PublicSkillsInsert;
+        Update: PublicSkillsUpdate;
+        Relationships: [];
       };
       public_mcp_servers: {
-        Row: {
-          id: string;
-          original_mcp_id: string | null;
-          author_id: string;
-          name: string;
-          description: string | null;
-          tools: Record<string, unknown>[];
-          resources: Record<string, unknown>[];
-          transport_type: string;
-          tags: string[];
-          usage_count: number;
-          is_verified: boolean;
-          created_at: string;
-        };
-        Insert: Omit<Database["public"]["Tables"]["public_mcp_servers"]["Row"], "id" | "created_at" | "usage_count">;
-        Update: Partial<Database["public"]["Tables"]["public_mcp_servers"]["Insert"]>;
+        Row: PublicMCPServersRow;
+        Insert: PublicMCPServersInsert;
+        Update: PublicMCPServersUpdate;
+        Relationships: [];
       };
       playbook_public_items: {
-        Row: {
-          id: string;
-          playbook_id: string;
-          item_type: "skill" | "mcp";
-          item_id: string;
-          added_at: string;
-        };
-        Insert: Omit<Database["public"]["Tables"]["playbook_public_items"]["Row"], "id" | "added_at">;
-        Update: Partial<Database["public"]["Tables"]["playbook_public_items"]["Insert"]>;
+        Row: PlaybookPublicItemsRow;
+        Insert: PlaybookPublicItemsInsert;
+        Update: PlaybookPublicItemsUpdate;
+        Relationships: [];
       };
     };
+    Views: Record<string, { Row: Record<string, unknown>; Relationships: [] }>;
+    Functions: Record<string, { Args: Record<string, unknown> | never; Returns: unknown }>;
+    Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>;
   };
 }
 
@@ -181,4 +273,3 @@ export interface PublicPlaybook extends Playbook {
   author_email?: string;
   is_starred?: boolean;
 }
-

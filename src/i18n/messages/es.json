@@ -38,8 +38,8 @@
         "description": "Almacenamiento persistente clave-valor que tu IA puede leer y escribir"
       },
       "formats": {
-        "title": "Exportación Multi-Formato",
-        "description": "JSON, OpenAPI para GPTs, protocolo MCP, o Markdown legible por humanos"
+        "title": "Compatible con Plataformas IA",
+        "description": "Funciona con todas las plataformas de IA principales - OpenAI Actions, Anthropic MCP & Skills, Gemini Functions y más"
       },
       "api": {
         "title": "Acceso con Clave API",

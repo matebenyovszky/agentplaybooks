@@ -23,7 +23,9 @@ import {
   Play,
   Sparkles,
   FileText,
-  Layers
+  Layers,
+  HelpCircle,
+  Check
 } from "lucide-react";
 export default function LandingPage() {
   const t = useTranslations();
@@ -54,6 +56,7 @@ export default function LandingPage() {
       title: t("landing.features.canvas.title"),
       description: t("landing.features.canvas.description"),
       icon: <FileText className="h-6 w-6 text-green-400" />,
+      comingSoon: true,
     },
     {
       title: t("landing.features.memory.title"),
@@ -128,7 +131,7 @@ export default function LandingPage() {
             className="flex flex-col sm:flex-row gap-4 justify-center"
           >
             <Link
-              href="/login"
+              href="/explore"
               className="px-8 py-4 bg-gradient-to-r from-amber-600 to-amber-400 rounded-full font-semibold text-lg text-slate-900 hover:opacity-90 transition-opacity flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25"
             >
               {t("landing.hero.cta")}
@@ -159,7 +162,7 @@ export default function LandingPage() {
             transition={{ duration: 0.5, delay: 0.6 }}
             className="mt-12 flex flex-wrap justify-center gap-3"
           >
-            {["Anthropic Skills", "skills.md", "MCP Protocol", "Agent Memory", "OpenAPI", "JSON Schema"].map((tech) => (
+            {["Skills Store", "Anthropic Skills", "skills.md", "MCP Protocol", "Agent Memory", "OpenAPI"].map((tech) => (
               <span
                 key={tech}
                 className="px-3 py-1 text-sm bg-blue-950/50 border border-blue-800/50 rounded-full text-blue-300"
@@ -262,14 +265,17 @@ export default function LandingPage() {
               <p className="text-sm text-slate-400">{t("landing.whatIsPlaybook.components.mcp.description")}</p>
             </motion.div>
 
-            {/* Canvas */}
+            {/* Canvas - Coming Soon */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.3 }}
-              className="p-5 rounded-2xl bg-gradient-to-b from-green-900/40 to-green-950/20 border border-green-700/30 hover:border-green-500/50 transition-all group"
+              className="p-5 rounded-2xl bg-gradient-to-b from-green-900/40 to-green-950/20 border border-green-700/30 hover:border-green-500/50 transition-all group relative opacity-70"
             >
+              <span className="absolute top-2 right-2 px-2 py-0.5 text-[10px] font-medium bg-purple-500/20 text-purple-300 rounded-full border border-purple-500/30">
+                Coming Soon
+              </span>
               <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                 <FileText className="w-6 h-6 text-green-400" />
               </div>
@@ -332,6 +338,7 @@ export default function LandingPage() {
                 title={feature.title}
                 description={feature.description}
                 icon={feature.icon}
+                comingSoon={feature.comingSoon}
                 className={i === 3 || i === 6 ? "md:col-span-2" : ""}
               />
             ))}
@@ -370,6 +377,148 @@ export default function LandingPage() {
               </motion.div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* FAQ / Use Cases Section */}
+      <section className="py-24 px-4 bg-gradient-to-b from-[#070b14] via-[#0a0f1a] to-[#070b14]">
+        <div className="max-w-5xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-16"
+          >
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/10 border border-amber-500/20 mb-6">
+              <HelpCircle className="w-4 h-4 text-amber-400" />
+              <span className="text-sm text-amber-300">Real Problems, Real Solutions</span>
+            </div>
+            <h2 className="text-4xl md:text-5xl font-bold mb-4">
+              {t("landing.useCases.title")}
+            </h2>
+            <p className="text-xl text-slate-400">
+              {t("landing.useCases.subtitle")}
+            </p>
+          </motion.div>
+
+          <div className="space-y-4">
+            {/* Switch Platform */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0 }}
+              className="p-6 rounded-2xl bg-blue-950/30 border border-blue-800/30 hover:border-blue-500/50 transition-all"
+            >
+              <p className="text-lg md:text-xl font-medium text-white mb-3">
+                {t("landing.useCases.cases.switchPlatform.question")}
+              </p>
+              <div className="flex items-start gap-3">
+                <Check className="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0" />
+                <p className="text-slate-400">{t("landing.useCases.cases.switchPlatform.answer")}</p>
+              </div>
+            </motion.div>
+
+            {/* Portable Skills */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.1 }}
+              className="p-6 rounded-2xl bg-amber-950/30 border border-amber-800/30 hover:border-amber-500/50 transition-all"
+            >
+              <p className="text-lg md:text-xl font-medium text-white mb-3">
+                {t("landing.useCases.cases.portableSkills.question")}
+              </p>
+              <div className="flex items-start gap-3">
+                <Check className="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0" />
+                <p className="text-slate-400">{t("landing.useCases.cases.portableSkills.answer")}</p>
+              </div>
+            </motion.div>
+
+            {/* Missing Actions */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.2 }}
+              className="p-6 rounded-2xl bg-purple-950/30 border border-purple-800/30 hover:border-purple-500/50 transition-all"
+            >
+              <p className="text-lg md:text-xl font-medium text-white mb-3">
+                {t("landing.useCases.cases.missingActions.question")}
+              </p>
+              <div className="flex items-start gap-3">
+                <Check className="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0" />
+                <p className="text-slate-400">{t("landing.useCases.cases.missingActions.answer")}</p>
+              </div>
+            </motion.div>
+
+            {/* Team Consistency */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.3 }}
+              className="p-6 rounded-2xl bg-green-950/30 border border-green-800/30 hover:border-green-500/50 transition-all"
+            >
+              <p className="text-lg md:text-xl font-medium text-white mb-3">
+                {t("landing.useCases.cases.teamConsistency.question")}
+              </p>
+              <div className="flex items-start gap-3">
+                <Check className="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0" />
+                <p className="text-slate-400">{t("landing.useCases.cases.teamConsistency.answer")}</p>
+              </div>
+            </motion.div>
+
+            {/* Future Proof */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.4 }}
+              className="p-6 rounded-2xl bg-cyan-950/30 border border-cyan-800/30 hover:border-cyan-500/50 transition-all"
+            >
+              <p className="text-lg md:text-xl font-medium text-white mb-3">
+                {t("landing.useCases.cases.futureProof.question")}
+              </p>
+              <div className="flex items-start gap-3">
+                <Check className="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0" />
+                <p className="text-slate-400">{t("landing.useCases.cases.futureProof.answer")}</p>
+              </div>
+            </motion.div>
+
+            {/* Local LLM */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.5 }}
+              className="p-6 rounded-2xl bg-pink-950/30 border border-pink-800/30 hover:border-pink-500/50 transition-all"
+            >
+              <p className="text-lg md:text-xl font-medium text-white mb-3">
+                {t("landing.useCases.cases.localLlm.question")}
+              </p>
+              <div className="flex items-start gap-3">
+                <Check className="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0" />
+                <p className="text-slate-400">{t("landing.useCases.cases.localLlm.answer")}</p>
+              </div>
+            </motion.div>
+          </div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mt-12"
+          >
+            <Link
+              href="/explore"
+              className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-amber-600 to-amber-400 rounded-full font-semibold text-lg text-slate-900 hover:opacity-90 transition-opacity shadow-lg shadow-amber-500/25"
+            >
+              {t("landing.useCases.cta")}
+              <ArrowRight className="h-5 w-5" />
+            </Link>
+          </motion.div>
         </div>
       </section>
 
@@ -491,11 +640,6 @@ export default function LandingPage() {
           </div>
           <div className="text-slate-500 text-sm">
             © {new Date().getFullYear()} AgentPlaybooks. All rights reserved.
-          </div>
-          <div className="flex gap-4">
-            <a href="https://github.com" className="text-slate-400 hover:text-amber-400 transition-colors">
-              <Github className="h-5 w-5" />
-            </a>
           </div>
         </div>
       </footer>

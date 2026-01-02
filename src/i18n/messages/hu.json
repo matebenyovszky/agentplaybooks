@@ -16,7 +16,7 @@
     "hero": {
       "title": "Az AI Univerzális Memóriája",
       "subtitle": "Adj AI agentjeidnek, GPT-idnek és robotjaidnak egy platformfüggetlen tárhelyet. Tárold a skilleket, personákat és MCP szervereket - válts AI platformot anélkül, hogy bármit elveszítenél.",
-      "cta": "Kezdj Ingyen",
+      "cta": "Playbook-ok Felfedezése",
       "tryDemo": "Próbáld Ki"
     },
     "whatIsPlaybook": {
@@ -68,15 +68,16 @@
       },
       "canvas": {
         "title": "Canvas",
-        "description": "Strukturált markdown dokumentumok az agent perzisztens munkaterületeként"
+        "description": "Strukturált markdown dokumentumok az agent perzisztens munkaterületeként",
+        "comingSoon": true
       },
       "memory": {
         "title": "Memória",
         "description": "Perzisztens kulcs-érték tároló, amit AI-od olvashat és írhat"
       },
       "formats": {
-        "title": "Többféle Formátum",
-        "description": "JSON, OpenAPI GPT-khez, MCP protokoll, vagy ember által olvasható Markdown"
+        "title": "AI Platform Kompatibilis",
+        "description": "Minden nagy AI platformmal működik - OpenAI Actions, Anthropic MCP & Skills, Gemini Functions, és még sok más"
       },
       "api": {
         "title": "API Kulcs Hozzáférés",
@@ -103,6 +104,37 @@
       "description": "Böngéssz és adj hozzá előre elkészített skilleket és MCP szervereket a közösségtől",
       "browseSkills": "Skillek Böngészése",
       "browseMCP": "MCP Szerverek Böngészése"
+    },
+    "useCases": {
+      "title": "Ismerős?",
+      "subtitle": "Valós problémák, amiket az AgentPlaybooks megold",
+      "cases": {
+        "switchPlatform": {
+          "question": "Váltanál ChatGPT-ről Gemini-re, de nem tudod átvinni a memóriát és beszélgetéseket?",
+          "answer": "A playbook-od veled utazik. Minden persona, skill és memória platformfüggetlenül tárolódik - csak irányítsd az új AI-odat a playbook URL-edre."
+        },
+        "portableSkills": {
+          "question": "Remek skilleket építettél Claude-ban, de más platformokon is használnád?",
+          "answer": "A playbook-odban lévő skillek mindenhol működnek. Exportálj Anthropic, OpenAPI vagy bármilyen más formátumban - a befektetésed nincs egy gyártóhoz láncolva."
+        },
+        "missingActions": {
+          "question": "Szereted a Grok-ot, de hiányoznak a ChatGPT egyedi akciói és integrációi?",
+          "answer": "Definiáld az MCP szervereidet és eszközeidet a playbook-odban - bármely AI, ami támogatja az eszközhasználatot, elérheti őket, platformtól függetlenül."
+        },
+        "teamConsistency": {
+          "question": "A csapatod különböző AI platformokat használ, de konzisztens viselkedésre lenne szükség?",
+          "answer": "Oszd meg a playbook URL-t. Mindenki AI-ja - legyen az Claude, GPT vagy helyi LLM - ugyanazokat az irányelveket követi és ugyanazokhoz a skillekhez fér hozzá."
+        },
+        "futureProof": {
+          "question": "Aggódsz, hogy beragadsz a mai AI platformba?",
+          "answer": "Az AgentPlaybooks nyílt forráskódú, szabványos formátumokkal. A playbook-jaid a holnap AI-jaival és robotjaival is működni fognak - a jövőre építünk."
+        },
+        "localLlm": {
+          "question": "Helyi LLM-eket futtatsz, de ugyanazokat a képességeket szeretnéd, mint a felhőszolgáltatások?",
+          "answer": "Irányítsd a helyi modelled a playbook-odra. Ugyanazok a skillek, ugyanaz a persona, ugyanaz a memória - csak a te hardvereden fut."
+        }
+      },
+      "cta": "Old Meg Ezeket Ma"
     }
   },
   "enterprise": {

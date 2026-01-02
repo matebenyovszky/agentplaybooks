@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/client";
+import type { McpResource, McpTool } from "@/lib/supabase/types";
 
 // MCP Protocol implementation for Cloudflare Workers / Next.js
 // Supports: tools/list, resources/list, tools/call
@@ -41,10 +42,10 @@ export async function GET(
   const personas = personasRes.data || [];
 
   // Build tools from skills
-  const tools = skills.map((skill) => ({
+  const tools: McpTool[] = skills.map((skill) => ({
     name: skill.name.toLowerCase().replace(/\s+/g, "_"),
     description: skill.description || skill.name,
-    inputSchema: skill.definition?.parameters || { type: "object", properties: {} },
+    inputSchema: (skill.definition?.parameters || { type: "object", properties: {} }) as Record<string, unknown>,
   }));
 
   // Add tools from MCP servers
@@ -55,7 +56,7 @@ export async function GET(
   }
 
   // Build resources
-  const resources = [
+  const resources: McpResource[] = [
     {
       uri: `playbook://${guid}/personas`,
       name: "Personas",

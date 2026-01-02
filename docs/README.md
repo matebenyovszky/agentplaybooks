@@ -1,8 +1,6 @@
 # AgentPlaybooks Documentation
 
-Welcome to the AgentPlaybooks documentation. This documentation is both:
-- Displayed on [GitHub](https://github.com/matebenyovszky/agentplaybooks) as standard Markdown
-- Rendered beautifully on our website at [agentplaybooks.ai/docs](https://agentplaybooks.ai/docs)
+Welcome to the AgentPlaybooks documentation.
 
 ## Quick Links
 
@@ -43,6 +41,10 @@ When you use multiple AI platforms (ChatGPT, Claude, custom agents), you often n
 AgentPlaybooks solves this by providing a central vault that any AI can access.
 
 ## Contributing
+
+This documentation is both:
+- Displayed on [GitHub](https://github.com/matebenyovszky/agentplaybooks) as standard Markdown
+- Rendered beautifully on our website at [agentplaybooks.ai/docs](https://agentplaybooks.ai/docs)
 
 This documentation is open source. Found an issue? [Edit on GitHub](https://github.com/matebenyovszky/agentplaybooks/tree/main/docs).
 

@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 
 // Documentation pages config
-const docs = [
+const docsGuides = [
   {
     slug: "getting-started",
     title: "Getting Started",
@@ -29,11 +29,47 @@ const docs = [
     icon: Rocket,
   },
   {
+    slug: "platform-integrations",
+    title: "Platform Integrations",
+    description: "Connect to ChatGPT, Claude, Gemini & more",
+    icon: Globe,
+  },
+  {
     slug: "architecture",
     title: "Architecture",
     description: "System design and components",
     icon: Layers,
   },
+];
+
+const docsConcepts = [
+  {
+    slug: "playbooks",
+    title: "Playbooks",
+    description: "Complete agent operating environment",
+    icon: FileText,
+  },
+  {
+    slug: "skills",
+    title: "Skills",
+    description: "Structured capability definitions",
+    icon: Code,
+  },
+  {
+    slug: "memory",
+    title: "Memory",
+    description: "Persistent key-value storage",
+    icon: HardDrive,
+  },
+  {
+    slug: "mcp-integration",
+    title: "MCP Integration",
+    description: "Model Context Protocol guide",
+    icon: Server,
+  },
+];
+
+const docsReference = [
   {
     slug: "api-reference",
     title: "API Reference",
@@ -41,10 +77,10 @@ const docs = [
     icon: Code,
   },
   {
-    slug: "mcp-integration",
-    title: "MCP Integration",
-    description: "Model Context Protocol guide",
-    icon: Server,
+    slug: "developer-guide",
+    title: "Developer Guide",
+    description: "Contributing and development",
+    icon: Code,
   },
   {
     slug: "self-hosting",
@@ -53,6 +89,8 @@ const docs = [
     icon: HardDrive,
   },
 ];
+
+const allDocs = [...docsGuides, ...docsConcepts, ...docsReference];
 
 export default function DocsPage() {
   const searchParams = useSearchParams();
@@ -120,11 +158,53 @@ export default function DocsPage() {
 
             <div className="pt-4 pb-2">
               <span className="px-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-                Guides
+                Getting Started
               </span>
             </div>
 
-            {docs.map((doc) => (
+            {docsGuides.map((doc) => (
+              <Link
+                key={doc.slug}
+                href={`/docs?page=${doc.slug}`}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+                  page === doc.slug 
+                    ? "bg-indigo-500/10 text-indigo-400" 
+                    : "text-neutral-400 hover:text-white hover:bg-neutral-800"
+                }`}
+              >
+                <doc.icon className="h-4 w-4" />
+                {doc.title}
+              </Link>
+            ))}
+
+            <div className="pt-4 pb-2">
+              <span className="px-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                Core Concepts
+              </span>
+            </div>
+
+            {docsConcepts.map((doc) => (
+              <Link
+                key={doc.slug}
+                href={`/docs?page=${doc.slug}`}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+                  page === doc.slug 
+                    ? "bg-indigo-500/10 text-indigo-400" 
+                    : "text-neutral-400 hover:text-white hover:bg-neutral-800"
+                }`}
+              >
+                <doc.icon className="h-4 w-4" />
+                {doc.title}
+              </Link>
+            ))}
+
+            <div className="pt-4 pb-2">
+              <span className="px-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                Reference
+              </span>
+            </div>
+
+            {docsReference.map((doc) => (
               <Link
                 key={doc.slug}
                 href={`/docs?page=${doc.slug}`}
@@ -165,7 +245,7 @@ export default function DocsPage() {
               <>
                 <ChevronRight className="h-4 w-4" />
                 <span className="text-neutral-300">
-                  {docs.find(d => d.slug === page)?.title || page}
+                  {allDocs.find(d => d.slug === page)?.title || page}
                 </span>
               </>
             )}
@@ -272,8 +352,16 @@ function parseMarkdown(md: string): string {
     // Bold and italic
     .replace(/\*\*([^*]+)\*\*/g, '<strong class="font-semibold text-white">$1</strong>')
     .replace(/\*([^*]+)\*/g, '<em class="italic text-neutral-200">$1</em>')
-    // Links
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-indigo-400 hover:text-indigo-300 underline underline-offset-2">$1</a>')
+    // Links - convert relative .md links to /docs?page= format
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, text, url) => {
+      let href = url;
+      // Convert ./something.md or something.md to /docs?page=something
+      if (url.match(/^\.?\/?([a-z0-9-]+)\.md$/i)) {
+        const slug = url.replace(/^\.?\/?/, '').replace(/\.md$/, '');
+        href = `/docs?page=${slug}`;
+      }
+      return `<a href="${href}" class="text-indigo-400 hover:text-indigo-300 underline underline-offset-2">${text}</a>`;
+    })
     // Lists
     .replace(/^\- (.*$)/gm, '<li class="ml-4">$1</li>')
     .replace(/^(\d+)\. (.*$)/gm, '<li class="ml-4">$2</li>')
