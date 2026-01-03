@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { FloatingNav } from "@/components/ui/floating-navbar";
 import { createBrowserClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
@@ -13,22 +13,13 @@ import {
   Building2,
   Globe,
   Star,
-  Download,
   Brain,
   Zap,
   Server,
-  Database,
-  Copy,
-  Check,
-  ChevronDown,
   Filter,
-  TrendingUp,
   Clock,
   User,
   ExternalLink,
-  FileJson,
-  FileCode,
-  FileText,
   Sparkles
 } from "lucide-react";
 import type { PublicPlaybook } from "@/lib/supabase/types";
@@ -266,6 +257,7 @@ export default function ExplorePage() {
                   isStarred={starredIds.has(playbook.id)}
                   onToggleStar={() => toggleStar(playbook.id)}
                   isLoggedIn={!!userId}
+                  isOwner={playbook.user_id === userId}
                 />
               ))}
             </div>
@@ -351,51 +343,15 @@ interface PlaybookCardProps {
   isStarred: boolean;
   onToggleStar: () => void;
   isLoggedIn: boolean;
+  isOwner: boolean;
 }
 
-function PlaybookCard({ playbook, index, isStarred, onToggleStar, isLoggedIn }: PlaybookCardProps) {
+function PlaybookCard({ playbook, index, isStarred, onToggleStar, isLoggedIn, isOwner }: PlaybookCardProps) {
   const t = useTranslations();
-  const [showFormats, setShowFormats] = useState(false);
-  const [copied, setCopied] = useState<string | null>(null);
 
-  const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
-
-  const formats = [
-    { 
-      id: "json", 
-      label: "JSON", 
-      icon: FileJson, 
-      url: `${baseUrl}/api/playbooks/${playbook.guid}`,
-      color: "text-green-400"
-    },
-    { 
-      id: "mcp", 
-      label: "MCP", 
-      icon: Server, 
-      url: `${baseUrl}/api/playbooks/${playbook.guid}?format=mcp`,
-      color: "text-blue-400"
-    },
-    { 
-      id: "openapi", 
-      label: "OpenAPI", 
-      icon: FileCode, 
-      url: `${baseUrl}/api/playbooks/${playbook.guid}?format=openapi`,
-      color: "text-purple-400"
-    },
-    { 
-      id: "markdown", 
-      label: "Markdown", 
-      icon: FileText, 
-      url: `${baseUrl}/api/playbooks/${playbook.guid}?format=markdown`,
-      color: "text-amber-400"
-    },
-  ];
-
-  const copyUrl = (url: string, id: string) => {
-    navigator.clipboard.writeText(url);
-    setCopied(id);
-    setTimeout(() => setCopied(null), 2000);
-  };
+  // TODO: When sign-in is fixed, change this to the proper playbook viewer URL
+  // Options: /playbooks/{guid} or /demo/playbook?id={guid}
+  const playbookUrl = `/demo/playbook?id=${playbook.guid}`;
 
   return (
     <motion.div
@@ -403,156 +359,114 @@ function PlaybookCard({ playbook, index, isStarred, onToggleStar, isLoggedIn }: 
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05 }}
       className={cn(
-        "rounded-xl overflow-hidden",
+        "rounded-xl overflow-hidden group cursor-pointer",
         "bg-gradient-to-br from-slate-900/80 to-slate-800/80",
         "border border-blue-900/30 hover:border-amber-500/30",
-        "transition-all duration-300"
+        "transition-all duration-300 hover:shadow-lg hover:shadow-amber-500/5"
       )}
     >
-      {/* Header */}
-      <div className="p-5">
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-lg truncate mb-1">
-              {playbook.name}
-            </h3>
-            {playbook.author_email && (
-              <p className="text-xs text-slate-500 flex items-center gap-1">
-                <User className="h-3 w-3" />
-                {playbook.author_email.split("@")[0]}
-              </p>
-            )}
+      {/* Clickable card body */}
+      <Link href={playbookUrl} className="block">
+        {/* Header */}
+        <div className="p-5">
+          <div className="flex items-start justify-between mb-3">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="font-semibold text-lg truncate group-hover:text-amber-400 transition-colors">
+                  {playbook.name}
+                </h3>
+                {isOwner && (
+                  <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 text-xs rounded-full font-medium shrink-0">
+                    {t("explore.yours")}
+                  </span>
+                )}
+              </div>
+              {playbook.author_email && (
+                <p className="text-xs text-slate-500 flex items-center gap-1">
+                  <User className="h-3 w-3" />
+                  {playbook.author_email.split("@")[0]}
+                </p>
+              )}
+            </div>
+            
+            {/* Star button - stop propagation to prevent link navigation */}
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onToggleStar();
+              }}
+              className={cn(
+                "flex items-center gap-1 px-3 py-1.5 rounded-lg transition-all",
+                isStarred 
+                  ? "bg-amber-500/20 text-amber-400" 
+                  : "bg-slate-800/50 text-slate-400 hover:text-amber-400 hover:bg-amber-500/10"
+              )}
+              title={isLoggedIn ? (isStarred ? "Unstar" : "Star") : "Sign in to star"}
+            >
+              <Star className={cn("h-4 w-4", isStarred && "fill-current")} />
+              <span className="text-sm font-medium">{playbook.star_count}</span>
+            </button>
           </div>
-          
-          {/* Star button */}
-          <button
-            onClick={onToggleStar}
-            className={cn(
-              "flex items-center gap-1 px-3 py-1.5 rounded-lg transition-all",
-              isStarred 
-                ? "bg-amber-500/20 text-amber-400" 
-                : "bg-slate-800/50 text-slate-400 hover:text-amber-400 hover:bg-amber-500/10"
-            )}
-            title={isLoggedIn ? (isStarred ? "Unstar" : "Star") : "Sign in to star"}
-          >
-            <Star className={cn("h-4 w-4", isStarred && "fill-current")} />
-            <span className="text-sm font-medium">{playbook.star_count}</span>
-          </button>
-        </div>
 
-        {/* Description */}
-        {playbook.description && (
-          <p className="text-sm text-slate-400 mb-4 line-clamp-2">
-            {playbook.description}
-          </p>
-        )}
+          {/* Description */}
+          {playbook.description && (
+            <p className="text-sm text-slate-400 mb-4 line-clamp-2">
+              {playbook.description}
+            </p>
+          )}
 
-        {/* Stats */}
-        <div className="flex flex-wrap gap-3 mb-4">
-          <span className="flex items-center gap-1 text-xs text-slate-500">
-            <Brain className="h-3.5 w-3.5 text-blue-400" />
-            {playbook.personas_count} {t("explore.personas")}
-          </span>
-          <span className="flex items-center gap-1 text-xs text-slate-500">
-            <Zap className="h-3.5 w-3.5 text-purple-400" />
-            {playbook.skills_count} {t("explore.skills")}
-          </span>
-          <span className="flex items-center gap-1 text-xs text-slate-500">
-            <Server className="h-3.5 w-3.5 text-pink-400" />
-            {playbook.mcp_servers_count} MCP
-          </span>
-        </div>
-
-        {/* Tags */}
-        {playbook.tags && playbook.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mb-4">
-            {playbook.tags.slice(0, 4).map((tag) => (
-              <span
-                key={tag}
-                className="px-2 py-0.5 bg-blue-900/30 rounded text-xs text-slate-400"
-              >
-                {tag}
-              </span>
-            ))}
-            {playbook.tags.length > 4 && (
-              <span className="px-2 py-0.5 text-xs text-slate-500">
-                +{playbook.tags.length - 4}
-              </span>
-            )}
+          {/* Stats */}
+          <div className="flex flex-wrap gap-3 mb-4">
+            <span className="flex items-center gap-1 text-xs text-slate-500">
+              <Brain className="h-3.5 w-3.5 text-blue-400" />
+              {playbook.personas_count} {t("explore.personas")}
+            </span>
+            <span className="flex items-center gap-1 text-xs text-slate-500">
+              <Zap className="h-3.5 w-3.5 text-purple-400" />
+              {playbook.skills_count} {t("explore.skills")}
+            </span>
+            <span className="flex items-center gap-1 text-xs text-slate-500">
+              <Server className="h-3.5 w-3.5 text-pink-400" />
+              {playbook.mcp_servers_count} MCP
+            </span>
           </div>
-        )}
-      </div>
 
-      {/* Actions */}
+          {/* Tags */}
+          {playbook.tags && playbook.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {playbook.tags.slice(0, 4).map((tag) => (
+                <span
+                  key={tag}
+                  className="px-2 py-0.5 bg-blue-900/30 rounded text-xs text-slate-400"
+                >
+                  {tag}
+                </span>
+              ))}
+              {playbook.tags.length > 4 && (
+                <span className="px-2 py-0.5 text-xs text-slate-500">
+                  +{playbook.tags.length - 4}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      </Link>
+
+      {/* Footer - view action and date */}
       <div className="px-5 py-3 border-t border-slate-700/30 bg-slate-900/30">
         <div className="flex items-center justify-between">
-          <div className="relative">
-            <button
-              onClick={() => setShowFormats(!showFormats)}
-              className={cn(
-                "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm",
-                "bg-amber-500/10 text-amber-400 hover:bg-amber-500/20",
-                "transition-colors"
-              )}
-            >
-              <Download className="h-4 w-4" />
-              {t("explore.download")}
-              <ChevronDown className={cn(
-                "h-4 w-4 transition-transform",
-                showFormats && "rotate-180"
-              )} />
-            </button>
-
-            {/* Dropdown */}
-            <AnimatePresence>
-              {showFormats && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className={cn(
-                    "absolute bottom-full left-0 mb-2 w-64",
-                    "bg-slate-800 border border-slate-700 rounded-lg shadow-xl",
-                    "overflow-hidden z-10"
-                  )}
-                >
-                  {formats.map((format) => (
-                    <div
-                      key={format.id}
-                      className="flex items-center justify-between p-3 hover:bg-slate-700/50 transition-colors"
-                    >
-                      <div className="flex items-center gap-2">
-                        <format.icon className={cn("h-4 w-4", format.color)} />
-                        <span className="text-sm text-slate-300">{format.label}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => copyUrl(format.url, format.id)}
-                          className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-600 rounded transition-colors"
-                          title="Copy URL"
-                        >
-                          {copied === format.id ? (
-                            <Check className="h-4 w-4 text-green-400" />
-                          ) : (
-                            <Copy className="h-4 w-4" />
-                          )}
-                        </button>
-                        <a
-                          href={format.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-600 rounded transition-colors"
-                          title="Open in new tab"
-                        >
-                          <ExternalLink className="h-4 w-4" />
-                        </a>
-                      </div>
-                    </div>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+          <Link
+            href={playbookUrl}
+            className={cn(
+              "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm",
+              "bg-amber-500/10 text-amber-400 hover:bg-amber-500/20",
+              "transition-colors"
+            )}
+          >
+            <ExternalLink className="h-4 w-4" />
+            {t("explore.view")}
+          </Link>
 
           <span className="text-xs text-slate-500 flex items-center gap-1">
             <Clock className="h-3 w-3" />

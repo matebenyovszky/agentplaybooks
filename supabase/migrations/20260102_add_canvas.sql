@@ -50,3 +50,4 @@ COMMENT ON COLUMN canvas.content IS 'Markdown content of the document';
 COMMENT ON COLUMN canvas.metadata IS 'Optional metadata like tags, last_editor, etc.';
 COMMENT ON COLUMN canvas.sort_order IS 'Order for displaying documents in the UI';
 
+

@@ -127,3 +127,4 @@ Browse community-contributed skills at [agentplaybooks.ai/explore](https://agent
 4. **Atomic skills** - Each skill should do one thing well
 5. **Version carefully** - Changing schemas may break existing integrations
 
+

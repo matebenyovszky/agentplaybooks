@@ -28,3 +28,4 @@ COMMENT ON COLUMN public_mcp_servers.source_type IS 'How this MCP server was add
 COMMENT ON COLUMN public_skills.source_url IS 'Original source URL (e.g., GitHub cursorrules file)';
 COMMENT ON COLUMN public_skills.source_type IS 'How this skill was added to the repository';
 
+

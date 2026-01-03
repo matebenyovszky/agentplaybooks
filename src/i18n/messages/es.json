@@ -163,7 +163,9 @@
     "noPlaybooksDesc": "¡Sé el primero en compartir un playbook con la comunidad!",
     "createFirst": "Crea Tu Primer Playbook",
     "createOwn": "Crea Tu Propio Playbook",
-    "createOwnDesc": "Construye y comparte tu configuración de IA con el mundo. Prueba primero la demo o regístrate para guardar en la nube."
+    "createOwnDesc": "Construye y comparte tu configuración de IA con el mundo. Prueba primero la demo o regístrate para guardar en la nube.",
+    "view": "Ver",
+    "yours": "Tuyo"
   },
   "demo": {
     "banner": "Modo Demo",

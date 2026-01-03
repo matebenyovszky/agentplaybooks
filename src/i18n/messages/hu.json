@@ -243,7 +243,9 @@
     "noPlaybooksDesc": "Légy te az első, aki megoszt egy playbookot a közösséggel!",
     "createFirst": "Első Playbook Létrehozása",
     "createOwn": "Hozz Létre Saját Playbookot",
-    "createOwnDesc": "Építsd és oszd meg AI konfigurációdat a világgal. Próbáld ki a demót először, vagy regisztrálj a felhőmentéshez."
+    "createOwnDesc": "Építsd és oszd meg AI konfigurációdat a világgal. Próbáld ki a demót először, vagy regisztrálj a felhőmentéshez.",
+    "view": "Megtekintés",
+    "yours": "Saját"
   },
   "demo": {
     "banner": "Demó Mód",

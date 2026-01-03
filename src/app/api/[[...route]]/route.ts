@@ -1188,7 +1188,7 @@ app.get("/public/playbooks", async (c) => {
   let query = supabase
     .from("playbooks")
     .select(`
-      id, guid, name, description, config, star_count, created_at, updated_at, user_id,
+      id, guid, name, description, config, star_count, tags, created_at, updated_at, user_id,
       personas:personas(count),
       skills:skills(count),
       mcp_servers:mcp_servers(count)
@@ -1218,12 +1218,13 @@ app.get("/public/playbooks", async (c) => {
     return c.json({ error: error.message }, 500);
   }
 
-  // Transform count objects to numbers
+  // Transform count objects to numbers with consistent naming
   const playbooks = (data || []).map((p: any) => ({
     ...p,
-    persona_count: p.personas?.[0]?.count || 0,
-    skill_count: p.skills?.[0]?.count || 0,
-    mcp_server_count: p.mcp_servers?.[0]?.count || 0,
+    personas_count: p.personas?.[0]?.count || 0,
+    skills_count: p.skills?.[0]?.count || 0,
+    mcp_servers_count: p.mcp_servers?.[0]?.count || 0,
+    tags: p.tags || [],
     personas: undefined,
     skills: undefined,
     mcp_servers: undefined,
@@ -1343,23 +1344,23 @@ app.get("/user/starred", async (c) => {
 });
 
 // ============================================
-// PUBLIC REPOSITORY ENDPOINTS (Skills & MCP - legacy)
+// PUBLIC REPOSITORY ENDPOINTS (Skills & MCP from public playbooks)
 // ============================================
 
-// GET /api/public/skills
+// GET /api/public/skills - Get skills from all public playbooks (marketplace)
 app.get("/public/skills", async (c) => {
-  const tags = c.req.query("tags")?.split(",");
   const search = c.req.query("search");
   const supabase = getSupabase();
 
+  // Get skills from public playbooks
   let query = supabase
-    .from("public_skills")
-    .select("*")
-    .order("usage_count", { ascending: false });
-
-  if (tags?.length) {
-    query = query.overlaps("tags", tags);
-  }
+    .from("skills")
+    .select(`
+      *,
+      playbook:playbooks!inner(id, guid, name, is_public, user_id)
+    `)
+    .eq("playbook.is_public", true)
+    .order("created_at", { ascending: false });
 
   if (search) {
     query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
@@ -1371,7 +1372,15 @@ app.get("/public/skills", async (c) => {
     return c.json({ error: error.message }, 500);
   }
 
-  return c.json(data || []);
+  // Transform to include playbook info
+  const skills = (data || []).map((s: any) => ({
+    ...s,
+    playbook_guid: s.playbook?.guid,
+    playbook_name: s.playbook?.name,
+    playbook: undefined // Remove nested object
+  }));
+
+  return c.json(skills);
 });
 
 // GET /api/public/skills/:id
@@ -1380,32 +1389,40 @@ app.get("/public/skills/:id", async (c) => {
   const supabase = getSupabase();
 
   const { data, error } = await supabase
-    .from("public_skills")
-    .select("*")
+    .from("skills")
+    .select(`
+      *,
+      playbook:playbooks!inner(id, guid, name, is_public)
+    `)
     .eq("id", id)
+    .eq("playbook.is_public", true)
     .single();
 
   if (error || !data) {
     return c.json({ error: "Skill not found" }, 404);
   }
 
-  return c.json(data);
+  return c.json({
+    ...data,
+    playbook_guid: (data as any).playbook?.guid,
+    playbook_name: (data as any).playbook?.name,
+    playbook: undefined
+  });
 });
 
-// GET /api/public/mcp
+// GET /api/public/mcp - Get MCP servers from all public playbooks (marketplace)
 app.get("/public/mcp", async (c) => {
-  const tags = c.req.query("tags")?.split(",");
   const search = c.req.query("search");
   const supabase = getSupabase();
 
   let query = supabase
-    .from("public_mcp_servers")
-    .select("*")
-    .order("usage_count", { ascending: false });
-
-  if (tags?.length) {
-    query = query.overlaps("tags", tags);
-  }
+    .from("mcp_servers")
+    .select(`
+      *,
+      playbook:playbooks!inner(id, guid, name, is_public, user_id)
+    `)
+    .eq("playbook.is_public", true)
+    .order("created_at", { ascending: false });
 
   if (search) {
     query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
@@ -1417,7 +1434,15 @@ app.get("/public/mcp", async (c) => {
     return c.json({ error: error.message }, 500);
   }
 
-  return c.json(data || []);
+  // Transform to include playbook info
+  const servers = (data || []).map((m: any) => ({
+    ...m,
+    playbook_guid: m.playbook?.guid,
+    playbook_name: m.playbook?.name,
+    playbook: undefined
+  }));
+
+  return c.json(servers);
 });
 
 // GET /api/public/mcp/:id
@@ -1426,16 +1451,25 @@ app.get("/public/mcp/:id", async (c) => {
   const supabase = getSupabase();
 
   const { data, error } = await supabase
-    .from("public_mcp_servers")
-    .select("*")
+    .from("mcp_servers")
+    .select(`
+      *,
+      playbook:playbooks!inner(id, guid, name, is_public)
+    `)
     .eq("id", id)
+    .eq("playbook.is_public", true)
     .single();
 
   if (error || !data) {
     return c.json({ error: "MCP Server not found" }, 404);
   }
 
-  return c.json(data);
+  return c.json({
+    ...data,
+    playbook_guid: (data as any).playbook?.guid,
+    playbook_name: (data as any).playbook?.name,
+    playbook: undefined
+  });
 });
 
 // ============================================

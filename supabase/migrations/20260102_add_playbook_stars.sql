@@ -68,3 +68,4 @@ CREATE TRIGGER star_removed
     FOR EACH ROW
     EXECUTE FUNCTION decrement_star_count();
 
+

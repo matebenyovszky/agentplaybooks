@@ -25,7 +25,7 @@
     "framer-motion": "^12.23.26",
     "hono": "^4.11.3",
     "lucide-react": "^0.562.0",
-    "next": "15.1.11",
+    "next": "15.5.9",
     "next-intl": "3.26.0",
     "react": "19.0.0",
     "react-dom": "19.0.0",
@@ -46,10 +46,14 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "15.1.4",
+    "eslint-config-next": "15.5.9",
     "tailwindcss": "^4",
     "tsx": "^4.7.0",
     "typescript": "^5",
     "wrangler": "^4.54.0"
+  },
+  "overrides": {
+    "cloudflare": "5.2.0",
+    "formdata-node": "6.0.3"
   }
 }

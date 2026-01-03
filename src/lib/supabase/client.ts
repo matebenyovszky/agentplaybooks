@@ -14,3 +14,4 @@ export function createServerClient(supabaseUrl: string, supabaseKey: string) {
   return createClient<Database>(supabaseUrl, supabaseKey);
 }
 
+

@@ -243,7 +243,9 @@
     "noPlaybooksDesc": "Be the first to share a playbook with the community!",
     "createFirst": "Create Your First Playbook",
     "createOwn": "Create Your Own Playbook",
-    "createOwnDesc": "Build and share your AI configuration with the world. Try the demo first or sign up to save to the cloud."
+    "createOwnDesc": "Build and share your AI configuration with the world. Try the demo first or sign up to save to the cloud.",
+    "view": "View",
+    "yours": "Yours"
   },
   "demo": {
     "banner": "Demo Mode",

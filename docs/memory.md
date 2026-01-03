@@ -210,3 +210,4 @@ memory.write("last_session", {"timestamp": "2026-01-02", "topic": "Memory docs"}
 - API keys are hashed before storage
 - Keys can have granular permissions
 
+

@@ -485,3 +485,4 @@ UNION ALL SELECT 'Skills (linked)', COUNT(*) FROM skills
 UNION ALL SELECT 'MCP Servers (linked)', COUNT(*) FROM mcp_servers
 UNION ALL SELECT 'Memories', COUNT(*) FROM memories;
 
+

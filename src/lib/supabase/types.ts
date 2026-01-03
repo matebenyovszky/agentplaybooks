@@ -130,51 +130,8 @@ export type ApiKeysRow = {
 export type ApiKeysInsert = Partial<ApiKeysRow>;
 export type ApiKeysUpdate = Partial<ApiKeysRow>;
 
-export type PublicSkillsRow = {
-  id: string;
-  original_skill_id: string | null;
-  author_id: string;
-  name: string;
-  description: string | null;
-  definition: SkillDefinition;
-  examples: Record<string, unknown>[];
-  tags: string[];
-  usage_count: number;
-  is_verified: boolean;
-  created_at: string;
-};
-
-export type PublicSkillsInsert = Partial<PublicSkillsRow>;
-export type PublicSkillsUpdate = Partial<PublicSkillsRow>;
-
-export type PublicMCPServersRow = {
-  id: string;
-  original_mcp_id: string | null;
-  author_id: string;
-  name: string;
-  description: string | null;
-  tools: McpTool[];
-  resources: McpResource[];
-  transport_type: string;
-  tags: string[];
-  usage_count: number;
-  is_verified: boolean;
-  created_at: string;
-};
-
-export type PublicMCPServersInsert = Partial<PublicMCPServersRow>;
-export type PublicMCPServersUpdate = Partial<PublicMCPServersRow>;
-
-export type PlaybookPublicItemsRow = {
-  id: string;
-  playbook_id: string;
-  item_type: "skill" | "mcp";
-  item_id: string;
-  added_at: string;
-};
-
-export type PlaybookPublicItemsInsert = Partial<PlaybookPublicItemsRow>;
-export type PlaybookPublicItemsUpdate = Partial<PlaybookPublicItemsRow>;
+// Public types removed - all items now belong to playbooks
+// Skills and MCP servers from public playbooks form the marketplace
 
 export interface Database {
   public: {
@@ -227,24 +184,6 @@ export interface Database {
         Update: ApiKeysUpdate;
         Relationships: [];
       };
-      public_skills: {
-        Row: PublicSkillsRow;
-        Insert: PublicSkillsInsert;
-        Update: PublicSkillsUpdate;
-        Relationships: [];
-      };
-      public_mcp_servers: {
-        Row: PublicMCPServersRow;
-        Insert: PublicMCPServersInsert;
-        Update: PublicMCPServersUpdate;
-        Relationships: [];
-      };
-      playbook_public_items: {
-        Row: PlaybookPublicItemsRow;
-        Insert: PlaybookPublicItemsInsert;
-        Update: PlaybookPublicItemsUpdate;
-        Relationships: [];
-      };
     };
     Views: Record<string, { Row: Record<string, unknown>; Relationships: [] }>;
     Functions: Record<string, { Args: Record<string, unknown> | never; Returns: unknown }>;
@@ -262,8 +201,8 @@ export type MCPServer = Database["public"]["Tables"]["mcp_servers"]["Row"];
 export type Canvas = Database["public"]["Tables"]["canvas"]["Row"];
 export type Memory = Database["public"]["Tables"]["memories"]["Row"];
 export type ApiKey = Database["public"]["Tables"]["api_keys"]["Row"];
-export type PublicSkill = Database["public"]["Tables"]["public_skills"]["Row"];
-export type PublicMCPServer = Database["public"]["Tables"]["public_mcp_servers"]["Row"];
+// Legacy: PublicSkill and PublicMCPServer types removed
+// Use Skill and MCPServer types - public items come from public playbooks
 
 // Extended types for Explore page
 export interface PublicPlaybook extends Playbook {
@@ -272,4 +211,5 @@ export interface PublicPlaybook extends Playbook {
   mcp_servers_count: number;
   author_email?: string;
   is_starred?: boolean;
+  user_id: string; // Owner/creator ID for permission checks
 }

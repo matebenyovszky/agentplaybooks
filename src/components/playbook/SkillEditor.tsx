@@ -479,3 +479,4 @@ export function SkillEditor({ skill, onUpdate, onDelete }: SkillEditorProps) {
 
 export default SkillEditor;
 
+

@@ -5,9 +5,10 @@
   Primary: Deep navy/midnight blue
   Accent: Ochre/Amber/Golden yellow
 */
+/* Force dark mode - ignore system preferences */
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  --background: #0a0f1a;
+  --foreground: #f1f5f9;
   
   /* Primary - Deep Blue */
   --primary-50: #eff6ff;
@@ -33,6 +34,9 @@
   --accent-700: #92400e;
   --accent-800: #78350f;
   --accent-900: #451a03;
+  
+  /* Force dark color-scheme for browser UI elements */
+  color-scheme: dark;
 }
 
 @theme inline {
@@ -40,13 +44,6 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0f1a;
-    --foreground: #f1f5f9;
-  }
 }
 
 body {

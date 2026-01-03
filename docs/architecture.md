@@ -190,3 +190,4 @@ The entire application deploys to Cloudflare's edge network, providing:
 - DDoS protection
 - Free SSL certificates
 
+

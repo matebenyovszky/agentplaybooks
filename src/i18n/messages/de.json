@@ -163,7 +163,9 @@
     "noPlaybooksDesc": "Seien Sie der Erste, der ein Playbook mit der Community teilt!",
     "createFirst": "Erstellen Sie Ihr erstes Playbook",
     "createOwn": "Erstellen Sie Ihr eigenes Playbook",
-    "createOwnDesc": "Erstellen und teilen Sie Ihre KI-Konfiguration mit der Welt. Probieren Sie zuerst die Demo aus oder registrieren Sie sich für Cloud-Speicher."
+    "createOwnDesc": "Erstellen und teilen Sie Ihre KI-Konfiguration mit der Welt. Probieren Sie zuerst die Demo aus oder registrieren Sie sich für Cloud-Speicher.",
+    "view": "Ansehen",
+    "yours": "Eigenes"
   },
   "demo": {
     "banner": "Demo-Modus",

@@ -407,3 +407,4 @@ export function DemoSkillEditor({ skill, onUpdate, onDelete }: DemoSkillEditorPr
   );
 }
 
+

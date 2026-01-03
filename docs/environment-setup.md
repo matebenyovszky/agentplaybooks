@@ -93,3 +93,4 @@ NEXT_PUBLIC_APP_URL=https://agentplaybooks.ai
 
 **Fix**: Ensure callback URL is `https://<YOUR-PROJECT>.supabase.co/auth/v1/callback` (NOT your app domain).
 
+
