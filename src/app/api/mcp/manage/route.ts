@@ -620,7 +620,7 @@ async function executeManagementTool(
         name: string;
         description?: string;
         definition?: Record<string, unknown>;
-        examples?: unknown[];
+        examples?: Record<string, unknown>[];
       };
 
       if (!playbook_id) throw new Error("playbook_id is required");
@@ -663,7 +663,7 @@ async function executeManagementTool(
         name?: string;
         description?: string;
         definition?: Record<string, unknown>;
-        examples?: unknown[];
+        examples?: Record<string, unknown>[];
       };
 
       if (!playbook_id || !skill_id) {
