@@ -119,7 +119,19 @@
     "preview": "Vorschau",
     "addPersona": "Persona Hinzufügen",
     "addSkill": "Skill Hinzufügen",
-    "addMCP": "MCP-Server Hinzufügen"
+    "addMCP": "MCP-Server Hinzufügen",
+    "browsePublic": "Öffentliche Durchsuchen",
+    "browsePublicSkills": "Öffentliche Skills Durchsuchen",
+    "browsePublicMCP": "Öffentliche MCP-Server Durchsuchen",
+    "searchPublic": "Nach Name oder Beschreibung suchen...",
+    "import": "Importieren",
+    "noPublicSkills": "Noch keine öffentlichen Skills verfügbar",
+    "noPublicMCP": "Noch keine öffentlichen MCP-Server verfügbar",
+    "noMatchingSkills": "Keine passenden Skills gefunden",
+    "noMatchingMCP": "Keine passenden MCP-Server gefunden",
+    "addParameter": "Parameter Hinzufügen",
+    "addTool": "Tool Hinzufügen",
+    "addResource": "Ressource Hinzufügen"
   },
   "apiKeys": {
     "title": "API-Schlüssel",

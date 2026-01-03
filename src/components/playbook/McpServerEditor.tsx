@@ -145,12 +145,18 @@ export function McpServerEditor({ mcpServer, onUpdate, onDelete }: McpServerEdit
     }
   };
 
-  // Add a new tool
+  // Add a new tool with auto-generated name
   const addTool = () => {
-    const toolName = prompt("Tool name:");
-    if (!toolName) return;
-
     const currentTools = JSON.parse(toolsJson);
+    
+    // Generate unique tool name
+    let toolNum = currentTools.length + 1;
+    let toolName = `new_tool_${toolNum}`;
+    while (currentTools.some((t: Tool) => t.name === toolName)) {
+      toolNum++;
+      toolName = `new_tool_${toolNum}`;
+    }
+    
     currentTools.push({
       name: toolName,
       description: "",
@@ -169,15 +175,21 @@ export function McpServerEditor({ mcpServer, onUpdate, onDelete }: McpServerEdit
     setToolsJson(JSON.stringify(currentTools, null, 2));
   };
 
-  // Add a new resource
+  // Add a new resource with auto-generated name
   const addResource = () => {
-    const resourceUri = prompt("Resource URI (e.g., file:///workspace):");
-    if (!resourceUri) return;
-
     const currentResources = JSON.parse(resourcesJson);
+    
+    // Generate unique resource name
+    let resNum = currentResources.length + 1;
+    let resourceName = `resource_${resNum}`;
+    while (currentResources.some((r: Resource) => r.name === resourceName)) {
+      resNum++;
+      resourceName = `resource_${resNum}`;
+    }
+    
     currentResources.push({
-      uri: resourceUri,
-      name: resourceUri.split("/").pop() || "Resource",
+      uri: `file:///path/to/${resourceName}`,
+      name: resourceName,
       description: "",
       mimeType: "application/json"
     });
@@ -363,16 +375,34 @@ export function McpServerEditor({ mcpServer, onUpdate, onDelete }: McpServerEdit
                           key={index}
                           className="p-3 bg-slate-900/50 rounded-lg border border-slate-700/50"
                         >
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <code className="text-pink-300">{tool.name}</code>
-                              {tool.description && (
-                                <p className="text-sm text-slate-500 mt-1">{tool.description}</p>
-                              )}
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 space-y-2">
+                              <input
+                                type="text"
+                                value={tool.name}
+                                onChange={(e) => {
+                                  const currentTools = JSON.parse(toolsJson);
+                                  currentTools[index].name = e.target.value.replace(/[^a-zA-Z0-9_]/g, '_');
+                                  setToolsJson(JSON.stringify(currentTools, null, 2));
+                                }}
+                                className="text-pink-300 bg-slate-800 border border-slate-700 rounded px-2 py-1 font-mono text-sm w-full focus:outline-none focus:border-pink-500/50"
+                                placeholder="tool_name"
+                              />
+                              <input
+                                type="text"
+                                value={tool.description || ""}
+                                onChange={(e) => {
+                                  const currentTools = JSON.parse(toolsJson);
+                                  currentTools[index].description = e.target.value;
+                                  setToolsJson(JSON.stringify(currentTools, null, 2));
+                                }}
+                                className="text-sm text-slate-400 bg-slate-800/50 border border-slate-700/50 rounded px-2 py-1 w-full focus:outline-none focus:border-pink-500/50"
+                                placeholder="Tool description..."
+                              />
                             </div>
                             <button
                               onClick={() => removeTool(index)}
-                              className="p-1 text-slate-500 hover:text-red-400 transition-colors"
+                              className="p-1 text-slate-500 hover:text-red-400 transition-colors shrink-0"
                             >
                               <Minus className="h-4 w-4" />
                             </button>
@@ -429,19 +459,50 @@ export function McpServerEditor({ mcpServer, onUpdate, onDelete }: McpServerEdit
                           key={index}
                           className="p-3 bg-slate-900/50 rounded-lg border border-slate-700/50"
                         >
-                          <div className="flex items-start justify-between">
-                            <div>
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 space-y-2">
                               <div className="flex items-center gap-2">
-                                <code className="text-pink-300">{resource.name}</code>
-                                <span className="text-xs px-2 py-0.5 bg-slate-800 rounded text-slate-400">
-                                  {resource.mimeType || "unknown"}
-                                </span>
+                                <input
+                                  type="text"
+                                  value={resource.name}
+                                  onChange={(e) => {
+                                    const currentResources = JSON.parse(resourcesJson);
+                                    currentResources[index].name = e.target.value;
+                                    setResourcesJson(JSON.stringify(currentResources, null, 2));
+                                  }}
+                                  className="text-pink-300 bg-slate-800 border border-slate-700 rounded px-2 py-1 font-mono text-sm flex-1 focus:outline-none focus:border-pink-500/50"
+                                  placeholder="resource_name"
+                                />
+                                <select
+                                  value={resource.mimeType || "application/json"}
+                                  onChange={(e) => {
+                                    const currentResources = JSON.parse(resourcesJson);
+                                    currentResources[index].mimeType = e.target.value;
+                                    setResourcesJson(JSON.stringify(currentResources, null, 2));
+                                  }}
+                                  className="text-xs px-2 py-1 bg-slate-800 border border-slate-700 rounded text-slate-400"
+                                >
+                                  <option value="application/json">JSON</option>
+                                  <option value="text/plain">Text</option>
+                                  <option value="text/markdown">Markdown</option>
+                                  <option value="application/xml">XML</option>
+                                </select>
                               </div>
-                              <p className="text-sm text-slate-500 mt-1 font-mono">{resource.uri}</p>
+                              <input
+                                type="text"
+                                value={resource.uri}
+                                onChange={(e) => {
+                                  const currentResources = JSON.parse(resourcesJson);
+                                  currentResources[index].uri = e.target.value;
+                                  setResourcesJson(JSON.stringify(currentResources, null, 2));
+                                }}
+                                className="text-sm text-slate-400 bg-slate-800/50 border border-slate-700/50 rounded px-2 py-1 font-mono w-full focus:outline-none focus:border-pink-500/50"
+                                placeholder="file:///path/to/resource"
+                              />
                             </div>
                             <button
                               onClick={() => removeResource(index)}
-                              className="p-1 text-slate-500 hover:text-red-400 transition-colors"
+                              className="p-1 text-slate-500 hover:text-red-400 transition-colors shrink-0"
                             >
                               <Minus className="h-4 w-4" />
                             </button>

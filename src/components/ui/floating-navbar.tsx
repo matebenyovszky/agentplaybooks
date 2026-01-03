@@ -4,9 +4,11 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { Home, ChevronDown } from "lucide-react";
+import { Home, ChevronDown, BookOpen, LogOut } from "lucide-react";
 import { locales, localeNames, localeFlags, type Locale } from "@/i18n/config";
 import { useTranslations } from "next-intl";
+import { createBrowserClient } from "@/lib/supabase/client";
+import type { User } from "@supabase/supabase-js";
 
 export const FloatingNav = ({
   navItems,
@@ -24,6 +26,25 @@ export const FloatingNav = ({
   const [lastScrollY, setLastScrollY] = useState(0);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
   const [currentLocale, setCurrentLocale] = useState<Locale>("en");
+  const [user, setUser] = useState<User | null>(null);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+
+  // Check authentication status
+  useEffect(() => {
+    const supabase = createBrowserClient();
+    
+    // Get initial user
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   // Read locale from cookie on mount
   useEffect(() => {
@@ -56,14 +77,25 @@ export const FloatingNav = ({
     return () => window.removeEventListener("scroll", handleScroll);
   }, [lastScrollY]);
 
-  // Close language menu when clicking outside
+  // Close menus when clicking outside
   useEffect(() => {
-    const handleClickOutside = () => setLangMenuOpen(false);
-    if (langMenuOpen) {
+    const handleClickOutside = () => {
+      setLangMenuOpen(false);
+      setUserMenuOpen(false);
+    };
+    if (langMenuOpen || userMenuOpen) {
       document.addEventListener("click", handleClickOutside);
       return () => document.removeEventListener("click", handleClickOutside);
     }
-  }, [langMenuOpen]);
+  }, [langMenuOpen, userMenuOpen]);
+
+  const handleSignOut = async () => {
+    const supabase = createBrowserClient();
+    await supabase.auth.signOut();
+    setUser(null);
+    setUserMenuOpen(false);
+    window.location.href = "/";
+  };
 
   const handleLocaleSelect = (newLocale: Locale) => {
     setLangMenuOpen(false);
@@ -155,12 +187,62 @@ export const FloatingNav = ({
           </AnimatePresence>
         </div>
 
-        <Link
-          href="/login"
-          className="text-sm font-medium relative border border-amber-500/50 text-white px-4 py-2 rounded-full hover:border-amber-400 hover:bg-amber-500/10 transition-all"
-        >
-          <span>{t("common.signIn")}</span>
-        </Link>
+        {/* Auth section - show user menu or sign in */}
+        {user ? (
+          <div className="relative">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setUserMenuOpen(!userMenuOpen);
+              }}
+              className="flex items-center gap-2 text-sm font-medium border border-amber-500/50 text-white px-3 py-2 rounded-full hover:border-amber-400 hover:bg-amber-500/10 transition-all"
+            >
+              <span className="w-6 h-6 rounded-full bg-amber-500/30 flex items-center justify-center text-xs font-bold text-amber-400">
+                {user.email?.charAt(0).toUpperCase() || "U"}
+              </span>
+              <ChevronDown className={cn("h-3 w-3 transition-transform", userMenuOpen && "rotate-180")} />
+            </button>
+
+            <AnimatePresence>
+              {userMenuOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute top-full right-0 mt-2 py-2 bg-neutral-900 border border-neutral-700 rounded-lg shadow-xl min-w-[180px]"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="px-4 py-2 border-b border-neutral-700">
+                    <p className="text-xs text-neutral-400 truncate">{user.email}</p>
+                  </div>
+                  <Link
+                    href="/dashboard"
+                    className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 hover:bg-neutral-800 transition-colors text-neutral-300"
+                    onClick={() => setUserMenuOpen(false)}
+                  >
+                    <BookOpen className="h-4 w-4" />
+                    <span>{t("dashboard.myPlaybooks")}</span>
+                  </Link>
+                  <button
+                    onClick={handleSignOut}
+                    className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 hover:bg-neutral-800 transition-colors text-red-400"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    <span>{t("dashboard.signOut")}</span>
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        ) : (
+          <Link
+            href="/login"
+            className="text-sm font-medium relative border border-amber-500/50 text-white px-4 py-2 rounded-full hover:border-amber-400 hover:bg-amber-500/10 transition-all"
+          >
+            <span>{t("common.signIn")}</span>
+          </Link>
+        )}
       </motion.div>
     </AnimatePresence>
   );

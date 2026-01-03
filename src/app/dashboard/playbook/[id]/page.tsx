@@ -23,7 +23,11 @@ import {
   Eye,
   EyeOff,
   ExternalLink,
-  Loader2
+  Loader2,
+  Search,
+  Download,
+  X,
+  Star
 } from "lucide-react";
 import type { Playbook, Persona, Skill, MCPServer, Memory, ApiKey } from "@/lib/supabase/types";
 
@@ -67,6 +71,14 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
+  
+  // Browse public modals
+  const [showBrowseSkills, setShowBrowseSkills] = useState(false);
+  const [showBrowseMCP, setShowBrowseMCP] = useState(false);
+  const [publicSkills, setPublicSkills] = useState<Skill[]>([]);
+  const [publicMCPs, setPublicMCPs] = useState<MCPServer[]>([]);
+  const [browseLoading, setBrowseLoading] = useState(false);
+  const [browseSearch, setBrowseSearch] = useState("");
 
   // Track changes for debounced save
   const debouncedPlaybook = useDebounce(playbook, 1500);
@@ -143,17 +155,16 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
     setHasChanges(true);
   }, [playbook]);
 
-  // Add handlers
+  // Add handlers - create items with default names, no prompt needed
   const handleAddPersona = async () => {
-    const name = prompt("Persona name:");
-    if (!name) return;
-
     const supabase = createBrowserClient();
+    const defaultName = `New Persona ${personas.length + 1}`;
+    
     const { data, error } = await supabase
       .from("personas")
       .insert({
         playbook_id: id,
-        name,
+        name: defaultName,
         system_prompt: "You are a helpful assistant.",
         metadata: {},
       })
@@ -166,15 +177,14 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
   };
 
   const handleAddSkill = async () => {
-    const name = prompt("Skill name (snake_case):");
-    if (!name) return;
-
     const supabase = createBrowserClient();
+    const defaultName = `new_skill_${skills.length + 1}`;
+    
     const { data, error } = await supabase
       .from("skills")
       .insert({
         playbook_id: id,
-        name,
+        name: defaultName,
         description: "",
         definition: { 
           parameters: { 
@@ -194,15 +204,14 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
   };
 
   const handleAddMCP = async () => {
-    const name = prompt("MCP Server name:");
-    if (!name) return;
-
     const supabase = createBrowserClient();
+    const defaultName = `New MCP Server ${mcpServers.length + 1}`;
+    
     const { data, error } = await supabase
       .from("mcp_servers")
       .insert({
         playbook_id: id,
-        name,
+        name: defaultName,
         description: "",
         tools: [],
         resources: [],
@@ -214,6 +223,108 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
       setMcpServers([...mcpServers, data as MCPServer]);
     }
   };
+
+  // Import handlers for public skills/MCP servers
+  const handleImportSkill = async (publicSkill: Skill) => {
+    const supabase = createBrowserClient();
+    
+    const { data, error } = await supabase
+      .from("skills")
+      .insert({
+        playbook_id: id,
+        name: publicSkill.name,
+        description: publicSkill.description,
+        definition: publicSkill.definition,
+        examples: publicSkill.examples,
+      })
+      .select()
+      .single();
+
+    if (!error && data) {
+      setSkills([...skills, data as Skill]);
+    }
+  };
+
+  const handleImportMCP = async (publicMCP: MCPServer) => {
+    const supabase = createBrowserClient();
+    
+    const { data, error } = await supabase
+      .from("mcp_servers")
+      .insert({
+        playbook_id: id,
+        name: publicMCP.name,
+        description: publicMCP.description,
+        tools: publicMCP.tools,
+        resources: publicMCP.resources,
+      })
+      .select()
+      .single();
+
+    if (!error && data) {
+      setMcpServers([...mcpServers, data as MCPServer]);
+      setShowBrowseMCP(false);
+    }
+  };
+
+  // Load public skills for browsing
+  const loadPublicSkills = async () => {
+    setBrowseLoading(true);
+    const supabase = createBrowserClient();
+    
+    const { data } = await supabase
+      .from("skills")
+      .select(`
+        *,
+        playbooks!inner(is_public)
+      `)
+      .eq("playbooks.is_public", true)
+      .order("name");
+    
+    setPublicSkills((data as Skill[]) || []);
+    setBrowseLoading(false);
+  };
+
+  // Load public MCP servers for browsing
+  const loadPublicMCPs = async () => {
+    setBrowseLoading(true);
+    const supabase = createBrowserClient();
+    
+    const { data } = await supabase
+      .from("mcp_servers")
+      .select(`
+        *,
+        playbooks!inner(is_public)
+      `)
+      .eq("playbooks.is_public", true)
+      .order("name");
+    
+    setPublicMCPs((data as MCPServer[]) || []);
+    setBrowseLoading(false);
+  };
+
+  // Open browse modals
+  const openBrowseSkills = () => {
+    setShowBrowseSkills(true);
+    setBrowseSearch("");
+    loadPublicSkills();
+  };
+
+  const openBrowseMCP = () => {
+    setShowBrowseMCP(true);
+    setBrowseSearch("");
+    loadPublicMCPs();
+  };
+
+  // Filter public items by search
+  const filteredPublicSkills = publicSkills.filter(s => 
+    s.name.toLowerCase().includes(browseSearch.toLowerCase()) ||
+    (s.description || "").toLowerCase().includes(browseSearch.toLowerCase())
+  );
+
+  const filteredPublicMCPs = publicMCPs.filter(m => 
+    m.name.toLowerCase().includes(browseSearch.toLowerCase()) ||
+    (m.description || "").toLowerCase().includes(browseSearch.toLowerCase())
+  );
 
   // Delete handlers
   const handleDeletePersona = async (personaId: string) => {
@@ -473,17 +584,30 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                   <Zap className="h-5 w-5 text-purple-400" />
                   {t("editor.tabs.skills")}
                 </h2>
-                <button
-                  onClick={handleAddSkill}
-                  className={cn(
-                    "px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium",
-                    "bg-purple-600/20 text-purple-400 border border-purple-500/30",
-                    "hover:bg-purple-600/30 transition-colors"
-                  )}
-                >
-                  <Plus className="h-4 w-4" />
-                  {t("editor.addSkill")}
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={openBrowseSkills}
+                    className={cn(
+                      "px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium",
+                      "bg-slate-700/50 text-slate-300 border border-slate-600/50",
+                      "hover:bg-slate-700 transition-colors"
+                    )}
+                  >
+                    <Search className="h-4 w-4" />
+                    {t("editor.browsePublic")}
+                  </button>
+                  <button
+                    onClick={handleAddSkill}
+                    className={cn(
+                      "px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium",
+                      "bg-purple-600/20 text-purple-400 border border-purple-500/30",
+                      "hover:bg-purple-600/30 transition-colors"
+                    )}
+                  >
+                    <Plus className="h-4 w-4" />
+                    {t("editor.addSkill")}
+                  </button>
+                </div>
               </div>
               
               {skills.length === 0 ? (
@@ -523,17 +647,30 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                   <Server className="h-5 w-5 text-pink-400" />
                   {t("editor.tabs.mcp")}
                 </h2>
-                <button
-                  onClick={handleAddMCP}
-                  className={cn(
-                    "px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium",
-                    "bg-pink-600/20 text-pink-400 border border-pink-500/30",
-                    "hover:bg-pink-600/30 transition-colors"
-                  )}
-                >
-                  <Plus className="h-4 w-4" />
-                  {t("editor.addMCP")}
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={openBrowseMCP}
+                    className={cn(
+                      "px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium",
+                      "bg-slate-700/50 text-slate-300 border border-slate-600/50",
+                      "hover:bg-slate-700 transition-colors"
+                    )}
+                  >
+                    <Search className="h-4 w-4" />
+                    {t("editor.browsePublic")}
+                  </button>
+                  <button
+                    onClick={handleAddMCP}
+                    className={cn(
+                      "px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium",
+                      "bg-pink-600/20 text-pink-400 border border-pink-500/30",
+                      "hover:bg-pink-600/30 transition-colors"
+                    )}
+                  >
+                    <Plus className="h-4 w-4" />
+                    {t("editor.addMCP")}
+                  </button>
+                </div>
               </div>
               
               {mcpServers.length === 0 ? (
@@ -752,6 +889,201 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
           )}
         </AnimatePresence>
       </main>
+
+      {/* Browse Public Skills Modal */}
+      <AnimatePresence>
+        {showBrowseSkills && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+            onClick={() => setShowBrowseSkills(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="w-full max-w-2xl max-h-[80vh] bg-slate-900 border border-purple-500/30 rounded-xl shadow-2xl overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-4 border-b border-slate-700/50">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <Globe className="h-5 w-5 text-purple-400" />
+                  {t("editor.browsePublicSkills")}
+                </h3>
+                <button
+                  onClick={() => setShowBrowseSkills(false)}
+                  className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Search */}
+              <div className="p-4 border-b border-slate-700/50">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                  <input
+                    type="text"
+                    value={browseSearch}
+                    onChange={(e) => setBrowseSearch(e.target.value)}
+                    placeholder={t("editor.searchPublic")}
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-purple-500/50"
+                  />
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="p-4 overflow-y-auto max-h-[50vh]">
+                {browseLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 text-purple-400 animate-spin" />
+                  </div>
+                ) : filteredPublicSkills.length === 0 ? (
+                  <div className="text-center py-8 text-slate-500">
+                    {publicSkills.length === 0 
+                      ? t("editor.noPublicSkills")
+                      : t("editor.noMatchingSkills")
+                    }
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {filteredPublicSkills.map((skill) => (
+                      <div
+                        key={skill.id}
+                        className="flex items-center justify-between p-4 bg-slate-800/50 border border-slate-700/50 rounded-lg hover:border-purple-500/30 transition-colors"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <Zap className="h-4 w-4 text-purple-400 shrink-0" />
+                            <code className="font-medium text-slate-200 font-mono">{skill.name}</code>
+                          </div>
+                          {skill.description && (
+                            <p className="text-sm text-slate-400 mt-1 truncate">
+                              {skill.description}
+                            </p>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => {
+                            handleImportSkill(skill);
+                            setShowBrowseSkills(false);
+                          }}
+                          className="shrink-0 ml-4 px-3 py-1.5 bg-purple-600/20 text-purple-400 border border-purple-500/30 rounded-lg hover:bg-purple-600/30 transition-colors flex items-center gap-1.5 text-sm"
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                          {t("editor.import")}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Browse Public MCP Servers Modal */}
+      <AnimatePresence>
+        {showBrowseMCP && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+            onClick={() => setShowBrowseMCP(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="w-full max-w-2xl max-h-[80vh] bg-slate-900 border border-pink-500/30 rounded-xl shadow-2xl overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-4 border-b border-slate-700/50">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <Globe className="h-5 w-5 text-pink-400" />
+                  {t("editor.browsePublicMCP")}
+                </h3>
+                <button
+                  onClick={() => setShowBrowseMCP(false)}
+                  className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Search */}
+              <div className="p-4 border-b border-slate-700/50">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                  <input
+                    type="text"
+                    value={browseSearch}
+                    onChange={(e) => setBrowseSearch(e.target.value)}
+                    placeholder={t("editor.searchPublic")}
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-pink-500/50"
+                  />
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="p-4 overflow-y-auto max-h-[50vh]">
+                {browseLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 text-pink-400 animate-spin" />
+                  </div>
+                ) : filteredPublicMCPs.length === 0 ? (
+                  <div className="text-center py-8 text-slate-500">
+                    {publicMCPs.length === 0 
+                      ? t("editor.noPublicMCP")
+                      : t("editor.noMatchingMCP")
+                    }
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {filteredPublicMCPs.map((mcp) => (
+                      <div
+                        key={mcp.id}
+                        className="flex items-center justify-between p-4 bg-slate-800/50 border border-slate-700/50 rounded-lg hover:border-pink-500/30 transition-colors"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <Server className="h-4 w-4 text-pink-400 shrink-0" />
+                            <span className="font-medium text-slate-200">{mcp.name}</span>
+                          </div>
+                          {mcp.description && (
+                            <p className="text-sm text-slate-400 mt-1 truncate">
+                              {mcp.description}
+                            </p>
+                          )}
+                          <div className="flex items-center gap-3 mt-2 text-xs text-slate-500">
+                            <span>{Array.isArray(mcp.tools) ? mcp.tools.length : 0} tools</span>
+                            <span>{Array.isArray(mcp.resources) ? mcp.resources.length : 0} resources</span>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            handleImportMCP(mcp);
+                          }}
+                          className="shrink-0 ml-4 px-3 py-1.5 bg-pink-600/20 text-pink-400 border border-pink-500/30 rounded-lg hover:bg-pink-600/30 transition-colors flex items-center gap-1.5 text-sm"
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                          {t("editor.import")}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -105,13 +105,12 @@ export default function DemoPlaybookPage() {
     setPlaybook(updated);
   }, [playbook]);
 
-  // Add handlers
+  // Add handlers - create items with default names, no prompt needed
   const handleAddPersona = () => {
-    const name = prompt("Persona name:");
-    if (!name) return;
-
+    const defaultName = `New Persona ${personas.length + 1}`;
+    
     const newPersona = addDemoPersona({
-      name,
+      name: defaultName,
       system_prompt: "You are a helpful assistant.",
       metadata: {},
     });
@@ -119,11 +118,10 @@ export default function DemoPlaybookPage() {
   };
 
   const handleAddSkill = () => {
-    const name = prompt("Skill name (snake_case):");
-    if (!name) return;
-
+    const defaultName = `new_skill_${skills.length + 1}`;
+    
     const newSkill = addDemoSkill({
-      name,
+      name: defaultName,
       description: "",
       definition: { 
         parameters: { 
@@ -138,11 +136,10 @@ export default function DemoPlaybookPage() {
   };
 
   const handleAddMCP = () => {
-    const name = prompt("MCP Server name:");
-    if (!name) return;
-
+    const defaultName = `New MCP Server ${mcpServers.length + 1}`;
+    
     const newMcp = addDemoMcpServer({
-      name,
+      name: defaultName,
       description: "",
       tools: [],
       resources: [],

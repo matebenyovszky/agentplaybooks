@@ -190,7 +190,19 @@
     "addPersona": "Persona Hozzáadása",
     "addSkill": "Skill Hozzáadása",
     "addMCP": "MCP Szerver Hozzáadása",
-    "addCanvas": "Canvas Hozzáadása"
+    "addCanvas": "Canvas Hozzáadása",
+    "browsePublic": "Publikus Tallózás",
+    "browsePublicSkills": "Publikus Skillek Böngészése",
+    "browsePublicMCP": "Publikus MCP Szerverek Böngészése",
+    "searchPublic": "Keresés név vagy leírás alapján...",
+    "import": "Importálás",
+    "noPublicSkills": "Még nincsenek publikus skillek",
+    "noPublicMCP": "Még nincsenek publikus MCP szerverek",
+    "noMatchingSkills": "Nincs találat a keresésre",
+    "noMatchingMCP": "Nincs találat a keresésre",
+    "addParameter": "Paraméter Hozzáadása",
+    "addTool": "Eszköz Hozzáadása",
+    "addResource": "Erőforrás Hozzáadása"
   },
   "canvas": {
     "title": "Canvas Dokumentumok",

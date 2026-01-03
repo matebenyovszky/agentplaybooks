@@ -123,8 +123,8 @@ export default function DocsPage() {
       // Map slug to filename
       const filename = slug === "readme" ? "README.md" : `${slug}.md`;
       
-      // Fetch from our API which reads from /docs folder
-      const response = await fetch(`/api/docs/${filename}`);
+      // Fetch from static /docs folder in public directory
+      const response = await fetch(`/docs/${filename}`);
       
       if (response.ok) {
         const text = await response.text();

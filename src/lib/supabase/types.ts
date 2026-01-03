@@ -130,6 +130,23 @@ export type ApiKeysRow = {
 export type ApiKeysInsert = Partial<ApiKeysRow>;
 export type ApiKeysUpdate = Partial<ApiKeysRow>;
 
+// User-level API Keys (work across all user's playbooks)
+export type UserApiKeysRow = {
+  id: string;
+  user_id: string;
+  key_hash: string;
+  key_prefix: string;
+  name: string | null;
+  permissions: string[];
+  last_used_at: string | null;
+  expires_at: string | null;
+  is_active: boolean;
+  created_at: string;
+};
+
+export type UserApiKeysInsert = Partial<UserApiKeysRow>;
+export type UserApiKeysUpdate = Partial<UserApiKeysRow>;
+
 // Public types removed - all items now belong to playbooks
 // Skills and MCP servers from public playbooks form the marketplace
 
@@ -184,6 +201,12 @@ export interface Database {
         Update: ApiKeysUpdate;
         Relationships: [];
       };
+      user_api_keys: {
+        Row: UserApiKeysRow;
+        Insert: UserApiKeysInsert;
+        Update: UserApiKeysUpdate;
+        Relationships: [];
+      };
     };
     Views: Record<string, { Row: Record<string, unknown>; Relationships: [] }>;
     Functions: Record<string, { Args: Record<string, unknown> | never; Returns: unknown }>;
@@ -201,6 +224,7 @@ export type MCPServer = Database["public"]["Tables"]["mcp_servers"]["Row"];
 export type Canvas = Database["public"]["Tables"]["canvas"]["Row"];
 export type Memory = Database["public"]["Tables"]["memories"]["Row"];
 export type ApiKey = Database["public"]["Tables"]["api_keys"]["Row"];
+export type UserApiKey = Database["public"]["Tables"]["user_api_keys"]["Row"];
 // Legacy: PublicSkill and PublicMCPServer types removed
 // Use Skill and MCPServer types - public items come from public playbooks
 

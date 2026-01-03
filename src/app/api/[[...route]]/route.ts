@@ -2,9 +2,12 @@ import { Hono } from "hono";
 import { handle } from "hono/vercel";
 import { cors } from "hono/cors";
 import { createServerClient } from "@/lib/supabase/client";
-import type { ApiKey } from "@/lib/supabase/types";
+import type { ApiKey, UserApiKeysRow } from "@/lib/supabase/types";
 import { hashApiKey, generateApiKey, generateGuid, getKeyPrefix } from "@/lib/utils";
 import { cookies } from "next/headers";
+
+// User API Key with user_id
+type UserApiKeyData = UserApiKeysRow & { user_id: string };
 
 // Types
 type Bindings = {
@@ -153,6 +156,65 @@ async function checkPlaybookOwnership(userId: string, playbookId: string): Promi
     .eq("user_id", userId)
     .single();
   return !!data;
+}
+
+// Helper: Validate User-level API key (works across all user's playbooks)
+async function validateUserApiKey(c: any, requiredPermission: string): Promise<UserApiKeyData | null> {
+  const authHeader = c.req.header("Authorization");
+  if (!authHeader?.startsWith("Bearer apb_")) {
+    return null;
+  }
+
+  const apiKey = authHeader.replace("Bearer ", "");
+  const keyHash = await hashApiKey(apiKey);
+  const supabase = getServiceSupabase();
+
+  // First try user_api_keys table
+  const { data: userKeyData } = await supabase
+    .from("user_api_keys")
+    .select("*")
+    .eq("key_hash", keyHash)
+    .eq("is_active", true)
+    .single();
+
+  if (!userKeyData) {
+    return null;
+  }
+
+  // Check expiration
+  if (userKeyData.expires_at && new Date(userKeyData.expires_at) < new Date()) {
+    return null;
+  }
+
+  // Check permission
+  if (!userKeyData.permissions.includes(requiredPermission) && !userKeyData.permissions.includes("full")) {
+    return null;
+  }
+
+  // Update last_used_at
+  await supabase
+    .from("user_api_keys")
+    .update({ last_used_at: new Date().toISOString() })
+    .eq("id", userKeyData.id);
+
+  return userKeyData as UserApiKeyData;
+}
+
+// Helper: Get user from either JWT auth or User API key
+async function getUserFromAuthOrApiKey(c: any, requiredPermission: string): Promise<{ id: string } | null> {
+  // Try JWT auth first
+  const user = await getAuthenticatedUser(c);
+  if (user) {
+    return user;
+  }
+  
+  // Try User API key
+  const userApiKey = await validateUserApiKey(c, requiredPermission);
+  if (userApiKey) {
+    return { id: userApiKey.user_id };
+  }
+  
+  return null;
 }
 
 // ============================================
@@ -934,6 +996,730 @@ app.delete("/playbooks/:id/api-keys/:kid", async (c) => {
   }
 
   return c.json({ success: true });
+});
+
+// ============================================
+// USER API KEYS MANAGEMENT
+// ============================================
+
+// GET /api/user/api-keys - List user's API keys
+app.get("/user/api-keys", async (c) => {
+  const user = await requireAuth(c);
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const supabase = getServiceSupabase();
+
+  const { data, error } = await supabase
+    .from("user_api_keys")
+    .select("id, key_prefix, name, permissions, last_used_at, expires_at, is_active, created_at")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json(data || []);
+});
+
+// POST /api/user/api-keys - Create new user API key (returns plain key ONCE)
+app.post("/user/api-keys", async (c) => {
+  const user = await requireAuth(c);
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const body = await c.req.json().catch(() => ({}));
+  const { name, permissions, expires_at } = body;
+
+  // Generate the API key
+  const plainKey = generateApiKey();
+  const keyHash = await hashApiKey(plainKey);
+  const keyPrefix = getKeyPrefix(plainKey);
+
+  const supabase = getServiceSupabase();
+
+  const { data, error } = await supabase
+    .from("user_api_keys")
+    .insert({
+      user_id: user.id,
+      key_hash: keyHash,
+      key_prefix: keyPrefix,
+      name: name || null,
+      permissions: permissions || ["playbooks:read", "playbooks:write", "memory:read", "memory:write"],
+      expires_at: expires_at || null,
+      is_active: true,
+    })
+    .select("id, key_prefix, name, permissions, expires_at, is_active, created_at")
+    .single();
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json({
+    ...data,
+    key: plainKey,
+    warning: "Save this key now! It will not be shown again.",
+  }, 201);
+});
+
+// DELETE /api/user/api-keys/:kid - Revoke user API key
+app.delete("/user/api-keys/:kid", async (c) => {
+  const user = await requireAuth(c);
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const keyId = c.req.param("kid");
+  const supabase = getServiceSupabase();
+
+  const { error } = await supabase
+    .from("user_api_keys")
+    .delete()
+    .eq("id", keyId)
+    .eq("user_id", user.id);
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json({ success: true });
+});
+
+// ============================================
+// MANAGEMENT API (User API Key supported)
+// These endpoints can be called with User API key for AI automation
+// ============================================
+
+// GET /api/manage/playbooks - List user's playbooks (User API key supported)
+app.get("/manage/playbooks", async (c) => {
+  const user = await getUserFromAuthOrApiKey(c, "playbooks:read");
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const supabase = getServiceSupabase();
+  
+  const { data, error } = await supabase
+    .from("playbooks")
+    .select(`
+      *,
+      personas:personas(count),
+      skills:skills(count),
+      mcp_servers:mcp_servers(count)
+    `)
+    .eq("user_id", user.id)
+    .order("updated_at", { ascending: false });
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  const playbooks = (data || []).map((p: any) => ({
+    ...p,
+    persona_count: p.personas?.[0]?.count || 0,
+    skill_count: p.skills?.[0]?.count || 0,
+    mcp_server_count: p.mcp_servers?.[0]?.count || 0,
+    personas: undefined,
+    skills: undefined,
+    mcp_servers: undefined,
+  }));
+
+  return c.json(playbooks);
+});
+
+// POST /api/manage/playbooks - Create playbook (User API key supported)
+app.post("/manage/playbooks", async (c) => {
+  const user = await getUserFromAuthOrApiKey(c, "playbooks:write");
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const body = await c.req.json();
+  const { name, description, is_public, config } = body;
+
+  if (!name) {
+    return c.json({ error: "Name is required" }, 400);
+  }
+
+  const supabase = getServiceSupabase();
+  const guid = generateGuid();
+
+  const { data, error } = await supabase
+    .from("playbooks")
+    .insert({
+      user_id: user.id,
+      guid,
+      name,
+      description: description || null,
+      is_public: is_public || false,
+      config: config || {},
+    })
+    .select()
+    .single();
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json(data, 201);
+});
+
+// GET /api/manage/playbooks/:id - Get playbook details (User API key supported)
+app.get("/manage/playbooks/:id", async (c) => {
+  const user = await getUserFromAuthOrApiKey(c, "playbooks:read");
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const playbookId = c.req.param("id");
+  const supabase = getServiceSupabase();
+
+  const { data: playbook, error } = await supabase
+    .from("playbooks")
+    .select("*")
+    .eq("id", playbookId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (error || !playbook) {
+    return c.json({ error: "Playbook not found" }, 404);
+  }
+
+  // Get related data
+  const [personas, skills, mcpServers] = await Promise.all([
+    supabase.from("personas").select("*").eq("playbook_id", playbook.id),
+    supabase.from("skills").select("*").eq("playbook_id", playbook.id),
+    supabase.from("mcp_servers").select("*").eq("playbook_id", playbook.id),
+  ]);
+
+  return c.json({
+    ...playbook,
+    personas: personas.data || [],
+    skills: skills.data || [],
+    mcp_servers: mcpServers.data || [],
+  });
+});
+
+// PUT /api/manage/playbooks/:id - Update playbook (User API key supported)
+app.put("/manage/playbooks/:id", async (c) => {
+  const user = await getUserFromAuthOrApiKey(c, "playbooks:write");
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const playbookId = c.req.param("id");
+  
+  if (!(await checkPlaybookOwnership(user.id, playbookId))) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+
+  const body = await c.req.json();
+  const { name, description, is_public, config } = body;
+
+  const supabase = getServiceSupabase();
+
+  const updateData: Record<string, unknown> = {};
+  if (name !== undefined) updateData.name = name;
+  if (description !== undefined) updateData.description = description;
+  if (is_public !== undefined) updateData.is_public = is_public;
+  if (config !== undefined) updateData.config = config;
+
+  const { data, error } = await supabase
+    .from("playbooks")
+    .update(updateData)
+    .eq("id", playbookId)
+    .select()
+    .single();
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json(data);
+});
+
+// DELETE /api/manage/playbooks/:id - Delete playbook (User API key supported)
+app.delete("/manage/playbooks/:id", async (c) => {
+  const user = await getUserFromAuthOrApiKey(c, "playbooks:write");
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const playbookId = c.req.param("id");
+  
+  if (!(await checkPlaybookOwnership(user.id, playbookId))) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+
+  const supabase = getServiceSupabase();
+
+  const { error } = await supabase
+    .from("playbooks")
+    .delete()
+    .eq("id", playbookId);
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json({ success: true });
+});
+
+// POST /api/manage/playbooks/:id/personas - Add persona (User API key supported)
+app.post("/manage/playbooks/:id/personas", async (c) => {
+  const user = await getUserFromAuthOrApiKey(c, "personas:write");
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const playbookId = c.req.param("id");
+  
+  if (!(await checkPlaybookOwnership(user.id, playbookId))) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+
+  const body = await c.req.json();
+  const { name, system_prompt, metadata } = body;
+
+  if (!name || !system_prompt) {
+    return c.json({ error: "Name and system_prompt are required" }, 400);
+  }
+
+  const supabase = getServiceSupabase();
+
+  const { data, error } = await supabase
+    .from("personas")
+    .insert({
+      playbook_id: playbookId,
+      name,
+      system_prompt,
+      metadata: metadata || {},
+    })
+    .select()
+    .single();
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json(data, 201);
+});
+
+// PUT /api/manage/playbooks/:id/personas/:pid - Update persona (User API key supported)
+app.put("/manage/playbooks/:id/personas/:pid", async (c) => {
+  const user = await getUserFromAuthOrApiKey(c, "personas:write");
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const playbookId = c.req.param("id");
+  const personaId = c.req.param("pid");
+  
+  if (!(await checkPlaybookOwnership(user.id, playbookId))) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+
+  const body = await c.req.json();
+  const supabase = getServiceSupabase();
+
+  const { data, error } = await supabase
+    .from("personas")
+    .update(body)
+    .eq("id", personaId)
+    .eq("playbook_id", playbookId)
+    .select()
+    .single();
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json(data);
+});
+
+// DELETE /api/manage/playbooks/:id/personas/:pid - Delete persona (User API key supported)
+app.delete("/manage/playbooks/:id/personas/:pid", async (c) => {
+  const user = await getUserFromAuthOrApiKey(c, "personas:write");
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const playbookId = c.req.param("id");
+  const personaId = c.req.param("pid");
+  
+  if (!(await checkPlaybookOwnership(user.id, playbookId))) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+
+  const supabase = getServiceSupabase();
+
+  const { error } = await supabase
+    .from("personas")
+    .delete()
+    .eq("id", personaId)
+    .eq("playbook_id", playbookId);
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json({ success: true });
+});
+
+// POST /api/manage/playbooks/:id/skills - Add skill (User API key supported)
+app.post("/manage/playbooks/:id/skills", async (c) => {
+  const user = await getUserFromAuthOrApiKey(c, "skills:write");
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const playbookId = c.req.param("id");
+  
+  if (!(await checkPlaybookOwnership(user.id, playbookId))) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+
+  const body = await c.req.json();
+  const { name, description, definition, examples } = body;
+
+  if (!name) {
+    return c.json({ error: "Name is required" }, 400);
+  }
+
+  const supabase = getServiceSupabase();
+
+  const { data, error } = await supabase
+    .from("skills")
+    .insert({
+      playbook_id: playbookId,
+      name,
+      description: description || null,
+      definition: definition || {},
+      examples: examples || [],
+    })
+    .select()
+    .single();
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json(data, 201);
+});
+
+// PUT /api/manage/playbooks/:id/skills/:sid - Update skill (User API key supported)
+app.put("/manage/playbooks/:id/skills/:sid", async (c) => {
+  const user = await getUserFromAuthOrApiKey(c, "skills:write");
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const playbookId = c.req.param("id");
+  const skillId = c.req.param("sid");
+  
+  if (!(await checkPlaybookOwnership(user.id, playbookId))) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+
+  const body = await c.req.json();
+  const supabase = getServiceSupabase();
+
+  const { data, error } = await supabase
+    .from("skills")
+    .update(body)
+    .eq("id", skillId)
+    .eq("playbook_id", playbookId)
+    .select()
+    .single();
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json(data);
+});
+
+// DELETE /api/manage/playbooks/:id/skills/:sid - Delete skill (User API key supported)
+app.delete("/manage/playbooks/:id/skills/:sid", async (c) => {
+  const user = await getUserFromAuthOrApiKey(c, "skills:write");
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const playbookId = c.req.param("id");
+  const skillId = c.req.param("sid");
+  
+  if (!(await checkPlaybookOwnership(user.id, playbookId))) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+
+  const supabase = getServiceSupabase();
+
+  const { error } = await supabase
+    .from("skills")
+    .delete()
+    .eq("id", skillId)
+    .eq("playbook_id", playbookId);
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json({ success: true });
+});
+
+// ============================================
+// OPENAPI SPEC FOR MANAGEMENT API
+// ============================================
+
+// GET /api/manage/openapi.json - OpenAPI spec for management API
+app.get("/manage/openapi.json", (c) => {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://agentplaybooks.ai";
+  
+  return c.json({
+    openapi: "3.1.0",
+    info: {
+      title: "AgentPlaybooks Management API",
+      description: "API for AI agents to create and manage playbooks. Use with User API Key for authentication.",
+      version: "1.0.0",
+    },
+    servers: [{ url: `${baseUrl}/api` }],
+    security: [{ bearerAuth: [] }],
+    paths: {
+      "/manage/playbooks": {
+        get: {
+          operationId: "listPlaybooks",
+          summary: "List all playbooks owned by the authenticated user",
+          responses: {
+            "200": {
+              description: "List of playbooks",
+              content: {
+                "application/json": {
+                  schema: { type: "array", items: { $ref: "#/components/schemas/Playbook" } }
+                }
+              }
+            }
+          }
+        },
+        post: {
+          operationId: "createPlaybook",
+          summary: "Create a new playbook",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["name"],
+                  properties: {
+                    name: { type: "string", description: "Playbook name" },
+                    description: { type: "string", description: "Playbook description" },
+                    is_public: { type: "boolean", default: false, description: "Whether the playbook is public" }
+                  }
+                }
+              }
+            }
+          },
+          responses: { "201": { description: "Playbook created" } }
+        }
+      },
+      "/manage/playbooks/{id}": {
+        get: {
+          operationId: "getPlaybook",
+          summary: "Get playbook details including personas, skills, and MCP servers",
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+          responses: { "200": { description: "Playbook details" } }
+        },
+        put: {
+          operationId: "updatePlaybook",
+          summary: "Update playbook",
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    name: { type: "string" },
+                    description: { type: "string" },
+                    is_public: { type: "boolean" }
+                  }
+                }
+              }
+            }
+          },
+          responses: { "200": { description: "Playbook updated" } }
+        },
+        delete: {
+          operationId: "deletePlaybook",
+          summary: "Delete playbook",
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+          responses: { "200": { description: "Playbook deleted" } }
+        }
+      },
+      "/manage/playbooks/{id}/personas": {
+        post: {
+          operationId: "createPersona",
+          summary: "Add a persona to a playbook",
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["name", "system_prompt"],
+                  properties: {
+                    name: { type: "string", description: "Persona name" },
+                    system_prompt: { type: "string", description: "System prompt for the AI" },
+                    metadata: { type: "object", description: "Optional metadata" }
+                  }
+                }
+              }
+            }
+          },
+          responses: { "201": { description: "Persona created" } }
+        }
+      },
+      "/manage/playbooks/{id}/personas/{pid}": {
+        put: {
+          operationId: "updatePersona",
+          summary: "Update a persona",
+          parameters: [
+            { name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+            { name: "pid", in: "path", required: true, schema: { type: "string", format: "uuid" } }
+          ],
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    name: { type: "string" },
+                    system_prompt: { type: "string" },
+                    metadata: { type: "object" }
+                  }
+                }
+              }
+            }
+          },
+          responses: { "200": { description: "Persona updated" } }
+        },
+        delete: {
+          operationId: "deletePersona",
+          summary: "Delete a persona",
+          parameters: [
+            { name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+            { name: "pid", in: "path", required: true, schema: { type: "string", format: "uuid" } }
+          ],
+          responses: { "200": { description: "Persona deleted" } }
+        }
+      },
+      "/manage/playbooks/{id}/skills": {
+        post: {
+          operationId: "createSkill",
+          summary: "Add a skill to a playbook",
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["name"],
+                  properties: {
+                    name: { type: "string", description: "Skill name (use snake_case)" },
+                    description: { type: "string", description: "What the skill does" },
+                    definition: {
+                      type: "object",
+                      description: "Skill definition with parameters schema",
+                      properties: {
+                        parameters: {
+                          type: "object",
+                          properties: {
+                            type: { type: "string", enum: ["object"] },
+                            properties: { type: "object" },
+                            required: { type: "array", items: { type: "string" } }
+                          }
+                        }
+                      }
+                    },
+                    examples: { type: "array", description: "Example usages" }
+                  }
+                }
+              }
+            }
+          },
+          responses: { "201": { description: "Skill created" } }
+        }
+      },
+      "/manage/playbooks/{id}/skills/{sid}": {
+        put: {
+          operationId: "updateSkill",
+          summary: "Update a skill",
+          parameters: [
+            { name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+            { name: "sid", in: "path", required: true, schema: { type: "string", format: "uuid" } }
+          ],
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    name: { type: "string" },
+                    description: { type: "string" },
+                    definition: { type: "object" },
+                    examples: { type: "array" }
+                  }
+                }
+              }
+            }
+          },
+          responses: { "200": { description: "Skill updated" } }
+        },
+        delete: {
+          operationId: "deleteSkill",
+          summary: "Delete a skill",
+          parameters: [
+            { name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+            { name: "sid", in: "path", required: true, schema: { type: "string", format: "uuid" } }
+          ],
+          responses: { "200": { description: "Skill deleted" } }
+        }
+      }
+    },
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: "http",
+          scheme: "bearer",
+          description: "User API Key starting with apb_live_"
+        }
+      },
+      schemas: {
+        Playbook: {
+          type: "object",
+          properties: {
+            id: { type: "string", format: "uuid" },
+            guid: { type: "string", description: "Public identifier for the playbook" },
+            name: { type: "string" },
+            description: { type: "string" },
+            is_public: { type: "boolean" },
+            persona_count: { type: "integer" },
+            skill_count: { type: "integer" },
+            mcp_server_count: { type: "integer" },
+            created_at: { type: "string", format: "date-time" },
+            updated_at: { type: "string", format: "date-time" }
+          }
+        }
+      }
+    }
+  });
 });
 
 // ============================================

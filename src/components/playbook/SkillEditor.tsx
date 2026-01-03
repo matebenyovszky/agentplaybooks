@@ -139,17 +139,22 @@ export function SkillEditor({ skill, onUpdate, onDelete }: SkillEditorProps) {
     }
   };
 
-  // Add a new property to schema
+  // Add a new property to schema with auto-generated name
   const addProperty = () => {
-    const propName = prompt("Property name:");
-    if (!propName) return;
-
     const currentDef = JSON.parse(definitionJson);
     if (!currentDef.parameters) {
       currentDef.parameters = { type: "object", properties: {} };
     }
     if (!currentDef.parameters.properties) {
       currentDef.parameters.properties = {};
+    }
+    
+    // Generate unique property name
+    let propNum = 1;
+    let propName = `param_${propNum}`;
+    while (currentDef.parameters.properties[propName]) {
+      propNum++;
+      propName = `param_${propNum}`;
     }
     
     currentDef.parameters.properties[propName] = {
@@ -370,7 +375,29 @@ export function SkillEditor({ skill, onUpdate, onDelete }: SkillEditorProps) {
                             <div className="flex-1 grid grid-cols-2 gap-3">
                               <div>
                                 <label className="text-xs text-slate-500 mb-1 block">Name</label>
-                                <code className="text-sm text-purple-300">{propName}</code>
+                                <input
+                                  type="text"
+                                  value={propName}
+                                  onChange={(e) => {
+                                    const newName = e.target.value.replace(/[^a-zA-Z0-9_]/g, '_');
+                                    if (newName && newName !== propName) {
+                                      const currentDef = JSON.parse(definitionJson);
+                                      if (!currentDef.parameters.properties[newName]) {
+                                        // Rename property
+                                        currentDef.parameters.properties[newName] = currentDef.parameters.properties[propName];
+                                        delete currentDef.parameters.properties[propName];
+                                        // Update required array if present
+                                        if (currentDef.parameters.required) {
+                                          currentDef.parameters.required = currentDef.parameters.required.map(
+                                            (r: string) => r === propName ? newName : r
+                                          );
+                                        }
+                                        setDefinitionJson(JSON.stringify(currentDef, null, 2));
+                                      }
+                                    }
+                                  }}
+                                  className="text-sm text-purple-300 bg-slate-800 border border-slate-700 rounded px-2 py-1 font-mono w-full focus:outline-none focus:border-purple-500/50"
+                                />
                               </div>
                               <div>
                                 <label className="text-xs text-slate-500 mb-1 block">Type</label>

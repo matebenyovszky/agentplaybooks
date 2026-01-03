@@ -119,7 +119,19 @@
     "preview": "Vista Previa",
     "addPersona": "Añadir Persona",
     "addSkill": "Añadir Habilidad",
-    "addMCP": "Añadir Servidor MCP"
+    "addMCP": "Añadir Servidor MCP",
+    "browsePublic": "Explorar Públicos",
+    "browsePublicSkills": "Explorar Habilidades Públicas",
+    "browsePublicMCP": "Explorar Servidores MCP Públicos",
+    "searchPublic": "Buscar por nombre o descripción...",
+    "import": "Importar",
+    "noPublicSkills": "Aún no hay habilidades públicas disponibles",
+    "noPublicMCP": "Aún no hay servidores MCP públicos disponibles",
+    "noMatchingSkills": "No se encontraron habilidades coincidentes",
+    "noMatchingMCP": "No se encontraron servidores MCP coincidentes",
+    "addParameter": "Añadir Parámetro",
+    "addTool": "Añadir Herramienta",
+    "addResource": "Añadir Recurso"
   },
   "apiKeys": {
     "title": "Claves API",

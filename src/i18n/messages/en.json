@@ -190,7 +190,19 @@
     "addPersona": "Add Persona",
     "addSkill": "Add Skill",
     "addMCP": "Add MCP Server",
-    "addCanvas": "Add Canvas"
+    "addCanvas": "Add Canvas",
+    "browsePublic": "Browse Public",
+    "browsePublicSkills": "Browse Public Skills",
+    "browsePublicMCP": "Browse Public MCP Servers",
+    "searchPublic": "Search by name or description...",
+    "import": "Import",
+    "noPublicSkills": "No public skills available yet",
+    "noPublicMCP": "No public MCP servers available yet",
+    "noMatchingSkills": "No skills match your search",
+    "noMatchingMCP": "No MCP servers match your search",
+    "addParameter": "Add Parameter",
+    "addTool": "Add Tool",
+    "addResource": "Add Resource"
   },
   "canvas": {
     "title": "Canvas Documents",
