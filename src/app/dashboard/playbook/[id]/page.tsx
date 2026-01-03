@@ -28,7 +28,8 @@ import {
   Search,
   Download,
   X,
-  Star
+  Star,
+  Tag
 } from "lucide-react";
 import type { Playbook, Persona, Skill, MCPServer, Memory, ApiKey } from "@/lib/supabase/types";
 
@@ -83,6 +84,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
   const [publicMCPs, setPublicMCPs] = useState<MCPServer[]>([]);
   const [browseLoading, setBrowseLoading] = useState(false);
   const [browseSearch, setBrowseSearch] = useState("");
+  const [newTagInput, setNewTagInput] = useState("");
 
   // Track changes for debounced save
   const debouncedPlaybook = useDebounce(playbook, 1500);
@@ -759,6 +761,114 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                   />
                 </div>
 
+                {/* Tags */}
+                <div className={cn(
+                  "p-5 rounded-xl",
+                  "bg-gradient-to-br from-slate-900/80 to-slate-800/80",
+                  "border border-slate-700/50"
+                )}>
+                  <label className="block text-sm font-medium text-slate-400 mb-2 flex items-center gap-2">
+                    <Tag className="h-4 w-4" />
+                    Tags
+                  </label>
+                  <p className="text-xs text-slate-500 mb-3">
+                    Add tags to help others find your playbook in the Explore page
+                  </p>
+                  
+                  {/* Existing tags */}
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {(playbook.tags || []).map((tag) => (
+                      <span
+                        key={tag}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/20 text-amber-400 rounded-full text-sm"
+                      >
+                        {tag}
+                        <button
+                          onClick={() => {
+                            const newTags = (playbook.tags || []).filter(t => t !== tag);
+                            updatePlaybook({ tags: newTags });
+                          }}
+                          className="hover:bg-amber-500/30 rounded-full p-0.5 transition-colors"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                    {(!playbook.tags || playbook.tags.length === 0) && (
+                      <span className="text-sm text-slate-500 italic">No tags yet</span>
+                    )}
+                  </div>
+                  
+                  {/* Add new tag */}
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newTagInput}
+                      onChange={(e) => setNewTagInput(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && newTagInput.trim()) {
+                          e.preventDefault();
+                          const tag = newTagInput.trim();
+                          if (tag && !(playbook.tags || []).includes(tag)) {
+                            updatePlaybook({ tags: [...(playbook.tags || []), tag] });
+                          }
+                          setNewTagInput("");
+                        }
+                      }}
+                      className={cn(
+                        "flex-1 px-3 py-2 rounded-lg",
+                        "bg-slate-900/70 border border-slate-700/50",
+                        "text-slate-200 placeholder:text-slate-600",
+                        "focus:outline-none focus:border-amber-500/50"
+                      )}
+                      placeholder="Add a tag (e.g. coding, writing, automation)"
+                      maxLength={30}
+                    />
+                    <button
+                      onClick={() => {
+                        const tag = newTagInput.trim();
+                        if (tag && !(playbook.tags || []).includes(tag)) {
+                          updatePlaybook({ tags: [...(playbook.tags || []), tag] });
+                        }
+                        setNewTagInput("");
+                      }}
+                      disabled={!newTagInput.trim()}
+                      className={cn(
+                        "px-4 py-2 rounded-lg font-medium transition-colors",
+                        newTagInput.trim()
+                          ? "bg-amber-500 text-slate-900 hover:bg-amber-400"
+                          : "bg-slate-800 text-slate-500 cursor-not-allowed"
+                      )}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
+                  </div>
+                  
+                  {/* Popular tags suggestions */}
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    <span className="text-xs text-slate-500 mr-1">Popular:</span>
+                    {["coding", "writing", "data", "automation", "research", "creative", "productivity"].map(tag => (
+                      <button
+                        key={tag}
+                        onClick={() => {
+                          if (!(playbook.tags || []).includes(tag)) {
+                            updatePlaybook({ tags: [...(playbook.tags || []), tag] });
+                          }
+                        }}
+                        disabled={(playbook.tags || []).includes(tag)}
+                        className={cn(
+                          "px-2 py-0.5 rounded text-xs transition-colors",
+                          (playbook.tags || []).includes(tag)
+                            ? "bg-slate-800 text-slate-600 cursor-not-allowed"
+                            : "bg-slate-800/50 text-slate-400 hover:bg-slate-700 hover:text-slate-300"
+                        )}
+                      >
+                        +{tag}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Visibility */}
                 <div className={cn(
                   "p-5 rounded-xl",
@@ -849,6 +959,152 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                         </button>
                       </div>
                     ))}
+                  </div>
+                </div>
+
+                {/* Platform Integrations */}
+                <div className={cn(
+                  "p-5 rounded-xl",
+                  "bg-gradient-to-br from-slate-900/80 to-slate-800/80",
+                  "border border-slate-700/50"
+                )}>
+                  <h3 className="font-medium mb-2 flex items-center gap-2">
+                    <Zap className="h-4 w-4 text-amber-400" />
+                    Use with AI Platforms
+                  </h3>
+                  <p className="text-sm text-slate-500 mb-4">
+                    Add this playbook to your favorite AI assistant. Click a platform for step-by-step instructions.
+                  </p>
+                  
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+                    {[
+                      { 
+                        name: "ChatGPT", 
+                        icon: "🤖", 
+                        color: "from-emerald-600/20 to-teal-600/20", 
+                        borderColor: "border-emerald-500/30",
+                        desc: "Custom GPTs with Actions",
+                        anchor: "#openai-chatgpt-custom-gpts"
+                      },
+                      { 
+                        name: "Claude", 
+                        icon: "🧠", 
+                        color: "from-orange-600/20 to-amber-600/20", 
+                        borderColor: "border-orange-500/30",
+                        desc: "Projects & Instructions",
+                        anchor: "#anthropic-claude-claudeai"
+                      },
+                      { 
+                        name: "Gemini", 
+                        icon: "💎", 
+                        color: "from-blue-600/20 to-cyan-600/20", 
+                        borderColor: "border-blue-500/30",
+                        desc: "Gems Configuration",
+                        anchor: "#google-gemini"
+                      },
+                      { 
+                        name: "Grok", 
+                        icon: "⚡", 
+                        color: "from-slate-600/20 to-zinc-600/20", 
+                        borderColor: "border-slate-500/30",
+                        desc: "Projects & System Prompts",
+                        anchor: "#xai-grok"
+                      },
+                      { 
+                        name: "Claude Code", 
+                        icon: "💻", 
+                        color: "from-violet-600/20 to-purple-600/20", 
+                        borderColor: "border-violet-500/30",
+                        desc: "MCP Integration",
+                        anchor: "#claude-code-cli-agent"
+                      },
+                      { 
+                        name: "Any API", 
+                        icon: "🔌", 
+                        color: "from-pink-600/20 to-rose-600/20", 
+                        borderColor: "border-pink-500/30",
+                        desc: "Generic Integration",
+                        anchor: "#generic-integration-template"
+                      },
+                    ].map((platform) => (
+                      <Link
+                        key={platform.name}
+                        href={`/docs/platform-integrations${platform.anchor}`}
+                        target="_blank"
+                        className={cn(
+                          "p-3 rounded-lg border transition-all group",
+                          `bg-gradient-to-br ${platform.color}`,
+                          platform.borderColor,
+                          "hover:scale-[1.02] hover:shadow-lg"
+                        )}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-lg">{platform.icon}</span>
+                          <span className="font-medium text-sm">{platform.name}</span>
+                          <ExternalLink className="h-3 w-3 text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity ml-auto" />
+                        </div>
+                        <p className="text-xs text-slate-400">{platform.desc}</p>
+                      </Link>
+                    ))}
+                  </div>
+                  
+                  {/* Quick Copy URLs for each platform */}
+                  <div className="space-y-2 pt-3 border-t border-slate-700/50">
+                    <p className="text-xs text-slate-500 mb-2">Quick copy URLs for integration:</p>
+                    <div className="grid gap-2">
+                      {[
+                        { 
+                          label: "OpenAPI (for ChatGPT Actions)", 
+                          url: `${getBaseUrl()}/api/playbooks/${playbook.guid}?format=openapi`,
+                          color: "text-emerald-400"
+                        },
+                        { 
+                          label: "Markdown (for Claude/Gemini)", 
+                          url: `${getBaseUrl()}/api/playbooks/${playbook.guid}?format=markdown`,
+                          color: "text-orange-400"
+                        },
+                        { 
+                          label: "MCP Endpoint (for Claude Code)", 
+                          url: `${getBaseUrl()}/api/mcp/${playbook.guid}`,
+                          color: "text-violet-400"
+                        },
+                      ].map(({ label, url, color }) => (
+                        <div 
+                          key={label}
+                          className="flex items-center gap-2 p-2 bg-slate-900/70 rounded-lg border border-slate-700/50 group"
+                        >
+                          <span className={cn("text-xs font-medium whitespace-nowrap", color)}>
+                            {label}
+                          </span>
+                          <code className="flex-1 text-xs text-slate-400 font-mono truncate">
+                            {url}
+                          </code>
+                          <button
+                            onClick={() => copyToClipboard(url, label)}
+                            className="p-1.5 text-slate-500 hover:text-white transition-colors"
+                          >
+                            {copied === label ? (
+                              <Check className="h-3.5 w-3.5 text-green-400" />
+                            ) : (
+                              <Copy className="h-3.5 w-3.5" />
+                            )}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* Full docs link */}
+                  <div className="mt-4 pt-3 border-t border-slate-700/50">
+                    <Link
+                      href="/docs/platform-integrations"
+                      target="_blank"
+                      className="inline-flex items-center gap-2 text-sm text-amber-400 hover:text-amber-300 transition-colors"
+                    >
+                      <span>📖</span>
+                      <span>View complete integration guide</span>
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </Link>
                   </div>
                 </div>
 

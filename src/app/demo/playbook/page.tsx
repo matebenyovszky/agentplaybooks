@@ -581,6 +581,48 @@ export default function DemoPlaybookPage() {
                   ))}
                 </div>
               </div>
+
+              {/* Platform Integrations */}
+              <div className="bg-slate-900/50 rounded-xl border border-slate-800/50 p-6">
+                <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
+                  <Zap className="h-5 w-5 text-amber-400" />
+                  Use with AI Platforms
+                </h3>
+                <p className="text-sm text-slate-500 mb-4">
+                  Learn how to add this playbook to your favorite AI assistant.
+                </p>
+                
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+                  {[
+                    { name: "ChatGPT", icon: "🤖", anchor: "#openai-chatgpt-custom-gpts" },
+                    { name: "Claude", icon: "🧠", anchor: "#anthropic-claude-claudeai" },
+                    { name: "Gemini", icon: "💎", anchor: "#google-gemini" },
+                    { name: "Grok", icon: "⚡", anchor: "#xai-grok" },
+                    { name: "Claude Code", icon: "💻", anchor: "#claude-code-cli-agent" },
+                    { name: "Any API", icon: "🔌", anchor: "#generic-integration-template" },
+                  ].map((platform) => (
+                    <Link
+                      key={platform.name}
+                      href={`/docs/platform-integrations${platform.anchor}`}
+                      target="_blank"
+                      className="p-3 rounded-lg border border-slate-700/50 bg-slate-800/30 hover:bg-slate-800/60 transition-colors group"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{platform.icon}</span>
+                        <span className="font-medium text-sm">{platform.name}</span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+                
+                <Link
+                  href="/docs/platform-integrations"
+                  target="_blank"
+                  className="inline-flex items-center gap-2 text-sm text-amber-400 hover:text-amber-300 transition-colors"
+                >
+                  <span>📖 View complete integration guide</span>
+                </Link>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

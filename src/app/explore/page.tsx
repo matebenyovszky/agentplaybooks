@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -130,11 +130,20 @@ export default function ExplorePage() {
     }
   };
 
-  const allTags = [
-    "coding", "writing", "data", "automation", 
-    "research", "creative", "business", "education",
-    "productivity", "development"
-  ];
+  // Extract unique tags from all playbooks, sorted by frequency
+  const allTags = useMemo(() => {
+    const tagCounts: Record<string, number> = {};
+    playbooks.forEach(p => {
+      (p.tags || []).forEach(tag => {
+        tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+      });
+    });
+    // Sort by frequency, then alphabetically
+    return Object.entries(tagCounts)
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .map(([tag]) => tag)
+      .slice(0, 15); // Show top 15 tags
+  }, [playbooks]);
 
   const toggleTag = (tag: string) => {
     if (selectedTags.includes(tag)) {

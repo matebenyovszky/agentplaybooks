@@ -19,7 +19,8 @@ import {
   Brain,
   Zap,
   Lock,
-  Eye
+  Eye,
+  Star
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import type { Playbook } from "@/lib/supabase/types";
@@ -97,6 +98,11 @@ export default function DashboardPage() {
       label: t("dashboard.myPlaybooks"),
       href: "/dashboard",
       icon: <BookOpen className="h-5 w-5 text-blue-400" />,
+    },
+    {
+      label: t("dashboard.favorites"),
+      href: "/dashboard/favorites",
+      icon: <Star className="h-5 w-5 text-amber-400" />,
     },
     {
       label: t("common.explore"),

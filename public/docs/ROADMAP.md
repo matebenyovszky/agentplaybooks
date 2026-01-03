@@ -129,6 +129,24 @@ This document outlines the development roadmap for AgentPlaybooks - the first op
   - Load balancing across MCP servers
   - Caching layer for performance
 
+### MCP Proxy 📋
+
+- [ ] **Multi-Protocol MCP Server Exposure**
+  - Expose MCP servers via OpenAPI/REST endpoints
+  - Convert MCP tools to OpenAI function calling format
+  - HTTP/SSE transport adapter for stdio-based MCP servers
+  - Unified authentication layer for proxied MCP calls
+  
+- [ ] **MCP Aggregation**
+  - Combine multiple MCP servers into single endpoint
+  - Tool namespace management (avoid conflicts)
+  - Selective tool exposure per playbook
+  
+- [ ] **MCP → OpenAPI Bridge**
+  - Auto-generate OpenAPI specs from MCP server definitions
+  - Enable ChatGPT Custom GPTs to use any MCP server
+  - Swagger UI for MCP tool testing
+
 ### Dynamic Canvas 💡
 
 - [ ] **Visual Agent Workflows**

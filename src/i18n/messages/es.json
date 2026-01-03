@@ -96,6 +96,7 @@
   "dashboard": {
     "welcome": "Bienvenido de nuevo",
     "myPlaybooks": "Mis Playbooks",
+    "favorites": "Favoritos",
     "signOut": "Cerrar Sesión",
     "createPlaybook": "Crear Playbook",
     "noPlaybooks": "Aún no tienes playbooks",
