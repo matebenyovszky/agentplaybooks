@@ -3,16 +3,6 @@
   "name": "agentplaybooks",
   "main": ".open-next/worker.js",
   "compatibility_date": "2025-01-01",
-  "compatibility_flags": ["nodejs_compat"],
-
-  // Environment variables
-  // IMPORTANT: Set secrets via Cloudflare Dashboard or `wrangler secret put`
-  "vars": {
-    "NEXT_PUBLIC_SUPABASE_URL": "https://bydcjwxfiiolmnddzbpy.supabase.co",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ5ZGNqd3hmaWlvbG1uZGR6YnB5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjczNzE5MjEsImV4cCI6MjA4Mjk0NzkyMX0.BrbGNGEVj4PZO_EZQwbVjKZwGfqWGNqR5uLEVAnlSXI"
-  }
-
-  // NOTE: SUPABASE_SERVICE_ROLE_KEY should be set as a SECRET, not here!
-  // Run: npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+  "compatibility_flags": ["nodejs_compat"]
 }
 
