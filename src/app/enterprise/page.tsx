@@ -182,7 +182,7 @@ export default function EnterprisePage() {
                 <ArrowRight className="w-5 h-5" />
               </Link>
               <a
-                href="https://github.com/agentplaybooks/agentplaybooks"
+                href="https://github.com/matebenyovszky/agentplaybooks"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-8 py-4 bg-blue-950/50 hover:bg-blue-900/50 rounded-full font-semibold transition-colors border border-blue-800/50"
@@ -433,7 +433,7 @@ export default function EnterprisePage() {
                 <ArrowRight className="w-5 h-5" />
               </Link>
               <a
-                href="https://github.com/agentplaybooks/agentplaybooks"
+                href="https://github.com/matebenyovszky/agentplaybooks"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-blue-950/50 hover:bg-blue-900/50 rounded-full font-semibold transition-colors border border-blue-800/50"
@@ -487,7 +487,7 @@ export default function EnterprisePage() {
 
             <p className="mt-8 text-xs text-slate-500 max-w-lg mx-auto">
               Enterprise features are under active development. Self-host today and get these features as they ship. 
-              <a href="https://github.com/agentplaybooks/agentplaybooks" className="text-purple-400/70 hover:text-purple-400 ml-1">
+              <a href="https://github.com/matebenyovszky/agentplaybooks" className="text-purple-400/70 hover:text-purple-400 ml-1">
                 Star on GitHub to follow progress →
               </a>
             </p>

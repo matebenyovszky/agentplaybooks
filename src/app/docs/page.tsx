@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { FloatingNav } from "@/components/ui/floating-navbar";
+import { useTranslations } from "next-intl";
 import { 
   BookOpen, 
   Building2, 
@@ -17,7 +18,8 @@ import {
   Server,
   HardDrive,
   Github,
-  ExternalLink
+  ExternalLink,
+  Settings
 } from "lucide-react";
 
 // Documentation pages config
@@ -88,6 +90,12 @@ const docsReference = [
     description: "Deploy your own instance",
     icon: HardDrive,
   },
+  {
+    slug: "environment-setup",
+    title: "Environment Setup",
+    description: "OAuth & environment configuration",
+    icon: Settings,
+  },
 ];
 
 const allDocs = [...docsGuides, ...docsConcepts, ...docsReference];
@@ -97,11 +105,12 @@ export default function DocsPage() {
   const page = searchParams.get("page") || "readme";
   const [content, setContent] = useState<string>("");
   const [loading, setLoading] = useState(true);
+  const t = useTranslations();
 
   const navItems = [
-    { name: "Explore", link: "/explore", icon: <Globe className="h-4 w-4" /> },
-    { name: "Enterprise", link: "/enterprise", icon: <Building2 className="h-4 w-4" /> },
-    { name: "Docs", link: "/docs", icon: <BookOpen className="h-4 w-4" /> },
+    { name: t("common.explore"), link: "/explore", icon: <Globe className="h-4 w-4" /> },
+    { name: t("common.enterprise"), link: "/enterprise", icon: <Building2 className="h-4 w-4" /> },
+    { name: t("common.docs"), link: "/docs", icon: <BookOpen className="h-4 w-4" /> },
   ];
 
   useEffect(() => {
