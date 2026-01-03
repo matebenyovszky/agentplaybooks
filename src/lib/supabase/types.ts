@@ -150,6 +150,73 @@ export type UserApiKeysUpdate = Partial<UserApiKeysRow>;
 // Public types removed - all items now belong to playbooks
 // Skills and MCP servers from public playbooks form the marketplace
 
+// ===================
+// SKILL ATTACHMENTS (Secure file storage)
+// ===================
+
+export const ALLOWED_FILE_TYPES = [
+  'typescript',
+  'javascript',
+  'python',
+  'go',
+  'rust',
+  'sql',
+  'markdown',
+  'json',
+  'yaml',
+  'text',
+  'cursorrules',
+  'shell'
+] as const;
+
+export type AttachmentFileType = typeof ALLOWED_FILE_TYPES[number];
+
+// File extension to type mapping
+export const FILE_EXTENSION_MAP: Record<string, AttachmentFileType> = {
+  '.ts': 'typescript',
+  '.tsx': 'typescript',
+  '.js': 'javascript',
+  '.jsx': 'javascript',
+  '.mjs': 'javascript',
+  '.py': 'python',
+  '.go': 'go',
+  '.rs': 'rust',
+  '.sql': 'sql',
+  '.md': 'markdown',
+  '.mdx': 'markdown',
+  '.json': 'json',
+  '.yaml': 'yaml',
+  '.yml': 'yaml',
+  '.txt': 'text',
+  '.cursorrules': 'cursorrules',
+  '.sh': 'shell',
+  '.bash': 'shell',
+  '.zsh': 'shell',
+};
+
+export type SkillAttachmentsRow = {
+  id: string;
+  skill_id: string;
+  filename: string;
+  file_type: AttachmentFileType;
+  language: string | null;
+  description: string | null;
+  content: string;
+  size_bytes: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SkillAttachmentsInsert = Omit<SkillAttachmentsRow, 'id' | 'created_at' | 'updated_at'>;
+export type SkillAttachmentsUpdate = Partial<Omit<SkillAttachmentsRow, 'id' | 'skill_id' | 'created_at'>>;
+
+// Security limits
+export const ATTACHMENT_LIMITS = {
+  MAX_FILE_SIZE: 51200, // 50KB
+  MAX_FILES_PER_SKILL: 10,
+  MAX_FILENAME_LENGTH: 100,
+} as const;
+
 export interface Database {
   public: {
     Tables: {
@@ -207,6 +274,12 @@ export interface Database {
         Update: UserApiKeysUpdate;
         Relationships: [];
       };
+      skill_attachments: {
+        Row: SkillAttachmentsRow;
+        Insert: SkillAttachmentsInsert;
+        Update: SkillAttachmentsUpdate;
+        Relationships: [];
+      };
     };
     Views: Record<string, { Row: Record<string, unknown>; Relationships: [] }>;
     Functions: Record<string, { Args: Record<string, unknown> | never; Returns: unknown }>;
@@ -225,6 +298,8 @@ export type Canvas = Database["public"]["Tables"]["canvas"]["Row"];
 export type Memory = Database["public"]["Tables"]["memories"]["Row"];
 export type ApiKey = Database["public"]["Tables"]["api_keys"]["Row"];
 export type UserApiKey = Database["public"]["Tables"]["user_api_keys"]["Row"];
+export type SkillAttachment = Database["public"]["Tables"]["skill_attachments"]["Row"];
+
 // Legacy: PublicSkill and PublicMCPServer types removed
 // Use Skill and MCPServer types - public items come from public playbooks
 

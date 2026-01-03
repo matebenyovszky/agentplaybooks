@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { createBrowserClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { 
   Server,
@@ -19,9 +18,11 @@ import {
   ExternalLink
 } from "lucide-react";
 import type { MCPServer } from "@/lib/supabase/types";
+import type { StorageAdapter } from "@/lib/storage";
 
 interface McpServerEditorProps {
   mcpServer: MCPServer;
+  storage: StorageAdapter;
   onUpdate: (mcpServer: MCPServer) => void;
   onDelete: () => void;
 }
@@ -39,7 +40,7 @@ interface Resource {
   mimeType?: string;
 }
 
-export function McpServerEditor({ mcpServer, onUpdate, onDelete }: McpServerEditorProps) {
+export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete }: McpServerEditorProps) {
   const [expanded, setExpanded] = useState(false);
   const [name, setName] = useState(mcpServer.name);
   const [description, setDescription] = useState(mcpServer.description || "");
@@ -88,25 +89,15 @@ export function McpServerEditor({ mcpServer, onUpdate, onDelete }: McpServerEdit
       const parsedTools = JSON.parse(toolsJson);
       const parsedResources = JSON.parse(resourcesJson);
 
-      const supabase = createBrowserClient();
-      const { error } = await supabase
-        .from("mcp_servers")
-        .update({ 
-          name,
-          description,
-          tools: parsedTools,
-          resources: parsedResources
-        })
-        .eq("id", mcpServer.id);
+      const updated = await storage.updateMcpServer(mcpServer.id, {
+        name,
+        description,
+        tools: parsedTools,
+        resources: parsedResources
+      });
 
-      if (!error) {
-        onUpdate({ 
-          ...mcpServer, 
-          name, 
-          description,
-          tools: parsedTools,
-          resources: parsedResources
-        });
+      if (updated) {
+        onUpdate(updated);
         setHasChanges(false);
       }
     } catch (e) {
@@ -114,7 +105,7 @@ export function McpServerEditor({ mcpServer, onUpdate, onDelete }: McpServerEdit
     } finally {
       setSaving(false);
     }
-  }, [name, description, toolsJson, resourcesJson, mcpServer, jsonError, onUpdate]);
+  }, [name, description, toolsJson, resourcesJson, mcpServer.id, jsonError, onUpdate, storage]);
 
   // Debounced auto-save
   useEffect(() => {

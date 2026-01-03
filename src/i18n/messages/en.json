@@ -165,6 +165,7 @@
   "dashboard": {
     "welcome": "Welcome back",
     "myPlaybooks": "My Playbooks",
+    "signOut": "Sign Out",
     "createPlaybook": "Create Playbook",
     "noPlaybooks": "You don't have any playbooks yet",
     "playbookCard": {

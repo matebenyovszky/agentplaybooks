@@ -21,6 +21,7 @@ Welcome to the AgentPlaybooks documentation.
 - [Management API & MCP](./management-api.md) - AI-driven playbook management
 - [Developer Guide](./developer-guide.md) - Contributing and development
 - [Self-Hosting](./self-hosting.md) - Deploy your own instance
+- [Roadmap](./ROADMAP.md) - Development roadmap and future plans
 
 ## What is AgentPlaybooks?
 

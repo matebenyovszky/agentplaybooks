@@ -165,6 +165,7 @@
   "dashboard": {
     "welcome": "Üdv újra",
     "myPlaybooks": "Playbookjaim",
+    "signOut": "Kijelentkezés",
     "createPlaybook": "Playbook Létrehozása",
     "noPlaybooks": "Még nincsenek playbookjaid",
     "playbookCard": {

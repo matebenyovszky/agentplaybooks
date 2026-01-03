@@ -2,23 +2,22 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { createBrowserClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { 
   Brain, 
   Trash2, 
-  Save, 
   ChevronDown, 
   ChevronUp,
   Copy,
   Check,
-  Sparkles,
-  GripVertical
+  Sparkles
 } from "lucide-react";
 import type { Persona } from "@/lib/supabase/types";
+import type { StorageAdapter } from "@/lib/storage";
 
 interface PersonaEditorProps {
   persona: Persona;
+  storage: StorageAdapter;
   onUpdate: (persona: Persona) => void;
   onDelete: () => void;
 }
@@ -40,7 +39,7 @@ function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
-export function PersonaEditor({ persona, onUpdate, onDelete }: PersonaEditorProps) {
+export function PersonaEditor({ persona, storage, onUpdate, onDelete }: PersonaEditorProps) {
   const [expanded, setExpanded] = useState(false);
   const [name, setName] = useState(persona.name);
   const [systemPrompt, setSystemPrompt] = useState(persona.system_prompt);
@@ -78,23 +77,14 @@ export function PersonaEditor({ persona, onUpdate, onDelete }: PersonaEditorProp
           // Keep existing metadata if JSON is invalid
         }
 
-        const supabase = createBrowserClient();
-        const { error } = await supabase
-          .from("personas")
-          .update({ 
-            name: debouncedName,
-            system_prompt: debouncedPrompt,
-            metadata: parsedMetadata
-          })
-          .eq("id", persona.id);
+        const updated = await storage.updatePersona(persona.id, {
+          name: debouncedName,
+          system_prompt: debouncedPrompt,
+          metadata: parsedMetadata
+        });
 
-        if (!error) {
-          onUpdate({ 
-            ...persona, 
-            name: debouncedName, 
-            system_prompt: debouncedPrompt,
-            metadata: parsedMetadata
-          });
+        if (updated) {
+          onUpdate(updated);
           setHasChanges(false);
         }
       } finally {
@@ -103,7 +93,7 @@ export function PersonaEditor({ persona, onUpdate, onDelete }: PersonaEditorProp
     };
 
     save();
-  }, [debouncedPrompt, debouncedName, debouncedMetadata]);
+  }, [debouncedPrompt, debouncedName, debouncedMetadata, hasChanges, metadata, onUpdate, persona.id, persona.metadata, storage]);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -271,5 +261,3 @@ export function PersonaEditor({ persona, onUpdate, onDelete }: PersonaEditorProp
 }
 
 export default PersonaEditor;
-
-

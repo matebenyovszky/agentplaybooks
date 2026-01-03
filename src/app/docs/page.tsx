@@ -96,6 +96,12 @@ const docsReference = [
     description: "OAuth & environment configuration",
     icon: Settings,
   },
+  {
+    slug: "ROADMAP",
+    title: "Roadmap",
+    description: "Development roadmap and future plans",
+    icon: Rocket,
+  },
 ];
 
 const allDocs = [...docsGuides, ...docsConcepts, ...docsReference];

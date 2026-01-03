@@ -2,7 +2,13 @@ import { Hono } from "hono";
 import { handle } from "hono/vercel";
 import { cors } from "hono/cors";
 import { createServerClient } from "@/lib/supabase/client";
-import type { ApiKey, UserApiKeysRow } from "@/lib/supabase/types";
+import type { ApiKey, UserApiKeysRow, AttachmentFileType } from "@/lib/supabase/types";
+import { ATTACHMENT_LIMITS, ALLOWED_FILE_TYPES } from "@/lib/supabase/types";
+import { 
+  validateAttachment, 
+  validateFilename, 
+  validateContent 
+} from "@/lib/attachment-validator";
 import { hashApiKey, generateApiKey, generateGuid, getKeyPrefix } from "@/lib/utils";
 import { cookies } from "next/headers";
 
@@ -1464,6 +1470,274 @@ app.delete("/manage/playbooks/:id/skills/:sid", async (c) => {
     .delete()
     .eq("id", skillId)
     .eq("playbook_id", playbookId);
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json({ success: true });
+});
+
+// ============================================
+// SKILL ATTACHMENTS API
+// ============================================
+
+// GET /api/manage/skills/:skillId/attachments - List attachments for a skill
+app.get("/manage/skills/:skillId/attachments", async (c) => {
+  const skillId = c.req.param("skillId");
+  const supabase = getServiceSupabase();
+
+  // First check if skill exists and is accessible
+  const { data: skill, error: skillError } = await supabase
+    .from("skills")
+    .select("id, playbook_id, playbooks!inner(is_public, user_id)")
+    .eq("id", skillId)
+    .single();
+
+  if (skillError || !skill) {
+    return c.json({ error: "Skill not found" }, 404);
+  }
+
+  // Check if public or owned
+  const user = await getAuthenticatedUser(c);
+  const isPublic = (skill as any).playbooks?.is_public;
+  const isOwner = user && (skill as any).playbooks?.user_id === user.id;
+
+  if (!isPublic && !isOwner) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+
+  const { data, error } = await supabase
+    .from("skill_attachments")
+    .select("id, filename, file_type, language, description, size_bytes, created_at, updated_at")
+    .eq("skill_id", skillId)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json(data || []);
+});
+
+// GET /api/manage/skills/:skillId/attachments/:attachmentId - Get attachment content
+app.get("/manage/skills/:skillId/attachments/:attachmentId", async (c) => {
+  const skillId = c.req.param("skillId");
+  const attachmentId = c.req.param("attachmentId");
+  const supabase = getServiceSupabase();
+
+  // Check skill access
+  const { data: skill } = await supabase
+    .from("skills")
+    .select("id, playbook_id, playbooks!inner(is_public, user_id)")
+    .eq("id", skillId)
+    .single();
+
+  if (!skill) {
+    return c.json({ error: "Skill not found" }, 404);
+  }
+
+  const user = await getAuthenticatedUser(c);
+  const isPublic = (skill as any).playbooks?.is_public;
+  const isOwner = user && (skill as any).playbooks?.user_id === user.id;
+
+  if (!isPublic && !isOwner) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+
+  const { data, error } = await supabase
+    .from("skill_attachments")
+    .select("*")
+    .eq("id", attachmentId)
+    .eq("skill_id", skillId)
+    .single();
+
+  if (error || !data) {
+    return c.json({ error: "Attachment not found" }, 404);
+  }
+
+  // Option to get raw content
+  const raw = c.req.query("raw") === "true";
+  if (raw) {
+    return new Response(data.content, {
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Content-Disposition": `inline; filename="${data.filename}"`,
+        "X-Content-Type-Options": "nosniff",
+      },
+    });
+  }
+
+  return c.json(data);
+});
+
+// POST /api/manage/skills/:skillId/attachments - Upload attachment
+app.post("/manage/skills/:skillId/attachments", async (c) => {
+  const user = await getUserFromAuthOrApiKey(c, "skills:write");
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const skillId = c.req.param("skillId");
+  const supabase = getServiceSupabase();
+
+  // Check skill ownership
+  const { data: skill } = await supabase
+    .from("skills")
+    .select("id, playbook_id, playbooks!inner(user_id)")
+    .eq("id", skillId)
+    .single();
+
+  if (!skill) {
+    return c.json({ error: "Skill not found" }, 404);
+  }
+
+  if ((skill as any).playbooks?.user_id !== user.id) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+
+  // Check attachment count limit
+  const { count } = await supabase
+    .from("skill_attachments")
+    .select("id", { count: "exact", head: true })
+    .eq("skill_id", skillId);
+
+  if ((count || 0) >= ATTACHMENT_LIMITS.MAX_FILES_PER_SKILL) {
+    return c.json({ 
+      error: `Maximum ${ATTACHMENT_LIMITS.MAX_FILES_PER_SKILL} attachments per skill` 
+    }, 400);
+  }
+
+  const body = await c.req.json();
+  const { filename, content, file_type, language, description } = body;
+
+  if (!filename || !content) {
+    return c.json({ error: "filename and content are required" }, 400);
+  }
+
+  // Validate attachment
+  const validation = validateAttachment(filename, content, file_type);
+  if (!validation.valid) {
+    return c.json({ error: validation.errors.join(", ") }, 400);
+  }
+
+  // Calculate size
+  const sizeBytes = new TextEncoder().encode(content).length;
+
+  const { data, error } = await supabase
+    .from("skill_attachments")
+    .insert({
+      skill_id: skillId,
+      filename: validation.sanitizedFilename || filename,
+      file_type: validation.detectedType || file_type,
+      language: language || null,
+      description: description || null,
+      content,
+      size_bytes: sizeBytes,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json(data, 201);
+});
+
+// PUT /api/manage/skills/:skillId/attachments/:attachmentId - Update attachment
+app.put("/manage/skills/:skillId/attachments/:attachmentId", async (c) => {
+  const user = await getUserFromAuthOrApiKey(c, "skills:write");
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const skillId = c.req.param("skillId");
+  const attachmentId = c.req.param("attachmentId");
+  const supabase = getServiceSupabase();
+
+  // Check skill ownership
+  const { data: skill } = await supabase
+    .from("skills")
+    .select("id, playbook_id, playbooks!inner(user_id)")
+    .eq("id", skillId)
+    .single();
+
+  if (!skill || (skill as any).playbooks?.user_id !== user.id) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+
+  const body = await c.req.json();
+  const updates: Record<string, any> = {};
+
+  // Validate filename if provided
+  if (body.filename) {
+    const filenameValidation = validateFilename(body.filename);
+    if (!filenameValidation.valid) {
+      return c.json({ error: filenameValidation.errors.join(", ") }, 400);
+    }
+    updates.filename = filenameValidation.sanitizedFilename;
+  }
+
+  // Validate content if provided
+  if (body.content) {
+    const contentValidation = validateContent(body.content);
+    if (!contentValidation.valid) {
+      return c.json({ error: contentValidation.errors.join(", ") }, 400);
+    }
+    updates.content = body.content;
+    updates.size_bytes = new TextEncoder().encode(body.content).length;
+  }
+
+  // Optional fields
+  if (body.file_type && ALLOWED_FILE_TYPES.includes(body.file_type)) {
+    updates.file_type = body.file_type;
+  }
+  if (body.language !== undefined) updates.language = body.language;
+  if (body.description !== undefined) updates.description = body.description;
+
+  const { data, error } = await supabase
+    .from("skill_attachments")
+    .update(updates)
+    .eq("id", attachmentId)
+    .eq("skill_id", skillId)
+    .select()
+    .single();
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json(data);
+});
+
+// DELETE /api/manage/skills/:skillId/attachments/:attachmentId - Delete attachment
+app.delete("/manage/skills/:skillId/attachments/:attachmentId", async (c) => {
+  const user = await getUserFromAuthOrApiKey(c, "skills:write");
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const skillId = c.req.param("skillId");
+  const attachmentId = c.req.param("attachmentId");
+  const supabase = getServiceSupabase();
+
+  // Check skill ownership
+  const { data: skill } = await supabase
+    .from("skills")
+    .select("id, playbook_id, playbooks!inner(user_id)")
+    .eq("id", skillId)
+    .single();
+
+  if (!skill || (skill as any).playbooks?.user_id !== user.id) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+
+  const { error } = await supabase
+    .from("skill_attachments")
+    .delete()
+    .eq("id", attachmentId)
+    .eq("skill_id", skillId);
 
   if (error) {
     return c.json({ error: error.message }, 500);

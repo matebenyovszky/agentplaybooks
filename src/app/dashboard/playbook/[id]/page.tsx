@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState, use, useCallback } from "react";
+import { useEffect, useState, use, useCallback, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { createBrowserClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
+import { createSupabaseAdapter } from "@/lib/storage";
 import { 
   ArrowLeft,
   Brain,
@@ -58,6 +59,9 @@ function useDebounce<T>(value: T, delay: number): T {
 export default function PlaybookEditorPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const t = useTranslations();
+  
+  // Create storage adapter
+  const storage = useMemo(() => createSupabaseAdapter(id), [id]);
   
   // State
   const [playbook, setPlaybook] = useState<Playbook | null>(null);
@@ -157,70 +161,52 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
 
   // Add handlers - create items with default names, no prompt needed
   const handleAddPersona = async () => {
-    const supabase = createBrowserClient();
     const defaultName = `New Persona ${personas.length + 1}`;
     
-    const { data, error } = await supabase
-      .from("personas")
-      .insert({
-        playbook_id: id,
-        name: defaultName,
-        system_prompt: "You are a helpful assistant.",
-        metadata: {},
-      })
-      .select()
-      .single();
+    const data = await storage.addPersona({
+      name: defaultName,
+      system_prompt: "You are a helpful assistant.",
+      metadata: {},
+    });
 
-    if (!error && data) {
-      setPersonas([...personas, data as Persona]);
+    if (data) {
+      setPersonas([...personas, data]);
     }
   };
 
   const handleAddSkill = async () => {
-    const supabase = createBrowserClient();
     const defaultName = `new_skill_${skills.length + 1}`;
     
-    const { data, error } = await supabase
-      .from("skills")
-      .insert({
-        playbook_id: id,
-        name: defaultName,
-        description: "",
-        definition: { 
-          parameters: { 
-            type: "object", 
-            properties: {},
-            required: []
-          } 
-        },
-        examples: [],
-      })
-      .select()
-      .single();
+    const data = await storage.addSkill({
+      name: defaultName,
+      description: "",
+      definition: { 
+        parameters: { 
+          type: "object", 
+          properties: {},
+          required: []
+        } 
+      },
+      examples: [],
+    });
 
-    if (!error && data) {
-      setSkills([...skills, data as Skill]);
+    if (data) {
+      setSkills([...skills, data]);
     }
   };
 
   const handleAddMCP = async () => {
-    const supabase = createBrowserClient();
     const defaultName = `New MCP Server ${mcpServers.length + 1}`;
     
-    const { data, error } = await supabase
-      .from("mcp_servers")
-      .insert({
-        playbook_id: id,
-        name: defaultName,
-        description: "",
-        tools: [],
-        resources: [],
-      })
-      .select()
-      .single();
+    const data = await storage.addMcpServer({
+      name: defaultName,
+      description: "",
+      tools: [],
+      resources: [],
+    });
 
-    if (!error && data) {
-      setMcpServers([...mcpServers, data as MCPServer]);
+    if (data) {
+      setMcpServers([...mcpServers, data]);
     }
   };
 
@@ -328,21 +314,24 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
 
   // Delete handlers
   const handleDeletePersona = async (personaId: string) => {
-    const supabase = createBrowserClient();
-    await supabase.from("personas").delete().eq("id", personaId);
-    setPersonas(personas.filter(p => p.id !== personaId));
+    const success = await storage.deletePersona(personaId);
+    if (success) {
+      setPersonas(personas.filter(p => p.id !== personaId));
+    }
   };
 
   const handleDeleteSkill = async (skillId: string) => {
-    const supabase = createBrowserClient();
-    await supabase.from("skills").delete().eq("id", skillId);
-    setSkills(skills.filter(s => s.id !== skillId));
+    const success = await storage.deleteSkill(skillId);
+    if (success) {
+      setSkills(skills.filter(s => s.id !== skillId));
+    }
   };
 
   const handleDeleteMCP = async (mcpId: string) => {
-    const supabase = createBrowserClient();
-    await supabase.from("mcp_servers").delete().eq("id", mcpId);
-    setMcpServers(mcpServers.filter(m => m.id !== mcpId));
+    const success = await storage.deleteMcpServer(mcpId);
+    if (success) {
+      setMcpServers(mcpServers.filter(m => m.id !== mcpId));
+    }
   };
 
   // Clipboard
@@ -560,6 +549,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                     <PersonaEditor
                       key={persona.id}
                       persona={persona}
+                      storage={storage}
                       onDelete={() => handleDeletePersona(persona.id)}
                       onUpdate={(updated) => {
                         setPersonas(personas.map(p => p.id === updated.id ? updated : p));
@@ -623,6 +613,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                     <SkillEditor
                       key={skill.id}
                       skill={skill}
+                      storage={storage}
                       onDelete={() => handleDeleteSkill(skill.id)}
                       onUpdate={(updated) => {
                         setSkills(skills.map(s => s.id === updated.id ? updated : s));
@@ -686,6 +677,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                     <McpServerEditor
                       key={mcp.id}
                       mcpServer={mcp}
+                      storage={storage}
                       onDelete={() => handleDeleteMCP(mcp.id)}
                       onUpdate={(updated) => {
                         setMcpServers(mcpServers.map(m => m.id === updated.id ? updated : m));
@@ -706,7 +698,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
               exit={{ opacity: 0, y: -10 }}
             >
               <MemoryEditor
-                playbook_id={id}
+                storage={storage}
                 memories={memories}
                 onUpdate={setMemories}
               />

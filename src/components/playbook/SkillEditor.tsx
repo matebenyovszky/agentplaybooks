@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { createBrowserClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { 
   Zap,
@@ -18,9 +17,11 @@ import {
   FileJson
 } from "lucide-react";
 import type { Skill } from "@/lib/supabase/types";
+import type { StorageAdapter } from "@/lib/storage";
 
 interface SkillEditorProps {
   skill: Skill;
+  storage: StorageAdapter;
   onUpdate: (skill: Skill) => void;
   onDelete: () => void;
 }
@@ -33,7 +34,7 @@ interface SchemaProperty {
   enum?: string[];
 }
 
-export function SkillEditor({ skill, onUpdate, onDelete }: SkillEditorProps) {
+export function SkillEditor({ skill, storage, onUpdate, onDelete }: SkillEditorProps) {
   const [expanded, setExpanded] = useState(false);
   const [name, setName] = useState(skill.name);
   const [description, setDescription] = useState(skill.description || "");
@@ -88,25 +89,15 @@ export function SkillEditor({ skill, onUpdate, onDelete }: SkillEditorProps) {
       const parsedDefinition = JSON.parse(definitionJson);
       const parsedExamples = JSON.parse(examplesJson);
 
-      const supabase = createBrowserClient();
-      const { error } = await supabase
-        .from("skills")
-        .update({ 
-          name,
-          description,
-          definition: parsedDefinition,
-          examples: parsedExamples
-        })
-        .eq("id", skill.id);
+      const updated = await storage.updateSkill(skill.id, {
+        name,
+        description,
+        definition: parsedDefinition,
+        examples: parsedExamples
+      });
 
-      if (!error) {
-        onUpdate({ 
-          ...skill, 
-          name, 
-          description,
-          definition: parsedDefinition,
-          examples: parsedExamples
-        });
+      if (updated) {
+        onUpdate(updated);
         setHasChanges(false);
       }
     } catch (e) {
@@ -114,7 +105,7 @@ export function SkillEditor({ skill, onUpdate, onDelete }: SkillEditorProps) {
     } finally {
       setSaving(false);
     }
-  }, [name, description, definitionJson, examplesJson, skill, jsonError, onUpdate]);
+  }, [name, description, definitionJson, examplesJson, skill.id, jsonError, onUpdate, storage]);
 
   // Debounced auto-save
   useEffect(() => {

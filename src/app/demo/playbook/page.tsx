@@ -1,28 +1,23 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { createDemoAdapter, resetDemoData, loadDemoData } from "@/lib/storage";
 import { 
   ArrowLeft,
   Brain,
   Zap,
   Server,
   Database,
-  Key,
   Settings,
-  Save,
   Globe,
   Lock,
   Plus,
   Copy,
   Check,
-  Eye,
-  EyeOff,
-  ExternalLink,
-  Loader2,
   Sparkles,
   RefreshCw,
   LogIn,
@@ -30,38 +25,21 @@ import {
   AlertTriangle,
   X
 } from "lucide-react";
-import type { Playbook, Persona, Skill, MCPServer, Memory, ApiKey } from "@/lib/supabase/types";
+import type { Playbook, Persona, Skill, MCPServer, Memory } from "@/lib/supabase/types";
 
-// Import demo storage
-import {
-  loadDemoData,
-  saveDemoData,
-  resetDemoData,
-  updateDemoPlaybook,
-  addDemoPersona,
-  updateDemoPersona,
-  deleteDemoPersona,
-  addDemoSkill,
-  updateDemoSkill,
-  deleteDemoSkill,
-  addDemoMcpServer,
-  updateDemoMcpServer,
-  deleteDemoMcpServer,
-  addDemoMemory,
-  updateDemoMemory,
-  deleteDemoMemory,
-} from "@/lib/demo-storage";
-
-// Import editor components (we'll create demo-compatible versions)
-import { DemoPersonaEditor } from "./DemoPersonaEditor";
-import { DemoSkillEditor } from "./DemoSkillEditor";
-import { DemoMcpServerEditor } from "./DemoMcpServerEditor";
-import { DemoMemoryEditor } from "./DemoMemoryEditor";
+// Import shared editor components
+import { PersonaEditor } from "@/components/playbook/PersonaEditor";
+import { SkillEditor } from "@/components/playbook/SkillEditor";
+import { McpServerEditor } from "@/components/playbook/McpServerEditor";
+import { MemoryEditor } from "@/components/playbook/MemoryEditor";
 
 type TabType = "personas" | "skills" | "mcp" | "memory" | "settings";
 
 export default function DemoPlaybookPage() {
   const t = useTranslations();
+  
+  // Create demo storage adapter
+  const storage = useMemo(() => createDemoAdapter(), []);
   
   // State
   const [playbook, setPlaybook] = useState<Playbook | null>(null);
@@ -78,7 +56,7 @@ export default function DemoPlaybookPage() {
     loadData();
   }, []);
 
-  const loadData = () => {
+  const loadData = async () => {
     const data = loadDemoData();
     setPlaybook(data.playbook);
     setPersonas(data.personas);
@@ -99,28 +77,26 @@ export default function DemoPlaybookPage() {
     }
   };
 
-  const updatePlaybook = useCallback((updates: Partial<Playbook>) => {
+  const updatePlaybook = useCallback(async (updates: Partial<Playbook>) => {
     if (!playbook) return;
-    const updated = updateDemoPlaybook(updates);
-    setPlaybook(updated);
-  }, [playbook]);
+    const updated = await storage.updatePlaybook(updates);
+    if (updated) setPlaybook(updated);
+  }, [playbook, storage]);
 
-  // Add handlers - create items with default names, no prompt needed
-  const handleAddPersona = () => {
+  // Add handlers
+  const handleAddPersona = async () => {
     const defaultName = `New Persona ${personas.length + 1}`;
-    
-    const newPersona = addDemoPersona({
+    const data = await storage.addPersona({
       name: defaultName,
       system_prompt: "You are a helpful assistant.",
       metadata: {},
     });
-    setPersonas([...personas, newPersona]);
+    if (data) setPersonas([...personas, data]);
   };
 
-  const handleAddSkill = () => {
+  const handleAddSkill = async () => {
     const defaultName = `new_skill_${skills.length + 1}`;
-    
-    const newSkill = addDemoSkill({
+    const data = await storage.addSkill({
       name: defaultName,
       description: "",
       definition: { 
@@ -132,66 +108,56 @@ export default function DemoPlaybookPage() {
       },
       examples: [],
     });
-    setSkills([...skills, newSkill]);
+    if (data) setSkills([...skills, data]);
   };
 
-  const handleAddMCP = () => {
+  const handleAddMCP = async () => {
     const defaultName = `New MCP Server ${mcpServers.length + 1}`;
-    
-    const newMcp = addDemoMcpServer({
+    const data = await storage.addMcpServer({
       name: defaultName,
       description: "",
       tools: [],
       resources: [],
     });
-    setMcpServers([...mcpServers, newMcp]);
+    if (data) setMcpServers([...mcpServers, data]);
   };
 
   // Delete handlers
-  const handleDeletePersona = (personaId: string) => {
-    deleteDemoPersona(personaId);
-    setPersonas(personas.filter(p => p.id !== personaId));
+  const handleDeletePersona = async (personaId: string) => {
+    const success = await storage.deletePersona(personaId);
+    if (success) setPersonas(personas.filter(p => p.id !== personaId));
   };
 
-  const handleDeleteSkill = (skillId: string) => {
-    deleteDemoSkill(skillId);
-    setSkills(skills.filter(s => s.id !== skillId));
+  const handleDeleteSkill = async (skillId: string) => {
+    const success = await storage.deleteSkill(skillId);
+    if (success) setSkills(skills.filter(s => s.id !== skillId));
   };
 
-  const handleDeleteMCP = (mcpId: string) => {
-    deleteDemoMcpServer(mcpId);
-    setMcpServers(mcpServers.filter(m => m.id !== mcpId));
+  const handleDeleteMCP = async (mcpId: string) => {
+    const success = await storage.deleteMcpServer(mcpId);
+    if (success) setMcpServers(mcpServers.filter(m => m.id !== mcpId));
   };
 
-  // Clipboard
-  const copyToClipboard = useCallback((text: string, key: string) => {
+  const copyToClipboard = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
     setCopied(key);
     setTimeout(() => setCopied(null), 2000);
-  }, []);
-
-  // Get base URL for API endpoints
-  const getBaseUrl = () => {
-    if (typeof window !== "undefined") {
-      return window.location.origin;
-    }
-    return "https://agentplaybooks.com";
   };
 
   const tabs = [
-    { id: "personas" as TabType, label: t("editor.tabs.personas"), icon: Brain, count: personas.length, color: "blue" },
-    { id: "skills" as TabType, label: t("editor.tabs.skills"), icon: Zap, count: skills.length, color: "purple" },
-    { id: "mcp" as TabType, label: t("editor.tabs.mcp"), icon: Server, count: mcpServers.length, color: "pink" },
-    { id: "memory" as TabType, label: t("editor.tabs.memory"), icon: Database, count: memories.length, color: "teal" },
-    { id: "settings" as TabType, label: t("editor.tabs.settings"), icon: Settings, count: 0, color: "slate" },
+    { id: "personas" as TabType, label: t("editor.tabs.personas"), icon: Brain, color: "blue" },
+    { id: "skills" as TabType, label: t("editor.tabs.skills"), icon: Zap, color: "purple" },
+    { id: "mcp" as TabType, label: t("editor.tabs.mcp"), icon: Server, color: "pink" },
+    { id: "memory" as TabType, label: t("editor.tabs.memory"), icon: Database, color: "green" },
+    { id: "settings" as TabType, label: t("editor.tabs.settings"), icon: Settings, color: "slate" },
   ];
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0f1a] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 text-blue-500 animate-spin" />
-          <p className="text-slate-400">Loading demo...</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
+        <div className="flex items-center gap-3 text-slate-400">
+          <div className="h-5 w-5 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
+          <span>Loading demo...</span>
         </div>
       </div>
     );
@@ -199,14 +165,14 @@ export default function DemoPlaybookPage() {
 
   if (!playbook) {
     return (
-      <div className="min-h-screen bg-[#0a0f1a] flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-xl text-slate-400 mb-4">Demo not available</p>
+          <p className="text-slate-400 mb-4">Failed to load demo</p>
           <Link 
             href="/"
             className="text-blue-400 hover:text-blue-300 transition-colors"
           >
-            ← Back to Home
+            ← Back to home
           </Link>
         </div>
       </div>
@@ -214,142 +180,126 @@ export default function DemoPlaybookPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0f1a] text-white">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white">
       {/* Demo Banner */}
-      <div className="bg-gradient-to-r from-amber-600/20 to-orange-600/20 border-b border-amber-500/30">
-        <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Sparkles className="h-5 w-5 text-amber-400" />
-            <span className="text-amber-200 text-sm">
-              <strong>Demo Mode</strong> - Changes are saved locally. Sign up to save to the cloud!
-            </span>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleReset}
-              className="px-3 py-1 text-sm text-slate-400 hover:text-white flex items-center gap-1 transition-colors"
-            >
-              <RefreshCw className="h-4 w-4" />
-              Reset Demo
-            </button>
-            <Link
-              href="/login"
-              className={cn(
-                "px-4 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2",
-                "bg-amber-500 text-slate-900 hover:bg-amber-400 transition-colors"
-              )}
-            >
-              <UserPlus className="h-4 w-4" />
-              Sign Up Free
-            </Link>
+      <div className="bg-gradient-to-r from-amber-600/20 via-amber-500/10 to-amber-600/20 border-b border-amber-500/30">
+        <div className="max-w-7xl mx-auto px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-1.5 rounded-lg bg-amber-500/20">
+                <Sparkles className="h-4 w-4 text-amber-400" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-amber-200">
+                  Demo Mode - Changes saved to browser only
+                </p>
+                <p className="text-xs text-amber-200/60">
+                  Sign up to save your playbook to the cloud and access it anywhere
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleReset}
+                className="px-3 py-1.5 text-sm rounded-lg bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 transition-colors flex items-center gap-2"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                Reset Demo
+              </button>
+              <button
+                onClick={() => setShowSignupPrompt(true)}
+                className="px-3 py-1.5 text-sm rounded-lg bg-amber-500 text-black font-medium hover:bg-amber-400 transition-colors flex items-center gap-2"
+              >
+                <UserPlus className="h-3.5 w-3.5" />
+                Save to Cloud
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-blue-900/30 bg-[#0a0f1a]/90 backdrop-blur-md px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
+      <header className="border-b border-slate-800/50 bg-slate-900/50 backdrop-blur-sm sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link
               href="/"
-              className="p-2 hover:bg-slate-800/50 rounded-lg transition-colors text-slate-400 hover:text-white"
+              className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
             >
-              <ArrowLeft className="h-5 w-5" />
+              <ArrowLeft className="h-4 w-4" />
+              <span className="text-sm">Back</span>
             </Link>
-            <div>
-              <input
-                type="text"
-                value={playbook.name}
-                onChange={(e) => updatePlaybook({ name: e.target.value })}
-                className={cn(
-                  "text-xl font-bold bg-transparent border-none focus:outline-none",
-                  "text-white placeholder:text-slate-500",
-                  "hover:bg-slate-800/50 focus:bg-slate-800/70 rounded px-2 py-1 -ml-2"
-                )}
-              />
-              <div className="flex items-center gap-2 text-sm text-slate-500 px-2">
-                <span className="px-2 py-0.5 bg-amber-500/20 text-amber-400 text-xs rounded-full">
-                  DEMO
+            
+            <div className="h-6 w-px bg-slate-700" />
+            
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 bg-gradient-to-br from-blue-600 to-amber-500 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">
+                  {playbook.name.charAt(0).toUpperCase()}
                 </span>
-                <code className="font-mono">/{playbook.guid}</code>
+              </div>
+              <div>
+                <input
+                  type="text"
+                  value={playbook.name}
+                  onChange={(e) => updatePlaybook({ name: e.target.value })}
+                  className="text-lg font-semibold bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-blue-500/50 rounded px-1"
+                />
+                <p className="text-sm text-slate-500 flex items-center gap-2">
+                  <span className="text-amber-400">Demo Mode</span>
+                  <span>•</span>
+                  <span className="font-mono text-xs">GUID: {playbook.guid}</span>
+                </p>
               </div>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-3">
-            <span className="text-green-400 text-sm flex items-center gap-1">
-              <Check className="h-3 w-3" />
-              Auto-saved locally
-            </span>
-            
-            {/* Public/Private toggle */}
-            <button
-              onClick={() => updatePlaybook({ is_public: !playbook.is_public })}
-              className={cn(
-                "px-3 py-2 rounded-lg flex items-center gap-2 text-sm transition-colors",
-                playbook.is_public 
-                  ? "bg-green-500/10 text-green-400 border border-green-500/20 hover:bg-green-500/20" 
-                  : "bg-slate-800/50 text-slate-400 border border-slate-700/50 hover:border-slate-600"
+            <div className="flex items-center gap-2 text-sm text-slate-400 bg-slate-800/50 rounded-lg px-3 py-1.5">
+              {playbook.is_public ? (
+                <>
+                  <Globe className="h-4 w-4 text-green-400" />
+                  <span>Public</span>
+                </>
+              ) : (
+                <>
+                  <Lock className="h-4 w-4" />
+                  <span>Private</span>
+                </>
               )}
-            >
-              {playbook.is_public ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-              {playbook.is_public ? "Public" : "Private"}
-            </button>
-            
-            {/* Save to Cloud button */}
-            <button
-              onClick={() => setShowSignupPrompt(true)}
-              className={cn(
-                "px-4 py-2 rounded-lg font-semibold flex items-center gap-2 transition-all",
-                "bg-gradient-to-r from-amber-600 to-amber-400 text-slate-900 shadow-lg shadow-amber-500/25"
-              )}
-            >
-              <Save className="h-4 w-4" />
-              Save to Cloud
-            </button>
+            </div>
           </div>
         </div>
       </header>
 
       {/* Tabs */}
-      <div className="border-b border-blue-900/30 bg-[#0a0f1a]/50">
-        <div className="max-w-7xl mx-auto px-6">
-          <nav className="flex gap-1 -mb-px overflow-x-auto">
+      <div className="border-b border-slate-800/50 bg-slate-900/30">
+        <div className="max-w-7xl mx-auto px-4">
+          <nav className="flex gap-1 overflow-x-auto py-2">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
-                  "px-4 py-3 flex items-center gap-2 text-sm font-medium border-b-2 transition-all whitespace-nowrap",
+                  "px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-all whitespace-nowrap",
                   activeTab === tab.id
-                    ? `border-${tab.color}-500 text-white`
-                    : "border-transparent text-slate-400 hover:text-white hover:border-slate-700"
+                    ? `bg-${tab.color}-500/20 text-${tab.color}-300 border border-${tab.color}-500/30`
+                    : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
                 )}
-                style={{
-                  borderBottomColor: activeTab === tab.id 
-                    ? tab.color === "blue" ? "#3b82f6" 
-                      : tab.color === "purple" ? "#a855f7" 
-                      : tab.color === "pink" ? "#ec4899" 
-                      : tab.color === "teal" ? "#14b8a6" 
-                      : "#64748b"
-                    : "transparent"
-                }}
+                style={activeTab === tab.id ? {
+                  backgroundColor: `rgb(var(--${tab.color}-500) / 0.2)`,
+                } : {}}
               >
                 <tab.icon className="h-4 w-4" />
                 {tab.label}
-                {tab.count > 0 && (
-                  <span className="px-2 py-0.5 bg-slate-800 rounded-full text-xs">
-                    {tab.count}
-                  </span>
-                )}
               </button>
             ))}
           </nav>
         </div>
       </div>
 
-      {/* Content */}
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 py-8">
         <AnimatePresence mode="wait">
           {/* Personas Tab */}
           {activeTab === "personas" && (
@@ -376,23 +326,21 @@ export default function DemoPlaybookPage() {
                   {t("editor.addPersona")}
                 </button>
               </div>
-              
+
               {personas.length === 0 ? (
-                <EmptyState 
-                  icon={Brain}
-                  message="No personas yet" 
-                  description="Personas define AI personalities and system prompts."
-                  color="blue"
-                />
+                <div className="text-center py-12 text-slate-500">
+                  <Brain className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No personas yet. Create one to define your AI&apos;s personality.</p>
+                </div>
               ) : (
                 <div className="space-y-4">
                   {personas.map((persona) => (
-                    <DemoPersonaEditor
+                    <PersonaEditor
                       key={persona.id}
                       persona={persona}
+                      storage={storage}
                       onDelete={() => handleDeletePersona(persona.id)}
                       onUpdate={(updated) => {
-                        updateDemoPersona(updated.id, updated);
                         setPersonas(personas.map(p => p.id === updated.id ? updated : p));
                       }}
                     />
@@ -427,23 +375,21 @@ export default function DemoPlaybookPage() {
                   {t("editor.addSkill")}
                 </button>
               </div>
-              
+
               {skills.length === 0 ? (
-                <EmptyState 
-                  icon={Zap}
-                  message="No skills yet" 
-                  description="Skills define structured capabilities using JSON Schema."
-                  color="purple"
-                />
+                <div className="text-center py-12 text-slate-500">
+                  <Zap className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No skills yet. Create one to define what your AI can do.</p>
+                </div>
               ) : (
                 <div className="space-y-4">
                   {skills.map((skill) => (
-                    <DemoSkillEditor
+                    <SkillEditor
                       key={skill.id}
                       skill={skill}
+                      storage={storage}
                       onDelete={() => handleDeleteSkill(skill.id)}
                       onUpdate={(updated) => {
-                        updateDemoSkill(updated.id, updated);
                         setSkills(skills.map(s => s.id === updated.id ? updated : s));
                       }}
                     />
@@ -478,23 +424,21 @@ export default function DemoPlaybookPage() {
                   {t("editor.addMCP")}
                 </button>
               </div>
-              
+
               {mcpServers.length === 0 ? (
-                <EmptyState 
-                  icon={Server}
-                  message="No MCP servers yet" 
-                  description="MCP servers provide tools and resources for AI agents."
-                  color="pink"
-                />
+                <div className="text-center py-12 text-slate-500">
+                  <Server className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No MCP servers yet. Add one to define external tool integrations.</p>
+                </div>
               ) : (
                 <div className="space-y-4">
                   {mcpServers.map((mcp) => (
-                    <DemoMcpServerEditor
+                    <McpServerEditor
                       key={mcp.id}
                       mcpServer={mcp}
+                      storage={storage}
                       onDelete={() => handleDeleteMCP(mcp.id)}
                       onUpdate={(updated) => {
-                        updateDemoMcpServer(updated.id, updated);
                         setMcpServers(mcpServers.map(m => m.id === updated.id ? updated : m));
                       }}
                     />
@@ -512,21 +456,10 @@ export default function DemoPlaybookPage() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
             >
-              <DemoMemoryEditor
+              <MemoryEditor
+                storage={storage}
                 memories={memories}
-                onUpdate={(updated) => setMemories(updated)}
-                onAdd={(memory) => {
-                  const newMem = addDemoMemory(memory);
-                  setMemories([...memories, newMem]);
-                }}
-                onEdit={(id, updates) => {
-                  updateDemoMemory(id, updates);
-                  setMemories(memories.map(m => m.id === id ? { ...m, ...updates } : m));
-                }}
-                onDelete={(id) => {
-                  deleteDemoMemory(id);
-                  setMemories(memories.filter(m => m.id !== id));
-                }}
+                onUpdate={setMemories}
               />
             </motion.div>
           )}
@@ -538,128 +471,114 @@ export default function DemoPlaybookPage() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="max-w-3xl"
+              className="space-y-6"
             >
-              <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
-                <Settings className="h-5 w-5 text-slate-400" />
-                {t("editor.tabs.settings")}
-              </h2>
-              
-              <div className="space-y-6">
-                {/* Description */}
-                <div className={cn(
-                  "p-5 rounded-xl",
-                  "bg-gradient-to-br from-slate-900/80 to-slate-800/80",
-                  "border border-slate-700/50"
-                )}>
-                  <label className="block text-sm font-medium text-slate-400 mb-2">
-                    Description
-                  </label>
-                  <textarea
-                    value={playbook.description || ""}
-                    onChange={(e) => updatePlaybook({ description: e.target.value })}
-                    className={cn(
-                      "w-full p-3 rounded-lg",
-                      "bg-slate-900/70 border border-slate-700/50",
-                      "text-slate-200 placeholder:text-slate-600",
-                      "focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20",
-                      "resize-y min-h-[100px]"
-                    )}
-                    placeholder="Describe what this playbook is for..."
-                  />
-                </div>
-
-                {/* Visibility */}
-                <div className={cn(
-                  "p-5 rounded-xl",
-                  "bg-gradient-to-br from-slate-900/80 to-slate-800/80",
-                  "border border-slate-700/50"
-                )}>
-                  <label className="block text-sm font-medium text-slate-400 mb-4">
-                    Visibility
-                  </label>
-                  <div className="flex gap-4">
-                    <button
-                      onClick={() => updatePlaybook({ is_public: false })}
+              <div className="bg-slate-900/50 rounded-xl border border-slate-800/50 p-6">
+                <h3 className="text-lg font-semibold mb-4">Playbook Settings</h3>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-400 mb-2">
+                      Name
+                    </label>
+                    <input
+                      type="text"
+                      value={playbook.name}
+                      onChange={(e) => updatePlaybook({ name: e.target.value })}
                       className={cn(
-                        "flex-1 p-4 rounded-xl border flex items-center gap-3 transition-all",
-                        !playbook.is_public
-                          ? "border-blue-500/50 bg-blue-500/10"
-                          : "border-slate-700/50 bg-slate-900/50 hover:border-slate-600"
+                        "w-full p-3 rounded-lg",
+                        "bg-slate-800/50 border border-slate-700/50",
+                        "text-slate-200 placeholder:text-slate-600",
+                        "focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20"
                       )}
-                    >
-                      <Lock className="h-5 w-5" />
-                      <div className="text-left">
-                        <p className="font-medium">Private</p>
-                        <p className="text-sm text-slate-400">Only you can access</p>
-                      </div>
-                    </button>
-                    <button
-                      onClick={() => updatePlaybook({ is_public: true })}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-400 mb-2">
+                      Description
+                    </label>
+                    <textarea
+                      value={playbook.description || ""}
+                      onChange={(e) => updatePlaybook({ description: e.target.value })}
+                      rows={3}
                       className={cn(
-                        "flex-1 p-4 rounded-xl border flex items-center gap-3 transition-all",
+                        "w-full p-3 rounded-lg resize-y",
+                        "bg-slate-800/50 border border-slate-700/50",
+                        "text-slate-200 placeholder:text-slate-600",
+                        "focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20"
+                      )}
+                      placeholder="Describe what this playbook does..."
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-slate-800/30 rounded-lg border border-slate-700/30">
+                    <div className="flex items-center gap-3">
+                      {playbook.is_public ? (
+                        <Globe className="h-5 w-5 text-green-400" />
+                      ) : (
+                        <Lock className="h-5 w-5 text-slate-400" />
+                      )}
+                      <div>
+                        <p className="font-medium">
+                          {playbook.is_public ? "Public Playbook" : "Private Playbook"}
+                        </p>
+                        <p className="text-sm text-slate-500">
+                          {playbook.is_public 
+                            ? "Anyone can view and import this playbook"
+                            : "Only you can access this playbook"
+                          }
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => updatePlaybook({ is_public: !playbook.is_public })}
+                      className={cn(
+                        "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
                         playbook.is_public
-                          ? "border-green-500/50 bg-green-500/10"
-                          : "border-slate-700/50 bg-slate-900/50 hover:border-slate-600"
+                          ? "bg-slate-700 text-slate-300 hover:bg-slate-600"
+                          : "bg-green-600/20 text-green-400 border border-green-500/30 hover:bg-green-600/30"
                       )}
                     >
-                      <Globe className="h-5 w-5" />
-                      <div className="text-left">
-                        <p className="font-medium">Public</p>
-                        <p className="text-sm text-slate-400">Anyone with the link</p>
-                      </div>
+                      {playbook.is_public ? "Make Private" : "Make Public"}
                     </button>
                   </div>
                 </div>
+              </div>
 
-                {/* API Endpoints Info */}
-                <div className={cn(
-                  "p-5 rounded-xl",
-                  "bg-gradient-to-br from-amber-900/20 to-orange-900/20",
-                  "border border-amber-500/30"
-                )}>
-                  <h3 className="font-medium mb-3 flex items-center gap-2 text-amber-300">
-                    <AlertTriangle className="h-4 w-4" />
-                    API Endpoints (Available after signup)
-                  </h3>
-                  <p className="text-sm text-amber-200/70 mb-4">
-                    Sign up to get your own API endpoints for this playbook. Your AI agents will be able to read and write data.
-                  </p>
-                  <div className="space-y-2 opacity-60">
-                    {[
-                      { method: "GET", path: `/api/playbooks/your-guid`, desc: "JSON format" },
-                      { method: "GET", path: `/api/playbooks/your-guid?format=mcp`, desc: "MCP manifest" },
-                      { method: "POST", path: `/api/agent/your-guid/memory`, desc: "Write memory" },
-                    ].map(({ method, path, desc }) => (
-                      <div 
-                        key={path}
-                        className="flex items-center gap-3 p-3 bg-slate-900/70 rounded-lg border border-slate-700/50"
-                      >
-                        <span className={cn(
-                          "text-xs font-mono px-2 py-0.5 rounded",
-                          method === "GET" ? "bg-green-500/20 text-green-400" : "bg-blue-500/20 text-blue-400"
-                        )}>
-                          {method}
-                        </span>
-                        <code className="flex-1 text-sm text-slate-400 font-mono truncate">
-                          {path}
-                        </code>
-                        <span className="text-xs text-slate-500">
-                          {desc}
-                        </span>
+              {/* API Endpoints (demo info) */}
+              <div className="bg-slate-900/50 rounded-xl border border-slate-800/50 p-6">
+                <h3 className="text-lg font-semibold mb-4">API Endpoints</h3>
+                <p className="text-sm text-slate-500 mb-4">
+                  In demo mode, API endpoints are simulated. Sign up to get real API access.
+                </p>
+                
+                <div className="space-y-3">
+                  {[
+                    { label: "JSON Export", path: `/api/playbooks/${playbook.guid}` },
+                    { label: "OpenAPI Spec", path: `/api/playbooks/${playbook.guid}/openapi` },
+                    { label: "MCP Endpoint", path: `/api/mcp/${playbook.guid}` },
+                  ].map((endpoint) => (
+                    <div 
+                      key={endpoint.label}
+                      className="flex items-center justify-between p-3 bg-slate-800/30 rounded-lg border border-slate-700/30"
+                    >
+                      <div>
+                        <p className="text-sm font-medium">{endpoint.label}</p>
+                        <code className="text-xs text-slate-500">{endpoint.path}</code>
                       </div>
-                    ))}
-                  </div>
-                  <Link
-                    href="/login"
-                    className={cn(
-                      "mt-4 w-full px-4 py-2 rounded-lg font-medium flex items-center justify-center gap-2",
-                      "bg-amber-500 text-slate-900 hover:bg-amber-400 transition-colors"
-                    )}
-                  >
-                    <UserPlus className="h-4 w-4" />
-                    Sign Up to Get API Access
-                  </Link>
+                      <button
+                        onClick={() => copyToClipboard(`${typeof window !== 'undefined' ? window.location.origin : ''}${endpoint.path}`, endpoint.label)}
+                        className="p-2 text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors"
+                      >
+                        {copied === endpoint.label ? (
+                          <Check className="h-4 w-4 text-green-400" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                  ))}
                 </div>
               </div>
             </motion.div>
@@ -667,66 +586,71 @@ export default function DemoPlaybookPage() {
         </AnimatePresence>
       </main>
 
-      {/* Sign Up Prompt Modal */}
+      {/* Signup Prompt Modal */}
       <AnimatePresence>
         {showSignupPrompt && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
             onClick={() => setShowSignupPrompt(false)}
           >
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
+              className="w-full max-w-md bg-slate-900 border border-amber-500/30 rounded-xl shadow-2xl overflow-hidden"
               onClick={(e) => e.stopPropagation()}
-              className={cn(
-                "w-full max-w-md rounded-2xl",
-                "bg-gradient-to-br from-slate-900 to-slate-800",
-                "border border-slate-700 shadow-2xl"
-              )}
             >
-              <div className="p-6 text-center">
-                <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-amber-500 to-orange-500 rounded-full flex items-center justify-center">
-                  <Sparkles className="h-8 w-8 text-white" />
+              <div className="p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 rounded-lg bg-amber-500/20">
+                    <AlertTriangle className="h-5 w-5 text-amber-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold">Save Your Work</h3>
+                  <button
+                    onClick={() => setShowSignupPrompt(false)}
+                    className="ml-auto p-1 text-slate-400 hover:text-white"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
                 </div>
-                <h3 className="text-xl font-semibold text-white mb-2">
-                  Ready to save your work?
-                </h3>
+                
                 <p className="text-slate-400 mb-6">
-                  Create a free account to save this playbook to the cloud, get API endpoints, and access your playbook from anywhere.
+                  Your demo playbook is stored locally in your browser. Create an account to:
                 </p>
                 
-                <div className="space-y-3">
+                <ul className="space-y-2 mb-6">
+                  {[
+                    "Save your playbook to the cloud",
+                    "Access from any device",
+                    "Get real API endpoints",
+                    "Share with your team",
+                    "Generate API keys",
+                  ].map((item, i) => (
+                    <li key={i} className="flex items-center gap-2 text-sm">
+                      <Check className="h-4 w-4 text-green-400" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+                
+                <div className="flex gap-3">
                   <Link
-                    href="/login?signup=true"
-                    className={cn(
-                      "w-full px-4 py-3 rounded-lg font-semibold flex items-center justify-center gap-2",
-                      "bg-gradient-to-r from-amber-600 to-amber-400 text-slate-900",
-                      "hover:opacity-90 transition-opacity"
-                    )}
+                    href="/signup"
+                    className="flex-1 py-2.5 bg-amber-500 text-black font-medium rounded-lg hover:bg-amber-400 transition-colors flex items-center justify-center gap-2"
                   >
-                    <UserPlus className="h-5 w-5" />
-                    Sign Up Free
+                    <UserPlus className="h-4 w-4" />
+                    Sign Up
                   </Link>
                   <Link
                     href="/login"
-                    className={cn(
-                      "w-full px-4 py-3 rounded-lg font-medium flex items-center justify-center gap-2",
-                      "bg-slate-700 text-white hover:bg-slate-600 transition-colors"
-                    )}
+                    className="flex-1 py-2.5 bg-slate-800 text-white font-medium rounded-lg hover:bg-slate-700 transition-colors flex items-center justify-center gap-2"
                   >
-                    <LogIn className="h-5 w-5" />
-                    Already have an account? Sign In
+                    <LogIn className="h-4 w-4" />
+                    Log In
                   </Link>
-                  <button
-                    onClick={() => setShowSignupPrompt(false)}
-                    className="text-sm text-slate-500 hover:text-slate-300 transition-colors"
-                  >
-                    Continue in Demo Mode
-                  </button>
                 </div>
               </div>
             </motion.div>
@@ -736,38 +660,3 @@ export default function DemoPlaybookPage() {
     </div>
   );
 }
-
-// Empty state component
-function EmptyState({ 
-  icon: Icon, 
-  message, 
-  description,
-  color 
-}: { 
-  icon: React.ComponentType<{ className?: string }>; 
-  message: string;
-  description: string;
-  color: string;
-}) {
-  const colorMap: Record<string, string> = {
-    blue: "text-blue-700",
-    purple: "text-purple-700",
-    pink: "text-pink-700",
-    teal: "text-teal-700",
-    slate: "text-slate-700"
-  };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="p-12 text-center bg-slate-900/50 rounded-xl border border-dashed border-slate-700"
-    >
-      <Icon className={cn("h-12 w-12 mx-auto mb-4", colorMap[color] || "text-slate-700")} />
-      <h3 className="text-lg font-medium text-slate-400 mb-2">{message}</h3>
-      <p className="text-sm text-slate-500">{description}</p>
-    </motion.div>
-  );
-}
-
-

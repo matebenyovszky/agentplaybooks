@@ -3,6 +3,9 @@ import { locales } from "@/i18n/config";
 import { promises as fs } from "fs";
 import path from "path";
 
+// Force static generation at build time (when fs is available)
+export const dynamic = "force-static";
+
 const baseUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://agentplaybooks.ai").replace(/\/$/, "");
 
 const paths = ["", "/docs", "/explore", "/enterprise"];

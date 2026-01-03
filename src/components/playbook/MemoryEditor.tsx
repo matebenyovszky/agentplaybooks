@@ -1,14 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { createBrowserClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { 
   Database,
   Trash2,
-  ChevronDown,
-  ChevronUp,
   Copy,
   Check,
   Plus,
@@ -19,14 +16,15 @@ import {
   RefreshCw
 } from "lucide-react";
 import type { Memory } from "@/lib/supabase/types";
+import type { StorageAdapter } from "@/lib/storage";
 
 interface MemoryEditorProps {
-  playbook_id: string;
+  storage: StorageAdapter;
   memories: Memory[];
   onUpdate: (memories: Memory[]) => void;
 }
 
-export function MemoryEditor({ playbook_id, memories, onUpdate }: MemoryEditorProps) {
+export function MemoryEditor({ storage, memories, onUpdate }: MemoryEditorProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [editingMemory, setEditingMemory] = useState<Memory | null>(null);
   const [editKey, setEditKey] = useState("");
@@ -55,38 +53,30 @@ export function MemoryEditor({ playbook_id, memories, onUpdate }: MemoryEditorPr
 
   const handleRefresh = async () => {
     setLoading(true);
-    const supabase = createBrowserClient();
-    const { data } = await supabase
-      .from("memories")
-      .select("*")
-      .eq("playbook_id", playbook_id);
-    
-    if (data) {
-      onUpdate(data as Memory[]);
-    }
+    const data = await storage.getMemories();
+    onUpdate(data);
     setLoading(false);
   };
 
   const handleAddMemory = async () => {
-    const key = prompt("Memory key (e.g., user_preferences):");
-    if (!key) return;
+    // Generate unique key name
+    let keyNum = memories.length + 1;
+    let key = `memory_key_${keyNum}`;
+    while (memories.some(m => m.key === key)) {
+      keyNum++;
+      key = `memory_key_${keyNum}`;
+    }
 
     setSaving(true);
-    const supabase = createBrowserClient();
-    const { data, error } = await supabase
-      .from("memories")
-      .insert({
-        playbook_id,
-        key,
-        value: {}
-      })
-      .select()
-      .single();
+    const data = await storage.addMemory({
+      key,
+      value: {}
+    });
 
-    if (!error && data) {
-      onUpdate([...memories, data as Memory]);
+    if (data) {
+      onUpdate([...memories, data]);
       // Open for editing immediately
-      setEditingMemory(data as Memory);
+      setEditingMemory(data);
       setEditKey(key);
       setEditValue("{}");
     }
@@ -99,21 +89,15 @@ export function MemoryEditor({ playbook_id, memories, onUpdate }: MemoryEditorPr
     setSaving(true);
     try {
       const parsedValue = JSON.parse(editValue);
-      const supabase = createBrowserClient();
       
-      const { error } = await supabase
-        .from("memories")
-        .update({ 
-          key: editKey,
-          value: parsedValue 
-        })
-        .eq("id", editingMemory.id);
+      const updated = await storage.updateMemory(editingMemory.id, {
+        key: editKey,
+        value: parsedValue 
+      });
 
-      if (!error) {
+      if (updated) {
         onUpdate(memories.map(m => 
-          m.id === editingMemory.id 
-            ? { ...m, key: editKey, value: parsedValue }
-            : m
+          m.id === editingMemory.id ? updated : m
         ));
         setEditingMemory(null);
       }
@@ -127,13 +111,8 @@ export function MemoryEditor({ playbook_id, memories, onUpdate }: MemoryEditorPr
   const handleDeleteMemory = async (memory: Memory) => {
     if (!confirm(`Delete memory "${memory.key}"?`)) return;
 
-    const supabase = createBrowserClient();
-    const { error } = await supabase
-      .from("memories")
-      .delete()
-      .eq("id", memory.id);
-
-    if (!error) {
+    const success = await storage.deleteMemory(memory.id);
+    if (success) {
       onUpdate(memories.filter(m => m.id !== memory.id));
     }
   };
