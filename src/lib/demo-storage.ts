@@ -113,6 +113,8 @@ When reviewing code:
           language: "en",
           codeStyle: "functional"
         },
+        tags: ["settings", "user"],
+        description: "User preference settings",
         updated_at: new Date().toISOString(),
       },
     ],
@@ -269,10 +271,13 @@ export function deleteDemoMcpServer(id: string): boolean {
 }
 
 // Memory operations
-export function addDemoMemory(memory: Omit<Memory, "id" | "updated_at" | "playbook_id">): Memory {
+export function addDemoMemory(memory: Partial<Omit<Memory, "id" | "updated_at" | "playbook_id">> & { key: string; value: Record<string, unknown> }): Memory {
   const data = loadDemoData();
   const newMemory: Memory = {
-    ...memory,
+    key: memory.key,
+    value: memory.value,
+    tags: memory.tags || [],
+    description: memory.description || null,
     id: generateId(),
     playbook_id: data.playbook.id,
     updated_at: new Date().toISOString(),

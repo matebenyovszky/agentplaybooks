@@ -12,7 +12,13 @@ import type { Persona, Skill, MCPServer, Memory, Playbook } from "@/lib/supabase
 export type PersonaInput = Omit<Persona, "id" | "playbook_id" | "created_at" | "updated_at">;
 export type SkillInput = Omit<Skill, "id" | "playbook_id" | "created_at" | "updated_at">;
 export type MCPServerInput = Omit<MCPServer, "id" | "playbook_id" | "created_at" | "updated_at">;
-export type MemoryInput = Omit<Memory, "id" | "playbook_id" | "created_at" | "updated_at">;
+// Memory input - tags and description are optional (have defaults in DB)
+export type MemoryInput = {
+  key: string;
+  value: Record<string, unknown>;
+  tags?: string[];
+  description?: string | null;
+};
 
 export interface StorageAdapter {
   // Mode indicator

@@ -429,18 +429,27 @@ app.delete("/playbooks/:id", async (c) => {
 // PERSONAS CRUD (authenticated)
 // ============================================
 
-// GET /api/playbooks/:id/personas
+// GET /api/playbooks/:id/personas - List personas (supports both UUID and GUID)
 app.get("/playbooks/:id/personas", async (c) => {
-  const user = await requireAuth(c);
-  const playbookId = c.req.param("id");
+  const user = await getAuthenticatedUser(c);
+  const idOrGuid = c.req.param("id");
   const supabase = getServiceSupabase();
 
-  // Check if playbook is public or user owns it
-  const { data: playbook } = await supabase
+  // Check if it's a UUID or GUID
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrGuid);
+
+  // Find playbook by ID or GUID
+  let query = supabase
     .from("playbooks")
-    .select("id, user_id, is_public")
-    .eq("id", playbookId)
-    .single();
+    .select("id, user_id, is_public");
+  
+  if (isUuid) {
+    query = query.eq("id", idOrGuid);
+  } else {
+    query = query.eq("guid", idOrGuid);
+  }
+
+  const { data: playbook } = await query.single();
 
   if (!playbook) {
     return c.json({ error: "Playbook not found" }, 404);
@@ -453,8 +462,8 @@ app.get("/playbooks/:id/personas", async (c) => {
 
   const { data, error } = await supabase
     .from("personas")
-    .select("*")
-    .eq("playbook_id", playbookId)
+    .select("id, name, system_prompt, metadata")
+    .eq("playbook_id", playbook.id)
     .order("created_at", { ascending: true });
 
   if (error) {
@@ -576,32 +585,42 @@ app.delete("/playbooks/:id/personas/:pid", async (c) => {
 // SKILLS CRUD (authenticated)
 // ============================================
 
-// GET /api/playbooks/:id/skills
+// GET /api/playbooks/:id/skills - List skills (supports both UUID and GUID)
 app.get("/playbooks/:id/skills", async (c) => {
-  const user = await requireAuth(c);
-  const playbookId = c.req.param("id");
+  const user = await getAuthenticatedUser(c);
+  const idOrGuid = c.req.param("id");
   const supabase = getServiceSupabase();
 
-  // Check if playbook is public or user owns it
-  const { data: playbook } = await supabase
+  // Check if it's a UUID or GUID
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrGuid);
+
+  // Find playbook by ID or GUID
+  let query = supabase
     .from("playbooks")
-    .select("id, user_id, is_public")
-    .eq("id", playbookId)
-    .single();
+    .select("id, user_id, is_public");
+  
+  if (isUuid) {
+    query = query.eq("id", idOrGuid);
+  } else {
+    query = query.eq("guid", idOrGuid);
+  }
+
+  const { data: playbook } = await query.single();
 
   if (!playbook) {
     return c.json({ error: "Playbook not found" }, 404);
   }
 
+  // Check access - public playbooks are readable by anyone, private only by owner
   if (!playbook.is_public && (!user || playbook.user_id !== user.id)) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
   const { data, error } = await supabase
     .from("skills")
-    .select("*")
-    .eq("playbook_id", playbookId)
-    .order("created_at", { ascending: true });
+    .select("id, name, description, definition, examples, priority")
+    .eq("playbook_id", playbook.id)
+    .order("priority", { ascending: false });
 
   if (error) {
     return c.json({ error: error.message }, 500);
@@ -942,95 +961,11 @@ app.delete("/playbooks/:guid/memory/:key", async (c) => {
 // PUBLIC SKILLS & PERSONAS ENDPOINTS (read-only for public playbooks)
 // ============================================
 
-// GET /api/playbooks/:guid/skills - List skills (public for public playbooks)
-app.get("/playbooks/:guid/skills", async (c) => {
-  const guid = c.req.param("guid");
-  const user = await getAuthenticatedUser(c);
-  
-  const playbook = await getPlaybookByGuid(guid, user?.id || null);
-  if (!playbook) {
-    return c.json({ error: "Playbook not found" }, 404);
-  }
+// NOTE: GET /api/playbooks/:guid/skills is handled by the :id route above (supports both UUID and GUID)
 
-  const supabase = getServiceSupabase();
+// NOTE: GET /api/playbooks/:guid/skills/:skillId is handled by the :id route in SKILLS CRUD section
 
-  const { data: skills, error } = await supabase
-    .from("skills")
-    .select("id, name, description, definition, examples, priority")
-    .eq("playbook_id", playbook.id)
-    .order("priority", { ascending: false });
-
-  if (error) {
-    return c.json({ error: error.message }, 500);
-  }
-
-  return c.json(skills || []);
-});
-
-// GET /api/playbooks/:guid/skills/:skillId - Get specific skill
-app.get("/playbooks/:guid/skills/:skillId", async (c) => {
-  const guid = c.req.param("guid");
-  const skillId = c.req.param("skillId");
-  const user = await getAuthenticatedUser(c);
-  
-  const playbook = await getPlaybookByGuid(guid, user?.id || null);
-  if (!playbook) {
-    return c.json({ error: "Playbook not found" }, 404);
-  }
-
-  const supabase = getServiceSupabase();
-
-  // Try to find by ID or by name
-  let query = supabase
-    .from("skills")
-    .select("id, name, description, definition, examples, priority")
-    .eq("playbook_id", playbook.id);
-
-  // Check if skillId is a UUID or a name
-  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(skillId);
-  
-  if (isUuid) {
-    query = query.eq("id", skillId);
-  } else {
-    // Search by name (case-insensitive)
-    query = query.ilike("name", skillId.replace(/_/g, " "));
-  }
-
-  const { data: skill, error } = await query.single();
-
-  if (error) {
-    if (error.code === "PGRST116") {
-      return c.json({ error: "Skill not found" }, 404);
-    }
-    return c.json({ error: error.message }, 500);
-  }
-
-  return c.json(skill);
-});
-
-// GET /api/playbooks/:guid/personas - List personas (public for public playbooks)
-app.get("/playbooks/:guid/personas", async (c) => {
-  const guid = c.req.param("guid");
-  const user = await getAuthenticatedUser(c);
-  
-  const playbook = await getPlaybookByGuid(guid, user?.id || null);
-  if (!playbook) {
-    return c.json({ error: "Playbook not found" }, 404);
-  }
-
-  const supabase = getServiceSupabase();
-
-  const { data: personas, error } = await supabase
-    .from("personas")
-    .select("id, name, system_prompt, metadata")
-    .eq("playbook_id", playbook.id);
-
-  if (error) {
-    return c.json({ error: error.message }, 500);
-  }
-
-  return c.json(personas || []);
-});
+// NOTE: GET /api/playbooks/:guid/personas is handled by the :id route in PERSONAS CRUD section
 
 // ============================================
 // API KEYS MANAGEMENT (authenticated owner only)

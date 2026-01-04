@@ -152,12 +152,17 @@ export async function GET(
   const mcpServers = mcpRes.data || [];
   const personas = personasRes.data || [];
 
-  // Build tools from skills
-  const tools: McpTool[] = skills.map((skill) => ({
-    name: skill.name.toLowerCase().replace(/\s+/g, "_"),
-    description: skill.description || skill.name,
-    inputSchema: (skill.definition?.parameters || { type: "object", properties: {} }) as Record<string, unknown>,
-  }));
+  // Build tools: start with built-in playbook tools
+  const tools: McpTool[] = [...PLAYBOOK_TOOLS];
+
+  // Add skill-based tools (prefixed with skill_ to distinguish from built-in)
+  for (const skill of skills) {
+    tools.push({
+      name: `skill_${skill.name.toLowerCase().replace(/\s+/g, "_")}`,
+      description: skill.description || skill.name,
+      inputSchema: (skill.definition?.parameters || { type: "object", properties: {} }) as Record<string, unknown>,
+    });
+  }
 
   // Add tools from MCP servers
   for (const mcp of mcpServers) {
@@ -465,7 +470,7 @@ export async function POST(
 
         switch (toolName) {
           case "list_personas": {
-            const { data } = await supabase
+            const { data } = await serviceSupabase
               .from("personas")
               .select("id, name, system_prompt, metadata")
               .eq("playbook_id", playbook.id);
@@ -474,7 +479,7 @@ export async function POST(
           }
 
           case "list_skills": {
-            const { data } = await supabase
+            const { data } = await serviceSupabase
               .from("skills")
               .select("id, name, description, definition, examples, priority")
               .eq("playbook_id", playbook.id)
@@ -487,7 +492,7 @@ export async function POST(
             const skillId = args.skill_id as string;
             const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(skillId);
             
-            let query = supabase
+            let query = serviceSupabase
               .from("skills")
               .select("*, skill_attachments(*)")
               .eq("playbook_id", playbook.id);
