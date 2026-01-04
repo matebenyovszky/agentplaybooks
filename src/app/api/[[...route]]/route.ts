@@ -1078,6 +1078,156 @@ app.delete("/playbooks/:id/api-keys/:kid", async (c) => {
 });
 
 // ============================================
+// USER PROFILE MANAGEMENT
+// ============================================
+
+// GET /api/user/profile - Get current user's profile
+app.get("/user/profile", async (c) => {
+  const user = await requireAuth(c);
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const supabase = getServiceSupabase();
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .single();
+
+  if (error && error.code !== "PGRST116") {
+    return c.json({ error: error.message }, 500);
+  }
+
+  // If no profile exists, return default
+  if (!data) {
+    return c.json({
+      id: user.id,
+      auth_user_id: user.id,
+      display_name: "User",
+      avatar_svg: null,
+      website_url: null,
+      description: null,
+      is_verified: false,
+      is_virtual: false,
+    });
+  }
+
+  return c.json(data);
+});
+
+// PUT /api/user/profile - Update current user's profile
+app.put("/user/profile", async (c) => {
+  const user = await requireAuth(c);
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const body = await c.req.json();
+  const { display_name, avatar_svg, website_url, description } = body;
+
+  // Validate avatar_svg if provided (basic SVG check)
+  if (avatar_svg && typeof avatar_svg === "string") {
+    if (avatar_svg.length > 10000) {
+      return c.json({ error: "Avatar SVG too large (max 10KB)" }, 400);
+    }
+    if (!avatar_svg.trim().startsWith("<svg") && !avatar_svg.startsWith("http")) {
+      return c.json({ error: "Avatar must be SVG content or URL" }, 400);
+    }
+  }
+
+  // Validate website_url if provided
+  if (website_url && typeof website_url === "string") {
+    try {
+      new URL(website_url);
+    } catch {
+      return c.json({ error: "Invalid website URL" }, 400);
+    }
+  }
+
+  const supabase = getServiceSupabase();
+
+  // Upsert profile
+  const { data, error } = await supabase
+    .from("profiles")
+    .upsert({
+      id: user.id,
+      auth_user_id: user.id,
+      display_name: display_name || "User",
+      avatar_svg: avatar_svg || null,
+      website_url: website_url || null,
+      description: description || null,
+      is_verified: false,
+      is_virtual: false,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "id" })
+    .select()
+    .single();
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json(data);
+});
+
+// GET /api/profiles/:id - Get any profile by ID (public)
+app.get("/profiles/:id", async (c) => {
+  const id = c.req.param("id");
+  const supabase = getServiceSupabase();
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, display_name, avatar_svg, website_url, description, is_verified, is_virtual, created_at")
+    .eq("id", id)
+    .single();
+
+  if (error) {
+    if (error.code === "PGRST116") {
+      return c.json({ error: "Profile not found" }, 404);
+    }
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json(data);
+});
+
+// GET /api/profiles/:id/playbooks - Get public playbooks by a profile
+app.get("/profiles/:id/playbooks", async (c) => {
+  const id = c.req.param("id");
+  const supabase = getServiceSupabase();
+
+  const { data, error } = await supabase
+    .from("playbooks")
+    .select(`
+      id, guid, name, description, star_count, tags, created_at,
+      personas:personas(count),
+      skills:skills(count),
+      mcp_servers:mcp_servers(count)
+    `)
+    .eq("user_id", id)
+    .eq("is_public", true)
+    .order("star_count", { ascending: false });
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  const playbooks = (data || []).map((p: any) => ({
+    ...p,
+    personas_count: p.personas?.[0]?.count || 0,
+    skills_count: p.skills?.[0]?.count || 0,
+    mcp_servers_count: p.mcp_servers?.[0]?.count || 0,
+    personas: undefined,
+    skills: undefined,
+    mcp_servers: undefined,
+  }));
+
+  return c.json(playbooks);
+});
+
+// ============================================
 // USER API KEYS MANAGEMENT
 // ============================================
 
@@ -2644,17 +2794,43 @@ app.get("/public/playbooks", async (c) => {
     return c.json({ error: error.message }, 500);
   }
 
+  // Get unique user_ids to fetch profiles
+  const userIds = [...new Set((data || []).map((p: any) => p.user_id).filter(Boolean))];
+  
+  // Fetch profiles for these users
+  const { data: profiles } = userIds.length > 0 
+    ? await supabase
+        .from("profiles")
+        .select("id, display_name, avatar_svg, website_url, is_verified, is_virtual")
+        .in("id", userIds)
+    : { data: [] };
+  
+  // Create a map for quick lookup
+  const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+
   // Transform count objects to numbers with consistent naming
-  const playbooks = (data || []).map((p: any) => ({
-    ...p,
-    personas_count: p.personas?.[0]?.count || 0,
-    skills_count: p.skills?.[0]?.count || 0,
-    mcp_servers_count: p.mcp_servers?.[0]?.count || 0,
-    tags: p.tags || [],
-    personas: undefined,
-    skills: undefined,
-    mcp_servers: undefined,
-  }));
+  const playbooks = (data || []).map((p: any) => {
+    const profile = profileMap.get(p.user_id);
+    return {
+      ...p,
+      personas_count: p.personas?.[0]?.count || 0,
+      skills_count: p.skills?.[0]?.count || 0,
+      mcp_servers_count: p.mcp_servers?.[0]?.count || 0,
+      tags: p.tags || [],
+      // Publisher info from profile
+      publisher: profile ? {
+        id: profile.id,
+        name: profile.display_name,
+        avatar_svg: profile.avatar_svg,
+        website_url: profile.website_url,
+        is_verified: profile.is_verified,
+        is_virtual: profile.is_virtual,
+      } : null,
+      personas: undefined,
+      skills: undefined,
+      mcp_servers: undefined,
+    };
+  });
 
   return c.json(playbooks);
 });
@@ -2776,7 +2952,7 @@ app.get("/user/starred", async (c) => {
 // GET /api/public/skills - Get skills from all public playbooks (marketplace)
 app.get("/public/skills", async (c) => {
   const search = c.req.query("search");
-  const supabase = getSupabase();
+  const supabase = getServiceSupabase();
 
   // Get skills from public playbooks
   let query = supabase
@@ -2798,13 +2974,37 @@ app.get("/public/skills", async (c) => {
     return c.json({ error: error.message }, 500);
   }
 
-  // Transform to include playbook info
-  const skills = (data || []).map((s: any) => ({
-    ...s,
-    playbook_guid: s.playbook?.guid,
-    playbook_name: s.playbook?.name,
-    playbook: undefined // Remove nested object
-  }));
+  // Get unique user_ids to fetch profiles
+  const userIds = [...new Set((data || []).map((s: any) => s.playbook?.user_id).filter(Boolean))];
+  
+  // Fetch profiles
+  const { data: profiles } = userIds.length > 0 
+    ? await supabase
+        .from("profiles")
+        .select("id, display_name, avatar_svg, website_url, is_verified, is_virtual")
+        .in("id", userIds)
+    : { data: [] };
+  
+  const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+
+  // Transform to include playbook and publisher info
+  const skills = (data || []).map((s: any) => {
+    const profile = profileMap.get(s.playbook?.user_id);
+    return {
+      ...s,
+      playbook_guid: s.playbook?.guid,
+      playbook_name: s.playbook?.name,
+      publisher: profile ? {
+        id: profile.id,
+        name: profile.display_name,
+        avatar_svg: profile.avatar_svg,
+        website_url: profile.website_url,
+        is_verified: profile.is_verified,
+        is_virtual: profile.is_virtual,
+      } : null,
+      playbook: undefined // Remove nested object
+    };
+  });
 
   return c.json(skills);
 });

@@ -12,8 +12,6 @@ export function createSupabaseAdapter(playbookId: string): StorageAdapter {
   const supabase = createBrowserClient();
   
   return {
-    isDemo: false,
-    
     // Playbook
     async getPlaybook(): Promise<Playbook | null> {
       const { data, error } = await supabase

@@ -206,7 +206,12 @@
     "addTool": "Eszköz Hozzáadása",
     "addResource": "Erőforrás Hozzáadása",
     "readOnly": "Csak megtekintés",
-    "apiKeysPrivate": "Az API kulcsok csak a playbook tulajdonosa számára láthatók"
+    "apiKeysPrivate": "Az API kulcsok csak a playbook tulajdonosa számára láthatók",
+    "forkToMyPlaybooks": "Másolás a Playbookjaimhoz",
+    "forking": "Másolás...",
+    "forked": "Másolva!",
+    "forkSuccess": "Playbook másolva a gyűjteményedbe",
+    "signInToFork": "Jelentkezz be a playbook másolásához"
   },
   "canvas": {
     "title": "Canvas Dokumentumok",
@@ -259,16 +264,9 @@
     "noPlaybooksDesc": "Légy te az első, aki megoszt egy playbookot a közösséggel!",
     "createFirst": "Első Playbook Létrehozása",
     "createOwn": "Hozz Létre Saját Playbookot",
-    "createOwnDesc": "Építsd és oszd meg AI konfigurációdat a világgal. Próbáld ki a demót először, vagy regisztrálj a felhőmentéshez.",
+    "createOwnDesc": "Építsd és oszd meg AI konfigurációdat a világgal. Regisztrálj, hogy létrehozhasd és elmenthesd saját playbook-jaidat.",
     "view": "Megtekintés",
     "yours": "Saját"
-  },
-  "demo": {
-    "banner": "Demó Mód",
-    "bannerDesc": "A változások helyben mentődnek. Regisztrálj a felhőmentéshez.",
-    "resetDemo": "Demó Visszaállítása",
-    "saveToCloud": "Mentés Felhőbe",
-    "autoSaved": "Automatikusan mentve helyben"
   }
 }
 

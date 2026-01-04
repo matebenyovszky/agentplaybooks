@@ -30,12 +30,6 @@ import {
 export default function LandingPage() {
   const t = useTranslations();
 
-  const navItems = [
-    { name: t("common.explore"), link: "/explore", icon: <Globe className="h-4 w-4" /> },
-    { name: t("common.enterprise"), link: "/enterprise", icon: <Building2 className="h-4 w-4" /> },
-    { name: t("common.docs"), link: "/docs", icon: <BookOpen className="h-4 w-4" /> },
-  ];
-
   const features = [
     {
       title: t("landing.features.personas.title"),
@@ -98,7 +92,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-[#0a0f1a] text-white overflow-hidden">
-      <FloatingNav navItems={navItems} />
+      <FloatingNav />
 
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center justify-center px-4">
@@ -138,11 +132,11 @@ export default function LandingPage() {
               <ArrowRight className="h-5 w-5" />
             </Link>
             <Link
-              href="/demo/playbook"
+              href="/login"
               className="px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-500 rounded-full font-semibold text-lg text-white hover:opacity-90 transition-opacity flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25"
             >
               <Play className="h-5 w-5" />
-              {t("landing.hero.tryDemo")}
+              {t("common.signIn")}
             </Link>
             <a
               href="https://github.com/matebenyovszky/agentplaybooks"

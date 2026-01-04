@@ -219,6 +219,32 @@ export const ATTACHMENT_LIMITS = {
   MAX_FILENAME_LENGTH: 100,
 } as const;
 
+// ===================
+// PROFILES (User display info & publishers)
+// ===================
+
+export type ProfilesRow = {
+  id: string;
+  auth_user_id: string | null;
+  display_name: string;
+  avatar_svg: string | null;
+  website_url: string | null;
+  description: string | null;
+  is_verified: boolean;
+  is_virtual: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProfilesInsert = Omit<ProfilesRow, 'created_at'>;
+export type ProfilesUpdate = Partial<Omit<ProfilesRow, 'id' | 'auth_user_id' | 'created_at'>>;
+
+// Known publisher IDs
+export const PUBLISHER_IDS = {
+  AGENT_PLAYBOOKS: '00000000-0000-0000-0000-000000000001',
+  ANTHROPIC: 'a0000000-0000-0000-0000-000000000001',
+} as const;
+
 export interface Database {
   public: {
     Tables: {
@@ -280,6 +306,12 @@ export interface Database {
         Row: SkillAttachmentsRow;
         Insert: SkillAttachmentsInsert;
         Update: SkillAttachmentsUpdate;
+        Relationships: [];
+      };
+      profiles: {
+        Row: ProfilesRow;
+        Insert: ProfilesInsert;
+        Update: ProfilesUpdate;
         Relationships: [];
       };
     };

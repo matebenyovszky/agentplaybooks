@@ -10,7 +10,6 @@ import { cn } from "@/lib/utils";
 import { 
   Search,
   BookOpen,
-  Building2,
   Globe,
   Star,
   Brain,
@@ -35,12 +34,6 @@ export default function ExplorePage() {
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [starredIds, setStarredIds] = useState<Set<string>>(new Set());
-
-  const navItems = [
-    { name: t("common.explore"), link: "/explore", icon: <Globe className="h-4 w-4" /> },
-    { name: t("common.enterprise"), link: "/enterprise", icon: <Building2 className="h-4 w-4" /> },
-    { name: t("common.docs"), link: "/docs", icon: <BookOpen className="h-4 w-4" /> },
-  ];
 
   useEffect(() => {
     checkAuth();
@@ -155,7 +148,7 @@ export default function ExplorePage() {
 
   return (
     <div className="min-h-screen bg-[#0a0f1a] text-white">
-      <FloatingNav navItems={navItems} />
+      <FloatingNav />
 
       {/* Hero */}
       <section className="pt-32 pb-12 px-4">
@@ -292,15 +285,6 @@ export default function ExplorePage() {
             <p className="text-slate-400 mb-6">{t("explore.createOwnDesc")}</p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Link
-                href="/demo/playbook"
-                className={cn(
-                  "px-6 py-3 rounded-lg font-medium flex items-center justify-center gap-2",
-                  "bg-blue-600 text-white hover:bg-blue-500 transition-colors"
-                )}
-              >
-                {t("landing.hero.tryDemo")}
-              </Link>
-              <Link
                 href="/login"
                 className={cn(
                   "px-6 py-3 rounded-lg font-medium flex items-center justify-center gap-2",
@@ -332,7 +316,7 @@ function EmptyState() {
         {t("explore.noPlaybooksDesc")}
       </p>
       <Link
-        href="/demo/playbook"
+        href="/login"
         className={cn(
           "inline-flex items-center gap-2 px-6 py-3 rounded-lg",
           "bg-amber-500 text-slate-900 font-medium",
@@ -340,7 +324,7 @@ function EmptyState() {
         )}
       >
         <Sparkles className="h-5 w-5" />
-        {t("explore.createFirst")}
+        {t("common.getStarted")}
       </Link>
     </div>
   );
@@ -358,9 +342,8 @@ interface PlaybookCardProps {
 function PlaybookCard({ playbook, index, isStarred, onToggleStar, isLoggedIn, isOwner }: PlaybookCardProps) {
   const t = useTranslations();
 
-  // TODO: When sign-in is fixed, change this to the proper playbook viewer URL
-  // Options: /playbooks/{guid} or /demo/playbook?id={guid}
-  const playbookUrl = `/demo/playbook?id=${playbook.guid}`;
+  // Use the dashboard playbook viewer for public playbooks
+  const playbookUrl = `/dashboard/playbook/${playbook.id}`;
 
   return (
     <motion.div

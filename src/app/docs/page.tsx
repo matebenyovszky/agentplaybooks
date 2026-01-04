@@ -8,7 +8,6 @@ import { FloatingNav } from "@/components/ui/floating-navbar";
 import { useTranslations } from "next-intl";
 import { 
   BookOpen, 
-  Building2, 
   Globe, 
   ChevronRight,
   FileText,
@@ -113,12 +112,6 @@ export default function DocsPage() {
   const [loading, setLoading] = useState(true);
   const t = useTranslations();
 
-  const navItems = [
-    { name: t("common.explore"), link: "/explore", icon: <Globe className="h-4 w-4" /> },
-    { name: t("common.enterprise"), link: "/enterprise", icon: <Building2 className="h-4 w-4" /> },
-    { name: t("common.docs"), link: "/docs", icon: <BookOpen className="h-4 w-4" /> },
-  ];
-
   // Scroll to anchor after content loads
   const scrollToAnchor = useCallback(() => {
     const hash = window.location.hash;
@@ -172,7 +165,7 @@ export default function DocsPage() {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      <FloatingNav navItems={navItems} />
+      <FloatingNav />
 
       <div className="flex pt-20">
         {/* Sidebar */}

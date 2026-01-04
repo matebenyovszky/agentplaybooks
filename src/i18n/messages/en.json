@@ -206,7 +206,12 @@
     "addTool": "Add Tool",
     "addResource": "Add Resource",
     "readOnly": "View Only",
-    "apiKeysPrivate": "API Keys are only visible to the playbook owner"
+    "apiKeysPrivate": "API Keys are only visible to the playbook owner",
+    "forkToMyPlaybooks": "Copy to My Playbooks",
+    "forking": "Copying...",
+    "forked": "Copied!",
+    "forkSuccess": "Playbook copied to your collection",
+    "signInToFork": "Sign in to copy this playbook"
   },
   "canvas": {
     "title": "Canvas Documents",
@@ -259,16 +264,9 @@
     "noPlaybooksDesc": "Be the first to share a playbook with the community!",
     "createFirst": "Create Your First Playbook",
     "createOwn": "Create Your Own Playbook",
-    "createOwnDesc": "Build and share your AI configuration with the world. Try the demo first or sign up to save to the cloud.",
+    "createOwnDesc": "Build and share your AI configuration with the world. Sign up to create and save your own playbooks.",
     "view": "View",
     "yours": "Yours"
-  },
-  "demo": {
-    "banner": "Demo Mode",
-    "bannerDesc": "Changes are saved locally. Sign up to save to the cloud.",
-    "resetDemo": "Reset Demo",
-    "saveToCloud": "Save to Cloud",
-    "autoSaved": "Auto-saved locally"
   }
 }
 

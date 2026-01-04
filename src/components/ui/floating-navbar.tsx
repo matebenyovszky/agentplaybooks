@@ -1,20 +1,20 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { Home, ChevronDown, BookOpen, LogOut } from "lucide-react";
+import { Home, ChevronDown, BookOpen, LogOut, Globe, Building2 } from "lucide-react";
 import { locales, localeNames, localeFlags, type Locale } from "@/i18n/config";
 import { useTranslations } from "next-intl";
 import { createBrowserClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
 
 export const FloatingNav = ({
-  navItems,
+  navItems: customNavItems,
   className,
 }: {
-  navItems: {
+  navItems?: {
     name: string;
     link: string;
     icon?: React.ReactNode;
@@ -22,6 +22,15 @@ export const FloatingNav = ({
   className?: string;
 }) => {
   const t = useTranslations();
+  
+  // Default nav items - used if no custom items provided
+  const defaultNavItems = useMemo(() => [
+    { name: t("common.explore"), link: "/explore", icon: <Globe className="h-4 w-4" /> },
+    { name: t("common.enterprise"), link: "/enterprise", icon: <Building2 className="h-4 w-4" /> },
+    { name: t("common.docs"), link: "/docs", icon: <BookOpen className="h-4 w-4" /> },
+  ], [t]);
+  
+  const navItems = customNavItems || defaultNavItems;
   const [visible, setVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   const [langMenuOpen, setLangMenuOpen] = useState(false);

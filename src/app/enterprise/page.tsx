@@ -2,9 +2,6 @@
 
 import { motion } from "framer-motion";
 import {
-  Building2,
-  Globe,
-  BookOpen,
   CheckCircle2,
   ArrowRight,
   Bot,
@@ -130,15 +127,9 @@ const marketplaceFeatures = [
 export default function EnterprisePage() {
   const t = useTranslations();
   
-  const navItems = [
-    { name: t("common.explore"), link: "/explore", icon: <Globe className="h-4 w-4" /> },
-    { name: t("common.enterprise"), link: "/enterprise", icon: <Building2 className="h-4 w-4" /> },
-    { name: t("common.docs"), link: "/docs", icon: <BookOpen className="h-4 w-4" /> },
-  ];
-
   return (
     <div className="min-h-screen bg-[#0a0f1a] text-white">
-      <FloatingNav navItems={navItems} />
+      <FloatingNav />
       
       {/* Hero Section */}
       <section className="relative overflow-hidden pt-32 pb-20">

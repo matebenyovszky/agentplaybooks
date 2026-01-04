@@ -1,9 +1,8 @@
 /**
  * Storage Adapter Types
  * 
- * This abstraction allows the same editor components to work with
- * different storage backends (Supabase for authenticated users, 
- * localStorage for demo mode).
+ * This abstraction allows editor components to work with
+ * the Supabase storage backend.
  */
 
 import type { Persona, Skill, MCPServer, Memory, Playbook } from "@/lib/supabase/types";
@@ -21,8 +20,6 @@ export type MemoryInput = {
 };
 
 export interface StorageAdapter {
-  // Mode indicator
-  isDemo: boolean;
   
   // Playbook
   getPlaybook(): Promise<Playbook | null>;

@@ -78,6 +78,8 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
   const [hasChanges, setHasChanges] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [forking, setForking] = useState(false);
+  const [forkSuccess, setForkSuccess] = useState(false);
   
   // Browse public modals
   const [showBrowseSkills, setShowBrowseSkills] = useState(false);
@@ -325,6 +327,86 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
     (m.description || "").toLowerCase().includes(browseSearch.toLowerCase())
   );
 
+  // Fork playbook handler - copy entire playbook to current user
+  const handleForkPlaybook = async () => {
+    if (!playbook || !currentUserId) return;
+    
+    setForking(true);
+    const supabase = createBrowserClient();
+    
+    try {
+      // Create new playbook with same data
+      const newGuid = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
+      
+      const { data: newPlaybook, error: playbookError } = await supabase
+        .from("playbooks")
+        .insert({
+          user_id: currentUserId,
+          guid: newGuid,
+          name: `${playbook.name} (Copy)`,
+          description: playbook.description,
+          config: playbook.config,
+          is_public: false, // Start as private
+          tags: playbook.tags,
+        })
+        .select()
+        .single();
+      
+      if (playbookError || !newPlaybook) {
+        throw playbookError;
+      }
+      
+      // Copy all personas
+      if (personas.length > 0) {
+        await supabase.from("personas").insert(
+          personas.map(p => ({
+            playbook_id: newPlaybook.id,
+            name: p.name,
+            system_prompt: p.system_prompt,
+            metadata: p.metadata,
+          }))
+        );
+      }
+      
+      // Copy all skills
+      if (skills.length > 0) {
+        await supabase.from("skills").insert(
+          skills.map(s => ({
+            playbook_id: newPlaybook.id,
+            name: s.name,
+            description: s.description,
+            definition: s.definition,
+            examples: s.examples,
+          }))
+        );
+      }
+      
+      // Copy all MCP servers
+      if (mcpServers.length > 0) {
+        await supabase.from("mcp_servers").insert(
+          mcpServers.map(m => ({
+            playbook_id: newPlaybook.id,
+            name: m.name,
+            description: m.description,
+            tools: m.tools,
+            resources: m.resources,
+          }))
+        );
+      }
+      
+      setForkSuccess(true);
+      setTimeout(() => {
+        // Redirect to the new playbook
+        window.location.href = `/dashboard/playbook/${newPlaybook.id}`;
+      }, 1500);
+      
+    } catch (error) {
+      console.error("Fork failed:", error);
+      alert("Failed to copy playbook. Please try again.");
+      setForking(false);
+    }
+  };
+
   // Delete handlers
   const handleDeletePersona = async (personaId: string) => {
     const success = await storage.deletePersona(personaId);
@@ -449,6 +531,48 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                 <Eye className="h-4 w-4" />
                 {t("editor.readOnly") || "Read Only"}
               </span>
+            )}
+            
+            {/* Fork button for logged-in non-owners viewing public playbooks */}
+            {!isOwner && playbook.is_public && currentUserId && (
+              <button
+                onClick={handleForkPlaybook}
+                disabled={forking || forkSuccess}
+                className={cn(
+                  "px-4 py-2 rounded-lg font-semibold flex items-center gap-2 transition-all text-sm",
+                  forkSuccess
+                    ? "bg-green-600/20 text-green-400 border border-green-500/30"
+                    : "bg-gradient-to-r from-amber-600 to-orange-500 text-white shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40"
+                )}
+              >
+                {forking ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {t("editor.forking")}
+                  </>
+                ) : forkSuccess ? (
+                  <>
+                    <Check className="h-4 w-4" />
+                    {t("editor.forked")}
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-4 w-4" />
+                    {t("editor.forkToMyPlaybooks")}
+                  </>
+                )}
+              </button>
+            )}
+            
+            {/* Sign in prompt for non-logged users viewing public playbooks */}
+            {!isOwner && playbook.is_public && !currentUserId && (
+              <Link
+                href="/login"
+                className="px-4 py-2 rounded-lg text-sm text-amber-400 border border-amber-500/30 hover:bg-amber-500/10 transition-colors flex items-center gap-2"
+              >
+                <Copy className="h-4 w-4" />
+                {t("editor.signInToFork")}
+              </Link>
             )}
             
             {/* Status indicators - only for owners */}
