@@ -743,10 +743,12 @@ async function getPlaybookByGuid(guid: string, userId: string | null) {
   return playbook;
 }
 
-// GET /api/playbooks/:guid/memory - Read memory (public for public playbooks)
+// GET /api/playbooks/:guid/memory - Read memory with search (public for public playbooks)
 app.get("/playbooks/:guid/memory", async (c) => {
   const guid = c.req.param("guid");
   const key = c.req.query("key");
+  const search = c.req.query("search");
+  const tagsParam = c.req.query("tags");
   const user = await getAuthenticatedUser(c);
   
   const playbook = await getPlaybookByGuid(guid, user?.id || null);
@@ -756,24 +758,48 @@ app.get("/playbooks/:guid/memory", async (c) => {
 
   const supabase = getServiceSupabase();
 
-  let query = supabase
-    .from("memories")
-    .select("key, value, updated_at")
-    .eq("playbook_id", playbook.id);
-
+  // If specific key requested, get it directly
   if (key) {
-    query = query.eq("key", key);
+    const { data, error } = await supabase
+      .from("memories")
+      .select("key, value, tags, description, updated_at")
+      .eq("playbook_id", playbook.id)
+      .eq("key", key)
+      .single();
+
+    if (error) {
+      if (error.code === "PGRST116") {
+        return c.json({ error: "Memory not found" }, 404);
+      }
+      return c.json({ error: error.message }, 500);
+    }
+
+    return c.json(data);
   }
 
-  const { data, error } = await query;
+  // Build query with optional filters
+  let query = supabase
+    .from("memories")
+    .select("key, value, tags, description, updated_at")
+    .eq("playbook_id", playbook.id);
+
+  // Search in key and description using ilike
+  if (search) {
+    query = query.or(`key.ilike.%${search}%,description.ilike.%${search}%`);
+  }
+
+  // Filter by tags (any match)
+  if (tagsParam) {
+    const tags = tagsParam.split(",").map(t => t.trim()).filter(Boolean);
+    if (tags.length > 0) {
+      query = query.overlaps("tags", tags);
+    }
+  }
+
+  const { data, error } = await query.order("updated_at", { ascending: false });
 
   if (error) {
     return c.json({ error: error.message }, 500);
-  }
-
-  // If single key requested, return just the value
-  if (key && data?.length) {
-    return c.json(data[0]);
   }
 
   return c.json(data || []);
@@ -805,10 +831,15 @@ app.put("/playbooks/:guid/memory/:key", async (c) => {
   }
 
   const body = await c.req.json();
-  const { value } = body;
+  const { value, tags, description } = body;
 
   if (value === undefined) {
     return c.json({ error: "Value is required" }, 400);
+  }
+
+  // Validate tags if provided
+  if (tags !== undefined && !Array.isArray(tags)) {
+    return c.json({ error: "Tags must be an array of strings" }, 400);
   }
 
   const supabase = getServiceSupabase();
@@ -824,18 +855,31 @@ app.put("/playbooks/:guid/memory/:key", async (c) => {
     return c.json({ error: "Playbook not found" }, 404);
   }
 
+  // Build upsert data
+  const upsertData: Record<string, unknown> = {
+    playbook_id: playbook.id,
+    key,
+    value,
+    updated_at: new Date().toISOString(),
+  };
+
+  // Include tags if provided
+  if (tags !== undefined) {
+    upsertData.tags = tags;
+  }
+
+  // Include description if provided
+  if (description !== undefined) {
+    upsertData.description = description;
+  }
+
   // Upsert memory
   const { data, error } = await supabase
     .from("memories")
-    .upsert({
-      playbook_id: playbook.id,
-      key,
-      value,
-      updated_at: new Date().toISOString(),
-    }, {
+    .upsert(upsertData, {
       onConflict: "playbook_id,key",
     })
-    .select()
+    .select("key, value, tags, description, updated_at")
     .single();
 
   if (error) {
@@ -892,6 +936,100 @@ app.delete("/playbooks/:guid/memory/:key", async (c) => {
   }
 
   return c.json({ success: true });
+});
+
+// ============================================
+// PUBLIC SKILLS & PERSONAS ENDPOINTS (read-only for public playbooks)
+// ============================================
+
+// GET /api/playbooks/:guid/skills - List skills (public for public playbooks)
+app.get("/playbooks/:guid/skills", async (c) => {
+  const guid = c.req.param("guid");
+  const user = await getAuthenticatedUser(c);
+  
+  const playbook = await getPlaybookByGuid(guid, user?.id || null);
+  if (!playbook) {
+    return c.json({ error: "Playbook not found" }, 404);
+  }
+
+  const supabase = getServiceSupabase();
+
+  const { data: skills, error } = await supabase
+    .from("skills")
+    .select("id, name, description, definition, examples, priority")
+    .eq("playbook_id", playbook.id)
+    .order("priority", { ascending: false });
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json(skills || []);
+});
+
+// GET /api/playbooks/:guid/skills/:skillId - Get specific skill
+app.get("/playbooks/:guid/skills/:skillId", async (c) => {
+  const guid = c.req.param("guid");
+  const skillId = c.req.param("skillId");
+  const user = await getAuthenticatedUser(c);
+  
+  const playbook = await getPlaybookByGuid(guid, user?.id || null);
+  if (!playbook) {
+    return c.json({ error: "Playbook not found" }, 404);
+  }
+
+  const supabase = getServiceSupabase();
+
+  // Try to find by ID or by name
+  let query = supabase
+    .from("skills")
+    .select("id, name, description, definition, examples, priority")
+    .eq("playbook_id", playbook.id);
+
+  // Check if skillId is a UUID or a name
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(skillId);
+  
+  if (isUuid) {
+    query = query.eq("id", skillId);
+  } else {
+    // Search by name (case-insensitive)
+    query = query.ilike("name", skillId.replace(/_/g, " "));
+  }
+
+  const { data: skill, error } = await query.single();
+
+  if (error) {
+    if (error.code === "PGRST116") {
+      return c.json({ error: "Skill not found" }, 404);
+    }
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json(skill);
+});
+
+// GET /api/playbooks/:guid/personas - List personas (public for public playbooks)
+app.get("/playbooks/:guid/personas", async (c) => {
+  const guid = c.req.param("guid");
+  const user = await getAuthenticatedUser(c);
+  
+  const playbook = await getPlaybookByGuid(guid, user?.id || null);
+  if (!playbook) {
+    return c.json({ error: "Playbook not found" }, 404);
+  }
+
+  const supabase = getServiceSupabase();
+
+  const { data: personas, error } = await supabase
+    .from("personas")
+    .select("id, name, system_prompt, metadata")
+    .eq("playbook_id", playbook.id);
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json(personas || []);
 });
 
 // ============================================
@@ -1747,6 +1885,198 @@ app.delete("/manage/skills/:skillId/attachments/:attachmentId", async (c) => {
 });
 
 // ============================================
+// MEMORY MANAGEMENT (via Management API)
+// ============================================
+
+// GET /api/manage/playbooks/:id/memory - List/search memories
+app.get("/manage/playbooks/:id/memory", async (c) => {
+  const user = await getUserFromAuthOrApiKey(c, "memory:read");
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const playbookId = c.req.param("id");
+  const search = c.req.query("search");
+  const tagsParam = c.req.query("tags");
+  const supabase = getServiceSupabase();
+
+  // Check ownership
+  const { data: playbook } = await supabase
+    .from("playbooks")
+    .select("id")
+    .eq("id", playbookId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (!playbook) {
+    return c.json({ error: "Playbook not found" }, 404);
+  }
+
+  // Build query with optional filters
+  let query = supabase
+    .from("memories")
+    .select("key, value, tags, description, updated_at")
+    .eq("playbook_id", playbookId);
+
+  if (search) {
+    query = query.or(`key.ilike.%${search}%,description.ilike.%${search}%`);
+  }
+
+  if (tagsParam) {
+    const tags = tagsParam.split(",").map(t => t.trim()).filter(Boolean);
+    if (tags.length > 0) {
+      query = query.overlaps("tags", tags);
+    }
+  }
+
+  const { data, error } = await query.order("updated_at", { ascending: false });
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json(data || []);
+});
+
+// GET /api/manage/playbooks/:id/memory/:key - Get specific memory
+app.get("/manage/playbooks/:id/memory/:key", async (c) => {
+  const user = await getUserFromAuthOrApiKey(c, "memory:read");
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const playbookId = c.req.param("id");
+  const key = c.req.param("key");
+  const supabase = getServiceSupabase();
+
+  // Check ownership
+  const { data: playbook } = await supabase
+    .from("playbooks")
+    .select("id")
+    .eq("id", playbookId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (!playbook) {
+    return c.json({ error: "Playbook not found" }, 404);
+  }
+
+  const { data, error } = await supabase
+    .from("memories")
+    .select("key, value, tags, description, updated_at")
+    .eq("playbook_id", playbookId)
+    .eq("key", key)
+    .single();
+
+  if (error) {
+    if (error.code === "PGRST116") {
+      return c.json({ error: "Memory not found" }, 404);
+    }
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json(data);
+});
+
+// PUT /api/manage/playbooks/:id/memory/:key - Write memory
+app.put("/manage/playbooks/:id/memory/:key", async (c) => {
+  const user = await getUserFromAuthOrApiKey(c, "memory:write");
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const playbookId = c.req.param("id");
+  const key = c.req.param("key");
+  const supabase = getServiceSupabase();
+
+  // Check ownership
+  const { data: playbook } = await supabase
+    .from("playbooks")
+    .select("id")
+    .eq("id", playbookId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (!playbook) {
+    return c.json({ error: "Playbook not found" }, 404);
+  }
+
+  const body = await c.req.json();
+  const { value, tags, description } = body;
+
+  if (value === undefined) {
+    return c.json({ error: "Value is required" }, 400);
+  }
+
+  if (tags !== undefined && !Array.isArray(tags)) {
+    return c.json({ error: "Tags must be an array of strings" }, 400);
+  }
+
+  const upsertData: Record<string, unknown> = {
+    playbook_id: playbookId,
+    key,
+    value,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (tags !== undefined) {
+    upsertData.tags = tags;
+  }
+
+  if (description !== undefined) {
+    upsertData.description = description;
+  }
+
+  const { data, error } = await supabase
+    .from("memories")
+    .upsert(upsertData, { onConflict: "playbook_id,key" })
+    .select("key, value, tags, description, updated_at")
+    .single();
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json(data);
+});
+
+// DELETE /api/manage/playbooks/:id/memory/:key - Delete memory
+app.delete("/manage/playbooks/:id/memory/:key", async (c) => {
+  const user = await getUserFromAuthOrApiKey(c, "memory:write");
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const playbookId = c.req.param("id");
+  const key = c.req.param("key");
+  const supabase = getServiceSupabase();
+
+  // Check ownership
+  const { data: playbook } = await supabase
+    .from("playbooks")
+    .select("id")
+    .eq("id", playbookId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (!playbook) {
+    return c.json({ error: "Playbook not found" }, 404);
+  }
+
+  const { error } = await supabase
+    .from("memories")
+    .delete()
+    .eq("playbook_id", playbookId)
+    .eq("key", key);
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json({ success: true });
+});
+
+// ============================================
 // OPENAPI SPEC FOR MANAGEMENT API
 // ============================================
 
@@ -1965,6 +2295,74 @@ app.get("/manage/openapi.json", (c) => {
           ],
           responses: { "200": { description: "Skill deleted" } }
         }
+      },
+      // Memory endpoints for management
+      "/manage/playbooks/{id}/memory": {
+        get: {
+          operationId: "listMemories",
+          summary: "List or search memories in a playbook",
+          description: "Get all memory entries, search by text, or filter by tags",
+          parameters: [
+            { name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" }, description: "Playbook ID" },
+            { name: "search", in: "query", schema: { type: "string" }, description: "Search in keys and descriptions" },
+            { name: "tags", in: "query", schema: { type: "string" }, description: "Filter by tags (comma-separated)" }
+          ],
+          responses: {
+            "200": {
+              description: "List of memories",
+              content: {
+                "application/json": {
+                  schema: { type: "array", items: { $ref: "#/components/schemas/Memory" } }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/manage/playbooks/{id}/memory/{key}": {
+        get: {
+          operationId: "getMemory",
+          summary: "Get a specific memory by key",
+          parameters: [
+            { name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+            { name: "key", in: "path", required: true, schema: { type: "string" } }
+          ],
+          responses: { "200": { description: "Memory entry" } }
+        },
+        put: {
+          operationId: "writeMemory",
+          summary: "Create or update a memory entry",
+          parameters: [
+            { name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+            { name: "key", in: "path", required: true, schema: { type: "string" } }
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["value"],
+                  properties: {
+                    value: { type: "object", description: "Any JSON value to store" },
+                    tags: { type: "array", items: { type: "string" }, description: "Tags for categorization" },
+                    description: { type: "string", description: "Human-readable description" }
+                  }
+                }
+              }
+            }
+          },
+          responses: { "200": { description: "Memory written" } }
+        },
+        delete: {
+          operationId: "deleteMemory",
+          summary: "Delete a memory entry",
+          parameters: [
+            { name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+            { name: "key", in: "path", required: true, schema: { type: "string" } }
+          ],
+          responses: { "200": { description: "Memory deleted" } }
+        }
       }
     },
     components: {
@@ -1989,6 +2387,39 @@ app.get("/manage/openapi.json", (c) => {
             mcp_server_count: { type: "integer" },
             created_at: { type: "string", format: "date-time" },
             updated_at: { type: "string", format: "date-time" }
+          }
+        },
+        Memory: {
+          type: "object",
+          description: "A memory entry storing persistent data with optional tags and description",
+          properties: {
+            key: { type: "string", description: "Unique key identifier" },
+            value: { type: "object", description: "Stored JSON value" },
+            tags: { type: "array", items: { type: "string" }, description: "Tags for categorization and search" },
+            description: { type: "string", description: "Human-readable description of this memory" },
+            updated_at: { type: "string", format: "date-time" }
+          }
+        },
+        Skill: {
+          type: "object",
+          description: "A skill defines a capability or rule for solving tasks",
+          properties: {
+            id: { type: "string", format: "uuid" },
+            name: { type: "string", description: "Skill name (snake_case)" },
+            description: { type: "string", description: "What this skill does" },
+            definition: { type: "object", description: "Skill definition with parameters schema" },
+            examples: { type: "array", description: "Example usages" },
+            priority: { type: "integer", description: "Priority (higher = more important)" }
+          }
+        },
+        Persona: {
+          type: "object",
+          description: "An AI personality with a system prompt",
+          properties: {
+            id: { type: "string", format: "uuid" },
+            name: { type: "string" },
+            system_prompt: { type: "string" },
+            metadata: { type: "object" }
           }
         }
       }
@@ -2539,6 +2970,7 @@ app.get("/public/mcp/:id", async (c) => {
 function formatAsOpenAPI(playbook: any) {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://agentplaybooks.ai";
   
+  // Convert skills to OpenAPI-compatible tool definitions
   const tools = playbook.skills.map((skill: any) => ({
     type: "function",
     function: {
@@ -2548,18 +2980,32 @@ function formatAsOpenAPI(playbook: any) {
     },
   }));
 
+  // Build skill schemas for OpenAPI
+  const skillSchemas: Record<string, any> = {};
+  playbook.skills.forEach((skill: any) => {
+    const skillName = skill.name.toLowerCase().replace(/\s+/g, "_");
+    skillSchemas[`Skill_${skillName}`] = {
+      type: "object",
+      description: skill.description || skill.name,
+      properties: skill.definition?.parameters?.properties || {},
+      required: skill.definition?.parameters?.required || [],
+    };
+  });
+
   return {
     openapi: "3.1.0",
     info: {
       title: playbook.name,
-      description: playbook.description,
+      description: playbook.description || `API for ${playbook.name} playbook`,
       version: "1.0.0",
     },
     servers: [{ url: `${baseUrl}/api` }],
     paths: {
+      // Memory: List & Search
       [`/playbooks/${playbook.guid}/memory`]: {
         get: {
-          summary: "Get memories",
+          summary: "Get or search memories",
+          description: "Retrieve all memory entries, search by tags, or get a specific key",
           operationId: "getMemories",
           parameters: [
             {
@@ -2567,15 +3013,83 @@ function formatAsOpenAPI(playbook: any) {
               in: "query",
               required: false,
               schema: { type: "string" },
-              description: "Optional specific key to retrieve",
+              description: "Get specific memory by key",
+            },
+            {
+              name: "search",
+              in: "query",
+              required: false,
+              schema: { type: "string" },
+              description: "Search in keys and descriptions",
+            },
+            {
+              name: "tags",
+              in: "query",
+              required: false,
+              schema: { type: "string" },
+              description: "Filter by tags (comma-separated)",
             },
           ],
-          responses: { "200": { description: "Success" } },
+          responses: {
+            "200": {
+              description: "Memory entries retrieved successfully",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "array",
+                    items: { $ref: "#/components/schemas/MemoryEntry" },
+                  },
+                },
+              },
+            },
+            "404": {
+              description: "Playbook not found",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/Error" },
+                },
+              },
+            },
+          },
         },
       },
+      // Memory: Write/Delete specific key
       [`/playbooks/${playbook.guid}/memory/{key}`]: {
+        get: {
+          summary: "Get memory by key",
+          description: "Retrieve a specific memory entry by its key",
+          operationId: "getMemoryByKey",
+          parameters: [
+            {
+              name: "key",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+              description: "Memory key to retrieve",
+            },
+          ],
+          responses: {
+            "200": {
+              description: "Memory entry",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/MemoryEntry" },
+                },
+              },
+            },
+            "404": {
+              description: "Memory not found",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/Error" },
+                },
+              },
+            },
+          },
+        },
         put: {
           summary: "Write memory",
+          description: "Create or update a memory entry with optional tags and description. Requires API key.",
           operationId: "writeMemory",
           parameters: [
             {
@@ -2583,26 +3097,40 @@ function formatAsOpenAPI(playbook: any) {
               in: "path",
               required: true,
               schema: { type: "string" },
+              description: "Memory key to write",
             },
           ],
           requestBody: {
+            required: true,
             content: {
               "application/json": {
-                schema: {
-                  type: "object",
-                  properties: {
-                    value: { type: "object" },
-                  },
-                  required: ["value"],
+                schema: { $ref: "#/components/schemas/MemoryWrite" },
+              },
+            },
+          },
+          responses: {
+            "200": {
+              description: "Memory written successfully",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/MemoryEntry" },
+                },
+              },
+            },
+            "401": {
+              description: "Unauthorized - API key required",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/Error" },
                 },
               },
             },
           },
-          responses: { "200": { description: "Success" } },
           security: [{ apiKey: [] }],
         },
         delete: {
           summary: "Delete memory",
+          description: "Delete a memory entry. Requires API key.",
           operationId: "deleteMemory",
           parameters: [
             {
@@ -2610,14 +3138,185 @@ function formatAsOpenAPI(playbook: any) {
               in: "path",
               required: true,
               schema: { type: "string" },
+              description: "Memory key to delete",
             },
           ],
-          responses: { "200": { description: "Success" } },
+          responses: {
+            "200": {
+              description: "Memory deleted",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/Success" },
+                },
+              },
+            },
+            "401": {
+              description: "Unauthorized",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/Error" },
+                },
+              },
+            },
+          },
           security: [{ apiKey: [] }],
+        },
+      },
+      // Skills: List all
+      [`/playbooks/${playbook.guid}/skills`]: {
+        get: {
+          summary: "List skills",
+          description: "Get all skills (rules/capabilities) defined in this playbook. Skills describe how to solve tasks.",
+          operationId: "listSkills",
+          responses: {
+            "200": {
+              description: "List of skills",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "array",
+                    items: { $ref: "#/components/schemas/Skill" },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      // Skills: Get specific
+      [`/playbooks/${playbook.guid}/skills/{skillId}`]: {
+        get: {
+          summary: "Get skill",
+          description: "Get a specific skill definition including its parameters and examples",
+          operationId: "getSkill",
+          parameters: [
+            {
+              name: "skillId",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+              description: "Skill ID or name",
+            },
+          ],
+          responses: {
+            "200": {
+              description: "Skill details",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/Skill" },
+                },
+              },
+            },
+            "404": {
+              description: "Skill not found",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/Error" },
+                },
+              },
+            },
+          },
+        },
+      },
+      // Personas: List
+      [`/playbooks/${playbook.guid}/personas`]: {
+        get: {
+          summary: "List personas",
+          description: "Get all personas (AI personalities with system prompts) in this playbook",
+          operationId: "listPersonas",
+          responses: {
+            "200": {
+              description: "List of personas",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "array",
+                    items: { $ref: "#/components/schemas/Persona" },
+                  },
+                },
+              },
+            },
+          },
         },
       },
     },
     components: {
+      schemas: {
+        MemoryEntry: {
+          type: "object",
+          description: "A memory entry storing persistent data",
+          properties: {
+            key: { type: "string", description: "Unique key identifier" },
+            value: { type: "object", description: "Stored value (any JSON)" },
+            tags: { 
+              type: "array", 
+              items: { type: "string" },
+              description: "Tags for categorization and search" 
+            },
+            description: { type: "string", description: "Human-readable description" },
+            updated_at: { type: "string", format: "date-time", description: "Last update timestamp" },
+          },
+        },
+        MemoryWrite: {
+          type: "object",
+          description: "Data for creating/updating a memory entry",
+          properties: {
+            value: { type: "object", description: "Value to store (any JSON object)" },
+            tags: { 
+              type: "array", 
+              items: { type: "string" },
+              description: "Optional tags for categorization" 
+            },
+            description: { type: "string", description: "Optional description" },
+          },
+          required: ["value"],
+        },
+        Skill: {
+          type: "object",
+          description: "A skill defines a capability or rule for solving tasks",
+          properties: {
+            id: { type: "string", format: "uuid" },
+            name: { type: "string", description: "Skill name (snake_case)" },
+            description: { type: "string", description: "What this skill does" },
+            definition: { 
+              type: "object", 
+              description: "Skill definition with parameters schema",
+              properties: {
+                parameters: { type: "object", description: "JSON Schema for input parameters" },
+              },
+            },
+            examples: { 
+              type: "array", 
+              items: { type: "object" },
+              description: "Example usages" 
+            },
+          },
+        },
+        Persona: {
+          type: "object",
+          description: "An AI personality with a system prompt",
+          properties: {
+            id: { type: "string", format: "uuid" },
+            name: { type: "string", description: "Persona name" },
+            system_prompt: { type: "string", description: "System prompt for the AI" },
+            metadata: { type: "object", description: "Additional metadata" },
+          },
+        },
+        Success: {
+          type: "object",
+          properties: {
+            success: { type: "boolean" },
+          },
+        },
+        Error: {
+          type: "object",
+          properties: {
+            error: { type: "string", description: "Error message" },
+          },
+        },
+        // Include skill-specific schemas
+        ...skillSchemas,
+      },
       securitySchemes: {
         apiKey: {
           type: "http",
@@ -2626,9 +3325,16 @@ function formatAsOpenAPI(playbook: any) {
         },
       },
     },
+    // Extension: include full playbook data for AI context
     "x-playbook": {
+      guid: playbook.guid,
       personas: playbook.personas,
       skills: tools,
+      mcp_servers: playbook.mcp_servers?.map((mcp: any) => ({
+        name: mcp.name,
+        description: mcp.description,
+        tools_count: mcp.tools?.length || 0,
+      })),
     },
   };
 }

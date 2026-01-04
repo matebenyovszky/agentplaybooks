@@ -24,9 +24,10 @@ Unlike Playbook API Keys (which only work for a single playbook), **User API Key
 
 ### Creating a User API Key
 
-1. Go to your Dashboard → Settings → API Keys
-2. Click "Create User API Key"
-3. Select permissions:
+1. Go to your [Dashboard Settings](https://agentplaybooks.ai/dashboard/settings)
+2. Click "Create Key"
+3. Enter an optional name (e.g., "Claude Desktop", "Cursor")
+4. Select permissions:
    - `playbooks:read` - List and read playbooks
    - `playbooks:write` - Create, update, delete playbooks
    - `personas:write` - Manage personas
@@ -112,6 +113,10 @@ This can be used with:
 | POST | `/manage/playbooks/:id/skills` | Add skill |
 | PUT | `/manage/playbooks/:id/skills/:sid` | Update skill |
 | DELETE | `/manage/playbooks/:id/skills/:sid` | Delete skill |
+| GET | `/manage/playbooks/:id/memory` | List/search memories |
+| GET | `/manage/playbooks/:id/memory/:key` | Get specific memory |
+| PUT | `/manage/playbooks/:id/memory/:key` | Write memory with tags |
+| DELETE | `/manage/playbooks/:id/memory/:key` | Delete memory |
 
 ### Examples
 
@@ -248,11 +253,14 @@ Add to your MCP settings:
 | `create_persona` | Add a persona to a playbook |
 | `update_persona` | Update a persona |
 | `delete_persona` | Delete a persona |
+| `list_skills` | List all skills in a playbook |
+| `get_skill` | Get skill details including definition and examples |
 | `create_skill` | Add a skill to a playbook |
 | `update_skill` | Update a skill |
 | `delete_skill` | Delete a skill |
-| `read_memory` | Read memory entries |
-| `write_memory` | Write a memory entry |
+| `read_memory` | Read a specific memory entry by key |
+| `search_memory` | Search memories by text and/or tags |
+| `write_memory` | Write a memory entry with optional tags and description |
 | `delete_memory` | Delete a memory entry |
 
 ### Example Tool Calls
@@ -370,7 +378,7 @@ Before deleting playbooks or personas, always confirm with the user:
 
 ### 4. Use Memory for Context
 
-Store user preferences, conversation history, or learned patterns in memory:
+Store user preferences, conversation history, or learned patterns in memory. Use **tags** for categorization and easy search, and **descriptions** for clarity:
 
 ```json
 {
@@ -382,7 +390,38 @@ Store user preferences, conversation history, or learned patterns in memory:
       "preferred_language": "Python",
       "code_style": "PEP8",
       "verbosity": "detailed"
-    }
+    },
+    "tags": ["settings", "user", "coding"],
+    "description": "User's coding preferences and style settings"
+  }
+}
+```
+
+#### Search Memory
+
+Use `search_memory` to find memories by tags or text:
+
+```json
+{
+  "name": "search_memory",
+  "arguments": {
+    "playbook_id": "xxx",
+    "tags": ["user", "settings"],
+    "search": "preference"
+  }
+}
+```
+
+This returns all memories that have any of the specified tags AND contain "preference" in the key or description.
+
+Use `read_memory` when you know the exact key:
+
+```json
+{
+  "name": "read_memory",
+  "arguments": {
+    "playbook_id": "xxx",
+    "key": "user_preferences"
   }
 }
 ```
@@ -390,6 +429,115 @@ Store user preferences, conversation history, or learned patterns in memory:
 ### 5. Make Playbooks Public Carefully
 
 Only make playbooks public if they're meant to be shared. Public playbooks appear in the marketplace.
+
+---
+
+## Playbook MCP Server
+
+Each public playbook has its own MCP server at `/api/mcp/:guid`. This allows AI clients to:
+
+- Read personas, skills, and memory
+- Search memory by tags and text
+- Write memory (with API key)
+- Access skill attachments
+
+### Available Tools (Playbook MCP)
+
+| Tool | Description | Auth |
+|------|-------------|------|
+| `list_personas` | List all personas | None |
+| `list_skills` | List all skills | None |
+| `get_skill` | Get skill details with attachments | None |
+| `read_memory` | Read specific memory by key | None |
+| `search_memory` | Search memories by text/tags | None |
+| `write_memory` | Write memory entry | API Key |
+| `delete_memory` | Delete memory entry | API Key |
+
+### Resources (Playbook MCP)
+
+| URI | Description |
+|-----|-------------|
+| `playbook://{guid}/personas` | All personas |
+| `playbook://{guid}/skills` | All skills |
+| `playbook://{guid}/memory` | All memories |
+| `playbook://{guid}/skills/{id}/attachments/{id}` | Skill attachment content |
+
+### Example: Configure Claude Desktop for a Playbook
+
+```json
+{
+  "mcpServers": {
+    "my-playbook": {
+      "url": "https://agentplaybooks.ai/api/mcp/abc123def456",
+      "transport": "http",
+      "headers": {
+        "Authorization": "Bearer apb_live_xxx"  // Optional, for write access
+      }
+    }
+  }
+}
+```
+
+---
+
+## Skill Attachments API
+
+Skills can have file attachments (code files, documentation, etc.) that provide additional context.
+
+### List Attachments
+
+```http
+GET /api/manage/skills/:skillId/attachments
+```
+
+### Get Attachment Content
+
+```http
+GET /api/manage/skills/:skillId/attachments/:attachmentId
+GET /api/manage/skills/:skillId/attachments/:attachmentId?raw=true  # Raw text
+```
+
+### Upload Attachment
+
+```http
+POST /api/manage/skills/:skillId/attachments
+Content-Type: application/json
+
+{
+  "filename": "helper.ts",
+  "content": "export function helper() { ... }",
+  "file_type": "typescript",
+  "description": "Helper functions for the skill"
+}
+```
+
+**Supported file types:**
+- `typescript`, `javascript`, `python`, `go`, `rust`
+- `sql`, `markdown`, `json`, `yaml`
+- `text`, `cursorrules`, `shell`
+
+**Limits:**
+- Max file size: 50KB
+- Max files per skill: 10
+- Max filename length: 100 characters
+
+### Update Attachment
+
+```http
+PUT /api/manage/skills/:skillId/attachments/:attachmentId
+Content-Type: application/json
+
+{
+  "content": "updated content...",
+  "description": "Updated description"
+}
+```
+
+### Delete Attachment
+
+```http
+DELETE /api/manage/skills/:skillId/attachments/:attachmentId
+```
 
 ---
 

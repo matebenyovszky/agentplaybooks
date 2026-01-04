@@ -108,6 +108,8 @@ export type MemoriesRow = {
   playbook_id: string;
   key: string;
   value: Record<string, unknown>;
+  tags: string[];
+  description: string | null;
   updated_at: string;
 };
 

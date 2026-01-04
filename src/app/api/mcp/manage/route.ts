@@ -200,26 +200,64 @@ const MCP_TOOLS = [
     },
   },
   {
-    name: "read_memory",
-    description: "Read memory entries from a playbook. Memory is a key-value store for persistent data.",
+    name: "list_skills",
+    description: "List all skills in a playbook. Skills define capabilities, rules, and how tasks should be solved.",
     inputSchema: {
       type: "object",
       properties: {
         playbook_id: { type: "string", description: "UUID of the playbook" },
-        key: { type: "string", description: "Optional specific key to read" },
+      },
+      required: ["playbook_id"],
+    },
+  },
+  {
+    name: "get_skill",
+    description: "Get detailed information about a specific skill including its definition and examples.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        playbook_id: { type: "string", description: "UUID of the playbook" },
+        skill_id: { type: "string", description: "UUID of the skill" },
+      },
+      required: ["playbook_id", "skill_id"],
+    },
+  },
+  {
+    name: "read_memory",
+    description: "Read a specific memory entry by key.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        playbook_id: { type: "string", description: "UUID of the playbook" },
+        key: { type: "string", description: "Memory key to read" },
+      },
+      required: ["playbook_id", "key"],
+    },
+  },
+  {
+    name: "search_memory",
+    description: "Search memories by text and/or tags. Returns all matching entries.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        playbook_id: { type: "string", description: "UUID of the playbook" },
+        search: { type: "string", description: "Search in keys and descriptions" },
+        tags: { type: "array", items: { type: "string" }, description: "Filter by tags (any match)" },
       },
       required: ["playbook_id"],
     },
   },
   {
     name: "write_memory",
-    description: "Write a memory entry to a playbook. If the key exists, it will be updated.",
+    description: "Write a memory entry with optional tags and description. Tags help organize and search memories.",
     inputSchema: {
       type: "object",
       properties: {
         playbook_id: { type: "string", description: "UUID of the playbook" },
-        key: { type: "string", description: "Memory key" },
+        key: { type: "string", description: "Memory key (unique identifier)" },
         value: { type: "object", description: "Value to store (any JSON object)" },
+        tags: { type: "array", items: { type: "string" }, description: "Tags for categorization and search" },
+        description: { type: "string", description: "Human-readable description of this memory" },
       },
       required: ["playbook_id", "key", "value"],
     },
@@ -726,6 +764,69 @@ async function executeManagementTool(
       return { success: true };
     }
 
+    case "list_skills": {
+      if (!hasPermission(userKey, "playbooks:read")) {
+        throw new Error("Permission denied: playbooks:read required");
+      }
+
+      const { playbook_id } = args as { playbook_id: string };
+      if (!playbook_id) throw new Error("playbook_id is required");
+
+      // Verify ownership
+      const { data: playbook } = await supabase
+        .from("playbooks")
+        .select("id")
+        .eq("id", playbook_id)
+        .eq("user_id", userId)
+        .single();
+
+      if (!playbook) throw new Error("Playbook not found");
+
+      const { data, error } = await supabase
+        .from("skills")
+        .select("id, name, description, definition, examples, priority")
+        .eq("playbook_id", playbook_id)
+        .order("priority", { ascending: false });
+
+      if (error) throw new Error(error.message);
+      return data || [];
+    }
+
+    case "get_skill": {
+      if (!hasPermission(userKey, "playbooks:read")) {
+        throw new Error("Permission denied: playbooks:read required");
+      }
+
+      const { playbook_id, skill_id } = args as {
+        playbook_id: string;
+        skill_id: string;
+      };
+
+      if (!playbook_id || !skill_id) {
+        throw new Error("playbook_id and skill_id are required");
+      }
+
+      // Verify ownership
+      const { data: playbook } = await supabase
+        .from("playbooks")
+        .select("id")
+        .eq("id", playbook_id)
+        .eq("user_id", userId)
+        .single();
+
+      if (!playbook) throw new Error("Playbook not found");
+
+      const { data, error } = await supabase
+        .from("skills")
+        .select("*")
+        .eq("id", skill_id)
+        .eq("playbook_id", playbook_id)
+        .single();
+
+      if (error) throw new Error("Skill not found");
+      return data;
+    }
+
     case "read_memory": {
       if (!hasPermission(userKey, "memory:read")) {
         throw new Error("Permission denied: memory:read required");
@@ -733,7 +834,42 @@ async function executeManagementTool(
 
       const { playbook_id, key } = args as {
         playbook_id: string;
-        key?: string;
+        key: string;
+      };
+
+      if (!playbook_id) throw new Error("playbook_id is required");
+      if (!key) throw new Error("key is required");
+
+      // Verify ownership
+      const { data: playbook } = await supabase
+        .from("playbooks")
+        .select("id")
+        .eq("id", playbook_id)
+        .eq("user_id", userId)
+        .single();
+
+      if (!playbook) throw new Error("Playbook not found");
+
+      const { data, error } = await supabase
+        .from("memories")
+        .select("key, value, tags, description, updated_at")
+        .eq("playbook_id", playbook_id)
+        .eq("key", key)
+        .single();
+
+      if (error) throw new Error("Memory not found");
+      return data;
+    }
+
+    case "search_memory": {
+      if (!hasPermission(userKey, "memory:read")) {
+        throw new Error("Permission denied: memory:read required");
+      }
+
+      const { playbook_id, search, tags } = args as {
+        playbook_id: string;
+        search?: string;
+        tags?: string[];
       };
 
       if (!playbook_id) throw new Error("playbook_id is required");
@@ -748,21 +884,22 @@ async function executeManagementTool(
 
       if (!playbook) throw new Error("Playbook not found");
 
+      // Build query with optional filters
       let query = supabase
         .from("memories")
-        .select("key, value, updated_at")
+        .select("key, value, tags, description, updated_at")
         .eq("playbook_id", playbook_id);
 
-      if (key) {
-        query = query.eq("key", key);
+      if (search) {
+        query = query.or(`key.ilike.%${search}%,description.ilike.%${search}%`);
       }
 
-      const { data, error } = await query;
+      if (tags && tags.length > 0) {
+        query = query.overlaps("tags", tags);
+      }
+
+      const { data, error } = await query.order("updated_at", { ascending: false });
       if (error) throw new Error(error.message);
-
-      if (key && data?.length) {
-        return data[0];
-      }
       return data || [];
     }
 
@@ -771,10 +908,12 @@ async function executeManagementTool(
         throw new Error("Permission denied: memory:write required");
       }
 
-      const { playbook_id, key, value } = args as {
+      const { playbook_id, key, value, tags, description } = args as {
         playbook_id: string;
         key: string;
         value: Record<string, unknown>;
+        tags?: string[];
+        description?: string;
       };
 
       if (!playbook_id) throw new Error("playbook_id is required");
@@ -791,17 +930,25 @@ async function executeManagementTool(
 
       if (!playbook) throw new Error("Playbook not found");
 
+      const upsertData: Record<string, unknown> = {
+        playbook_id,
+        key,
+        value,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (tags !== undefined) {
+        upsertData.tags = tags;
+      }
+
+      if (description !== undefined) {
+        upsertData.description = description;
+      }
+
       const { data, error } = await supabase
         .from("memories")
-        .upsert({
-          playbook_id,
-          key,
-          value,
-          updated_at: new Date().toISOString(),
-        }, {
-          onConflict: "playbook_id,key",
-        })
-        .select()
+        .upsert(upsertData, { onConflict: "playbook_id,key" })
+        .select("key, value, tags, description, updated_at")
         .single();
 
       if (error) throw new Error(error.message);

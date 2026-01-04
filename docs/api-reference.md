@@ -134,12 +134,22 @@ Returns Anthropic-compatible tool definitions with system prompt.
 
 Returns a human-readable Markdown document.
 
-### Get Memory (Public Read)
+### Get Memory (Public Read with Search)
 
 ```http
 GET /api/playbooks/:guid/memory
 GET /api/playbooks/:guid/memory?key=specific_key
+GET /api/playbooks/:guid/memory?search=user
+GET /api/playbooks/:guid/memory?tags=settings,preferences
 ```
+
+**Query Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `key` | string | Get specific memory by key |
+| `search` | string | Search in keys and descriptions |
+| `tags` | string | Filter by tags (comma-separated, any match) |
 
 **Response:**
 
@@ -148,7 +158,66 @@ GET /api/playbooks/:guid/memory?key=specific_key
   {
     "key": "user_preferences",
     "value": { "theme": "dark" },
+    "tags": ["settings", "user"],
+    "description": "User preference settings",
     "updated_at": "2024-01-15T10:30:00Z"
+  }
+]
+```
+
+### List Skills (Public Read)
+
+Get all skills (capabilities/rules) for a playbook:
+
+```http
+GET /api/playbooks/:guid/skills
+```
+
+**Response:**
+
+```json
+[
+  {
+    "id": "uuid",
+    "name": "code_review",
+    "description": "Review code for issues and improvements",
+    "definition": {
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "string" }
+        }
+      }
+    },
+    "examples": [],
+    "priority": 10
+  }
+]
+```
+
+### Get Skill by ID
+
+```http
+GET /api/playbooks/:guid/skills/:skillId
+```
+
+Supports lookup by UUID or skill name.
+
+### List Personas (Public Read)
+
+```http
+GET /api/playbooks/:guid/personas
+```
+
+**Response:**
+
+```json
+[
+  {
+    "id": "uuid",
+    "name": "Coder",
+    "system_prompt": "You are a helpful coding assistant...",
+    "metadata": {}
   }
 ]
 ```
@@ -361,23 +430,33 @@ Authorization: Bearer apb_live_xxx
 Content-Type: application/json
 
 {
-  "value": { "theme": "dark", "language": "en" }
+  "value": { "theme": "dark", "language": "en" },
+  "tags": ["settings", "user"],
+  "description": "User preference settings"
 }
 ```
+
+**Request Body:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `value` | object | Yes | Any JSON value to store |
+| `tags` | string[] | No | Tags for categorization and search |
+| `description` | string | No | Human-readable description |
 
 **Response:**
 
 ```json
 {
-  "id": "uuid",
-  "playbook_id": "uuid",
   "key": "user_preferences",
   "value": { "theme": "dark", "language": "en" },
+  "tags": ["settings", "user"],
+  "description": "User preference settings",
   "updated_at": "2024-01-15T10:30:00Z"
 }
 ```
 
-**Note:** If the key already exists, it will be updated (upsert behavior).
+**Note:** If the key already exists, it will be updated (upsert behavior). Tags and description can be updated along with the value.
 
 ### Delete Memory
 
@@ -466,6 +545,137 @@ Content-Type: application/json
 
 ```http
 DELETE /api/playbooks/:id/api-keys/:kid
+```
+
+---
+
+## User API Keys (Account-level)
+
+User API Keys provide access to ALL your playbooks, enabling AI agents to create and manage playbooks programmatically. Manage these at [Dashboard Settings](https://agentplaybooks.ai/dashboard/settings).
+
+### List User API Keys
+
+```http
+GET /api/user/api-keys
+```
+
+### Create User API Key
+
+```http
+POST /api/user/api-keys
+Content-Type: application/json
+
+{
+  "name": "Claude Desktop",
+  "permissions": ["playbooks:read", "playbooks:write", "skills:write", "memory:read", "memory:write"]
+}
+```
+
+**Available Permissions:**
+
+| Permission | Description |
+|------------|-------------|
+| `playbooks:read` | List and view your playbooks |
+| `playbooks:write` | Create, update, delete playbooks |
+| `personas:write` | Add/update/delete personas |
+| `skills:write` | Add/update/delete skills |
+| `memory:read` | Read memory entries |
+| `memory:write` | Write/delete memory entries |
+| `full` | All permissions |
+
+**Response (201):**
+
+```json
+{
+  "id": "uuid",
+  "key_prefix": "apb_live_xxx...",
+  "name": "Claude Desktop",
+  "permissions": ["playbooks:read", "playbooks:write", "skills:write", "memory:read", "memory:write"],
+  "is_active": true,
+  "created_at": "2024-01-15T10:00:00Z",
+  "key": "apb_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "warning": "Save this key now! It will not be shown again."
+}
+```
+
+### Delete User API Key
+
+```http
+DELETE /api/user/api-keys/:kid
+```
+
+---
+
+## Management API (User API Key)
+
+For programmatic playbook management by AI agents. See [Management API Documentation](./management-api.md) for details.
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/manage/playbooks` | List all playbooks |
+| `POST /api/manage/playbooks` | Create playbook |
+| `GET /api/manage/playbooks/:id` | Get playbook with contents |
+| `PUT /api/manage/playbooks/:id` | Update playbook |
+| `DELETE /api/manage/playbooks/:id` | Delete playbook |
+| `POST /api/manage/playbooks/:id/personas` | Add persona |
+| `PUT/DELETE /api/manage/playbooks/:id/personas/:pid` | Update/Delete persona |
+| `POST /api/manage/playbooks/:id/skills` | Add skill |
+| `PUT/DELETE /api/manage/playbooks/:id/skills/:sid` | Update/Delete skill |
+| `GET /api/manage/playbooks/:id/memory` | List/search memories |
+| `GET /api/manage/playbooks/:id/memory/:key` | Get specific memory |
+| `PUT /api/manage/playbooks/:id/memory/:key` | Write memory |
+| `DELETE /api/manage/playbooks/:id/memory/:key` | Delete memory |
+| `GET /api/manage/openapi.json` | OpenAPI specification |
+
+**MCP Server:** `/api/mcp/manage`
+
+---
+
+## Skill Attachments
+
+Skills can have file attachments for additional context (code files, docs, etc.).
+
+### List Attachments
+
+```http
+GET /api/manage/skills/:skillId/attachments
+```
+
+### Get Attachment
+
+```http
+GET /api/manage/skills/:skillId/attachments/:attachmentId
+GET /api/manage/skills/:skillId/attachments/:attachmentId?raw=true
+```
+
+### Create Attachment
+
+```http
+POST /api/manage/skills/:skillId/attachments
+Content-Type: application/json
+
+{
+  "filename": "helper.py",
+  "content": "def helper(): ...",
+  "file_type": "python",
+  "description": "Helper functions"
+}
+```
+
+**Supported file types:** `typescript`, `javascript`, `python`, `go`, `rust`, `sql`, `markdown`, `json`, `yaml`, `text`, `cursorrules`, `shell`
+
+**Limits:** 50KB per file, 10 files per skill
+
+### Update Attachment
+
+```http
+PUT /api/manage/skills/:skillId/attachments/:attachmentId
+```
+
+### Delete Attachment
+
+```http
+DELETE /api/manage/skills/:skillId/attachments/:attachmentId
 ```
 
 ---
@@ -734,6 +944,8 @@ X-RateLimit-Reset: 1705312800
 
 ## Endpoint Summary
 
+### Playbook CRUD
+
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
 | `GET` | `/api/playbooks` | JWT | List user's playbooks |
@@ -741,24 +953,71 @@ X-RateLimit-Reset: 1705312800
 | `GET` | `/api/playbooks/:guid` | Public* | Get playbook (format param) |
 | `PUT` | `/api/playbooks/:id` | JWT | Update playbook |
 | `DELETE` | `/api/playbooks/:id` | JWT | Delete playbook |
-| `GET` | `/api/playbooks/:id/personas` | JWT/Public* | List personas |
-| `POST` | `/api/playbooks/:id/personas` | JWT | Create persona |
-| `PUT` | `/api/playbooks/:id/personas/:pid` | JWT | Update persona |
-| `DELETE` | `/api/playbooks/:id/personas/:pid` | JWT | Delete persona |
-| `GET` | `/api/playbooks/:id/skills` | JWT/Public* | List skills |
-| `POST` | `/api/playbooks/:id/skills` | JWT | Create skill |
-| `PUT` | `/api/playbooks/:id/skills/:sid` | JWT | Update skill |
-| `DELETE` | `/api/playbooks/:id/skills/:sid` | JWT | Delete skill |
+
+### Personas, Skills, Memory
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `GET/POST` | `/api/playbooks/:id/personas` | JWT/Public* | List/Create personas |
+| `PUT/DELETE` | `/api/playbooks/:id/personas/:pid` | JWT | Update/Delete persona |
+| `GET/POST` | `/api/playbooks/:id/skills` | JWT/Public* | List/Create skills |
+| `PUT/DELETE` | `/api/playbooks/:id/skills/:sid` | JWT | Update/Delete skill |
 | `GET` | `/api/playbooks/:guid/memory` | Public* | Read memory |
 | `PUT` | `/api/playbooks/:guid/memory/:key` | API Key/JWT | Write memory |
 | `DELETE` | `/api/playbooks/:guid/memory/:key` | API Key/JWT | Delete memory |
-| `GET` | `/api/playbooks/:id/api-keys` | JWT | List API keys |
-| `POST` | `/api/playbooks/:id/api-keys` | JWT | Create API key |
-| `DELETE` | `/api/playbooks/:id/api-keys/:kid` | JWT | Delete API key |
+
+### API Keys
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `GET` | `/api/playbooks/:id/api-keys` | JWT | List playbook API keys |
+| `POST` | `/api/playbooks/:id/api-keys` | JWT | Create playbook API key |
+| `DELETE` | `/api/playbooks/:id/api-keys/:kid` | JWT | Delete playbook API key |
+| `GET` | `/api/user/api-keys` | JWT | List user API keys |
+| `POST` | `/api/user/api-keys` | JWT | Create user API key |
+| `DELETE` | `/api/user/api-keys/:kid` | JWT | Delete user API key |
+
+### Management API (AI Automation)
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `GET` | `/api/manage/playbooks` | User Key | List all playbooks |
+| `POST` | `/api/manage/playbooks` | User Key | Create playbook |
+| `GET` | `/api/manage/playbooks/:id` | User Key | Get playbook with all contents |
+| `PUT` | `/api/manage/playbooks/:id` | User Key | Update playbook |
+| `DELETE` | `/api/manage/playbooks/:id` | User Key | Delete playbook |
+| `POST` | `/api/manage/playbooks/:id/personas` | User Key | Add persona |
+| `PUT/DELETE` | `/api/manage/playbooks/:id/personas/:pid` | User Key | Update/Delete persona |
+| `POST` | `/api/manage/playbooks/:id/skills` | User Key | Add skill |
+| `PUT/DELETE` | `/api/manage/playbooks/:id/skills/:sid` | User Key | Update/Delete skill |
+| `GET` | `/api/manage/playbooks/:id/memory` | User Key | List/search memories |
+| `GET` | `/api/manage/playbooks/:id/memory/:key` | User Key | Get specific memory |
+| `PUT` | `/api/manage/playbooks/:id/memory/:key` | User Key | Write memory with tags |
+| `DELETE` | `/api/manage/playbooks/:id/memory/:key` | User Key | Delete memory |
+| `GET` | `/api/manage/openapi.json` | None | OpenAPI specification |
+| `GET/POST` | `/api/mcp/manage` | User Key | Management MCP Server |
+
+### Skill Attachments
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `GET` | `/api/manage/skills/:sid/attachments` | Public*/User Key | List attachments |
+| `GET` | `/api/manage/skills/:sid/attachments/:aid` | Public*/User Key | Get attachment |
+| `POST` | `/api/manage/skills/:sid/attachments` | User Key | Upload attachment |
+| `PUT` | `/api/manage/skills/:sid/attachments/:aid` | User Key | Update attachment |
+| `DELETE` | `/api/manage/skills/:sid/attachments/:aid` | User Key | Delete attachment |
+
+### Public Repository & MCP
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
 | `GET` | `/api/public/skills` | None | Browse public skills |
 | `GET` | `/api/public/mcp` | None | Browse public MCP servers |
-| `GET` | `/api/mcp/:guid` | Public* | MCP manifest |
-| `POST` | `/api/mcp/:guid` | Public* | MCP JSON-RPC |
+| `GET` | `/api/public/playbooks` | None | Browse public playbooks |
+| `GET/POST` | `/api/mcp/:guid` | Public* | Playbook MCP Server |
 | `GET` | `/api/health` | None | Health check |
 
-*Public endpoints work without auth for public playbooks, or with JWT for private playbooks you own.
+**Notes:**
+- *Public endpoints work without auth for public playbooks, or with JWT for private playbooks you own.
+- **User Key** = User API Key (created at /dashboard/settings)
+- **API Key** = Playbook-specific API Key
