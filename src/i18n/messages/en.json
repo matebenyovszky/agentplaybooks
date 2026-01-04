@@ -204,7 +204,9 @@
     "noMatchingMCP": "No MCP servers match your search",
     "addParameter": "Add Parameter",
     "addTool": "Add Tool",
-    "addResource": "Add Resource"
+    "addResource": "Add Resource",
+    "readOnly": "View Only",
+    "apiKeysPrivate": "API Keys are only visible to the playbook owner"
   },
   "canvas": {
     "title": "Canvas Documents",

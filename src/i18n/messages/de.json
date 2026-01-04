@@ -133,7 +133,9 @@
     "noMatchingMCP": "Keine passenden MCP-Server gefunden",
     "addParameter": "Parameter Hinzufügen",
     "addTool": "Tool Hinzufügen",
-    "addResource": "Ressource Hinzufügen"
+    "addResource": "Ressource Hinzufügen",
+    "readOnly": "Nur Ansicht",
+    "apiKeysPrivate": "API-Schlüssel sind nur für den Playbook-Eigentümer sichtbar"
   },
   "apiKeys": {
     "title": "API-Schlüssel",

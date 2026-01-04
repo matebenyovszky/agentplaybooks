@@ -24,6 +24,7 @@ interface SkillEditorProps {
   storage: StorageAdapter;
   onUpdate: (skill: Skill) => void;
   onDelete: () => void;
+  readOnly?: boolean;
 }
 
 interface SchemaProperty {
@@ -34,7 +35,7 @@ interface SchemaProperty {
   enum?: string[];
 }
 
-export function SkillEditor({ skill, storage, onUpdate, onDelete }: SkillEditorProps) {
+export function SkillEditor({ skill, storage, onUpdate, onDelete, readOnly = false }: SkillEditorProps) {
   const [expanded, setExpanded] = useState(false);
   const [name, setName] = useState(skill.name);
   const [description, setDescription] = useState(skill.description || "");

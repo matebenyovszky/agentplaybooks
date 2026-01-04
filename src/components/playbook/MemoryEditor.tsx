@@ -22,9 +22,10 @@ interface MemoryEditorProps {
   storage: StorageAdapter;
   memories: Memory[];
   onUpdate: (memories: Memory[]) => void;
+  readOnly?: boolean;
 }
 
-export function MemoryEditor({ storage, memories, onUpdate }: MemoryEditorProps) {
+export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: MemoryEditorProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [editingMemory, setEditingMemory] = useState<Memory | null>(null);
   const [editKey, setEditKey] = useState("");

@@ -204,7 +204,9 @@
     "noMatchingMCP": "Nincs találat a keresésre",
     "addParameter": "Paraméter Hozzáadása",
     "addTool": "Eszköz Hozzáadása",
-    "addResource": "Erőforrás Hozzáadása"
+    "addResource": "Erőforrás Hozzáadása",
+    "readOnly": "Csak megtekintés",
+    "apiKeysPrivate": "Az API kulcsok csak a playbook tulajdonosa számára láthatók"
   },
   "canvas": {
     "title": "Canvas Dokumentumok",

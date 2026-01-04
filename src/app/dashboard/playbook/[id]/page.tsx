@@ -76,6 +76,8 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   
   // Browse public modals
   const [showBrowseSkills, setShowBrowseSkills] = useState(false);
@@ -119,6 +121,11 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
   const loadPlaybook = async () => {
     const supabase = createBrowserClient();
 
+    // Get current user first
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id || null;
+    setCurrentUserId(userId);
+
     const [playbookRes, personasRes, skillsRes, mcpRes, memoriesRes, keysRes] = await Promise.all([
       supabase.from("playbooks").select("*").eq("id", id).single(),
       supabase.from("personas").select("*").eq("playbook_id", id).order("created_at"),
@@ -128,7 +135,11 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
       supabase.from("api_keys").select("*").eq("playbook_id", id).order("created_at", { ascending: false }),
     ]);
 
-    if (playbookRes.data) setPlaybook(playbookRes.data as Playbook);
+    if (playbookRes.data) {
+      setPlaybook(playbookRes.data as Playbook);
+      // Check if current user is the owner
+      setIsOwner(userId !== null && playbookRes.data.user_id === userId);
+    }
     setPersonas((personasRes.data as Persona[]) || []);
     setSkills((skillsRes.data as Skill[]) || []);
     setMcpServers((mcpRes.data as MCPServer[]) || []);
@@ -400,16 +411,20 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
               <ArrowLeft className="h-5 w-5" />
             </Link>
             <div>
-              <input
-                type="text"
-                value={playbook.name}
-                onChange={(e) => updatePlaybook({ name: e.target.value })}
-                className={cn(
-                  "text-xl font-bold bg-transparent border-none focus:outline-none",
-                  "text-white placeholder:text-slate-500",
-                  "hover:bg-slate-800/50 focus:bg-slate-800/70 rounded px-2 py-1 -ml-2"
-                )}
-              />
+              {isOwner ? (
+                <input
+                  type="text"
+                  value={playbook.name}
+                  onChange={(e) => updatePlaybook({ name: e.target.value })}
+                  className={cn(
+                    "text-xl font-bold bg-transparent border-none focus:outline-none",
+                    "text-white placeholder:text-slate-500",
+                    "hover:bg-slate-800/50 focus:bg-slate-800/70 rounded px-2 py-1 -ml-2"
+                  )}
+                />
+              ) : (
+                <h1 className="text-xl font-bold text-white px-2 py-1 -ml-2">{playbook.name}</h1>
+              )}
               <div className="flex items-center gap-2 text-sm text-slate-500 px-2">
                 <code className="font-mono">/{playbook.guid}</code>
                 <button
@@ -428,45 +443,67 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
           </div>
           
           <div className="flex items-center gap-3">
-            {/* Status indicators */}
-            {hasChanges && !saving && (
+            {/* Read-only badge for non-owners */}
+            {!isOwner && (
+              <span className="px-3 py-1.5 bg-slate-700/50 text-slate-400 text-sm rounded-lg border border-slate-600/50 flex items-center gap-2">
+                <Eye className="h-4 w-4" />
+                {t("editor.readOnly") || "Read Only"}
+              </span>
+            )}
+            
+            {/* Status indicators - only for owners */}
+            {isOwner && hasChanges && !saving && (
               <span className="text-amber-400 text-sm">Unsaved changes</span>
             )}
-            {saving && (
+            {isOwner && saving && (
               <span className="flex items-center gap-2 text-blue-400 text-sm">
                 <Loader2 className="h-3 w-3 animate-spin" />
                 Saving...
               </span>
             )}
             
-            {/* Public/Private toggle */}
-            <button
-              onClick={() => updatePlaybook({ is_public: !playbook.is_public })}
-              className={cn(
-                "px-3 py-2 rounded-lg flex items-center gap-2 text-sm transition-colors",
+            {/* Public/Private toggle - only for owners */}
+            {isOwner ? (
+              <button
+                onClick={() => updatePlaybook({ is_public: !playbook.is_public })}
+                className={cn(
+                  "px-3 py-2 rounded-lg flex items-center gap-2 text-sm transition-colors",
+                  playbook.is_public 
+                    ? "bg-green-500/10 text-green-400 border border-green-500/20 hover:bg-green-500/20" 
+                    : "bg-slate-800/50 text-slate-400 border border-slate-700/50 hover:border-slate-600"
+                )}
+              >
+                {playbook.is_public ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                {playbook.is_public ? "Public" : "Private"}
+              </button>
+            ) : (
+              <span className={cn(
+                "px-3 py-2 rounded-lg flex items-center gap-2 text-sm",
                 playbook.is_public 
-                  ? "bg-green-500/10 text-green-400 border border-green-500/20 hover:bg-green-500/20" 
-                  : "bg-slate-800/50 text-slate-400 border border-slate-700/50 hover:border-slate-600"
-              )}
-            >
-              {playbook.is_public ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-              {playbook.is_public ? "Public" : "Private"}
-            </button>
+                  ? "bg-green-500/10 text-green-400 border border-green-500/20" 
+                  : "bg-slate-800/50 text-slate-400 border border-slate-700/50"
+              )}>
+                {playbook.is_public ? <Globe className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                {playbook.is_public ? "Public" : "Private"}
+              </span>
+            )}
             
-            {/* Save button */}
-            <button
-              onClick={handleManualSave}
-              disabled={saving || !hasChanges}
-              className={cn(
-                "px-4 py-2 rounded-lg font-semibold flex items-center gap-2 transition-all",
-                hasChanges
-                  ? "bg-gradient-to-r from-amber-600 to-amber-400 text-slate-900 shadow-lg shadow-amber-500/25"
-                  : "bg-slate-800 text-slate-400"
-              )}
-            >
-              <Save className="h-4 w-4" />
-              {saving ? "Saving..." : t("editor.save")}
-            </button>
+            {/* Save button - only for owners */}
+            {isOwner && (
+              <button
+                onClick={handleManualSave}
+                disabled={saving || !hasChanges}
+                className={cn(
+                  "px-4 py-2 rounded-lg font-semibold flex items-center gap-2 transition-all",
+                  hasChanges
+                    ? "bg-gradient-to-r from-amber-600 to-amber-400 text-slate-900 shadow-lg shadow-amber-500/25"
+                    : "bg-slate-800 text-slate-400"
+                )}
+              >
+                <Save className="h-4 w-4" />
+                {saving ? "Saving..." : t("editor.save")}
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -525,17 +562,19 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                   <Brain className="h-5 w-5 text-blue-400" />
                   {t("editor.tabs.personas")}
                 </h2>
-                <button
-                  onClick={handleAddPersona}
-                  className={cn(
-                    "px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium",
-                    "bg-blue-600/20 text-blue-400 border border-blue-500/30",
-                    "hover:bg-blue-600/30 transition-colors"
-                  )}
-                >
-                  <Plus className="h-4 w-4" />
-                  {t("editor.addPersona")}
-                </button>
+                {isOwner && (
+                  <button
+                    onClick={handleAddPersona}
+                    className={cn(
+                      "px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium",
+                      "bg-blue-600/20 text-blue-400 border border-blue-500/30",
+                      "hover:bg-blue-600/30 transition-colors"
+                    )}
+                  >
+                    <Plus className="h-4 w-4" />
+                    {t("editor.addPersona")}
+                  </button>
+                )}
               </div>
               
               {personas.length === 0 ? (
@@ -552,6 +591,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                       key={persona.id}
                       persona={persona}
                       storage={storage}
+                      readOnly={!isOwner}
                       onDelete={() => handleDeletePersona(persona.id)}
                       onUpdate={(updated) => {
                         setPersonas(personas.map(p => p.id === updated.id ? updated : p));
@@ -576,30 +616,32 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                   <Zap className="h-5 w-5 text-purple-400" />
                   {t("editor.tabs.skills")}
                 </h2>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={openBrowseSkills}
-                    className={cn(
-                      "px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium",
-                      "bg-slate-700/50 text-slate-300 border border-slate-600/50",
-                      "hover:bg-slate-700 transition-colors"
-                    )}
-                  >
-                    <Search className="h-4 w-4" />
-                    {t("editor.browsePublic")}
-                  </button>
-                  <button
-                    onClick={handleAddSkill}
-                    className={cn(
-                      "px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium",
-                      "bg-purple-600/20 text-purple-400 border border-purple-500/30",
-                      "hover:bg-purple-600/30 transition-colors"
-                    )}
-                  >
-                    <Plus className="h-4 w-4" />
-                    {t("editor.addSkill")}
-                  </button>
-                </div>
+                {isOwner && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={openBrowseSkills}
+                      className={cn(
+                        "px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium",
+                        "bg-slate-700/50 text-slate-300 border border-slate-600/50",
+                        "hover:bg-slate-700 transition-colors"
+                      )}
+                    >
+                      <Search className="h-4 w-4" />
+                      {t("editor.browsePublic")}
+                    </button>
+                    <button
+                      onClick={handleAddSkill}
+                      className={cn(
+                        "px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium",
+                        "bg-purple-600/20 text-purple-400 border border-purple-500/30",
+                        "hover:bg-purple-600/30 transition-colors"
+                      )}
+                    >
+                      <Plus className="h-4 w-4" />
+                      {t("editor.addSkill")}
+                    </button>
+                  </div>
+                )}
               </div>
               
               {skills.length === 0 ? (
@@ -616,6 +658,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                       key={skill.id}
                       skill={skill}
                       storage={storage}
+                      readOnly={!isOwner}
                       onDelete={() => handleDeleteSkill(skill.id)}
                       onUpdate={(updated) => {
                         setSkills(skills.map(s => s.id === updated.id ? updated : s));
@@ -640,30 +683,32 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                   <Server className="h-5 w-5 text-pink-400" />
                   {t("editor.tabs.mcp")}
                 </h2>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={openBrowseMCP}
-                    className={cn(
-                      "px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium",
-                      "bg-slate-700/50 text-slate-300 border border-slate-600/50",
-                      "hover:bg-slate-700 transition-colors"
-                    )}
-                  >
-                    <Search className="h-4 w-4" />
-                    {t("editor.browsePublic")}
-                  </button>
-                  <button
-                    onClick={handleAddMCP}
-                    className={cn(
-                      "px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium",
-                      "bg-pink-600/20 text-pink-400 border border-pink-500/30",
-                      "hover:bg-pink-600/30 transition-colors"
-                    )}
-                  >
-                    <Plus className="h-4 w-4" />
-                    {t("editor.addMCP")}
-                  </button>
-                </div>
+                {isOwner && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={openBrowseMCP}
+                      className={cn(
+                        "px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium",
+                        "bg-slate-700/50 text-slate-300 border border-slate-600/50",
+                        "hover:bg-slate-700 transition-colors"
+                      )}
+                    >
+                      <Search className="h-4 w-4" />
+                      {t("editor.browsePublic")}
+                    </button>
+                    <button
+                      onClick={handleAddMCP}
+                      className={cn(
+                        "px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium",
+                        "bg-pink-600/20 text-pink-400 border border-pink-500/30",
+                        "hover:bg-pink-600/30 transition-colors"
+                      )}
+                    >
+                      <Plus className="h-4 w-4" />
+                      {t("editor.addMCP")}
+                    </button>
+                  </div>
+                )}
               </div>
               
               {mcpServers.length === 0 ? (
@@ -680,6 +725,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                       key={mcp.id}
                       mcpServer={mcp}
                       storage={storage}
+                      readOnly={!isOwner}
                       onDelete={() => handleDeleteMCP(mcp.id)}
                       onUpdate={(updated) => {
                         setMcpServers(mcpServers.map(m => m.id === updated.id ? updated : m));
@@ -703,12 +749,13 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                 storage={storage}
                 memories={memories}
                 onUpdate={setMemories}
+                readOnly={!isOwner}
               />
             </motion.div>
           )}
 
-          {/* API Keys Tab */}
-          {activeTab === "apiKeys" && (
+          {/* API Keys Tab - only visible to owner */}
+          {activeTab === "apiKeys" && isOwner && (
             <motion.div
               key="apiKeys"
               initial={{ opacity: 0, y: 10 }}
@@ -720,6 +767,20 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                 apiKeys={apiKeys}
                 onUpdate={setApiKeys}
               />
+            </motion.div>
+          )}
+          
+          {/* API Keys Tab - not owner message */}
+          {activeTab === "apiKeys" && !isOwner && (
+            <motion.div
+              key="apiKeys-readonly"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="text-center py-16"
+            >
+              <Lock className="h-12 w-12 mx-auto text-slate-600 mb-4" />
+              <p className="text-slate-400">{t("editor.apiKeysPrivate") || "API Keys are only visible to the playbook owner"}</p>
             </motion.div>
           )}
 
@@ -747,18 +808,24 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                   <label className="block text-sm font-medium text-slate-400 mb-2">
                     Description
                   </label>
-                  <textarea
-                    value={playbook.description || ""}
-                    onChange={(e) => updatePlaybook({ description: e.target.value })}
-                    className={cn(
-                      "w-full p-3 rounded-lg",
-                      "bg-slate-900/70 border border-slate-700/50",
-                      "text-slate-200 placeholder:text-slate-600",
-                      "focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20",
-                      "resize-y min-h-[100px]"
-                    )}
-                    placeholder="Describe what this playbook is for..."
-                  />
+                  {isOwner ? (
+                    <textarea
+                      value={playbook.description || ""}
+                      onChange={(e) => updatePlaybook({ description: e.target.value })}
+                      className={cn(
+                        "w-full p-3 rounded-lg",
+                        "bg-slate-900/70 border border-slate-700/50",
+                        "text-slate-200 placeholder:text-slate-600",
+                        "focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20",
+                        "resize-y min-h-[100px]"
+                      )}
+                      placeholder="Describe what this playbook is for..."
+                    />
+                  ) : (
+                    <p className="text-slate-300 p-3 bg-slate-900/50 rounded-lg min-h-[60px]">
+                      {playbook.description || <span className="text-slate-500 italic">No description</span>}
+                    </p>
+                  )}
                 </div>
 
                 {/* Tags */}
@@ -771,9 +838,11 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                     <Tag className="h-4 w-4" />
                     Tags
                   </label>
-                  <p className="text-xs text-slate-500 mb-3">
-                    Add tags to help others find your playbook in the Explore page
-                  </p>
+                  {isOwner && (
+                    <p className="text-xs text-slate-500 mb-3">
+                      Add tags to help others find your playbook in the Explore page
+                    </p>
+                  )}
                   
                   {/* Existing tags */}
                   <div className="flex flex-wrap gap-2 mb-3">
@@ -783,15 +852,17 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/20 text-amber-400 rounded-full text-sm"
                       >
                         {tag}
-                        <button
-                          onClick={() => {
-                            const newTags = (playbook.tags || []).filter(t => t !== tag);
-                            updatePlaybook({ tags: newTags });
-                          }}
-                          className="hover:bg-amber-500/30 rounded-full p-0.5 transition-colors"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
+                        {isOwner && (
+                          <button
+                            onClick={() => {
+                              const newTags = (playbook.tags || []).filter(t => t !== tag);
+                              updatePlaybook({ tags: newTags });
+                            }}
+                            className="hover:bg-amber-500/30 rounded-full p-0.5 transition-colors"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        )}
                       </span>
                     ))}
                     {(!playbook.tags || playbook.tags.length === 0) && (
@@ -799,58 +870,60 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                     )}
                   </div>
                   
-                  {/* Add new tag */}
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={newTagInput}
-                      onChange={(e) => setNewTagInput(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && newTagInput.trim()) {
-                          e.preventDefault();
-                          const tag = newTagInput.trim();
-                          if (tag && !(playbook.tags || []).includes(tag)) {
-                            updatePlaybook({ tags: [...(playbook.tags || []), tag] });
-                          }
-                          setNewTagInput("");
-                        }
-                      }}
-                      className={cn(
-                        "flex-1 px-3 py-2 rounded-lg",
-                        "bg-slate-900/70 border border-slate-700/50",
-                        "text-slate-200 placeholder:text-slate-600",
-                        "focus:outline-none focus:border-amber-500/50"
-                      )}
-                      placeholder="Add a tag (e.g. coding, writing, automation)"
-                      maxLength={30}
-                    />
-                    <button
-                      onClick={() => {
-                        const tag = newTagInput.trim();
-                        if (tag && !(playbook.tags || []).includes(tag)) {
-                          updatePlaybook({ tags: [...(playbook.tags || []), tag] });
-                        }
-                        setNewTagInput("");
-                      }}
-                      disabled={!newTagInput.trim()}
-                      className={cn(
-                        "px-4 py-2 rounded-lg font-medium transition-colors",
-                        newTagInput.trim()
-                          ? "bg-amber-500 text-slate-900 hover:bg-amber-400"
-                          : "bg-slate-800 text-slate-500 cursor-not-allowed"
-                      )}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </button>
-                  </div>
-                  
-                  {/* Popular tags suggestions */}
-                  <div className="mt-3 flex flex-wrap gap-1.5">
-                    <span className="text-xs text-slate-500 mr-1">Popular:</span>
-                    {["coding", "writing", "data", "automation", "research", "creative", "productivity"].map(tag => (
-                      <button
-                        key={tag}
-                        onClick={() => {
+                  {/* Add new tag - only for owner */}
+                  {isOwner && (
+                    <>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={newTagInput}
+                          onChange={(e) => setNewTagInput(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && newTagInput.trim()) {
+                              e.preventDefault();
+                              const tag = newTagInput.trim();
+                              if (tag && !(playbook.tags || []).includes(tag)) {
+                                updatePlaybook({ tags: [...(playbook.tags || []), tag] });
+                              }
+                              setNewTagInput("");
+                            }
+                          }}
+                          className={cn(
+                            "flex-1 px-3 py-2 rounded-lg",
+                            "bg-slate-900/70 border border-slate-700/50",
+                            "text-slate-200 placeholder:text-slate-600",
+                            "focus:outline-none focus:border-amber-500/50"
+                          )}
+                          placeholder="Add a tag (e.g. coding, writing, automation)"
+                          maxLength={30}
+                        />
+                        <button
+                          onClick={() => {
+                            const tag = newTagInput.trim();
+                            if (tag && !(playbook.tags || []).includes(tag)) {
+                              updatePlaybook({ tags: [...(playbook.tags || []), tag] });
+                            }
+                            setNewTagInput("");
+                          }}
+                          disabled={!newTagInput.trim()}
+                          className={cn(
+                            "px-4 py-2 rounded-lg font-medium transition-colors",
+                            newTagInput.trim()
+                              ? "bg-amber-500 text-slate-900 hover:bg-amber-400"
+                              : "bg-slate-800 text-slate-500 cursor-not-allowed"
+                          )}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </button>
+                      </div>
+                      
+                      {/* Popular tags suggestions */}
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        <span className="text-xs text-slate-500 mr-1">Popular:</span>
+                        {["coding", "writing", "data", "automation", "research", "creative", "productivity"].map(tag => (
+                          <button
+                            key={tag}
+                            onClick={() => {
                           if (!(playbook.tags || []).includes(tag)) {
                             updatePlaybook({ tags: [...(playbook.tags || []), tag] });
                           }
@@ -863,54 +936,82 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                             : "bg-slate-800/50 text-slate-400 hover:bg-slate-700 hover:text-slate-300"
                         )}
                       >
-                        +{tag}
-                      </button>
-                    ))}
-                  </div>
+                            +{tag}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
 
-                {/* Visibility */}
-                <div className={cn(
-                  "p-5 rounded-xl",
-                  "bg-gradient-to-br from-slate-900/80 to-slate-800/80",
-                  "border border-slate-700/50"
-                )}>
-                  <label className="block text-sm font-medium text-slate-400 mb-4">
-                    Visibility
-                  </label>
-                  <div className="flex gap-4">
-                    <button
-                      onClick={() => updatePlaybook({ is_public: false })}
-                      className={cn(
-                        "flex-1 p-4 rounded-xl border flex items-center gap-3 transition-all",
-                        !playbook.is_public
-                          ? "border-blue-500/50 bg-blue-500/10"
-                          : "border-slate-700/50 bg-slate-900/50 hover:border-slate-600"
-                      )}
-                    >
-                      <Lock className="h-5 w-5" />
-                      <div className="text-left">
-                        <p className="font-medium">Private</p>
-                        <p className="text-sm text-slate-400">Only you can access</p>
-                      </div>
-                    </button>
-                    <button
-                      onClick={() => updatePlaybook({ is_public: true })}
-                      className={cn(
-                        "flex-1 p-4 rounded-xl border flex items-center gap-3 transition-all",
-                        playbook.is_public
-                          ? "border-green-500/50 bg-green-500/10"
-                          : "border-slate-700/50 bg-slate-900/50 hover:border-slate-600"
-                      )}
-                    >
-                      <Globe className="h-5 w-5" />
-                      <div className="text-left">
-                        <p className="font-medium">Public</p>
-                        <p className="text-sm text-slate-400">Anyone with the link</p>
-                      </div>
-                    </button>
+                {/* Visibility - only changeable by owner */}
+                {isOwner ? (
+                  <div className={cn(
+                    "p-5 rounded-xl",
+                    "bg-gradient-to-br from-slate-900/80 to-slate-800/80",
+                    "border border-slate-700/50"
+                  )}>
+                    <label className="block text-sm font-medium text-slate-400 mb-4">
+                      Visibility
+                    </label>
+                    <div className="flex gap-4">
+                      <button
+                        onClick={() => updatePlaybook({ is_public: false })}
+                        className={cn(
+                          "flex-1 p-4 rounded-xl border flex items-center gap-3 transition-all",
+                          !playbook.is_public
+                            ? "border-blue-500/50 bg-blue-500/10"
+                            : "border-slate-700/50 bg-slate-900/50 hover:border-slate-600"
+                        )}
+                      >
+                        <Lock className="h-5 w-5" />
+                        <div className="text-left">
+                          <p className="font-medium">Private</p>
+                          <p className="text-sm text-slate-400">Only you can access</p>
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => updatePlaybook({ is_public: true })}
+                        className={cn(
+                          "flex-1 p-4 rounded-xl border flex items-center gap-3 transition-all",
+                          playbook.is_public
+                            ? "border-green-500/50 bg-green-500/10"
+                            : "border-slate-700/50 bg-slate-900/50 hover:border-slate-600"
+                        )}
+                      >
+                        <Globe className="h-5 w-5" />
+                        <div className="text-left">
+                          <p className="font-medium">Public</p>
+                          <p className="text-sm text-slate-400">Anyone with the link</p>
+                        </div>
+                      </button>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className={cn(
+                    "p-5 rounded-xl",
+                    "bg-gradient-to-br from-slate-900/80 to-slate-800/80",
+                    "border border-slate-700/50"
+                  )}>
+                    <label className="block text-sm font-medium text-slate-400 mb-4">
+                      Visibility
+                    </label>
+                    <div className={cn(
+                      "p-4 rounded-xl border flex items-center gap-3",
+                      playbook.is_public
+                        ? "border-green-500/50 bg-green-500/10"
+                        : "border-blue-500/50 bg-blue-500/10"
+                    )}>
+                      {playbook.is_public ? <Globe className="h-5 w-5" /> : <Lock className="h-5 w-5" />}
+                      <div className="text-left">
+                        <p className="font-medium">{playbook.is_public ? "Public" : "Private"}</p>
+                        <p className="text-sm text-slate-400">
+                          {playbook.is_public ? "Anyone with the link can view" : "Only the owner can access"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* API Endpoints */}
                 <div className={cn(

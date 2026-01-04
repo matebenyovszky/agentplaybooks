@@ -25,17 +25,36 @@ export const metadata: Metadata = {
     "robot skills", "AI toolkit", "agent configuration", "JSON schema",
     "OpenAPI", "platform-independent AI", "AI vault", "agent marketplace"
   ],
+  icons: {
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/icon.svg", type: "image/svg+xml", sizes: "any" },
+    ],
+    apple: [
+      { url: "/apple-icon.svg", type: "image/svg+xml" },
+    ],
+  },
+  manifest: "/manifest.json",
   openGraph: {
     title: "AgentPlaybooks - AI Agent Rules, Skills & Memory Store",
     description: "The universal skills store for AI agents. Store rules, chores, personas, MCP servers. Works with every major AI platform.",
     type: "website",
     url: "https://agentplaybooks.ai",
     siteName: "AgentPlaybooks",
+    images: [
+      {
+        url: "/og-image.svg",
+        width: 1200,
+        height: 630,
+        alt: "AgentPlaybooks - AI Agent Skills Store",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "AgentPlaybooks - AI Agent Skills Store",
     description: "Store AI agent rules, skills, and memories. Platform-independent vault for ChatGPT, Claude, Gemini.",
+    images: ["/twitter-image.svg"],
   },
   robots: {
     index: true,
@@ -43,6 +62,12 @@ export const metadata: Metadata = {
   },
   alternates: {
     canonical: "https://agentplaybooks.ai",
+  },
+  themeColor: "#0a0f1a",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "AgentPlaybooks",
   },
 };
 
@@ -56,6 +81,12 @@ export default async function RootLayout({
 
   return (
     <html lang={locale} className="dark">
+      <head>
+        <meta name="theme-color" content="#0a0f1a" />
+        <meta name="msapplication-TileColor" content="#0a0f1a" />
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="apple-touch-icon" href="/apple-icon.svg" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

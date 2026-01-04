@@ -133,7 +133,9 @@
     "noMatchingMCP": "No se encontraron servidores MCP coincidentes",
     "addParameter": "Añadir Parámetro",
     "addTool": "Añadir Herramienta",
-    "addResource": "Añadir Recurso"
+    "addResource": "Añadir Recurso",
+    "readOnly": "Solo lectura",
+    "apiKeysPrivate": "Las claves API solo son visibles para el propietario del playbook"
   },
   "apiKeys": {
     "title": "Claves API",

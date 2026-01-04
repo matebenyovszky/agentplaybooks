@@ -25,6 +25,7 @@ interface McpServerEditorProps {
   storage: StorageAdapter;
   onUpdate: (mcpServer: MCPServer) => void;
   onDelete: () => void;
+  readOnly?: boolean;
 }
 
 interface Tool {
@@ -40,7 +41,7 @@ interface Resource {
   mimeType?: string;
 }
 
-export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete }: McpServerEditorProps) {
+export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOnly = false }: McpServerEditorProps) {
   const [expanded, setExpanded] = useState(false);
   const [name, setName] = useState(mcpServer.name);
   const [description, setDescription] = useState(mcpServer.description || "");
