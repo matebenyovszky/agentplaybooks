@@ -595,7 +595,7 @@ export default function DemoPlaybookPage() {
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
                   {[
                     { name: "ChatGPT", icon: "🤖", anchor: "#openai-chatgpt-custom-gpts" },
-                    { name: "Claude", icon: "🧠", anchor: "#anthropic-claude-claudeai" },
+                    { name: "Claude", icon: "🧠", anchor: "#anthropic-claude-claude-ai" },
                     { name: "Gemini", icon: "💎", anchor: "#google-gemini" },
                     { name: "Grok", icon: "⚡", anchor: "#xai-grok" },
                     { name: "Claude Code", icon: "💻", anchor: "#claude-code-cli-agent" },

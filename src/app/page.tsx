@@ -162,7 +162,7 @@ export default function LandingPage() {
             transition={{ duration: 0.5, delay: 0.6 }}
             className="mt-12 flex flex-wrap justify-center gap-3"
           >
-            {["Skills Store", "Anthropic Skills", "skills.md", "MCP Protocol", "Agent Memory", "OpenAPI"].map((tech) => (
+            {["Agent Rules", "AI Chores", "Skills Store", "Anthropic Skills", "skills.md", "MCP Protocol", "Agent Memory", "OpenAPI", "JSON Schema", "Cursor Rules"].map((tech) => (
               <span
                 key={tech}
                 className="px-3 py-1 text-sm bg-blue-950/50 border border-blue-800/50 rounded-full text-blue-300"
@@ -632,14 +632,120 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* AI SEO Section - What is AgentPlaybooks */}
+      <section className="py-20 px-4 bg-gradient-to-b from-transparent to-blue-950/20">
+        <div className="max-w-4xl mx-auto">
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-3xl md:text-4xl font-bold text-center mb-12"
+          >
+            What is <span className="gradient-text">AgentPlaybooks</span>?
+          </motion.h2>
+          
+          <div className="prose prose-invert prose-lg max-w-none">
+            <motion.div
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true }}
+              className="space-y-6 text-slate-300"
+            >
+              <p>
+                <strong className="text-amber-400">AgentPlaybooks</strong> is the universal skills store and memory vault for AI agents. 
+                Whether you&apos;re building with <strong>ChatGPT Custom GPTs</strong>, <strong>Claude Projects</strong>, 
+                <strong>Gemini Gems</strong>, or <strong>Cursor AI</strong>, AgentPlaybooks provides a platform-independent 
+                way to store and share your agent&apos;s configuration.
+              </p>
+              
+              <p>
+                Think of it as the <strong>app store for AI agents</strong> - a marketplace where you can find and share 
+                <strong> agent rules</strong>, <strong>AI chores</strong>, <strong>skills.md files</strong>, 
+                <strong> personas</strong>, and <strong>MCP servers</strong>. Your agents can access their memory, 
+                skills, and configuration from any platform.
+              </p>
+              
+              <div className="grid md:grid-cols-2 gap-6 my-8">
+                <div className="p-4 bg-blue-950/30 rounded-xl border border-blue-800/30">
+                  <h3 className="text-lg font-semibold text-amber-400 mb-2">🤖 For AI Agents</h3>
+                  <ul className="text-sm space-y-1 text-slate-400">
+                    <li>• Store agent rules and cursor rules</li>
+                    <li>• Define recurring AI chores and tasks</li>
+                    <li>• Share skills via skills.md format</li>
+                    <li>• Connect MCP servers for tools</li>
+                  </ul>
+                </div>
+                <div className="p-4 bg-blue-950/30 rounded-xl border border-blue-800/30">
+                  <h3 className="text-lg font-semibold text-amber-400 mb-2">🔧 For Developers</h3>
+                  <ul className="text-sm space-y-1 text-slate-400">
+                    <li>• Export to OpenAPI for GPT Actions</li>
+                    <li>• Anthropic Skills format support</li>
+                    <li>• JSON Schema definitions</li>
+                    <li>• Self-host on your infrastructure</li>
+                  </ul>
+                </div>
+              </div>
+              
+              <p>
+                <strong>Open source</strong> and <strong>self-hostable</strong>, AgentPlaybooks helps you avoid vendor lock-in. 
+                Your AI agent&apos;s knowledge stays portable - switch between AI platforms without losing anything. 
+                Perfect for automation, AI assistants, coding agents, and even future physical robots.
+              </p>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="py-12 px-4 border-t border-blue-900/30">
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="text-2xl font-bold gradient-text">
-            {t("common.appName")}
+        <div className="max-w-6xl mx-auto">
+          <div className="grid md:grid-cols-4 gap-8 mb-8">
+            <div>
+              <div className="text-2xl font-bold gradient-text mb-4">
+                {t("common.appName")}
+              </div>
+              <p className="text-sm text-slate-500">
+                The universal skills store for AI agents, GPTs, and robots.
+              </p>
+            </div>
+            <div>
+              <h4 className="font-semibold text-slate-300 mb-3">Product</h4>
+              <ul className="space-y-2 text-sm text-slate-500">
+                <li><Link href="/explore" className="hover:text-amber-400 transition-colors">Skills Store</Link></li>
+                <li><Link href="/docs" className="hover:text-amber-400 transition-colors">Documentation</Link></li>
+                <li><Link href="/enterprise" className="hover:text-amber-400 transition-colors">Enterprise</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold text-slate-300 mb-3">Integrations</h4>
+              <ul className="space-y-2 text-sm text-slate-500">
+                <li>ChatGPT Custom GPTs</li>
+                <li>Claude & Anthropic Skills</li>
+                <li>Gemini Gems</li>
+                <li>Cursor Rules</li>
+                <li>MCP Protocol</li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold text-slate-300 mb-3">Open Source</h4>
+              <ul className="space-y-2 text-sm text-slate-500">
+                <li>
+                  <a href="https://github.com/matebenyovszky/agentplaybooks" target="_blank" rel="noopener noreferrer" className="hover:text-amber-400 transition-colors">
+                    GitHub Repository
+                  </a>
+                </li>
+                <li>Self-Hosting Guide</li>
+                <li>API Documentation</li>
+              </ul>
+            </div>
           </div>
-          <div className="text-slate-500 text-sm">
-            © {new Date().getFullYear()} AgentPlaybooks. All rights reserved.
+          <div className="pt-8 border-t border-blue-900/30 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="text-slate-500 text-sm">
+              © {new Date().getFullYear()} AgentPlaybooks. All rights reserved.
+            </div>
+            <div className="text-xs text-slate-600">
+              AI Agent Rules • AI Chores • Skills Store • MCP Servers • Agent Memory
+            </div>
           </div>
         </div>
       </footer>

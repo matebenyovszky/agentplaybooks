@@ -1,14 +1,31 @@
 import type { MetadataRoute } from "next";
 import { locales } from "@/i18n/config";
-import { promises as fs } from "fs";
-import path from "path";
 
-// Force static generation at build time (when fs is available)
+// Force static generation at build time
 export const dynamic = "force-static";
 
 const baseUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://agentplaybooks.ai").replace(/\/$/, "");
 
 const paths = ["", "/docs", "/explore", "/enterprise"];
+
+// Doc slugs - update this list when adding/removing docs in public/docs/
+// These correspond to .md files in public/docs/
+const docSlugs = [
+  "readme",
+  "api-reference",
+  "architecture",
+  "developer-guide",
+  "environment-setup",
+  "getting-started",
+  "management-api",
+  "mcp-integration",
+  "memory",
+  "platform-integrations",
+  "playbooks",
+  "self-hosting",
+  "skills",
+  "ROADMAP",
+];
 
 function buildAlternates(url: string) {
   const languages: Record<string, string> = { "x-default": url };
@@ -20,28 +37,11 @@ function buildAlternates(url: string) {
   return { languages };
 }
 
-async function getDocSlugs(): Promise<string[]> {
-  const docsDir = path.join(process.cwd(), "public", "docs");
-
-  try {
-    const entries = await fs.readdir(docsDir, { withFileTypes: true });
-
-    return entries
-      .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith(".md"))
-      .map((entry) => {
-        const base = entry.name.replace(/\.md$/i, "");
-        return base.toLowerCase() === "readme" ? "readme" : base;
-      });
-  } catch {
-    return [];
-  }
-}
-
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
 
-  const baseEntries = paths.map((path) => {
-    const url = `${baseUrl}${path}`;
+  const baseEntries = paths.map((p) => {
+    const url = `${baseUrl}${p}`;
 
     return {
       url,
@@ -50,7 +50,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     };
   });
 
-  const docSlugs = await getDocSlugs();
   const docEntries = docSlugs.map((slug) => {
     const url = `${baseUrl}/docs?page=${slug}`;
 

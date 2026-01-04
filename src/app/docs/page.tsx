@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
@@ -119,9 +119,35 @@ export default function DocsPage() {
     { name: t("common.docs"), link: "/docs", icon: <BookOpen className="h-4 w-4" /> },
   ];
 
+  // Scroll to anchor after content loads
+  const scrollToAnchor = useCallback(() => {
+    const hash = window.location.hash;
+    if (hash) {
+      // Small delay to ensure content is rendered
+      setTimeout(() => {
+        const element = document.querySelector(hash);
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 100);
+    }
+  }, []);
+
   useEffect(() => {
     loadContent(page);
   }, [page]);
+
+  // Handle hash changes for anchor links
+  useEffect(() => {
+    if (!loading) {
+      scrollToAnchor();
+    }
+    
+    // Listen for hash changes
+    const handleHashChange = () => scrollToAnchor();
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, [loading, scrollToAnchor]);
 
   const loadContent = async (slug: string) => {
     setLoading(true);

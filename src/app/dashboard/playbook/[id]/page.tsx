@@ -992,7 +992,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                         color: "from-orange-600/20 to-amber-600/20", 
                         borderColor: "border-orange-500/30",
                         desc: "Projects & Instructions",
-                        anchor: "#anthropic-claude-claudeai"
+                        anchor: "#anthropic-claude-claude-ai"
                       },
                       { 
                         name: "Gemini", 

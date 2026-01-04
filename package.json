@@ -4,9 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "tsx scripts/sync-sitemap-docs.ts",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "sync-sitemap": "tsx scripts/sync-sitemap-docs.ts",
     "build:worker": "opennextjs-cloudflare build",
     "dev:worker": "opennextjs-cloudflare dev",
     "preview": "opennextjs-cloudflare preview",

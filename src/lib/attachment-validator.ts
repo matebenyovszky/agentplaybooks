@@ -209,3 +209,4 @@ export function getHighlightLanguage(fileType: AttachmentFileType): string {
   return languageMap[fileType] || 'plaintext';
 }
 
+

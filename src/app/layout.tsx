@@ -15,9 +15,35 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AgentPlaybooks - Platform-Independent AI Memory & Toolkit",
-  description: "Give your AI agents, GPTs, and robots a platform-independent vault. Store skills, personas, and MCP servers.",
-  keywords: ["AI", "agent", "playbook", "MCP", "GPT", "skills", "personas", "memory"],
+  title: "AgentPlaybooks - AI Agent Rules, Skills & Memory Store",
+  description: "The universal skills store for AI agents. Store agent rules, chores, personas, skills.md, MCP servers. Works with ChatGPT, Claude, Gemini, Cursor. Platform-independent vault for AI robots and automation.",
+  keywords: [
+    "AI agent", "agent rules", "AI chores", "skills store", "agent memory",
+    "Anthropic skills", "skills.md", "MCP protocol", "MCP server",
+    "GPT actions", "ChatGPT custom GPT", "Claude projects", "Gemini gems",
+    "cursor rules", "AI automation", "agent playbook", "AI personas",
+    "robot skills", "AI toolkit", "agent configuration", "JSON schema",
+    "OpenAPI", "platform-independent AI", "AI vault", "agent marketplace"
+  ],
+  openGraph: {
+    title: "AgentPlaybooks - AI Agent Rules, Skills & Memory Store",
+    description: "The universal skills store for AI agents. Store rules, chores, personas, MCP servers. Works with every major AI platform.",
+    type: "website",
+    url: "https://agentplaybooks.ai",
+    siteName: "AgentPlaybooks",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "AgentPlaybooks - AI Agent Skills Store",
+    description: "Store AI agent rules, skills, and memories. Platform-independent vault for ChatGPT, Claude, Gemini.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+  alternates: {
+    canonical: "https://agentplaybooks.ai",
+  },
 };
 
 export default async function RootLayout({
