@@ -21,7 +21,7 @@
   <rect x="24" y="24" width="464" height="464" rx="80" ry="80" fill="none" stroke="url(#blueGlow)" stroke-width="4" opacity="0.4"/>
   
   <!-- Play button icon - centered and scaled -->
-  <g transform="translate(140, 120) scale(9.5)">
+  <g transform="translate(100, 80) scale(13)">
     <path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z" 
           fill="url(#playGradient)" 
           stroke="none"/>

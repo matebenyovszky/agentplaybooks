@@ -51,6 +51,11 @@ export default function DashboardLayout({
 
   const sidebarLinks = [
     {
+      label: "Settings",
+      href: "/dashboard/settings",
+      icon: <Settings className="h-5 w-5 text-slate-400" />,
+    },
+    {
       label: t("dashboard.myPlaybooks"),
       href: "/dashboard",
       icon: <BookOpen className="h-5 w-5 text-blue-400" />,
@@ -64,11 +69,6 @@ export default function DashboardLayout({
       label: t("common.explore"),
       href: "/explore",
       icon: <Globe className="h-5 w-5 text-emerald-400" />,
-    },
-    {
-      label: "Settings",
-      href: "/dashboard/settings",
-      icon: <Settings className="h-5 w-5 text-slate-400" />,
     },
   ];
 
@@ -86,10 +86,12 @@ export default function DashboardLayout({
         <SidebarBody className="justify-between gap-10 border-r border-blue-900/30">
           <div className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
             {/* Logo */}
-            <Link href="/" className="flex items-center gap-3 py-2 px-2 mb-2">
-              <div className="h-9 w-9 shrink-0 bg-gradient-to-br from-blue-500 to-amber-400 rounded-lg flex items-center justify-center">
-                <Play className="h-5 w-5 text-white fill-white" />
-              </div>
+            <Link href="/" className="flex items-center gap-3 py-2.5 px-2 rounded-lg hover:bg-blue-900/20 transition-all duration-200">
+              <span className="shrink-0 flex items-center justify-center w-6 h-6">
+                <div className="h-6 w-6 bg-gradient-to-br from-blue-500 to-amber-400 rounded-md flex items-center justify-center">
+                  <Play className="h-3.5 w-3.5 text-white fill-white" />
+                </div>
+              </span>
               <motion.span
                 animate={{ 
                   opacity: sidebarOpen ? 1 : 0,
@@ -112,10 +114,12 @@ export default function DashboardLayout({
 
           {/* User section */}
           <div className="border-t border-blue-900/30 pt-4 mt-4">
-            <div className="flex items-center gap-3 mb-3 px-2">
-              <div className="h-8 w-8 shrink-0 rounded-full bg-gradient-to-br from-blue-500 to-amber-400 flex items-center justify-center text-sm font-bold">
-                {user?.email?.charAt(0).toUpperCase() || "?"}
-              </div>
+            <div className="flex items-center gap-3 mb-3 py-2.5 px-2">
+              <span className="shrink-0 flex items-center justify-center w-6">
+                <div className="h-6 w-6 rounded-full bg-gradient-to-br from-blue-500 to-amber-400 flex items-center justify-center text-xs font-bold">
+                  {user?.email?.charAt(0).toUpperCase() || "?"}
+                </div>
+              </span>
               <motion.div
                 animate={{ 
                   opacity: sidebarOpen ? 1 : 0,
@@ -135,9 +139,11 @@ export default function DashboardLayout({
 
             <button
               onClick={handleSignOut}
-              className="flex items-center gap-3 px-2 py-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors w-full"
+              className="flex items-center gap-3 py-2.5 px-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors w-full"
             >
-              <LogOut className="h-5 w-5 shrink-0" />
+              <span className="shrink-0 flex items-center justify-center w-6">
+                <LogOut className="h-5 w-5" />
+              </span>
               <motion.span
                 animate={{ 
                   opacity: sidebarOpen ? 1 : 0,

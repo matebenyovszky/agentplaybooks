@@ -14,9 +14,15 @@ import {
   Minus,
   AlertCircle,
   Code2,
-  FileJson
+  FileJson,
+  FileCode,
+  File,
+  Upload,
+  X,
+  Loader2
 } from "lucide-react";
-import type { Skill } from "@/lib/supabase/types";
+import type { Skill, SkillAttachment, AttachmentFileType } from "@/lib/supabase/types";
+import { FILE_EXTENSION_MAP, ALLOWED_FILE_TYPES, ATTACHMENT_LIMITS } from "@/lib/supabase/types";
 import type { StorageAdapter } from "@/lib/storage";
 
 interface SkillEditorProps {
@@ -50,6 +56,20 @@ export function SkillEditor({ skill, storage, onUpdate, onDelete, readOnly = fal
   const [hasChanges, setHasChanges] = useState(false);
   const [jsonError, setJsonError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"visual" | "json">("visual");
+  
+  // Attachments state
+  const [attachments, setAttachments] = useState<SkillAttachment[]>([]);
+  const [attachmentsLoading, setAttachmentsLoading] = useState(false);
+  const [showAddAttachment, setShowAddAttachment] = useState(false);
+  const [newAttachment, setNewAttachment] = useState({
+    filename: "",
+    content: "",
+    description: "",
+    file_type: "text" as AttachmentFileType
+  });
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
+  const [attachmentError, setAttachmentError] = useState<string | null>(null);
+  const [expandedAttachment, setExpandedAttachment] = useState<string | null>(null);
 
   // Parse definition for visual editor
   const definition = skill.definition as { 
@@ -61,6 +81,97 @@ export function SkillEditor({ skill, storage, onUpdate, onDelete, readOnly = fal
   };
   const properties = definition?.parameters?.properties || {};
   const requiredFields = definition?.parameters?.required || [];
+
+  // Load attachments when expanded
+  useEffect(() => {
+    if (expanded && attachments.length === 0 && !attachmentsLoading) {
+      loadAttachments();
+    }
+  }, [expanded]);
+
+  const loadAttachments = async () => {
+    setAttachmentsLoading(true);
+    try {
+      const response = await fetch(`/api/manage/skills/${skill.id}/attachments`);
+      if (response.ok) {
+        const data = await response.json();
+        setAttachments(data);
+      }
+    } catch (e) {
+      console.error("Failed to load attachments:", e);
+    } finally {
+      setAttachmentsLoading(false);
+    }
+  };
+
+  const handleAddAttachment = async () => {
+    if (!newAttachment.filename || !newAttachment.content) {
+      setAttachmentError("Filename and content are required");
+      return;
+    }
+
+    // Validate size
+    const sizeBytes = new TextEncoder().encode(newAttachment.content).length;
+    if (sizeBytes > ATTACHMENT_LIMITS.MAX_FILE_SIZE) {
+      setAttachmentError(`File too large (${Math.round(sizeBytes / 1024)}KB, max ${Math.round(ATTACHMENT_LIMITS.MAX_FILE_SIZE / 1024)}KB)`);
+      return;
+    }
+
+    setUploadingAttachment(true);
+    setAttachmentError(null);
+
+    try {
+      const response = await fetch(`/api/manage/skills/${skill.id}/attachments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newAttachment)
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAttachments([...attachments, data]);
+        setNewAttachment({ filename: "", content: "", description: "", file_type: "text" });
+        setShowAddAttachment(false);
+      } else {
+        const error = await response.json();
+        setAttachmentError(error.error || "Failed to add attachment");
+      }
+    } catch (e) {
+      setAttachmentError("Failed to add attachment");
+    } finally {
+      setUploadingAttachment(false);
+    }
+  };
+
+  const handleDeleteAttachment = async (attachmentId: string) => {
+    if (!confirm("Delete this attachment?")) return;
+
+    try {
+      const response = await fetch(`/api/manage/skills/${skill.id}/attachments/${attachmentId}`, {
+        method: "DELETE"
+      });
+
+      if (response.ok) {
+        setAttachments(attachments.filter(a => a.id !== attachmentId));
+      }
+    } catch (e) {
+      console.error("Failed to delete attachment:", e);
+    }
+  };
+
+  // Detect file type from extension
+  const detectFileType = (filename: string): AttachmentFileType => {
+    const ext = filename.includes(".") ? "." + filename.split(".").pop()?.toLowerCase() : null;
+    return (ext && FILE_EXTENSION_MAP[ext]) || "text";
+  };
+
+  // Get icon for file type
+  const getFileIcon = (fileType: AttachmentFileType) => {
+    if (["typescript", "javascript", "python", "go", "rust"].includes(fileType)) {
+      return <FileCode className="h-4 w-4" />;
+    }
+    return <File className="h-4 w-4" />;
+  };
 
   // Validate JSON on change
   useEffect(() => {
@@ -451,14 +562,16 @@ export function SkillEditor({ skill, storage, onUpdate, onDelete, readOnly = fal
                     </label>
                     <textarea
                       value={definitionJson}
-                      onChange={(e) => setDefinitionJson(e.target.value)}
+                      onChange={(e) => !readOnly && setDefinitionJson(e.target.value)}
+                      readOnly={readOnly}
                       className={cn(
                         "w-full h-64 p-3 rounded-lg",
                         "bg-slate-900/70 border",
                         jsonError ? "border-red-500/50" : "border-slate-700/50",
                         "text-slate-200 placeholder:text-slate-600",
                         "focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20",
-                        "font-mono text-sm resize-y"
+                        "font-mono text-sm resize-y",
+                        readOnly && "cursor-default"
                       )}
                     />
                     {jsonError && (
@@ -475,19 +588,206 @@ export function SkillEditor({ skill, storage, onUpdate, onDelete, readOnly = fal
                     </label>
                     <textarea
                       value={examplesJson}
-                      onChange={(e) => setExamplesJson(e.target.value)}
+                      onChange={(e) => !readOnly && setExamplesJson(e.target.value)}
+                      readOnly={readOnly}
                       className={cn(
                         "w-full h-32 p-3 rounded-lg",
                         "bg-slate-900/70 border border-slate-700/50",
                         "text-slate-200 placeholder:text-slate-600",
                         "focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20",
-                        "font-mono text-sm resize-y"
+                        "font-mono text-sm resize-y",
+                        readOnly && "cursor-default"
                       )}
                       placeholder='[{"input": {...}, "output": "..."}]'
                     />
                   </div>
                 </div>
               )}
+
+              {/* Attachments Section */}
+              <div className="border-t border-slate-700/50 pt-4 mt-4">
+                <div className="flex items-center justify-between mb-3">
+                  <label className="text-sm font-medium text-slate-400 flex items-center gap-2">
+                    <FileCode className="h-4 w-4" />
+                    Sample Files ({attachments.length}/{ATTACHMENT_LIMITS.MAX_FILES_PER_SKILL})
+                  </label>
+                  {!readOnly && attachments.length < ATTACHMENT_LIMITS.MAX_FILES_PER_SKILL && (
+                    <button
+                      onClick={() => setShowAddAttachment(!showAddAttachment)}
+                      className="px-3 py-1 text-sm text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 rounded-lg flex items-center gap-1 transition-colors"
+                    >
+                      {showAddAttachment ? <X className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
+                      {showAddAttachment ? "Cancel" : "Add File"}
+                    </button>
+                  )}
+                </div>
+
+                {/* Add Attachment Form */}
+                {showAddAttachment && !readOnly && (
+                  <div className="p-4 bg-slate-900/70 rounded-lg border border-purple-500/30 mb-3 space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs text-slate-500 mb-1 block">Filename</label>
+                        <input
+                          type="text"
+                          value={newAttachment.filename}
+                          onChange={(e) => {
+                            const filename = e.target.value;
+                            setNewAttachment({
+                              ...newAttachment,
+                              filename,
+                              file_type: detectFileType(filename)
+                            });
+                          }}
+                          className="w-full p-2 text-sm bg-slate-800 border border-slate-700 rounded text-slate-200 font-mono"
+                          placeholder="example.ts"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-slate-500 mb-1 block">Type</label>
+                        <select
+                          value={newAttachment.file_type}
+                          onChange={(e) => setNewAttachment({
+                            ...newAttachment,
+                            file_type: e.target.value as AttachmentFileType
+                          })}
+                          className="w-full p-2 text-sm bg-slate-800 border border-slate-700 rounded text-slate-200"
+                        >
+                          {ALLOWED_FILE_TYPES.map(type => (
+                            <option key={type} value={type}>{type}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs text-slate-500 mb-1 block">Description (optional)</label>
+                      <input
+                        type="text"
+                        value={newAttachment.description}
+                        onChange={(e) => setNewAttachment({ ...newAttachment, description: e.target.value })}
+                        className="w-full p-2 text-sm bg-slate-800 border border-slate-700 rounded text-slate-200"
+                        placeholder="What this file demonstrates..."
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-slate-500 mb-1 block">
+                        Content (max {Math.round(ATTACHMENT_LIMITS.MAX_FILE_SIZE / 1024)}KB)
+                      </label>
+                      <textarea
+                        value={newAttachment.content}
+                        onChange={(e) => setNewAttachment({ ...newAttachment, content: e.target.value })}
+                        className="w-full h-48 p-3 text-sm bg-slate-800 border border-slate-700 rounded text-slate-200 font-mono resize-y"
+                        placeholder="Paste your code or content here..."
+                      />
+                      <p className="text-xs text-slate-500 mt-1">
+                        {new TextEncoder().encode(newAttachment.content).length} bytes
+                      </p>
+                    </div>
+                    {attachmentError && (
+                      <div className="flex items-center gap-2 text-red-400 text-sm">
+                        <AlertCircle className="h-4 w-4" />
+                        {attachmentError}
+                      </div>
+                    )}
+                    <button
+                      onClick={handleAddAttachment}
+                      disabled={uploadingAttachment || !newAttachment.filename || !newAttachment.content}
+                      className={cn(
+                        "w-full py-2 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors",
+                        newAttachment.filename && newAttachment.content
+                          ? "bg-purple-600 hover:bg-purple-500 text-white"
+                          : "bg-slate-800 text-slate-500 cursor-not-allowed"
+                      )}
+                    >
+                      {uploadingAttachment ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Uploading...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="h-4 w-4" />
+                          Add Attachment
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+
+                {/* Loading state */}
+                {attachmentsLoading && (
+                  <div className="flex items-center justify-center py-6 text-slate-500">
+                    <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                    Loading attachments...
+                  </div>
+                )}
+
+                {/* Attachments list */}
+                {!attachmentsLoading && attachments.length === 0 && !showAddAttachment && (
+                  <div className="text-center py-6 text-slate-500 text-sm bg-slate-900/30 rounded-lg border border-dashed border-slate-700">
+                    No sample files attached.
+                    {!readOnly && " Click \"Add File\" to add code examples."}
+                  </div>
+                )}
+
+                {attachments.length > 0 && (
+                  <div className="space-y-2">
+                    {attachments.map((attachment) => (
+                      <div
+                        key={attachment.id}
+                        className="bg-slate-900/50 rounded-lg border border-slate-700/50 overflow-hidden"
+                      >
+                        <div
+                          className="flex items-center justify-between p-3 cursor-pointer hover:bg-slate-800/50 transition-colors"
+                          onClick={() => setExpandedAttachment(
+                            expandedAttachment === attachment.id ? null : attachment.id
+                          )}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="text-purple-400">
+                              {getFileIcon(attachment.file_type)}
+                            </div>
+                            <div>
+                              <p className="text-sm font-mono text-slate-200">{attachment.filename}</p>
+                              <p className="text-xs text-slate-500">
+                                {attachment.file_type} • {Math.round(attachment.size_bytes / 1024 * 10) / 10}KB
+                                {attachment.description && ` • ${attachment.description}`}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {!readOnly && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteAttachment(attachment.id);
+                                }}
+                                className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            )}
+                            {expandedAttachment === attachment.id ? (
+                              <ChevronUp className="h-4 w-4 text-slate-500" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4 text-slate-500" />
+                            )}
+                          </div>
+                        </div>
+                        
+                        {/* Expanded content */}
+                        {expandedAttachment === attachment.id && (
+                          <div className="border-t border-slate-700/50">
+                            <pre className="p-4 text-xs font-mono text-slate-300 overflow-x-auto max-h-64 overflow-y-auto bg-slate-950/50">
+                              {attachment.content}
+                            </pre>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </motion.div>
         )}
