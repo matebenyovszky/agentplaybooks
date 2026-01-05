@@ -116,9 +116,9 @@ async function getAuthenticatedUser(c: AppContext): Promise<{ id: string } | nul
         return { id: user.id };
       }
     }
-  } catch (e) {
+  } catch {
     // Cookie parsing might fail in some environments
-    console.log("Cookie auth failed, trying header...", e);
+    // Silently fall through to header auth
   }
   
   // Try Authorization header (for API calls)
@@ -307,7 +307,7 @@ app.get("/playbooks", async (c) => {
   }
 
   // Transform count objects to numbers
-  const playbookRows: PlaybookWithCounts[] = data || [];
+  const playbookRows = (data as unknown as PlaybookWithCounts[] | null) ?? [];
   const playbooks = playbookRows.map((p) => ({
     ...p,
     persona_count: p.persona_name ? 1 : 0,
@@ -1276,7 +1276,7 @@ app.get("/profiles/:id/playbooks", async (c) => {
     return c.json({ error: error.message }, 500);
   }
 
-  const playbookRows: PlaybookWithCounts[] = data || [];
+  const playbookRows = (data as unknown as PlaybookWithCounts[] | null) ?? [];
   const playbooks = playbookRows.map((p) => ({
     ...p,
     personas_count: p.persona_name ? 1 : 0,
@@ -1408,7 +1408,7 @@ app.get("/manage/playbooks", async (c) => {
     return c.json({ error: error.message }, 500);
   }
 
-  const playbookRows: PlaybookWithCounts[] = data || [];
+  const playbookRows = (data as unknown as PlaybookWithCounts[] | null) ?? [];
   const playbooks = playbookRows.map((p) => ({
     ...p,
     persona_count: p.persona_name ? 1 : 0,
@@ -1790,13 +1790,13 @@ app.get("/manage/skills/:skillId/attachments", async (c) => {
   const supabase = getServiceSupabase();
 
   // First check if skill exists and is accessible
-  const { data, error: skillError } = await supabase
+  const { data: skillData, error: skillError } = await supabase
     .from("skills")
     .select("id, playbook_id, playbooks!inner(is_public, user_id)")
     .eq("id", skillId)
     .single();
 
-  const skill = data as SkillWithPlaybookAccess | null;
+  const skill = skillData as SkillWithPlaybookAccess | null;
 
   if (skillError || !skill) {
     return c.json({ error: "Skill not found" }, 404);
@@ -1811,17 +1811,17 @@ app.get("/manage/skills/:skillId/attachments", async (c) => {
     return c.json({ error: "Forbidden" }, 403);
   }
 
-  const { data, error } = await supabase
+  const { data: attachmentData, error: attachmentError } = await supabase
     .from("skill_attachments")
     .select("id, filename, file_type, language, description, size_bytes, created_at, updated_at")
     .eq("skill_id", skillId)
     .order("created_at", { ascending: true });
 
-  if (error) {
-    return c.json({ error: error.message }, 500);
+  if (attachmentError) {
+    return c.json({ error: attachmentError.message }, 500);
   }
 
-  return c.json(data || []);
+  return c.json(attachmentData || []);
 });
 
 // GET /api/manage/skills/:skillId/attachments/:attachmentId - Get attachment content
@@ -1831,13 +1831,13 @@ app.get("/manage/skills/:skillId/attachments/:attachmentId", async (c) => {
   const supabase = getServiceSupabase();
 
   // Check skill access
-  const { data } = await supabase
+  const { data: skillData } = await supabase
     .from("skills")
     .select("id, playbook_id, playbooks!inner(is_public, user_id)")
     .eq("id", skillId)
     .single();
 
-  const skill = data as SkillWithPlaybookAccess | null;
+  const skill = skillData as SkillWithPlaybookAccess | null;
 
   if (!skill) {
     return c.json({ error: "Skill not found" }, 404);
@@ -1888,13 +1888,13 @@ app.post("/manage/skills/:skillId/attachments", async (c) => {
   const supabase = getServiceSupabase();
 
   // Check skill ownership
-  const { data } = await supabase
+  const { data: skillData } = await supabase
     .from("skills")
     .select("id, playbook_id, playbooks!inner(user_id)")
     .eq("id", skillId)
     .single();
 
-  const skill = data as SkillWithPlaybookOwner | null;
+  const skill = skillData as SkillWithPlaybookOwner | null;
 
   if (!skill) {
     return c.json({ error: "Skill not found" }, 404);
@@ -1965,13 +1965,13 @@ app.put("/manage/skills/:skillId/attachments/:attachmentId", async (c) => {
   const supabase = getServiceSupabase();
 
   // Check skill ownership
-  const { data } = await supabase
+  const { data: skillData } = await supabase
     .from("skills")
     .select("id, playbook_id, playbooks!inner(user_id)")
     .eq("id", skillId)
     .single();
 
-  const skill = data as SkillWithPlaybookOwner | null;
+  const skill = skillData as SkillWithPlaybookOwner | null;
 
   if (!skill || skill.playbooks?.user_id !== user.id) {
     return c.json({ error: "Forbidden" }, 403);
@@ -2602,246 +2602,6 @@ app.get("/manage/openapi.json", (c) => {
 });
 
 // ============================================
-// AGENT ENDPOINTS (legacy - API key required)
-// Kept for backward compatibility
-// ============================================
-
-// GET /api/agent/:guid/memory
-app.get("/agent/:guid/memory", async (c) => {
-  const guid = c.req.param("guid");
-  const key = c.req.query("key");
-  const supabase = getServiceSupabase();
-
-  // Get playbook (public access only for this legacy endpoint)
-  const { data: playbook } = await supabase
-    .from("playbooks")
-    .select("id")
-    .eq("guid", guid)
-    .eq("is_public", true)
-    .single();
-
-  if (!playbook) {
-    return c.json({ error: "Playbook not found" }, 404);
-  }
-
-  let query = supabase
-    .from("memories")
-    .select("key, value, updated_at")
-    .eq("playbook_id", playbook.id);
-
-  if (key) {
-    query = query.eq("key", key);
-  }
-
-  const { data, error } = await query;
-
-  if (error) {
-    return c.json({ error: error.message }, 500);
-  }
-
-  if (key && data?.length) {
-    return c.json(data[0]);
-  }
-
-  return c.json(data || []);
-});
-
-// POST /api/agent/:guid/memory
-app.post("/agent/:guid/memory", async (c) => {
-  const guid = c.req.param("guid");
-  
-  const apiKeyData = await validateApiKey(c, "memory:write");
-  if (!apiKeyData) {
-    return c.json({ error: "Invalid or missing API key" }, 401);
-  }
-
-  if (apiKeyData.playbooks.guid !== guid) {
-    return c.json({ error: "API key does not match playbook" }, 403);
-  }
-
-  const body = await c.req.json();
-  const { key, value } = body;
-
-  if (!key || value === undefined) {
-    return c.json({ error: "Missing key or value" }, 400);
-  }
-
-  const supabase = getServiceSupabase();
-
-  const { data, error } = await supabase
-    .from("memories")
-    .upsert({
-      playbook_id: apiKeyData.playbook_id,
-      key,
-      value,
-      updated_at: new Date().toISOString(),
-    }, {
-      onConflict: "playbook_id,key",
-    })
-    .select()
-    .single();
-
-  if (error) {
-    return c.json({ error: error.message }, 500);
-  }
-
-  return c.json(data);
-});
-
-// DELETE /api/agent/:guid/memory/:key
-app.delete("/agent/:guid/memory/:key", async (c) => {
-  const guid = c.req.param("guid");
-  const key = c.req.param("key");
-
-  const apiKeyData = await validateApiKey(c, "memory:write");
-  if (!apiKeyData || apiKeyData.playbooks.guid !== guid) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
-
-  const supabase = getServiceSupabase();
-
-  const { error } = await supabase
-    .from("memories")
-    .delete()
-    .eq("playbook_id", apiKeyData.playbook_id)
-    .eq("key", key);
-
-  if (error) {
-    return c.json({ error: error.message }, 500);
-  }
-
-  return c.json({ success: true });
-});
-
-// Agent endpoints for skills and personas
-app.post("/agent/:guid/skills", async (c) => {
-  const guid = c.req.param("guid");
-
-  const apiKeyData = await validateApiKey(c, "skills:write");
-  if (!apiKeyData || apiKeyData.playbooks.guid !== guid) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
-
-  const body = await c.req.json();
-  const { name, description, definition, examples } = body;
-
-  if (!name) {
-    return c.json({ error: "Missing name" }, 400);
-  }
-
-  const supabase = getServiceSupabase();
-
-  const { data, error } = await supabase
-    .from("skills")
-    .insert({
-      playbook_id: apiKeyData.playbook_id,
-      name,
-      description: description || null,
-      definition: definition || {},
-      examples: examples || [],
-    })
-    .select()
-    .single();
-
-  if (error) {
-    return c.json({ error: error.message }, 500);
-  }
-
-  return c.json(data);
-});
-
-app.put("/agent/:guid/skills/:id", async (c) => {
-  const guid = c.req.param("guid");
-  const skillId = c.req.param("id");
-
-  const apiKeyData = await validateApiKey(c, "skills:write");
-  if (!apiKeyData || apiKeyData.playbooks.guid !== guid) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
-
-  const body = await c.req.json();
-  const supabase = getServiceSupabase();
-
-  const { data, error } = await supabase
-    .from("skills")
-    .update(body)
-    .eq("id", skillId)
-    .eq("playbook_id", apiKeyData.playbook_id)
-    .select()
-    .single();
-
-  if (error) {
-    return c.json({ error: error.message }, 500);
-  }
-
-  return c.json(data);
-});
-
-app.post("/agent/:guid/personas", async (c) => {
-  const guid = c.req.param("guid");
-
-  const apiKeyData = await validateApiKey(c, "personas:write");
-  if (!apiKeyData || apiKeyData.playbooks.guid !== guid) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
-
-  const body = await c.req.json();
-  const { name, system_prompt, metadata } = body;
-
-  if (!name || !system_prompt) {
-    return c.json({ error: "Missing name or system_prompt" }, 400);
-  }
-
-  const supabase = getServiceSupabase();
-
-  const { data, error } = await supabase
-    .from("playbooks")
-    .update({
-      persona_name: name,
-      persona_system_prompt: system_prompt,
-      persona_metadata: metadata || {},
-    })
-    .eq("id", apiKeyData.playbook_id)
-    .select("id, created_at, persona_name, persona_system_prompt, persona_metadata")
-    .single();
-
-  if (error) {
-    return c.json({ error: error.message }, 500);
-  }
-
-  return c.json(playbookToPersona(data));
-});
-
-app.put("/agent/:guid/personas/:id", async (c) => {
-  const guid = c.req.param("guid");
-  // Persona is a singleton (stored on playbook); :id is kept for legacy compatibility
-  const apiKeyData = await validateApiKey(c, "personas:write");
-  if (!apiKeyData || apiKeyData.playbooks.guid !== guid) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
-
-  const body = await c.req.json();
-  const supabase = getServiceSupabase();
-
-  const { data, error } = await supabase
-    .from("playbooks")
-    .update({
-      persona_name: body.name,
-      persona_system_prompt: body.system_prompt,
-      persona_metadata: body.metadata,
-    })
-    .eq("id", apiKeyData.playbook_id)
-    .select("id, created_at, persona_name, persona_system_prompt, persona_metadata")
-    .single();
-
-  if (error) {
-    return c.json({ error: error.message }, 500);
-  }
-
-  return c.json(playbookToPersona(data));
-});
-
-// ============================================
 // PUBLIC PLAYBOOKS ENDPOINTS
 // ============================================
 
@@ -2885,7 +2645,7 @@ app.get("/public/playbooks", async (c) => {
     return c.json({ error: error.message }, 500);
   }
 
-  const playbookRows: PlaybookWithCounts[] = data || [];
+  const playbookRows = (data as unknown as PlaybookWithCounts[] | null) ?? [];
   // Get unique user_ids to fetch profiles
   const userIds = [
     ...new Set(playbookRows.map((p) => p.user_id).filter((id): id is string => Boolean(id))),
@@ -3035,7 +2795,7 @@ app.get("/user/starred", async (c) => {
     return c.json({ error: error.message }, 500);
   }
 
-  const starredRows: StarredPlaybookRow[] = data || [];
+  const starredRows = (data as unknown as StarredPlaybookRow[] | null) ?? [];
   const playbooks = starredRows
     .map((star) => star.playbooks)
     .filter((playbook): playbook is Playbook => Boolean(playbook));
@@ -3071,7 +2831,7 @@ app.get("/public/skills", async (c) => {
     return c.json({ error: error.message }, 500);
   }
 
-  const skillsRows: SkillWithPlaybook[] = data || [];
+  const skillsRows = (data as unknown as SkillWithPlaybook[] | null) ?? [];
   // Get unique user_ids to fetch profiles
   const userIds = [
     ...new Set(
@@ -3166,7 +2926,7 @@ app.get("/public/mcp", async (c) => {
     return c.json({ error: error.message }, 500);
   }
 
-  const serverRows: MCPServerWithPlaybook[] = data || [];
+  const serverRows = (data as unknown as MCPServerWithPlaybook[] | null) ?? [];
   // Get unique user_ids to fetch profiles
   const userIds = [
     ...new Set(
@@ -3644,8 +3404,23 @@ function formatAsMCP(playbook: PlaybookWithExports) {
 
   // Add MCP servers from playbook
   for (const mcp of playbook.mcp_servers) {
-    tools.push(...(mcp.tools || []));
-    resources.push(...(mcp.resources || []));
+    const mcpTools = (mcp.tools || []).map((tool) => ({
+      name: tool.name,
+      description: tool.description || tool.name,
+      inputSchema: (tool.inputSchema || { type: "object", properties: {} }) as {
+        type?: string;
+        properties?: Record<string, { type?: string; description?: string; enum?: string[]; [key: string]: unknown }>;
+        required?: string[];
+      },
+    }));
+    tools.push(...mcpTools);
+    const mcpResources = (mcp.resources || []).map((resource) => ({
+      uri: resource.uri,
+      name: resource.name,
+      description: resource.description || resource.name,
+      mimeType: resource.mimeType || "application/octet-stream",
+    }));
+    resources.push(...mcpResources);
   }
 
   return {

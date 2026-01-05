@@ -11,12 +11,16 @@ const compat = new FlatCompat({
 
 const eslintConfig = [
   {
-    ignores: [".open-next/**"],
-    ignores: [".next/**"],
-    ignores: [".wrangler/**"],
-    ignores: [".cloudflare/**"],
-    ignores: [".cloudflare-pages/**"],
-    ignores: [".tmp/**"]
+    ignores: [
+      ".cloudflare/**",
+      ".cloudflare-pages/**",
+      ".next/**",
+      ".open-next/**",
+      ".tmp/**",
+      ".wrangler/**",
+      "node_modules/**",
+      "next-env.d.ts",
+    ],
   },
   ...compat.extends("next/core-web-vitals", "next/typescript"),
 ];

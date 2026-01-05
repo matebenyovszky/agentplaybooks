@@ -26,7 +26,7 @@ Authorization: Bearer <supabase_jwt_token>
 
 ### 2. Playbook API Key Authentication
 
-For agent/AI write-back endpoints on a specific playbook:
+For playbook memory write-back endpoints on a specific playbook:
 
 ```http
 Authorization: Bearer apb_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -809,72 +809,6 @@ PUT /api/manage/skills/:skillId/attachments/:attachmentId
 ```http
 DELETE /api/manage/skills/:skillId/attachments/:attachmentId
 ```
-
----
-
-## Agent Endpoints (Legacy - API Key Required)
-
-These legacy endpoints are maintained for backward compatibility.
-
-```http
-Authorization: Bearer apb_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-```
-
-### Read Memory
-
-```http
-GET /api/agent/:guid/memory
-GET /api/agent/:guid/memory?key=specific_key
-```
-
-### Write Memory
-
-```http
-POST /api/agent/:guid/memory
-Content-Type: application/json
-
-{
-  "key": "user_preferences",
-  "value": { "theme": "dark", "language": "en" }
-}
-```
-
-### Delete Memory
-
-```http
-DELETE /api/agent/:guid/memory/:key
-```
-
-### Add Skill
-
-Requires `skills:write` permission.
-
-```http
-POST /api/agent/:guid/skills
-Content-Type: application/json
-
-{
-  "name": "new_skill",
-  "description": "Description of the skill",
-  "definition": {
-    "parameters": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  "examples": []
-}
-```
-
-### Update Skill
-
-```http
-PUT /api/agent/:guid/skills/:id
-```
-
-**Note:** Persona management is done via playbook update (1 playbook = 1 persona architecture).
-
----
 
 ## MCP Endpoints
 

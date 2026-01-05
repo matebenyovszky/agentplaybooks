@@ -433,7 +433,7 @@ async function executeManagementTool(
 
       if (error) throw new Error(error.message);
 
-      const playbookRows: PlaybookWithCounts[] = data || [];
+      const playbookRows = (data as unknown as PlaybookWithCounts[] | null) ?? [];
       return playbookRows.map((p) => ({
         id: p.id,
         guid: p.guid,

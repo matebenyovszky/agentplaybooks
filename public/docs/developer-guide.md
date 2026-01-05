@@ -300,15 +300,6 @@ GET    /api/playbooks/:id/api-keys
 POST   /api/playbooks/:id/api-keys          // Returns plain key ONCE
 DELETE /api/playbooks/:id/api-keys/:kid
 
-// Legacy Agent Endpoints (API key required)
-GET    /api/agent/:guid/memory
-POST   /api/agent/:guid/memory
-DELETE /api/agent/:guid/memory/:key
-POST   /api/agent/:guid/skills
-PUT    /api/agent/:guid/skills/:id
-POST   /api/agent/:guid/personas
-PUT    /api/agent/:guid/personas/:id
-
 // Public Repository
 GET    /api/public/skills
 GET    /api/public/skills/:id
@@ -342,7 +333,6 @@ The `GET /api/playbooks/:guid` endpoint supports multiple output formats:
 - Uses `getServiceSupabase()` to bypass RLS where needed
 - API keys stored as SHA-256 hash, validated against hash
 - Ownership checked before all mutations
-- Legacy `/api/agent/*` endpoints maintained for backward compatibility
 
 ## Testing
 
@@ -396,4 +386,3 @@ npx wrangler pages deploy .open-next
 - [Aceternity UI Components](https://ui.aceternity.com/components)
 - [Anthropic Tool Use](https://docs.anthropic.com/en/docs/agents-and-tools/tool-use)
 - [MCP Specification](https://modelcontextprotocol.io/)
-

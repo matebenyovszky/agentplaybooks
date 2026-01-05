@@ -119,9 +119,9 @@ Let your AI store information in the playbook's memory:
 
 ```
 You can store memories at:
-POST https://agentplaybooks.ai/api/agent/YOUR_GUID/memory
+PUT https://agentplaybooks.ai/api/playbooks/YOUR_GUID/memory/memory_name
 Authorization: Bearer YOUR_API_KEY
-Body: {"key": "memory_name", "value": {...}}
+Body: {"value": {...}}
 ```
 
 ## Next Steps
@@ -130,4 +130,3 @@ Body: {"key": "memory_name", "value": {...}}
 - [Explore the public repository](/explore) for pre-built skills
 - Read the [API Reference](./api-reference.md) for all endpoints
 - Learn about [MCP Integration](./mcp-integration.md) for Claude
-

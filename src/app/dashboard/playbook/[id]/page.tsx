@@ -4,6 +4,7 @@ import { useEffect, useState, use, useCallback, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+import JSZip from "jszip";
 import { createBrowserClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { createSupabaseAdapter } from "@/lib/storage";
@@ -82,6 +83,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [forking, setForking] = useState(false);
   const [forkSuccess, setForkSuccess] = useState(false);
+  const [exporting, setExporting] = useState(false);
   
   // Browse public modals
   const [showBrowseSkills, setShowBrowseSkills] = useState(false);
@@ -461,14 +463,36 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
   }, []);
 
   // Get base URL for API endpoints
-  const getBaseUrl = () => {
+  const getBaseUrl = useCallback(() => {
     if (typeof window !== "undefined") {
       return window.location.origin;
     }
     return "https://agentplaybooks.ai";
-  };
+  }, []);
 
   const markdownPath = playbook ? `/api/playbooks/${playbook.guid}?format=markdown` : "";
+  const buildAgentsMarkdown = useCallback(() => {
+    if (!playbook) return "";
+
+    const personaName = playbook.persona_name || "Assistant";
+    const systemPrompt = playbook.persona_system_prompt || "You are a helpful AI assistant.";
+    const metadata = playbook.persona_metadata
+      ? JSON.stringify(playbook.persona_metadata, null, 2)
+      : "";
+
+    const lines = [
+      `# Persona: ${personaName}`,
+      "",
+      systemPrompt,
+    ];
+
+    if (metadata) {
+      lines.push("", "## Metadata", "```json", metadata, "```");
+    }
+
+    return lines.join("\n");
+  }, [playbook]);
+
   const buildOpenInPrompt = useCallback(() => {
     if (!playbook) return "";
 
@@ -489,7 +513,113 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
     ];
 
     return lines.filter((line) => line !== "").join("\n");
-  }, [playbook, skills, markdownPath]);
+  }, [playbook, skills, markdownPath, getBaseUrl]);
+
+  const handleExportZip = useCallback(async () => {
+    if (!playbook || exporting) return;
+
+    setExporting(true);
+    try {
+      const baseUrl = getBaseUrl();
+      const zip = new JSZip();
+
+      const skillsExport = skills.map((skill) => ({
+        name: skill.name,
+        description: skill.description,
+        definition: skill.definition,
+        examples: skill.examples,
+      }));
+
+      const mcpExport = mcpServers.map((server) => ({
+        name: server.name,
+        description: server.description,
+        tools: server.tools,
+        resources: server.resources,
+      }));
+
+      const playbookExport = {
+        id: playbook.id,
+        guid: playbook.guid,
+        name: playbook.name,
+        description: playbook.description,
+        config: playbook.config,
+        is_public: playbook.is_public,
+        tags: playbook.tags,
+        created_at: playbook.created_at,
+        updated_at: playbook.updated_at,
+        persona: {
+          name: playbook.persona_name || "Assistant",
+          system_prompt: playbook.persona_system_prompt || "You are a helpful AI assistant.",
+          metadata: playbook.persona_metadata || {},
+        },
+      };
+
+      zip.file("playbook.json", JSON.stringify(playbookExport, null, 2));
+      zip.file("skills.json", JSON.stringify(skillsExport, null, 2));
+      zip.file("mcp-servers.json", JSON.stringify(mcpExport, null, 2));
+      zip.file("memories.json", JSON.stringify(memories, null, 2));
+      zip.file("agents.md", buildAgentsMarkdown());
+
+      for (const skill of skillsExport) {
+        const baseName = (skill.name || "skill").toLowerCase().replace(/[^a-z0-9-_]+/g, "_");
+        zip.file(`skills/${baseName}.json`, JSON.stringify(skill, null, 2));
+      }
+
+      const [openapiRes, anthropicRes, mcpRes, markdownRes] = await Promise.all([
+        fetch(`${baseUrl}/api/playbooks/${playbook.guid}?format=openapi`, { credentials: "include" }),
+        fetch(`${baseUrl}/api/playbooks/${playbook.guid}?format=anthropic`, { credentials: "include" }),
+        fetch(`${baseUrl}/api/playbooks/${playbook.guid}?format=mcp`, { credentials: "include" }),
+        fetch(`${baseUrl}${markdownPath}`, { credentials: "include" }),
+      ]);
+
+      if (openapiRes.ok) {
+        zip.file("openapi.json", JSON.stringify(await openapiRes.json(), null, 2));
+      }
+      if (anthropicRes.ok) {
+        zip.file("anthropic.json", JSON.stringify(await anthropicRes.json(), null, 2));
+      }
+      if (mcpRes.ok) {
+        zip.file("mcp.json", JSON.stringify(await mcpRes.json(), null, 2));
+      }
+      if (markdownRes.ok) {
+        zip.file("playbook.md", await markdownRes.text());
+      }
+
+      zip.file(
+        "README.txt",
+        [
+          "AgentPlaybooks export bundle",
+          "",
+          "Included files:",
+          "- playbook.json: core playbook metadata and persona",
+          "- agents.md: persona system prompt",
+          "- skills.json: skill list (Anthropic tool spec compatible)",
+          "- skills/: individual skills as JSON",
+          "- mcp-servers.json: MCP server entries for this playbook",
+          "- memories.json: playbook memories",
+          "- openapi.json: OpenAPI export for GPT Actions",
+          "- anthropic.json: Anthropic tool export",
+          "- mcp.json: MCP tool/resource manifest",
+          "- playbook.md: Markdown export for Claude/Gemini/Grok",
+        ].join("\n")
+      );
+
+      const blob = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `playbook-${playbook.guid}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Failed to export playbook zip:", error);
+      alert("Failed to export playbook zip. Please try again.");
+    } finally {
+      setExporting(false);
+    }
+  }, [playbook, exporting, skills, mcpServers, memories, markdownPath, buildAgentsMarkdown, getBaseUrl]);
 
   const tabs = [
     { id: "details" as TabType, label: t("editor.tabs.details"), icon: Settings, count: 0, color: "slate" },
@@ -1187,7 +1317,6 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                       { method: "GET", path: `/api/playbooks/${playbook.guid}?format=mcp`, desc: "MCP manifest" },
                       { method: "GET", path: `/api/playbooks/${playbook.guid}?format=markdown`, desc: "Markdown docs" },
                       { method: "GET", path: `/api/mcp/${playbook.guid}`, desc: "MCP server" },
-                      { method: "POST", path: `/api/agent/${playbook.guid}/memory`, desc: "Write memory (API key)" },
                     ].map(({ method, path, desc }) => (
                       <div 
                         key={path}
@@ -1241,6 +1370,21 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                       buttonLabel="Open in AI"
                       disabled={!playbook}
                     />
+                    <button
+                      type="button"
+                      onClick={handleExportZip}
+                      disabled={!playbook || exporting}
+                      className={cn(
+                        "inline-flex items-center gap-2 rounded-lg border border-slate-700/50 bg-slate-900/70 text-slate-200 transition-colors hover:bg-slate-800/70",
+                        "disabled:opacity-60 disabled:cursor-not-allowed",
+                        "px-3 py-2 text-sm"
+                      )}
+                    >
+                      <Download className="h-4 w-4" />
+                      <span className="font-medium">
+                        {exporting ? "Preparing ZIP..." : "Download ZIP"}
+                      </span>
+                    </button>
                   </div>
                   
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">

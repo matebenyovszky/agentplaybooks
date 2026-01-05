@@ -3,6 +3,8 @@ import { createServerClient } from "@/lib/supabase/client";
 import { hashApiKey } from "@/lib/utils";
 import type { McpResource, McpTool, Playbook } from "@/lib/supabase/types";
 
+type PersonaSource = Pick<Playbook, "id" | "persona_name" | "persona_system_prompt" | "persona_metadata">;
+
 // MCP Protocol implementation for Cloudflare Workers / Next.js
 // Supports: tools/list, resources/list, resources/read, tools/call
 
@@ -18,7 +20,7 @@ function getServiceSupabase() {
   return createServerClient(url, key);
 }
 
-function playbookToPersona(playbook: Playbook) {
+function playbookToPersona(playbook: PersonaSource) {
   return {
     id: playbook.id,
     playbook_id: playbook.id,
@@ -621,4 +623,3 @@ export async function POST(
       });
   }
 }
-

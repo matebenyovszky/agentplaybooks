@@ -162,18 +162,12 @@ POST /api/playbooks/:id/star
 GET  /api/user/starred
 ```
 
-### Agent write-back (playbook API key)
+### Memory write-back (playbook API key or owner)
 
 ```
-GET    /api/agent/:guid/memory
-POST   /api/agent/:guid/memory
-DELETE /api/agent/:guid/memory/:key
-
-POST /api/agent/:guid/skills
-PUT  /api/agent/:guid/skills/:id
-
-POST /api/agent/:guid/personas
-PUT  /api/agent/:guid/personas/:id
+GET    /api/playbooks/:guid/memory
+PUT    /api/playbooks/:guid/memory/:key
+DELETE /api/playbooks/:guid/memory/:key
 ```
 
 ### MCP endpoints
@@ -199,13 +193,13 @@ GET /api/health
 
 ## API Key Usage
 
-Playbook API keys let agents read/write memory and update skills/personas for a single playbook.
+Playbook API keys let agents read/write memory for a single playbook.
 
 ```bash
-curl -X POST https://your-domain.com/api/agent/abc123/memory \
+curl -X PUT https://your-domain.com/api/playbooks/abc123/memory/user_preferences \
   -H "Authorization: Bearer apb_live_xxxxxxxxxxxx" \
   -H "Content-Type: application/json" \
-  -d '{"key": "user_preferences", "value": {"theme": "dark"}}'
+  -d '{"value": {"theme": "dark"}}'
 ```
 
 User API keys are used for management endpoints and the MCP management server:

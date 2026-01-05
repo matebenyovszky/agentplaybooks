@@ -12,9 +12,9 @@ const nextConfig: NextConfig = {
     unoptimized: true,
   },
   
-  // Ignore lint errors during build to prevent failures on Cloudflare
+  // ESLint should run during build - fix lint errors instead of ignoring them
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,
   },
 };
 

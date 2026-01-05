@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { createBrowserClient } from "@/lib/supabase/client";
@@ -27,6 +28,8 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const t = useTranslations();
+  const router = useRouter();
+  const pathname = usePathname();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -36,20 +39,20 @@ export default function DashboardLayout({
     supabase.auth.getUser().then(({ data: { user } }) => {
       // Allow viewing public playbooks without login (playbook/[id] pages)
       // Only redirect if we're on main dashboard pages that require auth
-      const isPlaybookViewerPage = window.location.pathname.includes('/dashboard/playbook/');
-      
+      const isPlaybookViewerPage = pathname.includes('/dashboard/playbook/');
+
       if (!user && !isPlaybookViewerPage) {
-        window.location.href = "/login";
+        router.push("/login");
         return;
       }
       setUser(user);
       setLoading(false);
     });
-  }, [supabase]);
+  }, [supabase, pathname, router]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    window.location.href = "/";
+    router.push("/");
   };
 
   const sidebarLinks = [

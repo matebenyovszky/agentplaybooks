@@ -69,7 +69,7 @@ export default function FavoritesPage() {
       `)
       .in("id", playbookIds);
 
-    const playbookRows: PlaybookWithCounts[] = playbooks || [];
+    const playbookRows = (playbooks as unknown as PlaybookWithCounts[] | null) ?? [];
     const formattedPlaybooks = playbookRows.map((p) => ({
       ...p,
       personas_count: p.persona_name ? 1 : 0,

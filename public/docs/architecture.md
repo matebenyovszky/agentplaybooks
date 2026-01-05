@@ -128,7 +128,7 @@ This document describes the technical architecture of AgentPlaybooks.
 ### Authenticated Write-Back
 
 ```
-1. AI Agent → POST /api/agent/:guid/memory
+1. AI Agent → PUT /api/playbooks/:guid/memory/:key
    Headers: Authorization: Bearer apb_live_xxx
 2. Cloudflare Worker receives request
 3. Extract API key from header
