@@ -40,7 +40,7 @@ export default function DashboardLayout({
       // Allow viewing public playbooks without login (playbook/[id] pages)
       // Only redirect if we're on main dashboard pages that require auth
       const isPlaybookViewerPage = pathname.includes('/dashboard/playbook/');
-
+      
       if (!user && !isPlaybookViewerPage) {
         router.push("/login");
         return;
