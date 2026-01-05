@@ -40,12 +40,11 @@ interface RegistryServer {
 }
 
 interface McpRegistrySearchProps {
-  playbookId: string;
   onAdd: (server: RegistryServer) => Promise<void>;
   onClose: () => void;
 }
 
-export function McpRegistrySearch({ playbookId, onAdd, onClose }: McpRegistrySearchProps) {
+export function McpRegistrySearch({ onAdd, onClose }: McpRegistrySearchProps) {
   const [query, setQuery] = useState("");
   const [servers, setServers] = useState<RegistryServer[]>([]);
   const [loading, setLoading] = useState(false);
@@ -210,6 +209,7 @@ export function McpRegistrySearch({ playbookId, onAdd, onClose }: McpRegistrySea
                       "border border-pink-500/20"
                     )}>
                       {server.icon_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
                         <img 
                           src={server.icon_url} 
                           alt={server.name}

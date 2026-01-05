@@ -26,7 +26,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { FloatingNav } from "@/components/ui/floating-navbar";
-import { useTranslations } from "next-intl";
 
 const whyOpenSource = [
   {
@@ -125,8 +124,6 @@ const marketplaceFeatures = [
 ];
 
 export default function EnterprisePage() {
-  const t = useTranslations();
-  
   return (
     <div className="min-h-screen bg-[#0a0f1a] text-white">
       <FloatingNav />
@@ -214,7 +211,7 @@ export default function EnterprisePage() {
           >
             <h2 className="text-4xl font-bold mb-4">Why Open Source?</h2>
             <p className="text-slate-400 text-lg max-w-2xl mx-auto">
-              Your AI knowledge is valuable. Don't let it be locked in proprietary platforms.
+              Your AI knowledge is valuable. Do not let it be locked in proprietary platforms.
             </p>
           </motion.div>
 

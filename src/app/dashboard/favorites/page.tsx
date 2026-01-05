@@ -17,6 +17,11 @@ import { cn } from "@/lib/utils";
 import type { User } from "@supabase/supabase-js";
 import type { PublicPlaybook } from "@/lib/supabase/types";
 
+type PlaybookWithCounts = PublicPlaybook & {
+  skills?: Array<{ count: number }>;
+  mcp_servers?: Array<{ count: number }>;
+};
+
 export default function FavoritesPage() {
   const t = useTranslations();
   const [user, setUser] = useState<User | null>(null);
@@ -64,7 +69,8 @@ export default function FavoritesPage() {
       `)
       .in("id", playbookIds);
 
-    const formattedPlaybooks = (playbooks || []).map((p: any) => ({
+    const playbookRows: PlaybookWithCounts[] = playbooks || [];
+    const formattedPlaybooks = playbookRows.map((p) => ({
       ...p,
       personas_count: p.persona_name ? 1 : 0,
       skills_count: p.skills?.[0]?.count || 0,

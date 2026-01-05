@@ -77,7 +77,7 @@ interface AttachmentData {
 // GitHub API Helpers
 // ============================================
 
-async function fetchGitHubApi(path: string, token?: string): Promise<any> {
+async function fetchGitHubApi<T>(path: string, token?: string): Promise<T> {
   const headers: Record<string, string> = {
     'Accept': 'application/vnd.github.v3+json',
     'User-Agent': 'AgentPlaybooks-Import-Script',
@@ -96,7 +96,7 @@ async function fetchGitHubApi(path: string, token?: string): Promise<any> {
     throw new Error(`GitHub API error: ${response.status} ${response.statusText}`);
   }
   
-  return response.json();
+  return response.json() as Promise<T>;
 }
 
 async function fetchGitHubRaw(url: string, token?: string): Promise<string> {
@@ -156,7 +156,10 @@ function isSupportedFile(filename: string): boolean {
 // ============================================
 
 async function fetchSkillDirectory(dirPath: string, token?: string): Promise<GitHubContent[]> {
-  return fetchGitHubApi(`/repos/${CONFIG.repo_owner}/${CONFIG.repo_name}/contents/${dirPath}`, token);
+  return fetchGitHubApi<GitHubContent[]>(
+    `/repos/${CONFIG.repo_owner}/${CONFIG.repo_name}/contents/${dirPath}`,
+    token
+  );
 }
 
 async function parseSkill(skillDir: GitHubContent, token?: string): Promise<SkillData | null> {
@@ -307,7 +310,7 @@ function extractDescription(content: string): string {
 async function ensureAnthropicPublisher(supabase: SupabaseClient): Promise<string> {
   console.log('📌 Ensuring Anthropic Skills publisher exists...');
   
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from('profiles')
     .upsert({
       id: CONFIG.anthropic_publisher_id,
@@ -338,10 +341,7 @@ async function ensureAnthropicPublisher(supabase: SupabaseClient): Promise<strin
   return CONFIG.anthropic_publisher_id;
 }
 
-async function createOrUpdatePlaybook(
-  supabase: SupabaseClient,
-  publisherId: string
-): Promise<string> {
+async function createOrUpdatePlaybook(supabase: SupabaseClient): Promise<string> {
   console.log('📦 Creating/updating Anthropic Skills playbook...');
   
   const guid = 'anthropic-official-skills';
@@ -522,10 +522,10 @@ async function main() {
   });
   
   // Ensure publisher exists
-  const publisherId = await ensureAnthropicPublisher(supabase);
+  await ensureAnthropicPublisher(supabase);
   
   // Create or get playbook
-  const playbookId = await createOrUpdatePlaybook(supabase, publisherId);
+  const playbookId = await createOrUpdatePlaybook(supabase);
   
   console.log('\n📂 Phase 1: Fetching skills from GitHub...\n');
   

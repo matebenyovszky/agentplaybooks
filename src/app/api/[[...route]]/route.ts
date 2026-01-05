@@ -1,8 +1,9 @@
 import { Hono } from "hono";
+import type { Context } from "hono";
 import { handle } from "hono/vercel";
 import { cors } from "hono/cors";
 import { createServerClient } from "@/lib/supabase/client";
-import type { ApiKey, UserApiKeysRow, AttachmentFileType } from "@/lib/supabase/types";
+import type { ApiKey, UserApiKeysRow, Playbook, Skill, MCPServer, ProfilesRow, Persona } from "@/lib/supabase/types";
 import { ATTACHMENT_LIMITS, ALLOWED_FILE_TYPES } from "@/lib/supabase/types";
 import { 
   validateAttachment, 
@@ -30,6 +31,49 @@ type ApiKeyWithPlaybook = ApiKey & {
   playbooks: { id: string; guid: string };
 };
 
+type AppContext = Context<{ Bindings: Bindings; Variables: Variables }>;
+
+type PersonaSource = Pick<
+  Playbook,
+  "id" | "persona_name" | "persona_system_prompt" | "persona_metadata" | "created_at"
+>;
+
+type PlaybookWithCounts = Playbook & {
+  skills?: Array<{ count: number }>;
+  mcp_servers?: Array<{ count: number }>;
+};
+
+type ProfileSummary = Pick<
+  ProfilesRow,
+  "id" | "display_name" | "avatar_svg" | "website_url" | "is_verified" | "is_virtual"
+>;
+
+type SkillWithPlaybookAccess = Skill & { playbooks?: { is_public?: boolean; user_id?: string } };
+type SkillWithPlaybookOwner = Skill & { playbooks?: { user_id?: string } };
+type SkillWithPlaybook = Skill & {
+  playbook?: { id?: string; guid?: string; name?: string; is_public?: boolean; user_id?: string };
+};
+
+type MCPServerWithPlaybook = MCPServer & {
+  playbook?: { id?: string; guid?: string; name?: string; is_public?: boolean; user_id?: string };
+};
+
+type PlaybookWithExports = Playbook & {
+  persona?: Persona | null;
+  personas?: Persona[];
+  skills: Skill[];
+  mcp_servers: MCPServer[];
+};
+
+type OpenApiSkillSchema = {
+  type: "object";
+  description?: string;
+  properties?: Record<string, unknown>;
+  required?: string[];
+};
+
+type StarredPlaybookRow = { playbooks?: Playbook | null };
+
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>().basePath("/api");
 
 // CORS middleware
@@ -54,7 +98,7 @@ function getServiceSupabase() {
 }
 
 // Helper: Get authenticated user from cookies or Authorization header
-async function getAuthenticatedUser(c: any): Promise<{ id: string } | null> {
+async function getAuthenticatedUser(c: AppContext): Promise<{ id: string } | null> {
   const supabase = getSupabase();
   
   // Try to get user from cookie
@@ -91,7 +135,7 @@ async function getAuthenticatedUser(c: any): Promise<{ id: string } | null> {
 }
 
 // Middleware: Require authenticated user
-async function requireAuth(c: any): Promise<{ id: string } | null> {
+async function requireAuth(c: AppContext): Promise<{ id: string } | null> {
   const user = await getAuthenticatedUser(c);
   if (!user) {
     return null;
@@ -100,7 +144,7 @@ async function requireAuth(c: any): Promise<{ id: string } | null> {
 }
 
 // Helper: Validate API key for agent endpoints
-async function validateApiKey(c: any, requiredPermission: string): Promise<ApiKeyWithPlaybook | null> {
+async function validateApiKey(c: AppContext, requiredPermission: string): Promise<ApiKeyWithPlaybook | null> {
   const authHeader = c.req.header("Authorization");
   if (!authHeader?.startsWith("Bearer apb_")) {
     return null;
@@ -165,19 +209,19 @@ async function checkPlaybookOwnership(userId: string, playbookId: string): Promi
 }
 
 // Helper: 1 Playbook = 1 Persona (persona stored on playbooks table)
-function playbookToPersona(playbook: any) {
+function playbookToPersona(playbook: PersonaSource): Persona {
   return {
     id: playbook.id,
     playbook_id: playbook.id,
     name: playbook.persona_name || "Assistant",
     system_prompt: playbook.persona_system_prompt || "You are a helpful AI assistant.",
-    metadata: playbook.persona_metadata || {},
+    metadata: playbook.persona_metadata ?? {},
     created_at: playbook.created_at,
   };
 }
 
 // Helper: Validate User-level API key (works across all user's playbooks)
-async function validateUserApiKey(c: any, requiredPermission: string): Promise<UserApiKeyData | null> {
+async function validateUserApiKey(c: AppContext, requiredPermission: string): Promise<UserApiKeyData | null> {
   const authHeader = c.req.header("Authorization");
   if (!authHeader?.startsWith("Bearer apb_")) {
     return null;
@@ -219,7 +263,7 @@ async function validateUserApiKey(c: any, requiredPermission: string): Promise<U
 }
 
 // Helper: Get user from either JWT auth or User API key
-async function getUserFromAuthOrApiKey(c: any, requiredPermission: string): Promise<{ id: string } | null> {
+async function getUserFromAuthOrApiKey(c: AppContext, requiredPermission: string): Promise<{ id: string } | null> {
   // Try JWT auth first
   const user = await getAuthenticatedUser(c);
   if (user) {
@@ -263,7 +307,8 @@ app.get("/playbooks", async (c) => {
   }
 
   // Transform count objects to numbers
-  const playbooks = (data || []).map((p: any) => ({
+  const playbookRows: PlaybookWithCounts[] = data || [];
+  const playbooks = playbookRows.map((p) => ({
     ...p,
     persona_count: p.persona_name ? 1 : 0,
     skill_count: p.skills?.[0]?.count || 0,
@@ -323,7 +368,7 @@ app.get("/playbooks/:guid", async (c) => {
   const user = await getAuthenticatedUser(c);
 
   // First try to find by guid
-  let query = supabase
+  const query = supabase
     .from("playbooks")
     .select("*")
     .eq("guid", guid);
@@ -393,7 +438,7 @@ app.put("/playbooks/:id", async (c) => {
 
   const supabase = getServiceSupabase();
 
-  const updateData: any = {};
+  const updateData: Record<string, unknown> = {};
   if (name !== undefined) updateData.name = name;
   if (description !== undefined) updateData.description = description;
   if (is_public !== undefined) updateData.is_public = is_public;
@@ -543,7 +588,7 @@ app.put("/playbooks/:id/personas/:pid", async (c) => {
 
   const supabase = getServiceSupabase();
 
-  const updateData: any = {};
+  const updateData: Record<string, unknown> = {};
   if (name !== undefined) updateData.persona_name = name;
   if (system_prompt !== undefined) updateData.persona_system_prompt = system_prompt;
   if (metadata !== undefined) updateData.persona_metadata = metadata;
@@ -707,7 +752,7 @@ app.put("/playbooks/:id/skills/:sid", async (c) => {
 
   const supabase = getServiceSupabase();
 
-  const updateData: any = {};
+  const updateData: Record<string, unknown> = {};
   if (name !== undefined) updateData.name = name;
   if (description !== undefined) updateData.description = description;
   if (definition !== undefined) updateData.definition = definition;
@@ -1231,7 +1276,8 @@ app.get("/profiles/:id/playbooks", async (c) => {
     return c.json({ error: error.message }, 500);
   }
 
-  const playbooks = (data || []).map((p: any) => ({
+  const playbookRows: PlaybookWithCounts[] = data || [];
+  const playbooks = playbookRows.map((p) => ({
     ...p,
     personas_count: p.persona_name ? 1 : 0,
     skills_count: p.skills?.[0]?.count || 0,
@@ -1362,7 +1408,8 @@ app.get("/manage/playbooks", async (c) => {
     return c.json({ error: error.message }, 500);
   }
 
-  const playbooks = (data || []).map((p: any) => ({
+  const playbookRows: PlaybookWithCounts[] = data || [];
+  const playbooks = playbookRows.map((p) => ({
     ...p,
     persona_count: p.persona_name ? 1 : 0,
     skill_count: p.skills?.[0]?.count || 0,
@@ -1743,11 +1790,13 @@ app.get("/manage/skills/:skillId/attachments", async (c) => {
   const supabase = getServiceSupabase();
 
   // First check if skill exists and is accessible
-  const { data: skill, error: skillError } = await supabase
+  const { data, error: skillError } = await supabase
     .from("skills")
     .select("id, playbook_id, playbooks!inner(is_public, user_id)")
     .eq("id", skillId)
     .single();
+
+  const skill = data as SkillWithPlaybookAccess | null;
 
   if (skillError || !skill) {
     return c.json({ error: "Skill not found" }, 404);
@@ -1755,8 +1804,8 @@ app.get("/manage/skills/:skillId/attachments", async (c) => {
 
   // Check if public or owned
   const user = await getAuthenticatedUser(c);
-  const isPublic = (skill as any).playbooks?.is_public;
-  const isOwner = user && (skill as any).playbooks?.user_id === user.id;
+  const isPublic = skill.playbooks?.is_public;
+  const isOwner = user && skill.playbooks?.user_id === user.id;
 
   if (!isPublic && !isOwner) {
     return c.json({ error: "Forbidden" }, 403);
@@ -1782,19 +1831,21 @@ app.get("/manage/skills/:skillId/attachments/:attachmentId", async (c) => {
   const supabase = getServiceSupabase();
 
   // Check skill access
-  const { data: skill } = await supabase
+  const { data } = await supabase
     .from("skills")
     .select("id, playbook_id, playbooks!inner(is_public, user_id)")
     .eq("id", skillId)
     .single();
+
+  const skill = data as SkillWithPlaybookAccess | null;
 
   if (!skill) {
     return c.json({ error: "Skill not found" }, 404);
   }
 
   const user = await getAuthenticatedUser(c);
-  const isPublic = (skill as any).playbooks?.is_public;
-  const isOwner = user && (skill as any).playbooks?.user_id === user.id;
+  const isPublic = skill.playbooks?.is_public;
+  const isOwner = user && skill.playbooks?.user_id === user.id;
 
   if (!isPublic && !isOwner) {
     return c.json({ error: "Forbidden" }, 403);
@@ -1837,17 +1888,19 @@ app.post("/manage/skills/:skillId/attachments", async (c) => {
   const supabase = getServiceSupabase();
 
   // Check skill ownership
-  const { data: skill } = await supabase
+  const { data } = await supabase
     .from("skills")
     .select("id, playbook_id, playbooks!inner(user_id)")
     .eq("id", skillId)
     .single();
 
+  const skill = data as SkillWithPlaybookOwner | null;
+
   if (!skill) {
     return c.json({ error: "Skill not found" }, 404);
   }
 
-  if ((skill as any).playbooks?.user_id !== user.id) {
+  if (skill.playbooks?.user_id !== user.id) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -1912,18 +1965,20 @@ app.put("/manage/skills/:skillId/attachments/:attachmentId", async (c) => {
   const supabase = getServiceSupabase();
 
   // Check skill ownership
-  const { data: skill } = await supabase
+  const { data } = await supabase
     .from("skills")
     .select("id, playbook_id, playbooks!inner(user_id)")
     .eq("id", skillId)
     .single();
 
-  if (!skill || (skill as any).playbooks?.user_id !== user.id) {
+  const skill = data as SkillWithPlaybookOwner | null;
+
+  if (!skill || skill.playbooks?.user_id !== user.id) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
   const body = await c.req.json();
-  const updates: Record<string, any> = {};
+  const updates: Record<string, unknown> = {};
 
   // Validate filename if provided
   if (body.filename) {
@@ -1978,13 +2033,15 @@ app.delete("/manage/skills/:skillId/attachments/:attachmentId", async (c) => {
   const supabase = getServiceSupabase();
 
   // Check skill ownership
-  const { data: skill } = await supabase
+  const { data } = await supabase
     .from("skills")
     .select("id, playbook_id, playbooks!inner(user_id)")
     .eq("id", skillId)
     .single();
 
-  if (!skill || (skill as any).playbooks?.user_id !== user.id) {
+  const skill = data as SkillWithPlaybookOwner | null;
+
+  if (!skill || skill.playbooks?.user_id !== user.id) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -2758,8 +2815,6 @@ app.post("/agent/:guid/personas", async (c) => {
 app.put("/agent/:guid/personas/:id", async (c) => {
   const guid = c.req.param("guid");
   // Persona is a singleton (stored on playbook); :id is kept for legacy compatibility
-  const _personaId = c.req.param("id");
-
   const apiKeyData = await validateApiKey(c, "personas:write");
   if (!apiKeyData || apiKeyData.playbooks.guid !== guid) {
     return c.json({ error: "Unauthorized" }, 401);
@@ -2830,8 +2885,11 @@ app.get("/public/playbooks", async (c) => {
     return c.json({ error: error.message }, 500);
   }
 
+  const playbookRows: PlaybookWithCounts[] = data || [];
   // Get unique user_ids to fetch profiles
-  const userIds = [...new Set((data || []).map((p: any) => p.user_id).filter(Boolean))];
+  const userIds = [
+    ...new Set(playbookRows.map((p) => p.user_id).filter((id): id is string => Boolean(id))),
+  ];
   
   // Fetch profiles for these users
   const { data: profiles } = userIds.length > 0 
@@ -2842,10 +2900,11 @@ app.get("/public/playbooks", async (c) => {
     : { data: [] };
   
   // Create a map for quick lookup
-  const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+  const profileRows: ProfileSummary[] = profiles || [];
+  const profileMap = new Map(profileRows.map((profile) => [profile.id, profile]));
 
   // Transform count objects to numbers with consistent naming
-  const playbooks = (data || []).map((p: any) => {
+  const playbooks = playbookRows.map((p) => {
     const profile = profileMap.get(p.user_id);
     return {
       ...p,
@@ -2976,7 +3035,10 @@ app.get("/user/starred", async (c) => {
     return c.json({ error: error.message }, 500);
   }
 
-  const playbooks = (data || []).map((s: any) => s.playbooks).filter(Boolean);
+  const starredRows: StarredPlaybookRow[] = data || [];
+  const playbooks = starredRows
+    .map((star) => star.playbooks)
+    .filter((playbook): playbook is Playbook => Boolean(playbook));
   return c.json(playbooks);
 });
 
@@ -3009,8 +3071,15 @@ app.get("/public/skills", async (c) => {
     return c.json({ error: error.message }, 500);
   }
 
+  const skillsRows: SkillWithPlaybook[] = data || [];
   // Get unique user_ids to fetch profiles
-  const userIds = [...new Set((data || []).map((s: any) => s.playbook?.user_id).filter(Boolean))];
+  const userIds = [
+    ...new Set(
+      skillsRows
+        .map((skill) => skill.playbook?.user_id)
+        .filter((id): id is string => Boolean(id))
+    ),
+  ];
   
   // Fetch profiles
   const { data: profiles } = userIds.length > 0 
@@ -3020,15 +3089,16 @@ app.get("/public/skills", async (c) => {
         .in("id", userIds)
     : { data: [] };
   
-  const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+  const profileRows: ProfileSummary[] = profiles || [];
+  const profileMap = new Map(profileRows.map((profile) => [profile.id, profile]));
 
   // Transform to include playbook and publisher info
-  const skills = (data || []).map((s: any) => {
-    const profile = profileMap.get(s.playbook?.user_id);
+  const skills = skillsRows.map((skill) => {
+    const profile = skill.playbook?.user_id ? profileMap.get(skill.playbook.user_id) : undefined;
     return {
-      ...s,
-      playbook_guid: s.playbook?.guid,
-      playbook_name: s.playbook?.name,
+      ...skill,
+      playbook_guid: skill.playbook?.guid,
+      playbook_name: skill.playbook?.name,
       publisher: profile ? {
         id: profile.id,
         name: profile.display_name,
@@ -3063,11 +3133,12 @@ app.get("/public/skills/:id", async (c) => {
     return c.json({ error: "Skill not found" }, 404);
   }
 
+  const skill = data as SkillWithPlaybook;
   return c.json({
-    ...data,
-    playbook_guid: (data as any).playbook?.guid,
-    playbook_name: (data as any).playbook?.name,
-    playbook: undefined
+    ...skill,
+    playbook_guid: skill.playbook?.guid,
+    playbook_name: skill.playbook?.name,
+    playbook: undefined,
   });
 });
 
@@ -3095,8 +3166,15 @@ app.get("/public/mcp", async (c) => {
     return c.json({ error: error.message }, 500);
   }
 
+  const serverRows: MCPServerWithPlaybook[] = data || [];
   // Get unique user_ids to fetch profiles
-  const userIds = [...new Set((data || []).map((m: any) => m.playbook?.user_id).filter(Boolean))];
+  const userIds = [
+    ...new Set(
+      serverRows
+        .map((server) => server.playbook?.user_id)
+        .filter((id): id is string => Boolean(id))
+    ),
+  ];
   
   // Fetch profiles
   const { data: profiles } = userIds.length > 0 
@@ -3106,15 +3184,16 @@ app.get("/public/mcp", async (c) => {
         .in("id", userIds)
     : { data: [] };
   
-  const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+  const profileRows: ProfileSummary[] = profiles || [];
+  const profileMap = new Map(profileRows.map((profile) => [profile.id, profile]));
 
   // Transform to include playbook and publisher info
-  const servers = (data || []).map((m: any) => {
-    const profile = profileMap.get(m.playbook?.user_id);
+  const servers = serverRows.map((server) => {
+    const profile = server.playbook?.user_id ? profileMap.get(server.playbook.user_id) : undefined;
     return {
-      ...m,
-      playbook_guid: m.playbook?.guid,
-      playbook_name: m.playbook?.name,
+      ...server,
+      playbook_guid: server.playbook?.guid,
+      playbook_name: server.playbook?.name,
       publisher: profile ? {
         id: profile.id,
         name: profile.display_name,
@@ -3149,11 +3228,12 @@ app.get("/public/mcp/:id", async (c) => {
     return c.json({ error: "MCP Server not found" }, 404);
   }
 
+  const server = data as MCPServerWithPlaybook;
   return c.json({
-    ...data,
-    playbook_guid: (data as any).playbook?.guid,
-    playbook_name: (data as any).playbook?.name,
-    playbook: undefined
+    ...server,
+    playbook_guid: server.playbook?.guid,
+    playbook_name: server.playbook?.name,
+    playbook: undefined,
   });
 });
 
@@ -3161,7 +3241,7 @@ app.get("/public/mcp/:id", async (c) => {
 // FORMAT HELPERS
 // ============================================
 
-function formatAsOpenAPI(playbook: any) {
+function formatAsOpenAPI(playbook: PlaybookWithExports) {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://agentplaybooks.ai";
   const persona = playbook.persona || (Array.isArray(playbook.personas) ? playbook.personas[0] : null);
   const personaHeader = persona?.name && persona?.system_prompt
@@ -3169,7 +3249,7 @@ function formatAsOpenAPI(playbook: any) {
     : "";
   
   // Convert skills to OpenAPI-compatible tool definitions
-  const tools = playbook.skills.map((skill: any) => ({
+  const tools = playbook.skills.map((skill) => ({
     type: "function",
     function: {
       name: skill.name.toLowerCase().replace(/\s+/g, "_"),
@@ -3179,8 +3259,8 @@ function formatAsOpenAPI(playbook: any) {
   }));
 
   // Build skill schemas for OpenAPI
-  const skillSchemas: Record<string, any> = {};
-  playbook.skills.forEach((skill: any) => {
+  const skillSchemas: Record<string, OpenApiSkillSchema> = {};
+  playbook.skills.forEach((skill) => {
     const skillName = skill.name.toLowerCase().replace(/\s+/g, "_");
     skillSchemas[`Skill_${skillName}`] = {
       type: "object",
@@ -3530,7 +3610,7 @@ function formatAsOpenAPI(playbook: any) {
       persona,
       personas: playbook.personas, // backward-compatible
       skills: tools,
-      mcp_servers: playbook.mcp_servers?.map((mcp: any) => ({
+      mcp_servers: playbook.mcp_servers.map((mcp) => ({
         name: mcp.name,
         description: mcp.description,
         tools_count: mcp.tools?.length || 0,
@@ -3539,9 +3619,9 @@ function formatAsOpenAPI(playbook: any) {
   };
 }
 
-function formatAsMCP(playbook: any) {
+function formatAsMCP(playbook: PlaybookWithExports) {
   const persona = playbook.persona || (Array.isArray(playbook.personas) ? playbook.personas[0] : null);
-  const tools = playbook.skills.map((skill: any) => ({
+  const tools = playbook.skills.map((skill) => ({
     name: skill.name.toLowerCase().replace(/\s+/g, "_"),
     description: skill.description || skill.name,
     inputSchema: skill.definition?.parameters || { type: "object", properties: {} },
@@ -3583,16 +3663,19 @@ function formatAsMCP(playbook: any) {
     persona: persona
       ? { name: persona.name, systemPrompt: persona.system_prompt }
       : null,
-    personas: Array.isArray(playbook.personas)
-      ? playbook.personas.map((p: any) => ({ name: p.name, systemPrompt: p.system_prompt }))
+  personas: Array.isArray(playbook.personas)
+      ? playbook.personas.map((personaItem) => ({
+          name: personaItem.name,
+          systemPrompt: personaItem.system_prompt,
+        }))
       : [],
   };
 }
 
-function formatAsAnthropic(playbook: any) {
+function formatAsAnthropic(playbook: PlaybookWithExports) {
   const persona = playbook.persona || (Array.isArray(playbook.personas) ? playbook.personas[0] : null);
   // Anthropic tool format
-  const tools = playbook.skills.map((skill: any) => ({
+  const tools = playbook.skills.map((skill) => ({
     name: skill.name.toLowerCase().replace(/\s+/g, "_"),
     description: skill.description || skill.name,
     input_schema: skill.definition?.parameters || { type: "object", properties: {} },
@@ -3606,7 +3689,7 @@ function formatAsAnthropic(playbook: any) {
     },
     system_prompt: persona?.name && persona?.system_prompt ? `## ${persona.name}\n\n${persona.system_prompt}` : null,
     tools,
-    mcp_servers: playbook.mcp_servers.map((mcp: any) => ({
+    mcp_servers: playbook.mcp_servers.map((mcp) => ({
       name: mcp.name,
       description: mcp.description,
       tools: mcp.tools,
@@ -3615,7 +3698,7 @@ function formatAsAnthropic(playbook: any) {
   };
 }
 
-function formatAsMarkdown(playbook: any): string {
+function formatAsMarkdown(playbook: PlaybookWithExports): string {
   let md = `# ${playbook.name}\n\n`;
   const persona = playbook.persona || (Array.isArray(playbook.personas) ? playbook.personas[0] : null);
   
@@ -3659,7 +3742,7 @@ function formatAsMarkdown(playbook: any): string {
         md += `${mcp.description}\n\n`;
       }
       if (mcp.tools?.length) {
-        md += `**Tools:** ${mcp.tools.map((t: any) => t.name).join(", ")}\n\n`;
+        md += `**Tools:** ${mcp.tools.map((tool) => tool.name).join(", ")}\n\n`;
       }
     }
   }

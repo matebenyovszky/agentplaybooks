@@ -28,7 +28,6 @@ import {
   Search,
   Download,
   X,
-  Star,
   Tag
 } from "lucide-react";
 import type { Playbook, Persona, Skill, MCPServer, Memory, ApiKey } from "@/lib/supabase/types";
@@ -40,6 +39,7 @@ import { McpServerEditor } from "@/components/playbook/McpServerEditor";
 import { MemoryEditor } from "@/components/playbook/MemoryEditor";
 import { ApiKeyManager } from "@/components/playbook/ApiKeyManager";
 import { McpRegistrySearch } from "@/components/playbook/McpRegistrySearch";
+import { OpenInDropdown } from "@/components/ui/open-in-dropdown";
 
 type TabType = "details" | "skills" | "mcp" | "memory" | "apiKeys";
 
@@ -108,35 +108,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
     };
   }, []);
 
-  useEffect(() => {
-    loadPlaybook();
-  }, [id]);
-
-  // Auto-save playbook changes
-  useEffect(() => {
-    if (!debouncedPlaybook || !hasChanges) return;
-
-    const save = async () => {
-      setSaving(true);
-      const supabase = createBrowserClient();
-      // Use playbook.id (actual UUID) for updates, not the URL id param
-      await supabase
-        .from("playbooks")
-        .update({
-          name: debouncedPlaybook.name,
-          description: debouncedPlaybook.description,
-          is_public: debouncedPlaybook.is_public,
-        })
-        .eq("id", playbook?.id || id);
-      
-      setSaving(false);
-      setHasChanges(false);
-    };
-
-    save();
-  }, [debouncedPlaybook, hasChanges, id]);
-
-  const loadPlaybook = async () => {
+  const loadPlaybook = useCallback(async () => {
     const supabase = createBrowserClient();
 
     // Get current user first
@@ -182,7 +154,36 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
     setMemories((memoriesRes.data as Memory[]) || []);
     setApiKeys((keysRes.data as ApiKey[]) || []);
     setLoading(false);
-  };
+  }, [id, buildPersonaFromPlaybook]);
+
+  useEffect(() => {
+    loadPlaybook();
+  }, [loadPlaybook]);
+
+  // Auto-save playbook changes
+  useEffect(() => {
+    if (!debouncedPlaybook || !hasChanges) return;
+
+    const save = async () => {
+      setSaving(true);
+      const supabase = createBrowserClient();
+      const playbookIdForSave = debouncedPlaybook?.id || id;
+      // Use playbook.id (actual UUID) for updates, not the URL id param
+      await supabase
+        .from("playbooks")
+        .update({
+          name: debouncedPlaybook.name,
+          description: debouncedPlaybook.description,
+          is_public: debouncedPlaybook.is_public,
+        })
+        .eq("id", playbookIdForSave);
+      
+      setSaving(false);
+      setHasChanges(false);
+    };
+
+    save();
+  }, [debouncedPlaybook, hasChanges, id]);
 
   const handleManualSave = async () => {
     if (!playbook) return;
@@ -215,6 +216,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
     const data = await storage.addSkill({
       name: defaultName,
       description: "",
+      content: null,
       definition: { 
         parameters: { 
           type: "object", 
@@ -223,6 +225,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
         } 
       },
       examples: [],
+      priority: null,
     });
 
     if (data) {
@@ -464,6 +467,29 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
     }
     return "https://agentplaybooks.ai";
   };
+
+  const markdownPath = playbook ? `/api/playbooks/${playbook.guid}?format=markdown` : "";
+  const buildOpenInPrompt = useCallback(() => {
+    if (!playbook) return "";
+
+    const skillNames = skills
+      .map((skill) => skill.name)
+      .filter((name): name is string => Boolean(name));
+
+    const baseUrl = getBaseUrl();
+    const lines = [
+      `Playbook: ${playbook.name}`,
+      playbook.description ? `Description: ${playbook.description}` : "",
+      "",
+      "System Prompt:",
+      playbook.persona_system_prompt || "You are a helpful AI assistant.",
+      "",
+      skillNames.length > 0 ? `Skills: ${skillNames.join(", ")}` : "",
+      markdownPath ? `Full playbook: ${baseUrl}${markdownPath}` : "",
+    ];
+
+    return lines.filter((line) => line !== "").join("\n");
+  }, [playbook, skills, markdownPath]);
 
   const tabs = [
     { id: "details" as TabType, label: t("editor.tabs.details"), icon: Settings, count: 0, color: "slate" },
@@ -1207,6 +1233,15 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                   <p className="text-sm text-slate-500 mb-4">
                     Add this playbook to your favorite AI assistant. Click a platform for step-by-step instructions.
                   </p>
+
+                  <div className="mb-4 flex flex-wrap gap-2">
+                    <OpenInDropdown
+                      buildPrompt={buildOpenInPrompt}
+                      markdownPath={markdownPath}
+                      buttonLabel="Open in AI"
+                      disabled={!playbook}
+                    />
+                  </div>
                   
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
                     {[
@@ -1569,7 +1604,6 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
       <AnimatePresence>
         {showMcpRegistry && playbook && (
           <McpRegistrySearch
-            playbookId={playbook.id}
             onAdd={async (server) => {
               // Call the instantiate API
               const response = await fetch("/api/mcp-registry/instantiate", {

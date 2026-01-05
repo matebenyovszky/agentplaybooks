@@ -90,17 +90,11 @@ export function SkillEditor({ skill, storage, onUpdate, onDelete, readOnly = fal
       required?: string[];
     } 
   };
+  const sourceUrl = (skill.definition as { source_url?: string } | null)?.source_url;
   const properties = definition?.parameters?.properties || {};
   const requiredFields = definition?.parameters?.required || [];
 
-  // Load attachments when expanded
-  useEffect(() => {
-    if (expanded && attachments.length === 0 && !attachmentsLoading) {
-      loadAttachments();
-    }
-  }, [expanded]);
-
-  const loadAttachments = async () => {
+  const loadAttachments = useCallback(async () => {
     setAttachmentsLoading(true);
     try {
       const response = await fetch(`/api/manage/skills/${skill.id}/attachments`);
@@ -113,7 +107,13 @@ export function SkillEditor({ skill, storage, onUpdate, onDelete, readOnly = fal
     } finally {
       setAttachmentsLoading(false);
     }
-  };
+  }, [skill.id]);
+
+  // Load attachments when expanded
+  useEffect(() => {
+    if (!expanded || attachments.length > 0 || attachmentsLoading) return;
+    loadAttachments();
+  }, [expanded, attachments.length, attachmentsLoading, loadAttachments]);
 
   const handleAddAttachment = async () => {
     if (!newAttachment.filename || !newAttachment.content) {
@@ -147,7 +147,7 @@ export function SkillEditor({ skill, storage, onUpdate, onDelete, readOnly = fal
         const error = await response.json();
         setAttachmentError(error.error || "Failed to add attachment");
       }
-    } catch (e) {
+    } catch {
       setAttachmentError("Failed to add attachment");
     } finally {
       setUploadingAttachment(false);
@@ -165,8 +165,8 @@ export function SkillEditor({ skill, storage, onUpdate, onDelete, readOnly = fal
       if (response.ok) {
         setAttachments(attachments.filter(a => a.id !== attachmentId));
       }
-    } catch (e) {
-      console.error("Failed to delete attachment:", e);
+    } catch (error) {
+      console.error("Failed to delete attachment:", error);
     }
   };
 
@@ -189,7 +189,7 @@ export function SkillEditor({ skill, storage, onUpdate, onDelete, readOnly = fal
     try {
       JSON.parse(definitionJson);
       setJsonError(null);
-    } catch (e) {
+    } catch {
       setJsonError("Invalid JSON in definition");
     }
   }, [definitionJson]);
@@ -493,17 +493,17 @@ export function SkillEditor({ skill, storage, onUpdate, onDelete, readOnly = fal
               {viewMode === "markdown" && isMarkdownSkill && (
                 <div className="space-y-4">
                   {/* Source info */}
-                  {(skill.definition as any)?.source_url && (
+                  {sourceUrl && (
                     <div className="flex items-center gap-2 text-sm text-slate-400 bg-slate-900/50 px-3 py-2 rounded-lg">
                       <ExternalLink className="h-4 w-4" />
                       <span>Source:</span>
                       <a 
-                        href={(skill.definition as any).source_url}
+                        href={sourceUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-purple-400 hover:text-purple-300 underline"
                       >
-                        {(skill.definition as any).source_url}
+                        {sourceUrl}
                       </a>
                     </div>
                   )}
@@ -570,7 +570,7 @@ export function SkillEditor({ skill, storage, onUpdate, onDelete, readOnly = fal
                   
                   {Object.entries(properties).length === 0 ? (
                     <div className="p-6 text-center text-slate-500 bg-slate-900/50 rounded-lg border border-dashed border-slate-700">
-                      No parameters defined. Click "Add Parameter" to add one.
+                      No parameters defined. Click &quot;Add Parameter&quot; to add one.
                     </div>
                   ) : (
                     <div className="space-y-2">

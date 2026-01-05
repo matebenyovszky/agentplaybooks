@@ -1,10 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/client";
 import { hashApiKey, generateGuid } from "@/lib/utils";
-import type { UserApiKeysRow } from "@/lib/supabase/types";
+import type { UserApiKeysRow, Playbook } from "@/lib/supabase/types";
 
 // MCP Server for Playbook Management
 // Allows AI agents to create and manage playbooks via User API Key
+
+type PlaybookWithCounts = Playbook & {
+  skills?: Array<{ count: number }>;
+  mcp_servers?: Array<{ count: number }>;
+};
+
+type PersonaSource = Pick<
+  Playbook,
+  "id" | "persona_name" | "persona_system_prompt" | "persona_metadata" | "created_at"
+>;
 
 function getServiceSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -51,6 +61,18 @@ async function validateUserApiKey(request: NextRequest): Promise<UserApiKeysRow 
 // Check permission
 function hasPermission(userKey: UserApiKeysRow, permission: string): boolean {
   return userKey.permissions.includes(permission) || userKey.permissions.includes("full");
+}
+
+// Helper: 1 Playbook = 1 Persona (persona stored on playbooks table)
+function playbookToPersona(playbook: PersonaSource) {
+  return {
+    id: playbook.id,
+    playbook_id: playbook.id,
+    name: playbook.persona_name || "Assistant",
+    system_prompt: playbook.persona_system_prompt || "You are a helpful AI assistant.",
+    metadata: playbook.persona_metadata ?? {},
+    created_at: playbook.created_at,
+  };
 }
 
 // MCP Tool definitions
@@ -357,13 +379,19 @@ export async function POST(request: NextRequest) {
             content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
           },
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : typeof error === "string"
+              ? error
+              : "Tool execution failed";
         return NextResponse.json({
           jsonrpc: "2.0",
           id,
           error: {
             code: -32000,
-            message: error.message || "Tool execution failed",
+            message,
           },
         });
       }
@@ -387,15 +415,6 @@ async function executeManagementTool(
   const supabase = getServiceSupabase();
   const userId = userKey.user_id;
 
-  const playbookToPersona = (playbook: any) => ({
-    id: playbook.id,
-    playbook_id: playbook.id,
-    name: playbook.persona_name || "Assistant",
-    system_prompt: playbook.persona_system_prompt || "You are a helpful AI assistant.",
-    metadata: playbook.persona_metadata || {},
-    created_at: playbook.created_at,
-  });
-
   switch (toolName) {
     case "list_playbooks": {
       if (!hasPermission(userKey, "playbooks:read")) {
@@ -414,7 +433,8 @@ async function executeManagementTool(
 
       if (error) throw new Error(error.message);
 
-      return (data || []).map((p: any) => ({
+      const playbookRows: PlaybookWithCounts[] = data || [];
+      return playbookRows.map((p) => ({
         id: p.id,
         guid: p.guid,
         name: p.name,
@@ -1018,4 +1038,3 @@ async function executeManagementTool(
       throw new Error(`Unknown tool: ${toolName}`);
   }
 }
-

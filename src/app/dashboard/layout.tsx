@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { createBrowserClient } from "@/lib/supabase/client";
+import { DashboardAuthProvider } from "./DashboardAuthContext";
 import { 
   Sidebar, 
   SidebarBody, 
@@ -29,10 +30,9 @@ export default function DashboardLayout({
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const supabase = useMemo(() => createBrowserClient(), []);
 
   useEffect(() => {
-    const supabase = createBrowserClient();
-
     supabase.auth.getUser().then(({ data: { user } }) => {
       // Allow viewing public playbooks without login (playbook/[id] pages)
       // Only redirect if we're on main dashboard pages that require auth
@@ -45,10 +45,9 @@ export default function DashboardLayout({
       setUser(user);
       setLoading(false);
     });
-  }, []);
+  }, [supabase]);
 
   const handleSignOut = async () => {
-    const supabase = createBrowserClient();
     await supabase.auth.signOut();
     window.location.href = "/";
   };
@@ -85,91 +84,93 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0f1a] text-white flex">
-      <Sidebar open={sidebarOpen} setOpen={setSidebarOpen}>
-        <SidebarBody className="justify-between gap-10 border-r border-blue-900/30">
-          <div className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
-            {/* Logo */}
-            <Link href="/" className="flex items-center gap-3 py-2.5 px-2 rounded-lg hover:bg-blue-900/20 transition-all duration-200">
-              <span className="shrink-0 flex items-center justify-center w-6 h-6">
-                <div className="h-6 w-6 bg-gradient-to-br from-blue-500 to-amber-400 rounded-md flex items-center justify-center">
-                  <Play className="h-3.5 w-3.5 text-white fill-white" />
-                </div>
-              </span>
-              <motion.span
-                animate={{ 
-                  opacity: sidebarOpen ? 1 : 0,
-                  width: sidebarOpen ? "auto" : 0
-                }}
-                transition={{ duration: 0.2 }}
-                className="text-lg font-bold text-amber-400 whitespace-nowrap overflow-hidden"
-              >
-                AgentPlaybooks
-              </motion.span>
-            </Link>
+    <DashboardAuthProvider value={{ supabase, user, loading }}>
+      <div className="min-h-screen bg-[#0a0f1a] text-white flex">
+        <Sidebar open={sidebarOpen} setOpen={setSidebarOpen}>
+          <SidebarBody className="justify-between gap-10 border-r border-blue-900/30">
+            <div className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
+              {/* Logo */}
+              <Link href="/" className="flex items-center gap-3 py-2.5 px-2 rounded-lg hover:bg-blue-900/20 transition-all duration-200">
+                <span className="shrink-0 flex items-center justify-center w-6 h-6">
+                  <div className="h-6 w-6 bg-gradient-to-br from-blue-500 to-amber-400 rounded-md flex items-center justify-center">
+                    <Play className="h-3.5 w-3.5 text-white fill-white" />
+                  </div>
+                </span>
+                <motion.span
+                  animate={{ 
+                    opacity: sidebarOpen ? 1 : 0,
+                    width: sidebarOpen ? "auto" : 0
+                  }}
+                  transition={{ duration: 0.2 }}
+                  className="text-lg font-bold text-amber-400 whitespace-nowrap overflow-hidden"
+                >
+                  AgentPlaybooks
+                </motion.span>
+              </Link>
 
-            {/* Navigation */}
-            <div className="mt-4 flex flex-col gap-1">
-              {sidebarLinks.map((link, idx) => (
-                <SidebarLink key={idx} link={link} />
-              ))}
-            </div>
-          </div>
-
-          {/* User section */}
-          <div className="border-t border-blue-900/30 pt-4 mt-4">
-            <div className="flex items-center gap-3 mb-3 py-2.5 px-2">
-              <span className="shrink-0 flex items-center justify-center w-6">
-                <div className="h-6 w-6 rounded-full bg-gradient-to-br from-blue-500 to-amber-400 flex items-center justify-center text-xs font-bold">
-                  {user?.email?.charAt(0).toUpperCase() || "?"}
-                </div>
-              </span>
-              <motion.div
-                animate={{ 
-                  opacity: sidebarOpen ? 1 : 0,
-                  width: sidebarOpen ? "auto" : 0
-                }}
-                transition={{ duration: 0.2 }}
-                className="overflow-hidden whitespace-nowrap"
-              >
-                <p className="text-sm font-medium truncate max-w-[140px]">
-                  {user?.user_metadata?.full_name || user?.email?.split("@")[0]}
-                </p>
-                <p className="text-xs text-slate-500 truncate max-w-[140px]">
-                  {user?.email}
-                </p>
-              </motion.div>
+              {/* Navigation */}
+              <div className="mt-4 flex flex-col gap-1">
+                {sidebarLinks.map((link, idx) => (
+                  <SidebarLink key={idx} link={link} />
+                ))}
+              </div>
             </div>
 
-            <button
-              onClick={handleSignOut}
-              className="flex items-center gap-3 py-2.5 px-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors w-full"
-            >
-              <span className="shrink-0 flex items-center justify-center w-6">
-                <LogOut className="h-5 w-5" />
-              </span>
-              <motion.span
-                animate={{ 
-                  opacity: sidebarOpen ? 1 : 0,
-                  width: sidebarOpen ? "auto" : 0
-                }}
-                transition={{ duration: 0.2 }}
-                className="text-sm whitespace-nowrap overflow-hidden"
-              >
-                {t("dashboard.signOut")}
-              </motion.span>
-            </button>
-          </div>
-        </SidebarBody>
-      </Sidebar>
+            {/* User section */}
+            <div className="border-t border-blue-900/30 pt-4 mt-4">
+              <div className="flex items-center gap-3 mb-3 py-2.5 px-2">
+                <span className="shrink-0 flex items-center justify-center w-6">
+                  <div className="h-6 w-6 rounded-full bg-gradient-to-br from-blue-500 to-amber-400 flex items-center justify-center text-xs font-bold">
+                    {user?.email?.charAt(0).toUpperCase() || "?"}
+                  </div>
+                </span>
+                <motion.div
+                  animate={{ 
+                    opacity: sidebarOpen ? 1 : 0,
+                    width: sidebarOpen ? "auto" : 0
+                  }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden whitespace-nowrap"
+                >
+                  <p className="text-sm font-medium truncate max-w-[140px]">
+                    {user?.user_metadata?.full_name || user?.email?.split("@")[0]}
+                  </p>
+                  <p className="text-xs text-slate-500 truncate max-w-[140px]">
+                    {user?.email}
+                  </p>
+                </motion.div>
+              </div>
 
-      {/* Main content */}
-      <main className="flex-1 p-8 overflow-auto">
-        <div className="max-w-6xl mx-auto">
-          {children}
-        </div>
-      </main>
-    </div>
+              <button
+                onClick={handleSignOut}
+                className="flex items-center gap-3 py-2.5 px-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors w-full"
+              >
+                <span className="shrink-0 flex items-center justify-center w-6">
+                  <LogOut className="h-5 w-5" />
+                </span>
+                <motion.span
+                  animate={{ 
+                    opacity: sidebarOpen ? 1 : 0,
+                    width: sidebarOpen ? "auto" : 0
+                  }}
+                  transition={{ duration: 0.2 }}
+                  className="text-sm whitespace-nowrap overflow-hidden"
+                >
+                  {t("dashboard.signOut")}
+                </motion.span>
+              </button>
+            </div>
+          </SidebarBody>
+        </Sidebar>
+
+        {/* Main content */}
+        <main className="flex-1 p-8 overflow-auto">
+          <div className="max-w-6xl mx-auto">
+            {children}
+          </div>
+        </main>
+      </div>
+    </DashboardAuthProvider>
   );
 }
 

@@ -99,7 +99,7 @@ interface ParsedMcpServer {
 // GitHub API Helpers
 // ============================================
 
-async function fetchGitHubApi(path: string, token?: string): Promise<any> {
+async function fetchGitHubApi<T>(path: string, token?: string): Promise<T> {
   const headers: Record<string, string> = {
     'Accept': 'application/vnd.github.v3+json',
     'User-Agent': 'AgentPlaybooks-Seed-Script',
@@ -118,7 +118,7 @@ async function fetchGitHubApi(path: string, token?: string): Promise<any> {
     throw new Error(`GitHub API error: ${response.status} ${response.statusText}`);
   }
   
-  return response.json();
+  return response.json() as Promise<T>;
 }
 
 async function fetchGitHubRaw(url: string, token?: string): Promise<string> {
@@ -140,7 +140,7 @@ async function fetchGitHubRaw(url: string, token?: string): Promise<string> {
 }
 
 async function listGitHubDir(repo: string, path: string = '', token?: string): Promise<GitHubContent[]> {
-  return fetchGitHubApi(`/repos/${repo}/contents/${path}`, token);
+  return fetchGitHubApi<GitHubContent[]>(`/repos/${repo}/contents/${path}`, token);
 }
 
 // ============================================
@@ -527,7 +527,7 @@ const KNOWN_PUBLIC_MCP_SERVERS: ParsedMcpServer[] = [
   },
 ];
 
-async function fetchMcpServers(token?: string): Promise<ParsedMcpServer[]> {
+async function fetchMcpServers(): Promise<ParsedMcpServer[]> {
   console.log('🔌 Loading MCP server definitions...');
   
   // For now, use our curated list
@@ -616,7 +616,7 @@ async function insertMcpServers(supabase: SupabaseClient, servers: ParsedMcpServ
   }
 }
 
-async function getOrCreateSystemUser(supabase: SupabaseClient): Promise<string> {
+async function getOrCreateSystemUser(): Promise<string> {
   // In a real scenario, you'd have a dedicated system user
   // For seeding, we'll use a fixed UUID that represents "system"
   const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000001';
@@ -658,13 +658,13 @@ async function main() {
   });
   
   // Get system user ID
-  const systemUserId = await getOrCreateSystemUser(supabase);
+  const systemUserId = await getOrCreateSystemUser();
   
   console.log('\n📦 Phase 1: Fetching Skills from awesome-cursorrules...\n');
   const skills = await fetchCursorRulesSkills(githubToken);
   
   console.log('\n🔌 Phase 2: Loading MCP Server definitions...\n');
-  const mcpServers = await fetchMcpServers(githubToken);
+  const mcpServers = await fetchMcpServers();
   
   console.log('\n💾 Phase 3: Inserting into database...\n');
   await insertSkills(supabase, skills, systemUserId);

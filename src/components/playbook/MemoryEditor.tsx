@@ -60,6 +60,7 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
   };
 
   const handleAddMemory = async () => {
+    if (readOnly) return;
     // Generate unique key name
     let keyNum = memories.length + 1;
     let key = `memory_key_${keyNum}`;
@@ -85,6 +86,7 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
   };
 
   const handleSaveMemory = async () => {
+    if (readOnly) return;
     if (!editingMemory || jsonError) return;
 
     setSaving(true);
@@ -110,6 +112,7 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
   };
 
   const handleDeleteMemory = async (memory: Memory) => {
+    if (readOnly) return;
     if (!confirm(`Delete memory "${memory.key}"?`)) return;
 
     const success = await storage.deleteMemory(memory.id);
@@ -125,6 +128,7 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
   };
 
   const startEditing = (memory: Memory) => {
+    if (readOnly) return;
     setEditingMemory(memory);
     setEditKey(memory.key);
     setEditValue(JSON.stringify(memory.value, null, 2));
@@ -164,11 +168,12 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
         </button>
         <button
           onClick={handleAddMemory}
-          disabled={saving}
+          disabled={saving || readOnly}
           className={cn(
             "px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium",
             "bg-teal-600/20 text-teal-400 border border-teal-500/30",
-            "hover:bg-teal-600/30 transition-colors"
+            "hover:bg-teal-600/30 transition-colors",
+            readOnly && "opacity-50 cursor-not-allowed"
           )}
         >
           <Plus className="h-4 w-4" />
@@ -190,10 +195,12 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
           </p>
           <button
             onClick={handleAddMemory}
+            disabled={readOnly}
             className={cn(
               "px-4 py-2 rounded-lg inline-flex items-center gap-2 text-sm font-medium",
               "bg-teal-600/20 text-teal-400 border border-teal-500/30",
-              "hover:bg-teal-600/30 transition-colors"
+              "hover:bg-teal-600/30 transition-colors",
+              readOnly && "opacity-50 cursor-not-allowed"
             )}
           >
             <Plus className="h-4 w-4" />
@@ -247,20 +254,22 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
                           <Copy className="h-4 w-4" />
                         )}
                       </button>
-                      <button
-                        onClick={() => startEditing(memory)}
-                        className="p-1.5 text-slate-400 hover:text-teal-400 hover:bg-teal-500/10 rounded-lg transition-colors"
-                        title="Edit memory"
-                      >
-                        <Edit3 className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteMemory(memory)}
-                        className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
-                        title="Delete memory"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+          <button
+            onClick={() => startEditing(memory)}
+            disabled={readOnly}
+            className="p-1.5 text-slate-400 hover:text-teal-400 hover:bg-teal-500/10 rounded-lg transition-colors"
+            title="Edit memory"
+          >
+            <Edit3 className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => handleDeleteMemory(memory)}
+            disabled={readOnly}
+            className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+            title="Delete memory"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
                     </div>
                   </div>
                   
@@ -281,7 +290,7 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
       {/* No Results */}
       {memories.length > 0 && filteredMemories.length === 0 && (
         <div className="p-6 text-center text-slate-500">
-          No memories matching "{searchQuery}"
+          No memories matching &quot;{searchQuery}&quot;
         </div>
       )}
 

@@ -109,7 +109,6 @@ export function validateContent(content: string): AttachmentValidationResult {
   }
   
   // Check for suspicious control characters (except common ones like \n, \r, \t)
-  // eslint-disable-next-line no-control-regex
   const suspiciousChars = /[\x00-\x08\x0B\x0C\x0E-\x1F]/;
   if (suspiciousChars.test(content)) {
     errors.push('Suspicious control characters detected');

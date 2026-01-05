@@ -1,42 +1,40 @@
 # AgentPlaybooks
 
-**Platform-independent memory and toolkit for AI agents**
+Platform-independent memory and toolkit for AI agents.
 
-Give your AI agents, GPTs, and robots a platform-independent vault. Store skills, personas, and MCP servers - switch between AI platforms without losing anything.
+Give your AI agents, GPTs, and robots a platform-independent vault. Store skills, personas, and MCP servers, then move between AI platforms without losing anything.
 
-## Features
+## Highlights
 
-- **Personas** - Define system prompts and AI personalities that work across any platform
-- **Skills** - Create reusable capabilities and task definitions in Anthropic skill format
-- **MCP Servers** - Configure Model Context Protocol servers for tools and resources
-- **Memory** - Persistent key-value storage your AI can read and write to
-- **Multi-Format Export** - JSON, OpenAPI for GPTs, MCP protocol, or human-readable Markdown
-- **API Key Access** - Let your AI write back - update memory, skills, and personas programmatically
-- **Public Repository** - Browse and add pre-built skills and MCP servers from the community
+- Personas: 1 per playbook, stored directly on the playbook record
+- Skills: JSON schema definitions plus optional SKILL.md content
+- Skill attachments: secure file storage for code, prompts, and docs
+- MCP servers: tools and resources in Model Context Protocol format
+- Memory: key-value store with tags and descriptions
+- Export formats: JSON, OpenAPI, MCP, Anthropic, Markdown
+- API keys: playbook keys for agents, user keys for management
+- Marketplace: public playbooks, skills, MCP servers, and stars
 
 ## Tech Stack
 
 | Category | Technology | Purpose |
-|----------|------------|---------|
-| **Framework** | [Next.js 16](https://nextjs.org/) + [React 19](https://react.dev/) | Server-side rendering, App Router |
-| **Styling** | [Tailwind CSS 4](https://tailwindcss.com/) | Utility-first CSS |
-| **Animation** | [Framer Motion](https://www.framer.com/motion/) | Smooth animations |
-| **UI Components** | [Aceternity UI](https://ui.aceternity.com/) | Modern, accessible components |
-| **Icons** | [Lucide React](https://lucide.dev/) | Icon library |
-| **API** | [Hono](https://hono.dev/) | Fast, lightweight edge framework |
-| **Database** | [Supabase](https://supabase.com/) | PostgreSQL + Auth + RLS |
-| **i18n** | [next-intl](https://next-intl-docs.vercel.app/) | Multi-language (EN, HU, DE, ES) |
-| **Docs** | [MDX](https://mdxjs.com/) | Markdown + React components |
-| **Hosting** | [Cloudflare Pages](https://pages.cloudflare.com/) | Edge deployment, global CDN |
-| **Adapter** | [@opennextjs/cloudflare](https://opennext.js.org/) | Next.js → Cloudflare |
+| --- | --- | --- |
+| Framework | [Next.js 15](https://nextjs.org/) + [React 19](https://react.dev/) | App Router, SSR |
+| Styling | [Tailwind CSS 4](https://tailwindcss.com/) | Utility-first CSS |
+| Animation | [Framer Motion](https://www.framer.com/motion/) | UI animations |
+| Icons | [Lucide React](https://lucide.dev/) | Icon library |
+| API | [Hono](https://hono.dev/) | Edge API routing |
+| Database | [Supabase](https://supabase.com/) | Postgres + Auth + RLS |
+| i18n | [next-intl](https://next-intl-docs.vercel.app/) | Localization |
+| Docs | [MDX](https://mdxjs.com/) | Markdown + React |
+| Hosting | [Cloudflare Pages](https://pages.cloudflare.com/) | Edge deployment |
+| Adapter | [@opennextjs/cloudflare](https://opennext.js.org/) | Next.js on Workers |
 
 ## Live Demo
 
-🌐 **Website**: [agentplaybooks.ai](https://agentplaybooks.ai)
-
-📚 **Documentation**: [agentplaybooks.ai/docs](https://agentplaybooks.ai/docs)
-
-🔗 **GitHub**: [github.com/matebenyovszky/agentplaybooks](https://github.com/matebenyovszky/agentplaybooks)
+- Website: https://agentplaybooks.ai
+- Docs: https://agentplaybooks.ai/docs
+- GitHub: https://github.com/matebenyovszky/agentplaybooks
 
 ## Getting Started
 
@@ -45,21 +43,14 @@ Give your AI agents, GPTs, and robots a platform-independent vault. Store skills
 - Node.js 20+
 - npm or pnpm
 - Supabase account
-- Cloudflare account
+- Cloudflare account (optional for deployment)
 
 ### Installation
 
 ```bash
-# Clone the repository
 git clone https://github.com/matebenyovszky/agentplaybooks.git
 cd agentplaybooks
-
-# Install dependencies
 npm install
-
-# Create .env.local file
-cp .env.example .env.local
-# Edit .env.local with your Supabase credentials
 ```
 
 ### Environment Variables
@@ -75,70 +66,140 @@ SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 ### Development
 
 ```bash
-# Start development server
 npm run dev
-
-# Open http://localhost:3000
 ```
 
-### Build for Cloudflare
+Open http://localhost:3000
+
+### Cloudflare Deployment
 
 ```bash
-# Build for Cloudflare Workers
 npm run build:worker
-
-# Preview locally
 npm run preview
-
-# Deploy (requires Cloudflare CLI setup)
 npx wrangler deploy
 ```
 
-## API Endpoints
+## API Overview
 
-### Public Playbook Access
-
-```
-GET /api/playbooks/:guid                    # Get playbook (JSON)
-GET /api/playbooks/:guid?format=openapi     # OpenAPI 3.1 spec
-GET /api/playbooks/:guid?format=mcp         # MCP Protocol format
-GET /api/playbooks/:guid?format=markdown    # Human-readable
-GET /api/playbooks/:guid/personas           # List personas
-GET /api/playbooks/:guid/skills             # List skills
-```
-
-### Agent Write-back (requires API key)
+### Public playbook access
 
 ```
-GET  /api/agent/:guid/memory                # Read memories
-POST /api/agent/:guid/memory                # Write memory
-DELETE /api/agent/:guid/memory/:key         # Delete memory
+GET /api/playbooks/:guid
+GET /api/playbooks/:guid?format=openapi
+GET /api/playbooks/:guid?format=mcp
+GET /api/playbooks/:guid?format=anthropic
+GET /api/playbooks/:guid?format=markdown
 
-POST /api/agent/:guid/skills                # Add skill
-PUT  /api/agent/:guid/skills/:id            # Update skill
-
-POST /api/agent/:guid/personas              # Add persona
-PUT  /api/agent/:guid/personas/:id          # Update persona
+GET /api/playbooks/:id/personas
+GET /api/playbooks/:id/skills
+GET /api/playbooks/:guid/memory
 ```
 
-### MCP Server Endpoint
+Note: `:id` supports both UUID and GUID for personas and skills.
+
+### Authenticated playbook CRUD (session auth)
 
 ```
-GET  /api/mcp/:guid                         # MCP server manifest
-POST /api/mcp/:guid                         # MCP JSON-RPC handler
+GET    /api/playbooks
+POST   /api/playbooks
+PUT    /api/playbooks/:id
+DELETE /api/playbooks/:id
 ```
 
-### Public Repository
+### Personas (owner only)
 
 ```
-GET /api/public/skills                      # Browse public skills
-GET /api/public/skills?tags=coding          # Filter by tags
-GET /api/public/mcp                         # Browse public MCP servers
+POST   /api/playbooks/:id/personas
+PUT    /api/playbooks/:id/personas/:pid
+DELETE /api/playbooks/:id/personas/:pid
+```
+
+### Skills (owner only)
+
+```
+POST   /api/playbooks/:id/skills
+PUT    /api/playbooks/:id/skills/:sid
+DELETE /api/playbooks/:id/skills/:sid
+```
+
+### Memory writes (API key or owner)
+
+```
+PUT    /api/playbooks/:guid/memory/:key
+DELETE /api/playbooks/:guid/memory/:key
+```
+
+### Playbook API keys (owner only)
+
+```
+GET    /api/playbooks/:id/api-keys
+POST   /api/playbooks/:id/api-keys
+DELETE /api/playbooks/:id/api-keys/:kid
+```
+
+### User profile and user API keys
+
+```
+GET    /api/user/profile
+PUT    /api/user/profile
+
+GET    /api/user/api-keys
+POST   /api/user/api-keys
+DELETE /api/user/api-keys/:kid
+```
+
+### Marketplace and stars
+
+```
+GET /api/public/playbooks
+GET /api/public/skills
+GET /api/public/skills/:id
+GET /api/public/mcp
+GET /api/public/mcp/:id
+
+GET  /api/playbooks/:id/star
+POST /api/playbooks/:id/star
+GET  /api/user/starred
+```
+
+### Agent write-back (playbook API key)
+
+```
+GET    /api/agent/:guid/memory
+POST   /api/agent/:guid/memory
+DELETE /api/agent/:guid/memory/:key
+
+POST /api/agent/:guid/skills
+PUT  /api/agent/:guid/skills/:id
+
+POST /api/agent/:guid/personas
+PUT  /api/agent/:guid/personas/:id
+```
+
+### MCP endpoints
+
+```
+GET  /api/mcp/:guid       # MCP manifest
+POST /api/mcp/:guid       # MCP JSON-RPC
+
+POST /api/mcp/manage      # MCP management server (user API key)
+```
+
+### Management OpenAPI
+
+```
+GET /api/manage/openapi.json
+```
+
+### Health
+
+```
+GET /api/health
 ```
 
 ## API Key Usage
 
-Generate an API key in the dashboard, then use it in your AI's requests:
+Playbook API keys let agents read/write memory and update skills/personas for a single playbook.
 
 ```bash
 curl -X POST https://your-domain.com/api/agent/abc123/memory \
@@ -147,42 +208,59 @@ curl -X POST https://your-domain.com/api/agent/abc123/memory \
   -d '{"key": "user_preferences", "value": {"theme": "dark"}}'
 ```
 
+User API keys are used for management endpoints and the MCP management server:
+
+```bash
+curl -X POST https://your-domain.com/api/mcp/manage \
+  -H "Authorization: Bearer apb_live_xxxxxxxxxxxx" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"list_playbooks","params":{}}'
+```
+
 ## Project Structure
 
 ```
 agentplaybooks/
-├── src/
-│   ├── app/                    # Next.js App Router
-│   │   ├── api/                # API routes (Hono)
-│   │   ├── dashboard/          # Dashboard pages
-│   │   ├── explore/            # Public repository
-│   │   ├── login/              # Auth pages
-│   │   └── page.tsx            # Landing page
-│   ├── components/
-│   │   └── ui/                 # Aceternity UI components
-│   ├── i18n/
-│   │   ├── messages/           # Translation files
-│   │   └── config.ts           # i18n configuration
-│   └── lib/
-│       ├── supabase/           # Supabase client & types
-│       └── utils.ts            # Utility functions
-├── wrangler.jsonc              # Cloudflare config
-└── open-next.config.ts         # OpenNext config
+  src/
+    app/
+      api/                 # Hono API + MCP endpoints
+      dashboard/           # Authenticated UI
+      enterprise/          # Enterprise landing page
+      explore/             # Marketplace
+      login/               # Auth pages
+      page.tsx             # Marketing home
+    components/
+      playbook/            # Editor components
+      ui/                  # UI primitives
+    i18n/
+      messages/            # Translation files
+      config.ts            # i18n configuration
+    lib/
+      storage/             # Storage adapters
+      supabase/            # Supabase client and types
+      attachment-validator.ts
+      utils.ts
+  scripts/                 # Seed and build scripts
+  supabase/
+    migrations/            # Database migrations
+  public/
+  open-next.config.ts
+  wrangler.jsonc
 ```
 
 ## Database Schema
 
-- `playbooks` - Main entity containing personas, skills, MCP servers
-- `personas` - System prompts / AI personalities
-- `skills` - Capabilities / task definitions
-- `mcp_servers` - MCP server configurations
-- `memories` - Key-value storage for AI agents
-- `api_keys` - For AI agent write-back access
-- `public_skills` - Community skill repository
-- `public_mcp_servers` - Community MCP repository
-- `playbook_public_items` - Links playbooks to public items
+- playbooks: core entity (includes persona fields)
+- skills: skill definitions and optional SKILL.md content
+- skill_attachments: secure attachment storage for skills
+- mcp_servers: MCP tools and resources
+- memories: key-value memory store
+- api_keys: playbook-scoped API keys
+- user_api_keys: user-scoped API keys
+- profiles: public user profile data
+- playbook_stars: marketplace stars
 
-All tables have Row Level Security (RLS) enabled.
+All tables use Row Level Security (RLS).
 
 ## Contributing
 
@@ -194,21 +272,21 @@ All tables have Row Level Security (RLS) enabled.
 
 ## License
 
-This project is licensed under the **PolyForm Noncommercial License 1.0.0**.
+This project is licensed under the PolyForm Noncommercial License 1.0.0.
 
 ### What this means:
 
-✅ **You CAN:**
+You CAN:
 - Use the software for personal projects, learning, and experimentation
 - Use it internally within your organization for non-commercial purposes
 - Modify and adapt it for your own non-commercial use
 - Use it for research, education, and charitable purposes
 
-❌ **You CANNOT (without permission):**
+You CANNOT (without permission):
 - Sell the software or offer it as a paid service
 - Use it to provide commercial services to others
 - Monetize the software or concept in any way
 
-📧 **For commercial licensing**, please contact the project maintainer.
+For commercial licensing, please contact the project maintainer.
 
-See the [LICENSE](./LICENSE) file for full details.
+See the LICENSE file for full details.

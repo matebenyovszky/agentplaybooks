@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/client";
 import { hashApiKey } from "@/lib/utils";
-import type { McpResource, McpTool } from "@/lib/supabase/types";
+import type { McpResource, McpTool, Playbook } from "@/lib/supabase/types";
 
 // MCP Protocol implementation for Cloudflare Workers / Next.js
 // Supports: tools/list, resources/list, resources/read, tools/call
@@ -18,13 +18,13 @@ function getServiceSupabase() {
   return createServerClient(url, key);
 }
 
-function playbookToPersona(playbook: any) {
+function playbookToPersona(playbook: Playbook) {
   return {
     id: playbook.id,
     playbook_id: playbook.id,
     name: playbook.persona_name || "Assistant",
     system_prompt: playbook.persona_system_prompt || "You are a helpful AI assistant.",
-    metadata: playbook.persona_metadata || {},
+    metadata: playbook.persona_metadata ?? {},
   };
 }
 
@@ -598,11 +598,17 @@ export async function POST(
             content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
           },
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : typeof error === "string"
+              ? error
+              : "Tool execution failed";
         return NextResponse.json({
           jsonrpc: "2.0",
           id,
-          error: { code: -32000, message: error.message || "Tool execution failed" },
+          error: { code: -32000, message },
         });
       }
     }
@@ -615,5 +621,4 @@ export async function POST(
       });
   }
 }
-
 

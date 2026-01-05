@@ -8,10 +8,15 @@ import { createBrowserClient } from "@/lib/supabase/client";
 import type { Persona, Skill, MCPServer, Memory, Playbook } from "@/lib/supabase/types";
 import type { StorageAdapter, PersonaInput, SkillInput, MCPServerInput, MemoryInput } from "./types";
 
+type PersonaSource = Pick<
+  Playbook,
+  "id" | "created_at" | "persona_name" | "persona_system_prompt" | "persona_metadata"
+>;
+
 export function createSupabaseAdapter(playbookId: string): StorageAdapter {
   const supabase = createBrowserClient();
 
-  function playbookToPersona(playbook: Pick<Playbook, "id" | "created_at" | "persona_name" | "persona_system_prompt" | "persona_metadata">): Persona {
+  function playbookToPersona(playbook: PersonaSource): Persona {
     return {
       id: playbook.id,
       playbook_id: playbook.id,
@@ -61,12 +66,13 @@ export function createSupabaseAdapter(playbookId: string): StorageAdapter {
         .eq("id", playbookId)
         .single();
 
-      if (error || !playbook) {
+      const playbookData = playbook as PersonaSource | null;
+      if (error || !playbookData) {
         console.error("Error fetching playbook persona:", error);
         return [];
       }
 
-      return [playbookToPersona(playbook as any)];
+      return [playbookToPersona(playbookData)];
     },
     
     async addPersona(input: PersonaInput): Promise<Persona | null> {
@@ -82,12 +88,13 @@ export function createSupabaseAdapter(playbookId: string): StorageAdapter {
         .select("id, created_at, persona_name, persona_system_prompt, persona_metadata")
         .single();
 
-      if (error || !playbook) {
+      const playbookData = playbook as PersonaSource | null;
+      if (error || !playbookData) {
         console.error("Error setting persona:", error);
         return null;
       }
 
-      return playbookToPersona(playbook as any);
+      return playbookToPersona(playbookData);
     },
     
     async updatePersona(id: string, updates: Partial<PersonaInput>): Promise<Persona | null> {
@@ -109,12 +116,13 @@ export function createSupabaseAdapter(playbookId: string): StorageAdapter {
         .select("id, created_at, persona_name, persona_system_prompt, persona_metadata")
         .single();
 
-      if (error || !playbook) {
+      const playbookData = playbook as PersonaSource | null;
+      if (error || !playbookData) {
         console.error("Error updating persona:", error);
         return null;
       }
 
-      return playbookToPersona(playbook as any);
+      return playbookToPersona(playbookData);
     },
     
     async deletePersona(id: string): Promise<boolean> {

@@ -43,6 +43,7 @@ interface Resource {
 
 export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOnly = false }: McpServerEditorProps) {
   const [expanded, setExpanded] = useState(false);
+  const isReadOnly = readOnly;
   const [name, setName] = useState(mcpServer.name);
   const [description, setDescription] = useState(mcpServer.description || "");
   const [toolsJson, setToolsJson] = useState(
@@ -67,7 +68,7 @@ export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOn
       JSON.parse(toolsJson);
       JSON.parse(resourcesJson);
       setJsonError(null);
-    } catch (e) {
+    } catch {
       setJsonError("Invalid JSON");
     }
   }, [toolsJson, resourcesJson]);
@@ -223,14 +224,15 @@ export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOn
           </div>
           
           <div className="flex-1 min-w-0">
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => {
-                e.stopPropagation();
-                setName(e.target.value);
-              }}
-              onClick={(e) => e.stopPropagation()}
+              <input
+                type="text"
+                value={name}
+                readOnly={isReadOnly}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  setName(e.target.value);
+                }}
+                onClick={(e) => e.stopPropagation()}
               className={cn(
                 "text-lg font-semibold bg-transparent border-none focus:outline-none",
                 "w-full text-slate-100 placeholder:text-slate-500",
@@ -272,6 +274,7 @@ export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOn
             }}
             className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
             title="Delete MCP server"
+            disabled={isReadOnly}
           >
             <Trash2 className="h-4 w-4" />
           </button>
@@ -300,6 +303,7 @@ export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOn
                 </label>
                 <textarea
                   value={description}
+                  readOnly={isReadOnly}
                   onChange={(e) => setDescription(e.target.value)}
                   className={cn(
                     "w-full h-16 p-3 rounded-lg",
@@ -350,6 +354,7 @@ export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOn
                     <button
                       onClick={addTool}
                       className="px-3 py-1 text-sm text-pink-400 hover:text-pink-300 hover:bg-pink-500/10 rounded-lg flex items-center gap-1 transition-colors"
+                      disabled={isReadOnly}
                     >
                       <Plus className="h-3 w-3" />
                       Add Tool
@@ -358,7 +363,7 @@ export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOn
 
                   {tools.length === 0 ? (
                     <div className="p-6 text-center text-slate-500 bg-slate-900/50 rounded-lg border border-dashed border-slate-700">
-                      No tools defined. Click "Add Tool" to create one.
+                      No tools defined. Click Add Tool to create one.
                     </div>
                   ) : (
                     <div className="space-y-2">
@@ -372,6 +377,7 @@ export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOn
                               <input
                                 type="text"
                                 value={tool.name}
+                                readOnly={isReadOnly}
                                 onChange={(e) => {
                                   const currentTools = JSON.parse(toolsJson);
                                   currentTools[index].name = e.target.value.replace(/[^a-zA-Z0-9_]/g, '_');
@@ -383,6 +389,7 @@ export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOn
                               <input
                                 type="text"
                                 value={tool.description || ""}
+                                readOnly={isReadOnly}
                                 onChange={(e) => {
                                   const currentTools = JSON.parse(toolsJson);
                                   currentTools[index].description = e.target.value;
@@ -395,6 +402,7 @@ export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOn
                             <button
                               onClick={() => removeTool(index)}
                               className="p-1 text-slate-500 hover:text-red-400 transition-colors shrink-0"
+                              disabled={isReadOnly}
                             >
                               <Minus className="h-4 w-4" />
                             </button>
@@ -410,6 +418,7 @@ export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOn
                     </label>
                     <textarea
                       value={toolsJson}
+                      readOnly={isReadOnly}
                       onChange={(e) => setToolsJson(e.target.value)}
                       className={cn(
                         "w-full h-48 p-3 rounded-lg",
@@ -434,6 +443,7 @@ export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOn
                     <button
                       onClick={addResource}
                       className="px-3 py-1 text-sm text-pink-400 hover:text-pink-300 hover:bg-pink-500/10 rounded-lg flex items-center gap-1 transition-colors"
+                      disabled={isReadOnly}
                     >
                       <Plus className="h-3 w-3" />
                       Add Resource
@@ -442,7 +452,7 @@ export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOn
 
                   {resources.length === 0 ? (
                     <div className="p-6 text-center text-slate-500 bg-slate-900/50 rounded-lg border border-dashed border-slate-700">
-                      No resources defined. Click "Add Resource" to create one.
+                      No resources defined. Click Add Resource to create one.
                     </div>
                   ) : (
                     <div className="space-y-2">
@@ -457,6 +467,7 @@ export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOn
                                 <input
                                   type="text"
                                   value={resource.name}
+                                  readOnly={isReadOnly}
                                   onChange={(e) => {
                                     const currentResources = JSON.parse(resourcesJson);
                                     currentResources[index].name = e.target.value;
@@ -473,6 +484,7 @@ export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOn
                                     setResourcesJson(JSON.stringify(currentResources, null, 2));
                                   }}
                                   className="text-xs px-2 py-1 bg-slate-800 border border-slate-700 rounded text-slate-400"
+                                  disabled={isReadOnly}
                                 >
                                   <option value="application/json">JSON</option>
                                   <option value="text/plain">Text</option>
@@ -483,6 +495,7 @@ export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOn
                               <input
                                 type="text"
                                 value={resource.uri}
+                                readOnly={isReadOnly}
                                 onChange={(e) => {
                                   const currentResources = JSON.parse(resourcesJson);
                                   currentResources[index].uri = e.target.value;
@@ -495,6 +508,7 @@ export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOn
                             <button
                               onClick={() => removeResource(index)}
                               className="p-1 text-slate-500 hover:text-red-400 transition-colors shrink-0"
+                              disabled={isReadOnly}
                             >
                               <Minus className="h-4 w-4" />
                             </button>
@@ -510,6 +524,7 @@ export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOn
                     </label>
                     <textarea
                       value={resourcesJson}
+                      readOnly={isReadOnly}
                       onChange={(e) => setResourcesJson(e.target.value)}
                       className={cn(
                         "w-full h-48 p-3 rounded-lg",

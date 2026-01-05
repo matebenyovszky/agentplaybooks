@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { createBrowserClient } from "@/lib/supabase/client";
@@ -44,7 +43,6 @@ const AVAILABLE_PERMISSIONS = [
 ];
 
 export default function SettingsPage() {
-  const t = useTranslations();
   const [user, setUser] = useState<User | null>(null);
   const [apiKeys, setApiKeys] = useState<UserApiKey[]>([]);
   const [loading, setLoading] = useState(true);

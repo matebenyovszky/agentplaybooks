@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -76,30 +76,7 @@ export default function ExplorePage() {
   const [skillSearch, setSkillSearch] = useState("");
   const [mcpSearch, setMcpSearch] = useState("");
 
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
-  useEffect(() => {
-    if (activeTab === "playbooks") {
-      loadPlaybooks();
-    } else if (activeTab === "skills" && skills.length === 0) {
-      loadSkills();
-    } else if (activeTab === "mcp" && mcpServers.length === 0) {
-      loadMCPServers();
-    }
-  }, [activeTab, searchQuery, selectedTags, sortBy]);
-
-  const checkAuth = async () => {
-    const supabase = createBrowserClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      setUserId(user.id);
-      loadUserStars(user.id);
-    }
-  };
-
-  const loadUserStars = async (uid: string) => {
+  const loadUserStars = useCallback(async (uid: string) => {
     const supabase = createBrowserClient();
     const { data } = await supabase
       .from("playbook_stars")
@@ -109,9 +86,18 @@ export default function ExplorePage() {
     if (data) {
       setStarredIds(new Set(data.map(s => s.playbook_id)));
     }
-  };
+  }, []);
 
-  const loadPlaybooks = async () => {
+  const checkAuth = useCallback(async () => {
+    const supabase = createBrowserClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      setUserId(user.id);
+      loadUserStars(user.id);
+    }
+  }, [loadUserStars]);
+
+  const loadPlaybooks = useCallback(async () => {
     setLoading(true);
     
     try {
@@ -130,9 +116,9 @@ export default function ExplorePage() {
     }
     
     setLoading(false);
-  };
+  }, [searchQuery, selectedTags, sortBy]);
 
-  const loadSkills = async () => {
+  const loadSkills = useCallback(async () => {
     setSkillsLoading(true);
     try {
       const res = await fetch("/api/public/skills");
@@ -143,9 +129,9 @@ export default function ExplorePage() {
       setSkills([]);
     }
     setSkillsLoading(false);
-  };
+  }, []);
 
-  const loadMCPServers = async () => {
+  const loadMCPServers = useCallback(async () => {
     setMcpLoading(true);
     try {
       const res = await fetch("/api/public/mcp");
@@ -156,7 +142,21 @@ export default function ExplorePage() {
       setMcpServers([]);
     }
     setMcpLoading(false);
-  };
+  }, []);
+
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
+
+  useEffect(() => {
+    if (activeTab === "playbooks") {
+      loadPlaybooks();
+    } else if (activeTab === "skills" && skills.length === 0) {
+      loadSkills();
+    } else if (activeTab === "mcp" && mcpServers.length === 0) {
+      loadMCPServers();
+    }
+  }, [activeTab, loadPlaybooks, loadSkills, loadMCPServers, skills.length, mcpServers.length]);
 
   const toggleStar = async (playbookId: string) => {
     if (!userId) {

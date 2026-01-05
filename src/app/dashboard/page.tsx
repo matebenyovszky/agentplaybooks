@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { createBrowserClient } from "@/lib/supabase/client";
+import { useDashboardAuth } from "./DashboardAuthContext";
 import { 
   BookOpen, 
   Plus,
@@ -13,49 +13,46 @@ import {
   Lock,
   Eye
 } from "lucide-react";
-import type { User } from "@supabase/supabase-js";
 import type { Playbook } from "@/lib/supabase/types";
 
 export default function DashboardPage() {
   const t = useTranslations();
-  const [user, setUser] = useState<User | null>(null);
+  const { supabase, user } = useDashboardAuth();
   const [playbooks, setPlaybooks] = useState<Playbook[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const supabase = createBrowserClient();
+    if (!user) return;
 
-    // Get current user
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user);
-    });
-
-    // Get user's playbooks
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session) {
-        const { data } = await supabase
-          .from("playbooks")
-          .select("*")
-          .order("created_at", { ascending: false });
-        
-        setPlaybooks((data as Playbook[]) || []);
-      }
+    let active = true;
+    const loadPlaybooks = async () => {
+      const { data } = await supabase
+        .from("playbooks")
+        .select("*")
+        .order("created_at", { ascending: false });
+      
+      if (!active) return;
+      setPlaybooks((data as Playbook[]) || []);
       setLoading(false);
-    });
-  }, []);
+    };
+
+    loadPlaybooks();
+
+    return () => {
+      active = false;
+    };
+  }, [supabase, user]);
 
   const handleCreatePlaybook = async () => {
-    const supabase = createBrowserClient();
-    
     const name = prompt("Enter playbook name:");
-    if (!name) return;
+    if (!name || !user) return;
 
     const guid = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
 
     const { data, error } = await supabase
       .from("playbooks")
       .insert({
-        user_id: user?.id,
+        user_id: user.id,
         guid,
         name,
         description: "",

@@ -14,9 +14,7 @@ import {
   Shield,
   Clock,
   AlertTriangle,
-  X,
-  Eye,
-  EyeOff
+  X
 } from "lucide-react";
 import type { ApiKey } from "@/lib/supabase/types";
 
@@ -117,7 +115,6 @@ export function ApiKeyManager({ playbook_id, apiKeys, onUpdate }: ApiKeyManagerP
     }
   };
 
-  const activeKeys = apiKeys.filter(k => k.is_active);
   const hasExpired = (key: ApiKey) => key.expires_at && new Date(key.expires_at) < new Date();
 
   return (
@@ -165,7 +162,7 @@ export function ApiKeyManager({ playbook_id, apiKeys, onUpdate }: ApiKeyManagerP
                   Copy your API key now!
                 </h4>
                 <p className="text-sm text-amber-200/70 mb-3">
-                  This is the only time you'll see this key. Store it securely.
+                  This is the only time you will see this key. Store it securely.
                 </p>
                 <div className="flex items-center gap-2">
                   <code className={cn(
