@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
@@ -15,6 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://agentplaybooks.ai"),
   title: "AgentPlaybooks - AI Agent Rules, Skills & Memory Store",
   description: "The universal skills store for AI agents. Store agent rules, chores, personas, skills.md, MCP servers. Works with ChatGPT, Claude, Gemini, Cursor. Platform-independent vault for AI robots and automation.",
   keywords: [
@@ -63,12 +64,15 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "https://agentplaybooks.ai",
   },
-  themeColor: "#0a0f1a",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "AgentPlaybooks",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0a0f1a",
 };
 
 export default async function RootLayout({
@@ -81,12 +85,6 @@ export default async function RootLayout({
 
   return (
     <html lang={locale} className="dark">
-      <head>
-        <meta name="theme-color" content="#0a0f1a" />
-        <meta name="msapplication-TileColor" content="#0a0f1a" />
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-        <link rel="apple-touch-icon" href="/apple-icon.svg" />
-      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

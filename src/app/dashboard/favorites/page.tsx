@@ -58,7 +58,7 @@ export default function FavoritesPage() {
       .from("playbooks")
       .select(`
         id, guid, name, description, is_public, star_count, tags, created_at, user_id,
-        personas:personas(count),
+        persona_name,
         skills:skills(count),
         mcp_servers:mcp_servers(count)
       `)
@@ -66,7 +66,7 @@ export default function FavoritesPage() {
 
     const formattedPlaybooks = (playbooks || []).map((p: any) => ({
       ...p,
-      personas_count: p.personas?.[0]?.count || 0,
+      personas_count: p.persona_name ? 1 : 0,
       skills_count: p.skills?.[0]?.count || 0,
       mcp_servers_count: p.mcp_servers?.[0]?.count || 0,
       is_starred: true,
@@ -169,7 +169,7 @@ export default function FavoritesPage() {
               <div className="flex items-center gap-4 text-xs text-slate-500 mb-4">
                 <span className="flex items-center gap-1">
                   <Brain className="h-3.5 w-3.5" />
-                  {playbook.personas_count} personas
+                  {playbook.personas_count} persona
                 </span>
                 <span className="flex items-center gap-1">
                   <Zap className="h-3.5 w-3.5" />

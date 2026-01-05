@@ -10,6 +10,17 @@ import type { StorageAdapter, PersonaInput, SkillInput, MCPServerInput, MemoryIn
 
 export function createSupabaseAdapter(playbookId: string): StorageAdapter {
   const supabase = createBrowserClient();
+
+  function playbookToPersona(playbook: Pick<Playbook, "id" | "created_at" | "persona_name" | "persona_system_prompt" | "persona_metadata">): Persona {
+    return {
+      id: playbook.id,
+      playbook_id: playbook.id,
+      name: playbook.persona_name || "Assistant",
+      system_prompt: playbook.persona_system_prompt || "You are a helpful AI assistant.",
+      metadata: (playbook.persona_metadata as Record<string, unknown>) || {},
+      created_at: playbook.created_at,
+    };
+  }
   
   return {
     // Playbook
@@ -44,61 +55,89 @@ export function createSupabaseAdapter(playbookId: string): StorageAdapter {
     
     // Personas
     async getPersonas(): Promise<Persona[]> {
-      const { data, error } = await supabase
-        .from("personas")
-        .select("*")
-        .eq("playbook_id", playbookId)
-        .order("created_at");
-      
-      if (error) {
-        console.error("Error fetching personas:", error);
+      const { data: playbook, error } = await supabase
+        .from("playbooks")
+        .select("id, created_at, persona_name, persona_system_prompt, persona_metadata")
+        .eq("id", playbookId)
+        .single();
+
+      if (error || !playbook) {
+        console.error("Error fetching playbook persona:", error);
         return [];
       }
-      return (data as Persona[]) || [];
+
+      return [playbookToPersona(playbook as any)];
     },
     
     async addPersona(input: PersonaInput): Promise<Persona | null> {
-      const { data, error } = await supabase
-        .from("personas")
-        .insert({
-          playbook_id: playbookId,
-          ...input,
+      // 1 playbook = 1 persona: "add" is effectively "set/overwrite"
+      const { data: playbook, error } = await supabase
+        .from("playbooks")
+        .update({
+          persona_name: input.name ?? "Assistant",
+          persona_system_prompt: input.system_prompt ?? "You are a helpful AI assistant.",
+          persona_metadata: input.metadata ?? {},
         })
-        .select()
+        .eq("id", playbookId)
+        .select("id, created_at, persona_name, persona_system_prompt, persona_metadata")
         .single();
-      
-      if (error) {
-        console.error("Error adding persona:", error);
+
+      if (error || !playbook) {
+        console.error("Error setting persona:", error);
         return null;
       }
-      return data as Persona;
+
+      return playbookToPersona(playbook as any);
     },
     
     async updatePersona(id: string, updates: Partial<PersonaInput>): Promise<Persona | null> {
-      const { data, error } = await supabase
-        .from("personas")
-        .update(updates)
-        .eq("id", id)
-        .select()
+      // We use playbookId as persona id (singleton persona per playbook)
+      if (id !== playbookId) {
+        console.error("Error updating persona: persona id mismatch", { id, playbookId });
+        return null;
+      }
+
+      const updateData: Record<string, unknown> = {};
+      if (updates.name !== undefined) updateData.persona_name = updates.name;
+      if (updates.system_prompt !== undefined) updateData.persona_system_prompt = updates.system_prompt;
+      if (updates.metadata !== undefined) updateData.persona_metadata = updates.metadata;
+
+      const { data: playbook, error } = await supabase
+        .from("playbooks")
+        .update(updateData)
+        .eq("id", playbookId)
+        .select("id, created_at, persona_name, persona_system_prompt, persona_metadata")
         .single();
-      
-      if (error) {
+
+      if (error || !playbook) {
         console.error("Error updating persona:", error);
         return null;
       }
-      return data as Persona;
+
+      return playbookToPersona(playbook as any);
     },
     
     async deletePersona(id: string): Promise<boolean> {
-      const { error } = await supabase
-        .from("personas")
-        .delete()
-        .eq("id", id);
-      
-      if (error) {
-        console.error("Error deleting persona:", error);
+      // Reset to default persona (still 1 persona per playbook)
+      if (id !== playbookId) {
+        console.error("Error deleting persona: persona id mismatch", { id, playbookId });
         return false;
       }
+
+      const { error } = await supabase
+        .from("playbooks")
+        .update({
+          persona_name: "Assistant",
+          persona_system_prompt: "You are a helpful AI assistant.",
+          persona_metadata: {},
+        })
+        .eq("id", playbookId);
+
+      if (error) {
+        console.error("Error resetting persona:", error);
+        return false;
+      }
+
       return true;
     },
     

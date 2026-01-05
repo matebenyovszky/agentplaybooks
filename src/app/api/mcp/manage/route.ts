@@ -57,7 +57,7 @@ function hasPermission(userKey: UserApiKeysRow, permission: string): boolean {
 const MCP_TOOLS = [
   {
     name: "list_playbooks",
-    description: "List all playbooks owned by the authenticated user. Each playbook has one persona, skills, and memory.",
+    description: "List all playbooks owned by the authenticated user. Returns playbooks with their counts of personas, skills, and MCP servers.",
     inputSchema: {
       type: "object",
       properties: {},
@@ -65,22 +65,20 @@ const MCP_TOOLS = [
   },
   {
     name: "create_playbook",
-    description: "Create a new playbook. A playbook contains one persona (AI personality), skills (capabilities), and memory (persistent storage).",
+    description: "Create a new playbook. A playbook is a container for personas (AI personalities), skills (capabilities), and memory (persistent storage).",
     inputSchema: {
       type: "object",
       properties: {
         name: { type: "string", description: "Name of the playbook" },
         description: { type: "string", description: "Description of what the playbook is for" },
         is_public: { type: "boolean", description: "Whether the playbook should be publicly visible", default: false },
-        persona_name: { type: "string", description: "Name of the AI persona" },
-        persona_system_prompt: { type: "string", description: "System prompt that defines the AI's behavior" },
       },
       required: ["name"],
     },
   },
   {
     name: "get_playbook",
-    description: "Get detailed information about a specific playbook including its persona, skills, and MCP servers.",
+    description: "Get detailed information about a specific playbook including all personas, skills, and MCP servers.",
     inputSchema: {
       type: "object",
       properties: {
@@ -91,7 +89,7 @@ const MCP_TOOLS = [
   },
   {
     name: "update_playbook",
-    description: "Update a playbook's name, description, visibility, or persona.",
+    description: "Update a playbook's name, description, or visibility.",
     inputSchema: {
       type: "object",
       properties: {
@@ -99,16 +97,13 @@ const MCP_TOOLS = [
         name: { type: "string", description: "New name" },
         description: { type: "string", description: "New description" },
         is_public: { type: "boolean", description: "Whether the playbook should be public" },
-        persona_name: { type: "string", description: "Name of the AI persona" },
-        persona_system_prompt: { type: "string", description: "System prompt for the AI persona" },
-        persona_metadata: { type: "object", description: "Additional persona metadata" },
       },
       required: ["playbook_id"],
     },
   },
   {
     name: "delete_playbook",
-    description: "Delete a playbook and all its contents (skills, memory, API keys). This action cannot be undone!",
+    description: "Delete a playbook and all its contents (personas, skills, memory, API keys). This action cannot be undone!",
     inputSchema: {
       type: "object",
       properties: {
@@ -118,28 +113,44 @@ const MCP_TOOLS = [
     },
   },
   {
-    name: "get_persona",
-    description: "Get the persona (AI personality) for a playbook. Each playbook has exactly one persona.",
+    name: "create_persona",
+    description: "Add a persona (AI personality with system prompt) to a playbook.",
     inputSchema: {
       type: "object",
       properties: {
         playbook_id: { type: "string", description: "UUID of the playbook" },
+        name: { type: "string", description: "Name of the persona" },
+        system_prompt: { type: "string", description: "The system prompt that defines this persona's behavior" },
+        metadata: { type: "object", description: "Optional metadata" },
       },
-      required: ["playbook_id"],
+      required: ["playbook_id", "name", "system_prompt"],
     },
   },
   {
     name: "update_persona",
-    description: "Update the persona's name, system prompt, or metadata for a playbook.",
+    description: "Update a persona's name, system prompt, or metadata.",
     inputSchema: {
       type: "object",
       properties: {
         playbook_id: { type: "string", description: "UUID of the playbook" },
-        name: { type: "string", description: "New persona name" },
+        persona_id: { type: "string", description: "UUID of the persona" },
+        name: { type: "string", description: "New name" },
         system_prompt: { type: "string", description: "New system prompt" },
         metadata: { type: "object", description: "New metadata" },
       },
-      required: ["playbook_id"],
+      required: ["playbook_id", "persona_id"],
+    },
+  },
+  {
+    name: "delete_persona",
+    description: "Delete a persona from a playbook.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        playbook_id: { type: "string", description: "UUID of the playbook" },
+        persona_id: { type: "string", description: "UUID of the persona to delete" },
+      },
+      required: ["playbook_id", "persona_id"],
     },
   },
   {
@@ -277,7 +288,7 @@ export async function GET(request: NextRequest) {
     serverInfo: {
       name: "AgentPlaybooks Management",
       version: "1.0.0",
-      description: "MCP server for managing AgentPlaybooks. Create, update, and delete playbooks, skills, and memory. Each playbook has one persona. Requires User API Key authentication.",
+      description: "MCP server for managing AgentPlaybooks. Create, update, and delete playbooks, personas, skills, and memory. Requires User API Key authentication.",
     },
     capabilities: {
       tools: {},
@@ -376,6 +387,15 @@ async function executeManagementTool(
   const supabase = getServiceSupabase();
   const userId = userKey.user_id;
 
+  const playbookToPersona = (playbook: any) => ({
+    id: playbook.id,
+    playbook_id: playbook.id,
+    name: playbook.persona_name || "Assistant",
+    system_prompt: playbook.persona_system_prompt || "You are a helpful AI assistant.",
+    metadata: playbook.persona_metadata || {},
+    created_at: playbook.created_at,
+  });
+
   switch (toolName) {
     case "list_playbooks": {
       if (!hasPermission(userKey, "playbooks:read")) {
@@ -400,8 +420,7 @@ async function executeManagementTool(
         name: p.name,
         description: p.description,
         is_public: p.is_public,
-        // Persona is embedded (1 playbook = 1 persona)
-        persona_name: p.persona_name,
+        persona_count: p.persona_name ? 1 : 0,
         skill_count: p.skills?.[0]?.count || 0,
         mcp_server_count: p.mcp_servers?.[0]?.count || 0,
         created_at: p.created_at,
@@ -414,12 +433,10 @@ async function executeManagementTool(
         throw new Error("Permission denied: playbooks:write required");
       }
 
-      const { name, description, is_public, persona_name, persona_system_prompt } = args as {
+      const { name, description, is_public } = args as {
         name: string;
         description?: string;
         is_public?: boolean;
-        persona_name?: string;
-        persona_system_prompt?: string;
       };
 
       if (!name) throw new Error("name is required");
@@ -435,10 +452,6 @@ async function executeManagementTool(
           description: description || null,
           is_public: is_public || false,
           config: {},
-          // Persona is embedded in playbook (1 playbook = 1 persona)
-          persona_name: persona_name || "Assistant",
-          persona_system_prompt: persona_system_prompt || "You are a helpful AI assistant.",
-          persona_metadata: {},
         })
         .select()
         .single();
@@ -464,7 +477,6 @@ async function executeManagementTool(
 
       if (error || !playbook) throw new Error("Playbook not found");
 
-      // Persona is embedded in playbook (1 playbook = 1 persona)
       const [skills, mcpServers, memories] = await Promise.all([
         supabase.from("skills").select("*").eq("playbook_id", playbook.id),
         supabase.from("mcp_servers").select("*").eq("playbook_id", playbook.id),
@@ -473,11 +485,9 @@ async function executeManagementTool(
 
       return {
         ...playbook,
-        persona: playbook.persona_name ? {
-          name: playbook.persona_name,
-          system_prompt: playbook.persona_system_prompt,
-          metadata: playbook.persona_metadata || {},
-        } : null,
+        // 1 playbook = 1 persona
+        persona: playbookToPersona(playbook),
+        personas: [playbookToPersona(playbook)], // backward-compatible shape
         skills: skills.data || [],
         mcp_servers: mcpServers.data || [],
         memories: memories.data || [],
@@ -489,14 +499,11 @@ async function executeManagementTool(
         throw new Error("Permission denied: playbooks:write required");
       }
 
-      const { playbook_id, name, description, is_public, persona_name, persona_system_prompt, persona_metadata } = args as {
+      const { playbook_id, name, description, is_public } = args as {
         playbook_id: string;
         name?: string;
         description?: string;
         is_public?: boolean;
-        persona_name?: string;
-        persona_system_prompt?: string;
-        persona_metadata?: Record<string, unknown>;
       };
 
       if (!playbook_id) throw new Error("playbook_id is required");
@@ -505,10 +512,6 @@ async function executeManagementTool(
       if (name !== undefined) updateData.name = name;
       if (description !== undefined) updateData.description = description;
       if (is_public !== undefined) updateData.is_public = is_public;
-      // Persona fields (embedded in playbook)
-      if (persona_name !== undefined) updateData.persona_name = persona_name;
-      if (persona_system_prompt !== undefined) updateData.persona_system_prompt = persona_system_prompt;
-      if (persona_metadata !== undefined) updateData.persona_metadata = persona_metadata;
 
       const { data, error } = await supabase
         .from("playbooks")
@@ -540,28 +543,46 @@ async function executeManagementTool(
       return { success: true, message: "Playbook deleted" };
     }
 
-    case "get_persona": {
-      if (!hasPermission(userKey, "playbooks:read")) {
-        throw new Error("Permission denied: playbooks:read required");
+    case "create_persona": {
+      if (!hasPermission(userKey, "personas:write")) {
+        throw new Error("Permission denied: personas:write required");
       }
 
-      const { playbook_id } = args as { playbook_id: string };
-      if (!playbook_id) throw new Error("playbook_id is required");
+      const { playbook_id, name, system_prompt, metadata } = args as {
+        playbook_id: string;
+        name: string;
+        system_prompt: string;
+        metadata?: Record<string, unknown>;
+      };
 
-      const { data: playbook, error } = await supabase
+      if (!playbook_id) throw new Error("playbook_id is required");
+      if (!name) throw new Error("name is required");
+      if (!system_prompt) throw new Error("system_prompt is required");
+
+      // Verify ownership
+      const { data: playbook } = await supabase
         .from("playbooks")
-        .select("persona_name, persona_system_prompt, persona_metadata")
+        .select("id")
         .eq("id", playbook_id)
         .eq("user_id", userId)
         .single();
 
-      if (error || !playbook) throw new Error("Playbook not found");
+      if (!playbook) throw new Error("Playbook not found");
 
-      return {
-        name: playbook.persona_name,
-        system_prompt: playbook.persona_system_prompt,
-        metadata: playbook.persona_metadata || {},
-      };
+      const { data, error } = await supabase
+        .from("playbooks")
+        .update({
+          persona_name: name,
+          persona_system_prompt: system_prompt,
+          persona_metadata: metadata || {},
+        })
+        .eq("id", playbook_id)
+        .eq("user_id", userId)
+        .select("*")
+        .single();
+
+      if (error || !data) throw new Error(error?.message || "Failed to set persona");
+      return playbookToPersona(data);
     }
 
     case "update_persona": {
@@ -569,35 +590,88 @@ async function executeManagementTool(
         throw new Error("Permission denied: personas:write required");
       }
 
-      const { playbook_id, name, system_prompt, metadata } = args as {
+      const { playbook_id, persona_id, ...updates } = args as {
         playbook_id: string;
+        persona_id: string;
         name?: string;
         system_prompt?: string;
         metadata?: Record<string, unknown>;
       };
 
-      if (!playbook_id) throw new Error("playbook_id is required");
+      if (!playbook_id || !persona_id) {
+        throw new Error("playbook_id and persona_id are required");
+      }
+      // Persona is a singleton; we use playbook_id as persona_id
+      if (persona_id !== playbook_id) {
+        throw new Error("Invalid persona_id (persona is a singleton and uses playbook_id)");
+      }
+
+      // Verify ownership
+      const { data: playbook } = await supabase
+        .from("playbooks")
+        .select("id")
+        .eq("id", playbook_id)
+        .eq("user_id", userId)
+        .single();
+
+      if (!playbook) throw new Error("Playbook not found");
 
       const updateData: Record<string, unknown> = {};
-      if (name !== undefined) updateData.persona_name = name;
-      if (system_prompt !== undefined) updateData.persona_system_prompt = system_prompt;
-      if (metadata !== undefined) updateData.persona_metadata = metadata;
+      if (updates.name !== undefined) updateData.persona_name = updates.name;
+      if (updates.system_prompt !== undefined) updateData.persona_system_prompt = updates.system_prompt;
+      if (updates.metadata !== undefined) updateData.persona_metadata = updates.metadata;
 
       const { data, error } = await supabase
         .from("playbooks")
         .update(updateData)
         .eq("id", playbook_id)
         .eq("user_id", userId)
-        .select("persona_name, persona_system_prompt, persona_metadata")
+        .select("*")
         .single();
 
-      if (error) throw new Error(error.message);
+      if (error || !data) throw new Error(error?.message || "Failed to update persona");
+      return playbookToPersona(data);
+    }
 
-      return {
-        name: data.persona_name,
-        system_prompt: data.persona_system_prompt,
-        metadata: data.persona_metadata || {},
+    case "delete_persona": {
+      if (!hasPermission(userKey, "personas:write")) {
+        throw new Error("Permission denied: personas:write required");
+      }
+
+      const { playbook_id, persona_id } = args as {
+        playbook_id: string;
+        persona_id: string;
       };
+
+      if (!playbook_id || !persona_id) {
+        throw new Error("playbook_id and persona_id are required");
+      }
+      if (persona_id !== playbook_id) {
+        throw new Error("Invalid persona_id (persona is a singleton and uses playbook_id)");
+      }
+
+      // Verify ownership
+      const { data: playbook } = await supabase
+        .from("playbooks")
+        .select("id")
+        .eq("id", playbook_id)
+        .eq("user_id", userId)
+        .single();
+
+      if (!playbook) throw new Error("Playbook not found");
+
+      const { error } = await supabase
+        .from("playbooks")
+        .update({
+          persona_name: "Assistant",
+          persona_system_prompt: "You are a helpful AI assistant.",
+          persona_metadata: {},
+        })
+        .eq("id", playbook_id)
+        .eq("user_id", userId);
+
+      if (error) throw new Error(error.message);
+      return { success: true };
     }
 
     case "create_skill": {

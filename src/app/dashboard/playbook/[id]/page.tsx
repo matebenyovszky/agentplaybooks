@@ -41,7 +41,7 @@ import { MemoryEditor } from "@/components/playbook/MemoryEditor";
 import { ApiKeyManager } from "@/components/playbook/ApiKeyManager";
 import { McpRegistrySearch } from "@/components/playbook/McpRegistrySearch";
 
-type TabType = "details" | "personas" | "skills" | "mcp" | "memory" | "apiKeys";
+type TabType = "details" | "skills" | "mcp" | "memory" | "apiKeys";
 
 // Debounce hook
 function useDebounce<T>(value: T, delay: number): T {
@@ -95,6 +95,18 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
   // Track changes for debounced save
   const debouncedPlaybook = useDebounce(playbook, 1500);
 
+  const buildPersonaFromPlaybook = useCallback((pb: Playbook): Persona => {
+    return {
+      // Persona is a singleton; we use playbook ID as persona ID
+      id: pb.id,
+      playbook_id: pb.id,
+      name: pb.persona_name || "Assistant",
+      system_prompt: pb.persona_system_prompt || "You are a helpful AI assistant.",
+      metadata: (pb.persona_metadata as Record<string, unknown>) || {},
+      created_at: pb.created_at,
+    };
+  }, []);
+
   useEffect(() => {
     loadPlaybook();
   }, [id]);
@@ -130,9 +142,8 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
     const userId = user?.id || null;
     setCurrentUserId(userId);
 
-    const [playbookRes, personasRes, skillsRes, mcpRes, memoriesRes, keysRes] = await Promise.all([
+    const [playbookRes, skillsRes, mcpRes, memoriesRes, keysRes] = await Promise.all([
       supabase.from("playbooks").select("*").eq("id", id).single(),
-      supabase.from("personas").select("*").eq("playbook_id", id).order("created_at"),
       supabase.from("skills").select("*").eq("playbook_id", id).order("created_at"),
       supabase.from("mcp_servers").select("*").eq("playbook_id", id).order("created_at"),
       supabase.from("memories").select("*").eq("playbook_id", id).order("updated_at", { ascending: false }),
@@ -140,11 +151,13 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
     ]);
 
     if (playbookRes.data) {
-      setPlaybook(playbookRes.data as Playbook);
+      const pb = playbookRes.data as Playbook;
+      setPlaybook(pb);
       // Check if current user is the owner
       setIsOwner(userId !== null && playbookRes.data.user_id === userId);
+      // 1 Playbook = 1 Persona (stored on playbook)
+      setPersonas([buildPersonaFromPlaybook(pb)]);
     }
-    setPersonas((personasRes.data as Persona[]) || []);
     setSkills((skillsRes.data as Skill[]) || []);
     setMcpServers((mcpRes.data as MCPServer[]) || []);
     setMemories((memoriesRes.data as Memory[]) || []);
@@ -175,21 +188,6 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
     setPlaybook({ ...playbook, ...updates });
     setHasChanges(true);
   }, [playbook]);
-
-  // Add handlers - create items with default names, no prompt needed
-  const handleAddPersona = async () => {
-    const defaultName = `New Persona ${personas.length + 1}`;
-    
-    const data = await storage.addPersona({
-      name: defaultName,
-      system_prompt: "You are a helpful assistant.",
-      metadata: {},
-    });
-
-    if (data) {
-      setPersonas([...personas, data]);
-    }
-  };
 
   const handleAddSkill = async () => {
     const defaultName = `new_skill_${skills.length + 1}`;
@@ -350,24 +348,16 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
           config: playbook.config,
           is_public: false, // Start as private
           tags: playbook.tags,
+          // Copy singleton persona
+          persona_name: playbook.persona_name,
+          persona_system_prompt: playbook.persona_system_prompt,
+          persona_metadata: playbook.persona_metadata,
         })
         .select()
         .single();
       
       if (playbookError || !newPlaybook) {
         throw playbookError;
-      }
-      
-      // Copy all personas
-      if (personas.length > 0) {
-        await supabase.from("personas").insert(
-          personas.map(p => ({
-            playbook_id: newPlaybook.id,
-            name: p.name,
-            system_prompt: p.system_prompt,
-            metadata: p.metadata,
-          }))
-        );
       }
       
       // Copy all skills
@@ -412,9 +402,18 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
   // Delete handlers
   const handleDeletePersona = async (personaId: string) => {
     const success = await storage.deletePersona(personaId);
-    if (success) {
-      setPersonas(personas.filter(p => p.id !== personaId));
-    }
+    if (!success) return;
+
+    // Reset locally (persona is a singleton)
+    if (!playbook) return;
+    const reset = {
+      ...playbook,
+      persona_name: "Assistant",
+      persona_system_prompt: "You are a helpful AI assistant.",
+      persona_metadata: {},
+    } as Playbook;
+    setPlaybook(reset);
+    setPersonas([buildPersonaFromPlaybook(reset)]);
   };
 
   const handleDeleteSkill = async (skillId: string) => {
@@ -448,7 +447,6 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
 
   const tabs = [
     { id: "details" as TabType, label: t("editor.tabs.details"), icon: Settings, count: 0, color: "slate" },
-    { id: "personas" as TabType, label: t("editor.tabs.personas"), icon: Brain, count: personas.length, color: "blue" },
     { id: "skills" as TabType, label: t("editor.tabs.skills"), icon: Zap, count: skills.length, color: "purple" },
     { id: "mcp" as TabType, label: t("editor.tabs.mcp"), icon: Server, count: mcpServers.length, color: "pink" },
     { id: "memory" as TabType, label: t("editor.tabs.memory"), icon: Database, count: memories.length, color: "teal" },
@@ -675,59 +673,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
       {/* Content */}
       <main className="max-w-7xl mx-auto px-6 py-8">
         <AnimatePresence mode="wait">
-          {/* Personas Tab */}
-          {activeTab === "personas" && (
-            <motion.div
-              key="personas"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-            >
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold flex items-center gap-2">
-                  <Brain className="h-5 w-5 text-blue-400" />
-                  {t("editor.tabs.personas")}
-                </h2>
-                {isOwner && (
-                  <button
-                    onClick={handleAddPersona}
-                    className={cn(
-                      "px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium",
-                      "bg-blue-600/20 text-blue-400 border border-blue-500/30",
-                      "hover:bg-blue-600/30 transition-colors"
-                    )}
-                  >
-                    <Plus className="h-4 w-4" />
-                    {t("editor.addPersona")}
-                  </button>
-                )}
-              </div>
-              
-              {personas.length === 0 ? (
-                <EmptyState 
-                  icon={Brain}
-                  message="No personas yet" 
-                  description="Personas define AI personalities and system prompts."
-                  color="blue"
-                />
-              ) : (
-                <div className="space-y-4">
-                  {personas.map((persona) => (
-                    <PersonaEditor
-                      key={persona.id}
-                      persona={persona}
-                      storage={storage}
-                      readOnly={!isOwner}
-                      onDelete={() => handleDeletePersona(persona.id)}
-                      onUpdate={(updated) => {
-                        setPersonas(personas.map(p => p.id === updated.id ? updated : p));
-                      }}
-                    />
-                  ))}
-                </div>
-              )}
-            </motion.div>
-          )}
+          {/* Personas: 1 playbook = 1 persona; edited in Details tab */}
 
           {/* Skills Tab */}
           {activeTab === "skills" && (
@@ -962,6 +908,34 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                     <p className="text-slate-300 p-3 bg-slate-900/50 rounded-lg min-h-[60px]">
                       {playbook.description || <span className="text-slate-500 italic">No description</span>}
                     </p>
+                  )}
+                </div>
+
+                {/* Persona (1 Playbook = 1 Persona) */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-sm font-medium text-slate-400 flex items-center gap-2">
+                      <Brain className="h-4 w-4 text-blue-400" />
+                      Persona
+                    </label>
+                    <span className="text-xs text-slate-500">1 playbook = 1 persona</span>
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    This is the system prompt and personality definition ChatGPT and MCP clients should follow when using this playbook.
+                  </p>
+
+                  {personas[0] ? (
+                    <PersonaEditor
+                      persona={personas[0]}
+                      storage={storage}
+                      readOnly={!isOwner}
+                      onDelete={() => handleDeletePersona(personas[0].id)}
+                      onUpdate={(updated) => setPersonas([updated])}
+                    />
+                  ) : (
+                    <div className="text-sm text-slate-500 italic">
+                      Persona not loaded.
+                    </div>
                   )}
                 </div>
 

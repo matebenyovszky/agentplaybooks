@@ -33,7 +33,7 @@ export type PlaybooksRow = {
   is_public: boolean;
   star_count: number;
   tags: string[];
-  // Persona is embedded (1 playbook = 1 persona)
+  // 1 Playbook = 1 Persona (embedded into playbooks table)
   persona_name: string | null;
   persona_system_prompt: string | null;
   persona_metadata: Record<string, unknown> | null;
@@ -54,9 +54,15 @@ export type PlaybookStarsRow = {
 export type PlaybookStarsInsert = Partial<PlaybookStarsRow>;
 export type PlaybookStarsUpdate = Partial<PlaybookStarsRow>;
 
-// PersonasRow removed - persona is now embedded in PlaybooksRow (1 playbook = 1 persona)
-// Legacy types kept for backward compatibility during migration
-export type PersonasRow = {
+/**
+ * Persona type (logical model)
+ *
+ * Note: Personas are no longer stored in a `personas` table.
+ * We keep this type for UI/API compatibility, but the data is stored
+ * in `playbooks.persona_*` columns (1 playbook = 1 persona).
+ */
+export type Persona = {
+  // We use the playbook ID as the persona ID (singleton persona per playbook).
   id: string;
   playbook_id: string;
   name: string;
@@ -64,9 +70,6 @@ export type PersonasRow = {
   metadata: Record<string, unknown>;
   created_at: string;
 };
-
-export type PersonasInsert = Partial<PersonasRow>;
-export type PersonasUpdate = Partial<PersonasRow>;
 
 export type SkillsRow = {
   id: string;
@@ -88,13 +91,8 @@ export type MCPServersRow = {
   description: string | null;
   tools: McpTool[];
   resources: McpResource[];
-  transport_type: 'stdio' | 'http' | 'sse' | null;
-  transport_config: Record<string, unknown> | null;
-  source_registry: 'anthropic' | 'github' | 'manual' | null;
-  source_registry_id: string | null;
-  source_url: string | null;
-  source_version: string | null;
-  publisher_id: string | null;
+  transport_type?: "stdio" | "http" | "sse" | null;
+  transport_config?: Record<string, unknown>;
   created_at: string;
 };
 
@@ -258,70 +256,6 @@ export const PUBLISHER_IDS = {
   ANTHROPIC: 'a0000000-0000-0000-0000-000000000001',
 } as const;
 
-// ===================
-// MCP REGISTRY TYPES (Anthropic Official Registry)
-// ===================
-
-export type McpRegistryPackage = {
-  registryType: 'pypi' | 'npm' | 'oci' | string;
-  registryBaseUrl?: string;
-  identifier: string;
-  version?: string;
-  transport?: {
-    type: 'stdio' | 'http' | 'sse';
-  };
-  environmentVariables?: Array<{
-    name: string;
-    description?: string;
-    isSecret?: boolean;
-  }>;
-};
-
-export type McpRegistryRemote = {
-  type: 'streamable-http' | 'sse' | 'stdio';
-  url?: string;
-};
-
-export type McpRegistryServer = {
-  $schema?: string;
-  name: string;
-  title?: string;
-  description: string;
-  version: string;
-  repository?: {
-    url?: string;
-    source?: 'github' | string;
-  };
-  websiteUrl?: string;
-  icons?: Array<{
-    src: string;
-    mimeType?: string;
-    theme?: 'light' | 'dark';
-  }>;
-  packages?: McpRegistryPackage[];
-  remotes?: McpRegistryRemote[];
-};
-
-export type McpRegistryItem = {
-  server: McpRegistryServer;
-  _meta: {
-    'io.modelcontextprotocol.registry/official': {
-      status: 'active' | 'inactive';
-      publishedAt: string;
-      updatedAt: string;
-      isLatest: boolean;
-    };
-  };
-};
-
-export type McpRegistryResponse = {
-  servers: McpRegistryItem[];
-  metadata: {
-    nextCursor?: string;
-    count: number;
-  };
-};
-
 export interface Database {
   public: {
     Tables: {
@@ -335,12 +269,6 @@ export interface Database {
         Row: PlaybookStarsRow;
         Insert: PlaybookStarsInsert;
         Update: PlaybookStarsUpdate;
-        Relationships: [];
-      };
-      personas: {
-        Row: PersonasRow;
-        Insert: PersonasInsert;
-        Update: PersonasUpdate;
         Relationships: [];
       };
       skills: {
@@ -402,7 +330,6 @@ export interface Database {
 // Convenience types
 export type Playbook = Database["public"]["Tables"]["playbooks"]["Row"];
 export type PlaybookStar = Database["public"]["Tables"]["playbook_stars"]["Row"];
-export type Persona = Database["public"]["Tables"]["personas"]["Row"];
 export type Skill = Database["public"]["Tables"]["skills"]["Row"];
 export type MCPServer = Database["public"]["Tables"]["mcp_servers"]["Row"];
 export type Canvas = Database["public"]["Tables"]["canvas"]["Row"];

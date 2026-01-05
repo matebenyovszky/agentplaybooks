@@ -308,7 +308,7 @@ export default function SettingsPage() {
             <div>https://agentplaybooks.ai/api/mcp/manage</div>
           </div>
           <p className="text-xs text-slate-500 mt-2">
-            <Link href="/docs?page=management-api" className="text-amber-400 hover:underline">
+            <Link href="/docs/management-api" className="text-amber-400 hover:underline">
               View full documentation →
             </Link>
           </p>

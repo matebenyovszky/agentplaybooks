@@ -207,8 +207,11 @@ async function parseSkill(skillDir: GitHubContent, token?: string): Promise<Skil
             try {
               const content = await fetchGitHubRaw(file.download_url, token);
               
+              // Replace / with _ to satisfy no_path_traversal constraint
+              const safeFilename = `${item.name}_${file.name}`.replace(/[\/\\]/g, '_');
+              
               attachments.push({
-                filename: `${item.name}/${file.name}`,
+                filename: safeFilename,
                 file_type: fileType,
                 content: content,
                 description: `Reference file from ${item.name}/`,
@@ -341,15 +344,21 @@ async function createOrUpdatePlaybook(
 ): Promise<string> {
   console.log('📦 Creating/updating Anthropic Skills playbook...');
   
-  // Check if playbook exists
-  const { data: existing } = await supabase
+  const guid = 'anthropic-official-skills';
+  
+  // Check if playbook exists by guid (more reliable)
+  const { data: existing, error: selectError } = await supabase
     .from('playbooks')
     .select('id')
-    .eq('name', CONFIG.playbook_name)
-    .single();
+    .eq('guid', guid)
+    .maybeSingle();
+  
+  if (selectError) {
+    console.log(`  ⚠ Query error: ${selectError.message}, trying insert anyway...`);
+  }
   
   if (existing) {
-    console.log('  ✓ Playbook already exists, will update skills');
+    console.log(`  ✓ Playbook already exists: ${existing.id}`);
     return existing.id;
   }
   
@@ -359,20 +368,23 @@ async function createOrUpdatePlaybook(
   
   const { data, error } = await supabase
     .from('playbooks')
-    .insert({
+    .upsert({
       user_id: systemUserId,
+      guid: guid,
       name: CONFIG.playbook_name,
       description: CONFIG.playbook_description,
       is_public: true,
       star_count: 0,
       tags: CONFIG.playbook_tags,
       config: { source: 'anthropic-skills-repo' },
+    }, {
+      onConflict: 'guid',
     })
     .select()
     .single();
   
   if (error) {
-    throw new Error(`Failed to create playbook: ${error.message}`);
+    throw new Error(`Failed to create/update playbook: ${error.message}`);
   }
   
   console.log(`  ✓ Created playbook: ${data.id}`);
@@ -498,6 +510,14 @@ async function main() {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
+    },
+    global: {
+      headers: {
+        'X-Client-Info': 'agentplaybooks-import-script/1.0',
+      },
+    },
+    db: {
+      schema: 'public',
     },
   });
   

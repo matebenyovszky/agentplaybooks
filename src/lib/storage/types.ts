@@ -10,20 +10,7 @@ import type { Persona, Skill, MCPServer, Memory, Playbook } from "@/lib/supabase
 // Partial types for creating new items (without id, timestamps)
 export type PersonaInput = Omit<Persona, "id" | "playbook_id" | "created_at" | "updated_at">;
 export type SkillInput = Omit<Skill, "id" | "playbook_id" | "created_at" | "updated_at">;
-// MCPServerInput - name and description required, transport fields are optional (have defaults)
-export type MCPServerInput = {
-  name: string;
-  description: string | null;
-  tools?: MCPServer["tools"];
-  resources?: MCPServer["resources"];
-  transport_type?: MCPServer["transport_type"];
-  transport_config?: MCPServer["transport_config"];
-  source_registry?: MCPServer["source_registry"];
-  source_registry_id?: MCPServer["source_registry_id"];
-  source_url?: MCPServer["source_url"];
-  source_version?: MCPServer["source_version"];
-  publisher_id?: MCPServer["publisher_id"];
-};
+export type MCPServerInput = Omit<MCPServer, "id" | "playbook_id" | "created_at" | "updated_at">;
 // Memory input - tags and description are optional (have defaults in DB)
 export type MemoryInput = {
   key: string;
