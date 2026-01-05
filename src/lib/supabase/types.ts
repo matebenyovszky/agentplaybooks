@@ -26,6 +26,7 @@ export type SkillDefinition = {
 export type PlaybooksRow = {
   id: string;
   user_id: string;
+  publisher_id: string | null; // -> profiles.id (publisher/author profile)
   guid: string;
   name: string;
   description: string | null;
@@ -74,6 +75,7 @@ export type Persona = {
 export type SkillsRow = {
   id: string;
   playbook_id: string;
+  publisher_id: string | null; // -> profiles.id (can differ from playbook publisher)
   name: string;
   description: string | null;
   content: string | null; // Full markdown content (SKILL.md body)
@@ -89,6 +91,7 @@ export type SkillsUpdate = Partial<SkillsRow>;
 export type MCPServersRow = {
   id: string;
   playbook_id: string;
+  publisher_id: string | null; // -> profiles.id (can differ from playbook publisher)
   name: string;
   description: string | null;
   tools: McpTool[];

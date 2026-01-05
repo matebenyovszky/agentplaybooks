@@ -75,7 +75,7 @@ export const docsEntries: DocEntry[] = [
     section: "reference",
   },
   {
-    slug: "ROADMAP",
+    slug: "roadmap",
     title: "Roadmap",
     description: "Development roadmap and future plans",
     section: "reference",

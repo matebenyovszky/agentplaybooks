@@ -32,6 +32,7 @@ import {
   Tag
 } from "lucide-react";
 import type { Playbook, Persona, Skill, MCPServer, Memory, ApiKey } from "@/lib/supabase/types";
+import { ChatGPTIcon, ClaudeIcon, MarkdownIcon } from "@/components/ui/ai-icons";
 
 // Import editor components
 import { PersonaEditor } from "@/components/playbook/PersonaEditor";
@@ -40,7 +41,6 @@ import { McpServerEditor } from "@/components/playbook/McpServerEditor";
 import { MemoryEditor } from "@/components/playbook/MemoryEditor";
 import { ApiKeyManager } from "@/components/playbook/ApiKeyManager";
 import { McpRegistrySearch } from "@/components/playbook/McpRegistrySearch";
-import { OpenInDropdown } from "@/components/ui/open-in-dropdown";
 
 type TabType = "details" | "skills" | "mcp" | "memory" | "apiKeys";
 
@@ -219,12 +219,13 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
       name: defaultName,
       description: "",
       content: null,
-      definition: { 
-        parameters: { 
-          type: "object", 
+      publisher_id: currentUserId,
+      definition: {
+        parameters: {
+          type: "object",
           properties: {},
           required: []
-        } 
+        }
       },
       examples: [],
       priority: null,
@@ -241,6 +242,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
     const data = await storage.addMcpServer({
       name: defaultName,
       description: "",
+      publisher_id: currentUserId,
       tools: [],
       resources: [],
     });
@@ -471,6 +473,9 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
   }, []);
 
   const markdownPath = playbook ? `/api/playbooks/${playbook.guid}?format=markdown` : "";
+  const openExternal = useCallback((url: string) => {
+    window.open(url, "_blank", "noopener,noreferrer");
+  }, []);
   const buildAgentsMarkdown = useCallback(() => {
     if (!playbook) return "";
 
@@ -514,6 +519,93 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
 
     return lines.filter((line) => line !== "").join("\n");
   }, [playbook, skills, markdownPath, getBaseUrl]);
+
+  const handleOpenInClaude = useCallback(() => {
+    const prompt = buildOpenInPrompt();
+    if (!prompt) return;
+    openExternal(`https://claude.ai/new?q=${encodeURIComponent(prompt)}`);
+  }, [buildOpenInPrompt, openExternal]);
+
+  const handleOpenInChatGPT = useCallback(() => {
+    const prompt = buildOpenInPrompt();
+    if (!prompt) return;
+    openExternal(`https://chatgpt.com/?q=${encodeURIComponent(prompt)}`);
+  }, [buildOpenInPrompt, openExternal]);
+
+  const handleViewMarkdown = useCallback(() => {
+    if (!markdownPath) return;
+    openExternal(`${getBaseUrl()}${markdownPath}`);
+  }, [markdownPath, openExternal, getBaseUrl]);
+
+  const buildPromptForChatGPT = useCallback(() => {
+    if (!playbook) return "";
+
+    const skillNames = skills
+      .map((skill) => skill.name)
+      .filter((name): name is string => Boolean(name));
+    const baseUrl = getBaseUrl();
+    const jsonUrl = `${baseUrl}/api/playbooks/${playbook.guid}`;
+    const openapiUrl = `${baseUrl}/api/playbooks/${playbook.guid}?format=openapi`;
+
+    const lines = [
+      "You are an AI assistant configured with an AgentPlaybooks playbook.",
+      `Playbook JSON: ${jsonUrl}`,
+      `OpenAPI (GPT Actions): ${openapiUrl}`,
+      "",
+      "System prompt:",
+      playbook.persona_system_prompt || "You are a helpful AI assistant.",
+      "",
+      skillNames.length > 0 ? `Skills: ${skillNames.join(", ")}` : "",
+    ];
+
+    return lines.filter((line) => line !== "").join("\n");
+  }, [playbook, skills, getBaseUrl]);
+
+  const buildPromptForClaude = useCallback(() => {
+    if (!playbook) return "";
+
+    const skillNames = skills
+      .map((skill) => skill.name)
+      .filter((name): name is string => Boolean(name));
+    const baseUrl = getBaseUrl();
+    const markdownUrl = `${baseUrl}${markdownPath}`;
+    const memoryUrl = `${baseUrl}/api/playbooks/${playbook.guid}/memory`;
+
+    const lines = [
+      "You are an AI assistant configured with an AgentPlaybooks playbook.",
+      `Playbook Markdown: ${markdownUrl}`,
+      `Memory (read): ${memoryUrl}`,
+      "",
+      "System prompt:",
+      playbook.persona_system_prompt || "You are a helpful AI assistant.",
+      "",
+      skillNames.length > 0 ? `Skills: ${skillNames.join(", ")}` : "",
+    ];
+
+    return lines.filter((line) => line !== "").join("\n");
+  }, [playbook, skills, markdownPath, getBaseUrl]);
+
+  const buildPromptForGemini = useCallback(() => {
+    if (!playbook) return "";
+
+    const skillNames = skills
+      .map((skill) => skill.name)
+      .filter((name): name is string => Boolean(name));
+    const baseUrl = getBaseUrl();
+    const jsonUrl = `${baseUrl}/api/playbooks/${playbook.guid}`;
+
+    const lines = [
+      "You are an AI assistant configured with an AgentPlaybooks playbook.",
+      `Playbook JSON (Gemini Gems friendly): ${jsonUrl}`,
+      "",
+      "System prompt:",
+      playbook.persona_system_prompt || "You are a helpful AI assistant.",
+      "",
+      skillNames.length > 0 ? `Skills: ${skillNames.join(", ")}` : "",
+    ];
+
+    return lines.filter((line) => line !== "").join("\n");
+  }, [playbook, skills, getBaseUrl]);
 
   const handleExportZip = useCallback(async () => {
     if (!playbook || exporting) return;
@@ -1300,43 +1392,158 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                   </div>
                 )}
 
-                {/* API Endpoints */}
+                {/* Use with AI Platforms (API Endpoints) */}
                 <div className={cn(
                   "p-5 rounded-xl",
                   "bg-gradient-to-br from-slate-900/80 to-slate-800/80",
                   "border border-slate-700/50"
                 )}>
-                  <h3 className="font-medium mb-4 flex items-center gap-2">
-                    <ExternalLink className="h-4 w-4 text-slate-400" />
-                    API Endpoints
+                  <h3 className="font-medium mb-3 flex items-center gap-2">
+                    <Zap className="h-4 w-4 text-amber-400" />
+                    Use with AI Platforms (API Endpoints)
                   </h3>
-                  <div className="space-y-2">
+                  <p className="text-base text-slate-400 mb-4">
+                    Open in a chat UI or use the endpoints below to integrate this playbook.
+                  </p>
+
+                  <div className="mb-4 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={handleViewMarkdown}
+                      disabled={!playbook}
+                      className={cn(
+                        "inline-flex items-center gap-2 rounded-lg border border-slate-700/50 bg-slate-900/70 text-slate-200 transition-colors hover:bg-slate-800/70",
+                        "disabled:opacity-60 disabled:cursor-not-allowed",
+                        "px-3 py-2 text-base"
+                      )}
+                    >
+                      <MarkdownIcon className="h-4 w-4" />
+                      <span className="font-medium">View Markdown</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleOpenInClaude}
+                      disabled={!playbook}
+                      className={cn(
+                        "inline-flex items-center gap-2 rounded-lg border border-slate-700/50 bg-slate-900/70 text-slate-200 transition-colors hover:bg-slate-800/70",
+                        "disabled:opacity-60 disabled:cursor-not-allowed",
+                        "px-3 py-2 text-base"
+                      )}
+                    >
+                      <ClaudeIcon className="h-4 w-4" />
+                      <span className="font-medium">Open in Claude</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleOpenInChatGPT}
+                      disabled={!playbook}
+                      className={cn(
+                        "inline-flex items-center gap-2 rounded-lg border border-slate-700/50 bg-slate-900/70 text-slate-200 transition-colors hover:bg-slate-800/70",
+                        "disabled:opacity-60 disabled:cursor-not-allowed",
+                        "px-3 py-2 text-base"
+                      )}
+                    >
+                      <ChatGPTIcon className="h-4 w-4" />
+                      <span className="font-medium">Open in ChatGPT</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleExportZip}
+                      disabled={!playbook || exporting}
+                      className={cn(
+                        "inline-flex items-center gap-2 rounded-lg border border-slate-700/50 bg-slate-900/70 text-slate-200 transition-colors hover:bg-slate-800/70",
+                        "disabled:opacity-60 disabled:cursor-not-allowed",
+                        "px-3 py-2 text-base"
+                      )}
+                    >
+                      <Download className="h-4 w-4" />
+                      <span className="font-medium">
+                        {exporting ? "Preparing ZIP..." : "Download ZIP"}
+                      </span>
+                    </button>
+                  </div>
+
+                  <div className="mb-6 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(buildPromptForChatGPT(), "prompt-chatgpt")}
+                      disabled={!playbook}
+                      className={cn(
+                        "inline-flex items-center gap-2 rounded-lg border border-slate-700/50 bg-slate-900/70 text-slate-200 transition-colors hover:bg-slate-800/70",
+                        "disabled:opacity-60 disabled:cursor-not-allowed",
+                        "px-3 py-2 text-base"
+                      )}
+                    >
+                      {copied === "prompt-chatgpt" ? (
+                        <Check className="h-4 w-4 text-green-400" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                      <span className="font-medium">Copy prompt for ChatGPT</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(buildPromptForClaude(), "prompt-claude")}
+                      disabled={!playbook}
+                      className={cn(
+                        "inline-flex items-center gap-2 rounded-lg border border-slate-700/50 bg-slate-900/70 text-slate-200 transition-colors hover:bg-slate-800/70",
+                        "disabled:opacity-60 disabled:cursor-not-allowed",
+                        "px-3 py-2 text-base"
+                      )}
+                    >
+                      {copied === "prompt-claude" ? (
+                        <Check className="h-4 w-4 text-green-400" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                      <span className="font-medium">Copy prompt for Claude</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(buildPromptForGemini(), "prompt-gemini")}
+                      disabled={!playbook}
+                      className={cn(
+                        "inline-flex items-center gap-2 rounded-lg border border-slate-700/50 bg-slate-900/70 text-slate-200 transition-colors hover:bg-slate-800/70",
+                        "disabled:opacity-60 disabled:cursor-not-allowed",
+                        "px-3 py-2 text-base"
+                      )}
+                    >
+                      {copied === "prompt-gemini" ? (
+                        <Check className="h-4 w-4 text-green-400" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                      <span className="font-medium">Copy prompt for Gemini Gems</span>
+                    </button>
+                  </div>
+
+                  <div className="space-y-2 mb-6">
                     {[
                       { method: "GET", path: `/api/playbooks/${playbook.guid}`, desc: "JSON format" },
-                      { method: "GET", path: `/api/playbooks/${playbook.guid}?format=openapi`, desc: "OpenAPI for GPTs" },
-                      { method: "GET", path: `/api/playbooks/${playbook.guid}?format=mcp`, desc: "MCP manifest" },
-                      { method: "GET", path: `/api/playbooks/${playbook.guid}?format=markdown`, desc: "Markdown docs" },
-                      { method: "GET", path: `/api/mcp/${playbook.guid}`, desc: "MCP server" },
+                      { method: "GET", path: `/api/playbooks/${playbook.guid}?format=openapi`, desc: "OpenAPI for GPT actions" },
+                      { method: "GET", path: `/api/playbooks/${playbook.guid}?format=mcp`, desc: "MCP manifest (static export)" },
+                      { method: "GET", path: `/api/playbooks/${playbook.guid}?format=markdown`, desc: "Markdown for Claude/Gemini/Grok" },
+                      { method: "GET", path: `/api/mcp/${playbook.guid}`, desc: "MCP server (live endpoint)" },
                     ].map(({ method, path, desc }) => (
                       <div 
                         key={path}
                         className="flex items-center gap-3 p-3 bg-slate-900/70 rounded-lg border border-slate-700/50 group"
                       >
                         <span className={cn(
-                          "text-xs font-mono px-2 py-0.5 rounded",
+                          "text-base font-mono px-2.5 py-1 rounded",
                           method === "GET" ? "bg-green-500/20 text-green-400" : "bg-blue-500/20 text-blue-400"
                         )}>
                           {method}
                         </span>
-                        <code className="flex-1 text-sm text-slate-300 font-mono truncate">
+                        <code className="flex-1 text-base text-slate-200 font-mono truncate">
                           {path}
                         </code>
-                        <span className="text-xs text-slate-500 hidden sm:block">
+                        <span className="text-base text-slate-400 hidden sm:block">
                           {desc}
                         </span>
                         <button
                           onClick={() => copyToClipboard(`${getBaseUrl()}${path}`, path)}
-                          className="p-1.5 text-slate-500 hover:text-white opacity-0 group-hover:opacity-100 transition-all"
+                          className="p-1.5 text-slate-400 hover:text-white opacity-0 group-hover:opacity-100 transition-all"
                         >
                           {copied === path ? (
                             <Check className="h-4 w-4 text-green-400" />
@@ -1347,46 +1554,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                       </div>
                     ))}
                   </div>
-                </div>
 
-                {/* Platform Integrations */}
-                <div className={cn(
-                  "p-5 rounded-xl",
-                  "bg-gradient-to-br from-slate-900/80 to-slate-800/80",
-                  "border border-slate-700/50"
-                )}>
-                  <h3 className="font-medium mb-2 flex items-center gap-2">
-                    <Zap className="h-4 w-4 text-amber-400" />
-                    Use with AI Platforms
-                  </h3>
-                  <p className="text-sm text-slate-500 mb-4">
-                    Add this playbook to your favorite AI assistant. Click a platform for step-by-step instructions.
-                  </p>
-
-                  <div className="mb-4 flex flex-wrap gap-2">
-                    <OpenInDropdown
-                      buildPrompt={buildOpenInPrompt}
-                      markdownPath={markdownPath}
-                      buttonLabel="Open in AI"
-                      disabled={!playbook}
-                    />
-                    <button
-                      type="button"
-                      onClick={handleExportZip}
-                      disabled={!playbook || exporting}
-                      className={cn(
-                        "inline-flex items-center gap-2 rounded-lg border border-slate-700/50 bg-slate-900/70 text-slate-200 transition-colors hover:bg-slate-800/70",
-                        "disabled:opacity-60 disabled:cursor-not-allowed",
-                        "px-3 py-2 text-sm"
-                      )}
-                    >
-                      <Download className="h-4 w-4" />
-                      <span className="font-medium">
-                        {exporting ? "Preparing ZIP..." : "Download ZIP"}
-                      </span>
-                    </button>
-                  </div>
-                  
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
                     {[
                       { 
@@ -1451,58 +1619,12 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                       >
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-lg">{platform.icon}</span>
-                          <span className="font-medium text-sm">{platform.name}</span>
+                          <span className="font-medium text-base">{platform.name}</span>
                           <ExternalLink className="h-3 w-3 text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity ml-auto" />
                         </div>
-                        <p className="text-xs text-slate-400">{platform.desc}</p>
+                        <p className="text-base text-slate-400">{platform.desc}</p>
                       </Link>
                     ))}
-                  </div>
-                  
-                  {/* Quick Copy URLs for each platform */}
-                  <div className="space-y-2 pt-3 border-t border-slate-700/50">
-                    <p className="text-xs text-slate-500 mb-2">Quick copy URLs for integration:</p>
-                    <div className="grid gap-2">
-                      {[
-                        { 
-                          label: "OpenAPI (for ChatGPT Actions)", 
-                          url: `${getBaseUrl()}/api/playbooks/${playbook.guid}?format=openapi`,
-                          color: "text-emerald-400"
-                        },
-                        { 
-                          label: "Markdown (for Claude/Gemini)", 
-                          url: `${getBaseUrl()}/api/playbooks/${playbook.guid}?format=markdown`,
-                          color: "text-orange-400"
-                        },
-                        { 
-                          label: "MCP Endpoint (for Claude Code)", 
-                          url: `${getBaseUrl()}/api/mcp/${playbook.guid}`,
-                          color: "text-violet-400"
-                        },
-                      ].map(({ label, url, color }) => (
-                        <div 
-                          key={label}
-                          className="flex items-center gap-2 p-2 bg-slate-900/70 rounded-lg border border-slate-700/50 group"
-                        >
-                          <span className={cn("text-xs font-medium whitespace-nowrap", color)}>
-                            {label}
-                          </span>
-                          <code className="flex-1 text-xs text-slate-400 font-mono truncate">
-                            {url}
-                          </code>
-                          <button
-                            onClick={() => copyToClipboard(url, label)}
-                            className="p-1.5 text-slate-500 hover:text-white transition-colors"
-                          >
-                            {copied === label ? (
-                              <Check className="h-3.5 w-3.5 text-green-400" />
-                            ) : (
-                              <Copy className="h-3.5 w-3.5" />
-                            )}
-                          </button>
-                        </div>
-                      ))}
-                    </div>
                   </div>
                   
                   {/* Full docs link */}
@@ -1510,7 +1632,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                     <Link
                       href="/docs/platform-integrations"
                       target="_blank"
-                      className="inline-flex items-center gap-2 text-sm text-amber-400 hover:text-amber-300 transition-colors"
+                      className="inline-flex items-center gap-2 text-base text-amber-400 hover:text-amber-300 transition-colors"
                     >
                       <span>📖</span>
                       <span>View complete integration guide</span>

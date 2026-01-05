@@ -5,7 +5,7 @@ This guide will help you create your first playbook and connect it to an AI agen
 ## Prerequisites
 
 - A web browser
-- An AI platform (ChatGPT, Claude, or any custom agent)
+- An AI platform (ChatGPT, Claude, Gemini Gems/Gem agents, or any custom agent)
 
 ## Step 1: Create an Account
 
@@ -19,13 +19,12 @@ This guide will help you create your first playbook and connect it to an AI agen
 2. Give it a name (e.g., "My AI Assistant")
 3. You'll be taken to the Playbook Editor
 
-## Step 3: Add a Persona
+## Step 3: Give a Persona
 
 Personas are system prompts that define your AI's personality and behavior.
 
 1. In the Playbook Editor, go to the **Personas** tab
-2. Click **"Add Persona"**
-3. Enter a name and system prompt:
+2. Enter a name and system prompt:
 
 ```
 You are a helpful coding assistant. You:

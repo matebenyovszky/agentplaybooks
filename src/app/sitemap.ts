@@ -1,13 +1,38 @@
 import type { MetadataRoute } from "next";
 import { locales } from "@/i18n/config";
-import { promises as fs } from "fs";
-import path from "path";
 
 export const dynamic = "force-static";
 
 const baseUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://agentplaybooks.ai").replace(/\/$/, "");
 
-const paths = ["", "/docs", "/explore", "/enterprise"];
+const paths = [
+  "",
+  "/docs",
+  "/explore",
+  "/enterprise",
+  "/login",
+  "/dashboard",
+  "/dashboard/favorites",
+  "/dashboard/settings",
+];
+
+// This list is updated by scripts/sync-sitemap-docs.ts
+const docSlugs = [
+  "readme",
+  "api-reference",
+  "architecture",
+  "developer-guide",
+  "environment-setup",
+  "getting-started",
+  "management-api",
+  "mcp-integration",
+  "memory",
+  "platform-integrations",
+  "playbooks",
+  "self-hosting",
+  "skills",
+  "roadmap",
+];
 
 function buildAlternates(url: string) {
   const languages: Record<string, string> = { "x-default": url };
@@ -17,21 +42,6 @@ function buildAlternates(url: string) {
   }
 
   return { languages };
-}
-
-async function getDocSlugs(): Promise<string[]> {
-  const docsDir = path.join(process.cwd(), "public", "docs");
-
-  try {
-    const entries = await fs.readdir(docsDir, { withFileTypes: true });
-
-    return entries
-      .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith(".md"))
-      .map((entry) => entry.name.replace(/\.md$/i, ""))
-      .map((base) => (base.toLowerCase() === "readme" ? "readme" : base.toLowerCase()));
-  } catch {
-    return [];
-  }
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
@@ -47,7 +57,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     };
   });
 
-  const docSlugs = await getDocSlugs();
   const docEntries = docSlugs
     .filter((slug) => slug !== "readme")
     .map((slug) => {

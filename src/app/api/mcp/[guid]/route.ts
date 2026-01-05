@@ -1,24 +1,13 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@/lib/supabase/client";
-import { hashApiKey } from "@/lib/utils";
+import { handle } from "hono/vercel";
+import { createApiApp } from "@/app/api/_shared/hono";
+import { validateApiKey } from "@/app/api/_shared/auth";
+import { getServiceSupabase, getSupabase } from "@/app/api/_shared/supabase";
 import type { McpResource, McpTool, Playbook } from "@/lib/supabase/types";
 
 type PersonaSource = Pick<Playbook, "id" | "persona_name" | "persona_system_prompt" | "persona_metadata">;
 
 // MCP Protocol implementation for Cloudflare Workers / Next.js
 // Supports: tools/list, resources/list, resources/read, tools/call
-
-function getSupabase() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-  return createServerClient(url, key);
-}
-
-function getServiceSupabase() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-  return createServerClient(url, key);
-}
 
 function playbookToPersona(playbook: PersonaSource) {
   return {
@@ -30,37 +19,6 @@ function playbookToPersona(playbook: PersonaSource) {
   };
 }
 
-// Validate playbook API key
-async function validateApiKey(request: NextRequest, playbookId: string, permission: string): Promise<boolean> {
-  const authHeader = request.headers.get("Authorization");
-  if (!authHeader?.startsWith("Bearer apb_")) {
-    return false;
-  }
-
-  const apiKey = authHeader.replace("Bearer ", "");
-  const keyHash = await hashApiKey(apiKey);
-  const supabase = getServiceSupabase();
-
-  const { data } = await supabase
-    .from("api_keys")
-    .select("*")
-    .eq("key_hash", keyHash)
-    .eq("playbook_id", playbookId)
-    .eq("is_active", true)
-    .single();
-
-  if (!data) return false;
-  if (data.expires_at && new Date(data.expires_at) < new Date()) return false;
-  if (!data.permissions.includes(permission) && !data.permissions.includes("full")) return false;
-
-  // Update last_used_at
-  await supabase
-    .from("api_keys")
-    .update({ last_used_at: new Date().toISOString() })
-    .eq("id", data.id);
-
-  return true;
-}
 
 // Built-in MCP tools for playbook access
 // Note: Persona is embedded in the MCP manifest under _playbook.persona
@@ -130,12 +88,14 @@ const PLAYBOOK_TOOLS: McpTool[] = [
   },
 ];
 
+const app = createApiApp("/api/mcp/:guid");
+
 // GET /api/mcp/:guid - Return MCP server manifest
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ guid: string }> }
-) {
-  const { guid } = await params;
+app.get("/", async (c) => {
+  const guid = c.req.param("guid");
+  if (!guid) {
+    return c.json({ error: "Missing playbook GUID" }, 400);
+  }
   const supabase = getSupabase();
 
   // Get playbook with all related data
@@ -147,7 +107,7 @@ export async function GET(
     .single();
 
   if (error || !playbook) {
-    return NextResponse.json({ error: "Playbook not found" }, { status: 404 });
+    return c.json({ error: "Playbook not found" }, 404);
   }
 
   const [skillsRes, mcpRes] = await Promise.all([
@@ -227,16 +187,20 @@ export async function GET(
     },
   };
 
-  return NextResponse.json(manifest);
-}
+  return c.json(manifest);
+});
 
 // POST /api/mcp/:guid - Handle MCP JSON-RPC requests
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ guid: string }> }
-) {
-  const { guid } = await params;
-  const body = await request.json();
+app.post("/", async (c) => {
+  const guid = c.req.param("guid");
+  if (!guid) {
+    return c.json({
+      jsonrpc: "2.0",
+      id: null,
+      error: { code: -32600, message: "Missing playbook GUID" }
+    }, 400);
+  }
+  const body = await c.req.json();
   
   const { method, params: rpcParams, id } = body;
 
@@ -251,7 +215,7 @@ export async function POST(
     .single();
 
   if (!playbook) {
-    return NextResponse.json({
+    return c.json({
       jsonrpc: "2.0",
       id,
       error: { code: -32001, message: "Playbook not found" },
@@ -261,7 +225,7 @@ export async function POST(
   // Handle MCP methods
   switch (method) {
     case "initialize":
-      return NextResponse.json({
+      return c.json({
         jsonrpc: "2.0",
         id,
         result: {
@@ -287,7 +251,7 @@ export async function POST(
       // Combine with built-in playbook tools
       const allTools = [...PLAYBOOK_TOOLS, ...skillTools];
 
-      return NextResponse.json({
+      return c.json({
         jsonrpc: "2.0",
         id,
         result: { tools: allTools },
@@ -336,7 +300,7 @@ export async function POST(
         }
       }
 
-      return NextResponse.json({
+      return c.json({
         jsonrpc: "2.0",
         id,
         result: { resources },
@@ -355,7 +319,7 @@ export async function POST(
           .eq("playbook_id", playbook.id)
           .order("updated_at", { ascending: false });
 
-        return NextResponse.json({
+        return c.json({
           jsonrpc: "2.0",
           id,
           result: {
@@ -373,7 +337,7 @@ export async function POST(
       // Personas resource (deprecated - persona is now in _playbook.persona)
       // Kept for backward compatibility
       if (uri?.match(/\/personas$/)) {
-        return NextResponse.json({
+        return c.json({
           jsonrpc: "2.0",
           id,
           result: {
@@ -396,7 +360,7 @@ export async function POST(
           .eq("playbook_id", playbook.id)
           .order("priority", { ascending: false });
 
-        return NextResponse.json({
+        return c.json({
           jsonrpc: "2.0",
           id,
           result: {
@@ -424,14 +388,14 @@ export async function POST(
           .single();
 
         if (!attachment) {
-          return NextResponse.json({
+          return c.json({
             jsonrpc: "2.0",
             id,
             error: { code: -32002, message: "Attachment not found" },
           });
         }
 
-        return NextResponse.json({
+        return c.json({
           jsonrpc: "2.0",
           id,
           result: {
@@ -446,7 +410,7 @@ export async function POST(
         });
       }
 
-      return NextResponse.json({
+      return c.json({
         jsonrpc: "2.0",
         id,
         error: { code: -32002, message: "Resource not found" },
@@ -530,8 +494,8 @@ export async function POST(
 
           case "write_memory": {
             // Requires API key
-            const hasPermission = await validateApiKey(request, playbook.id, "memory:write");
-            if (!hasPermission) {
+            const apiKeyData = await validateApiKey(c.req.raw, "memory:write");
+            if (!apiKeyData || apiKeyData.playbooks.id !== playbook.id) {
               throw new Error("API key with memory:write permission required");
             }
 
@@ -562,8 +526,8 @@ export async function POST(
 
           case "delete_memory": {
             // Requires API key
-            const hasDeletePermission = await validateApiKey(request, playbook.id, "memory:write");
-            if (!hasDeletePermission) {
+            const apiKeyData = await validateApiKey(c.req.raw, "memory:write");
+            if (!apiKeyData || apiKeyData.playbooks.id !== playbook.id) {
               throw new Error("API key with memory:write permission required");
             }
 
@@ -593,7 +557,7 @@ export async function POST(
             }
         }
 
-        return NextResponse.json({
+        return c.json({
           jsonrpc: "2.0",
           id,
           result: {
@@ -607,7 +571,7 @@ export async function POST(
             : typeof error === "string"
               ? error
               : "Tool execution failed";
-        return NextResponse.json({
+        return c.json({
           jsonrpc: "2.0",
           id,
           error: { code: -32000, message },
@@ -616,10 +580,13 @@ export async function POST(
     }
 
     default:
-      return NextResponse.json({
+      return c.json({
         jsonrpc: "2.0",
         id,
         error: { code: -32601, message: `Method not found: ${method}` },
       });
   }
-}
+});
+
+export const GET = handle(app);
+export const POST = handle(app);

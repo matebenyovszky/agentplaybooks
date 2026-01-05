@@ -4,7 +4,7 @@ A **Playbook** is the complete operating environment for an AI agent - everythin
 
 ## The Problem Playbooks Solve
 
-When you use AI assistants across different platforms (ChatGPT, Claude, Gemini, local LLMs), you face these challenges:
+When you use AI assistants across different platforms (ChatGPT, Claude, Gemini Gems/Gem agents, local LLMs), you face these challenges:
 
 - **Knowledge fragmentation** - Each platform has its own memory and context
 - **Repeated setup** - Recreating system prompts and configurations everywhere

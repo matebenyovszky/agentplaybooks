@@ -21,11 +21,11 @@ Welcome to the AgentPlaybooks documentation.
 - [Management API & MCP](./management-api.md) - AI-driven playbook management
 - [Developer Guide](./developer-guide.md) - Contributing and development
 - [Self-Hosting](./self-hosting.md) - Deploy your own instance
-- [Roadmap](./ROADMAP.md) - Development roadmap and future plans
+- [Roadmap](./roadmap.md) - Development roadmap and future plans
 
 ## What is AgentPlaybooks?
 
-AgentPlaybooks is a platform-independent memory and toolkit for AI agents. It provides:
+AgentPlaybooks is a platform-independent memory and toolkit for AI agents, including Gemini Gems (Gem agents). It provides:
 
 - **Personas** - Reusable system prompts that work across any AI platform
 - **Skills** - Structured capabilities in Anthropic skill format
@@ -49,4 +49,3 @@ This documentation is both:
 - Rendered beautifully on our website at [agentplaybooks.ai/docs](https://agentplaybooks.ai/docs)
 
 This documentation is open source. Found an issue? [Edit on GitHub](https://github.com/matebenyovszky/agentplaybooks/tree/main/docs).
-

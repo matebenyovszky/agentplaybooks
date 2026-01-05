@@ -3,7 +3,7 @@ import type { Context } from "hono";
 import { handle } from "hono/vercel";
 import { cors } from "hono/cors";
 import { createServerClient } from "@/lib/supabase/client";
-import type { ApiKey, UserApiKeysRow, Playbook, Skill, MCPServer, ProfilesRow, Persona } from "@/lib/supabase/types";
+import type { UserApiKeysRow, Playbook, Skill, MCPServer, ProfilesRow, Persona } from "@/lib/supabase/types";
 import { ATTACHMENT_LIMITS, ALLOWED_FILE_TYPES } from "@/lib/supabase/types";
 import { 
   validateAttachment, 
@@ -27,9 +27,6 @@ type Variables = {
   user: { id: string } | null;
 };
 
-type ApiKeyWithPlaybook = ApiKey & {
-  playbooks: { id: string; guid: string };
-};
 
 type AppContext = Context<{ Bindings: Bindings; Variables: Variables }>;
 
@@ -143,58 +140,6 @@ async function requireAuth(c: AppContext): Promise<{ id: string } | null> {
   return user;
 }
 
-// Helper: Validate API key for agent endpoints
-async function validateApiKey(c: AppContext, requiredPermission: string): Promise<ApiKeyWithPlaybook | null> {
-  const authHeader = c.req.header("Authorization");
-  if (!authHeader?.startsWith("Bearer apb_")) {
-    return null;
-  }
-
-  const apiKey = authHeader.replace("Bearer ", "");
-  const keyHash = await hashApiKey(apiKey);
-  const supabase = getServiceSupabase();
-
-  const { data } = await supabase
-    .from("api_keys")
-    .select("*")
-    .eq("key_hash", keyHash)
-    .eq("is_active", true)
-    .single();
-
-  const apiKeyData = data as ApiKey | null;
-
-  if (!apiKeyData) {
-    return null;
-  }
-
-  // Check expiration
-  if (apiKeyData.expires_at && new Date(apiKeyData.expires_at) < new Date()) {
-    return null;
-  }
-
-  // Check permission
-  if (!apiKeyData.permissions.includes(requiredPermission) && !apiKeyData.permissions.includes("full")) {
-    return null;
-  }
-
-  const { data: playbook } = await supabase
-    .from("playbooks")
-    .select("id, guid")
-    .eq("id", apiKeyData.playbook_id)
-    .single();
-
-  if (!playbook) {
-    return null;
-  }
-
-  // Update last_used_at
-  await supabase
-    .from("api_keys")
-    .update({ last_used_at: new Date().toISOString() })
-    .eq("id", apiKeyData.id);
-
-  return { ...apiKeyData, playbooks: playbook };
-}
 
 // Helper: Check if user owns playbook
 async function checkPlaybookOwnership(userId: string, playbookId: string): Promise<boolean> {
@@ -794,224 +739,6 @@ app.delete("/playbooks/:id/skills/:sid", async (c) => {
     .delete()
     .eq("id", skillId)
     .eq("playbook_id", playbookId);
-
-  if (error) {
-    return c.json({ error: error.message }, 500);
-  }
-
-  return c.json({ success: true });
-});
-
-// ============================================
-// MEMORY ENDPOINTS (API key required for writes)
-// ============================================
-
-// Helper: Get playbook by guid (public or owned)
-async function getPlaybookByGuid(guid: string, userId: string | null) {
-  const supabase = getServiceSupabase();
-  const { data: playbook } = await supabase
-    .from("playbooks")
-    .select("id, user_id, is_public, guid")
-    .eq("guid", guid)
-    .single();
-
-  if (!playbook) return null;
-  
-  // Check access
-  if (!playbook.is_public && (!userId || playbook.user_id !== userId)) {
-    return null;
-  }
-  
-  return playbook;
-}
-
-// GET /api/playbooks/:guid/memory - Read memory with search (public for public playbooks)
-app.get("/playbooks/:guid/memory", async (c) => {
-  const guid = c.req.param("guid");
-  const key = c.req.query("key");
-  const search = c.req.query("search");
-  const tagsParam = c.req.query("tags");
-  const user = await getAuthenticatedUser(c);
-  
-  const playbook = await getPlaybookByGuid(guid, user?.id || null);
-  if (!playbook) {
-    return c.json({ error: "Playbook not found" }, 404);
-  }
-
-  const supabase = getServiceSupabase();
-
-  // If specific key requested, get it directly
-  if (key) {
-    const { data, error } = await supabase
-      .from("memories")
-      .select("key, value, tags, description, updated_at")
-      .eq("playbook_id", playbook.id)
-      .eq("key", key)
-      .single();
-
-    if (error) {
-      if (error.code === "PGRST116") {
-        return c.json({ error: "Memory not found" }, 404);
-      }
-      return c.json({ error: error.message }, 500);
-    }
-
-    return c.json(data);
-  }
-
-  // Build query with optional filters
-  let query = supabase
-    .from("memories")
-    .select("key, value, tags, description, updated_at")
-    .eq("playbook_id", playbook.id);
-
-  // Search in key and description using ilike
-  if (search) {
-    query = query.or(`key.ilike.%${search}%,description.ilike.%${search}%`);
-  }
-
-  // Filter by tags (any match)
-  if (tagsParam) {
-    const tags = tagsParam.split(",").map(t => t.trim()).filter(Boolean);
-    if (tags.length > 0) {
-      query = query.overlaps("tags", tags);
-    }
-  }
-
-  const { data, error } = await query.order("updated_at", { ascending: false });
-
-  if (error) {
-    return c.json({ error: error.message }, 500);
-  }
-
-  return c.json(data || []);
-});
-
-// PUT /api/playbooks/:guid/memory/:key - Update memory (requires API key)
-app.put("/playbooks/:guid/memory/:key", async (c) => {
-  const guid = c.req.param("guid");
-  const key = c.req.param("key");
-
-  // Check API key first
-  const apiKeyData = await validateApiKey(c, "memory:write");
-  if (apiKeyData) {
-    // Verify the API key belongs to this playbook
-    if (apiKeyData.playbooks.guid !== guid) {
-      return c.json({ error: "API key does not match playbook" }, 403);
-    }
-  } else {
-    // Fall back to user auth
-    const user = await requireAuth(c);
-    if (!user) {
-      return c.json({ error: "Unauthorized" }, 401);
-    }
-    
-    const playbook = await getPlaybookByGuid(guid, user.id);
-    if (!playbook || playbook.user_id !== user.id) {
-      return c.json({ error: "Forbidden" }, 403);
-    }
-  }
-
-  const body = await c.req.json();
-  const { value, tags, description } = body;
-
-  if (value === undefined) {
-    return c.json({ error: "Value is required" }, 400);
-  }
-
-  // Validate tags if provided
-  if (tags !== undefined && !Array.isArray(tags)) {
-    return c.json({ error: "Tags must be an array of strings" }, 400);
-  }
-
-  const supabase = getServiceSupabase();
-
-  // Get playbook id
-  const { data: playbook } = await supabase
-    .from("playbooks")
-    .select("id")
-    .eq("guid", guid)
-    .single();
-
-  if (!playbook) {
-    return c.json({ error: "Playbook not found" }, 404);
-  }
-
-  // Build upsert data
-  const upsertData: Record<string, unknown> = {
-    playbook_id: playbook.id,
-    key,
-    value,
-    updated_at: new Date().toISOString(),
-  };
-
-  // Include tags if provided
-  if (tags !== undefined) {
-    upsertData.tags = tags;
-  }
-
-  // Include description if provided
-  if (description !== undefined) {
-    upsertData.description = description;
-  }
-
-  // Upsert memory
-  const { data, error } = await supabase
-    .from("memories")
-    .upsert(upsertData, {
-      onConflict: "playbook_id,key",
-    })
-    .select("key, value, tags, description, updated_at")
-    .single();
-
-  if (error) {
-    return c.json({ error: error.message }, 500);
-  }
-
-  return c.json(data);
-});
-
-// DELETE /api/playbooks/:guid/memory/:key - Delete memory (requires API key or owner)
-app.delete("/playbooks/:guid/memory/:key", async (c) => {
-  const guid = c.req.param("guid");
-  const key = c.req.param("key");
-
-  // Check API key first
-  const apiKeyData = await validateApiKey(c, "memory:write");
-  if (apiKeyData) {
-    if (apiKeyData.playbooks.guid !== guid) {
-      return c.json({ error: "API key does not match playbook" }, 403);
-    }
-  } else {
-    const user = await requireAuth(c);
-    if (!user) {
-      return c.json({ error: "Unauthorized" }, 401);
-    }
-    
-    const playbook = await getPlaybookByGuid(guid, user.id);
-    if (!playbook || playbook.user_id !== user.id) {
-      return c.json({ error: "Forbidden" }, 403);
-    }
-  }
-
-  const supabase = getServiceSupabase();
-
-  // Get playbook id
-  const { data: playbook } = await supabase
-    .from("playbooks")
-    .select("id")
-    .eq("guid", guid)
-    .single();
-
-  if (!playbook) {
-    return c.json({ error: "Playbook not found" }, 404);
-  }
-
-  const { error } = await supabase
-    .from("memories")
-    .delete()
-    .eq("playbook_id", playbook.id)
-    .eq("key", key);
 
   if (error) {
     return c.json({ error: error.message }, 500);
@@ -2612,13 +2339,15 @@ app.get("/public/playbooks", async (c) => {
   const limit = parseInt(c.req.query("limit") || "50");
   const supabase = getServiceSupabase();
 
+  // Get playbooks with their publishers directly
   let query = supabase
     .from("playbooks")
     .select(`
       id, guid, name, description, config, star_count, tags, created_at, updated_at, user_id,
       persona_name,
       skills:skills(count),
-      mcp_servers:mcp_servers(count)
+      mcp_servers:mcp_servers(count),
+      publisher:profiles(id, display_name, avatar_svg, website_url, is_verified, is_virtual)
     `)
     .eq("is_public", true);
 
@@ -2645,27 +2374,12 @@ app.get("/public/playbooks", async (c) => {
     return c.json({ error: error.message }, 500);
   }
 
-  const playbookRows = (data as unknown as PlaybookWithCounts[] | null) ?? [];
-  // Get unique user_ids to fetch profiles
-  const userIds = [
-    ...new Set(playbookRows.map((p) => p.user_id).filter((id): id is string => Boolean(id))),
-  ];
-  
-  // Fetch profiles for these users
-  const { data: profiles } = userIds.length > 0 
-    ? await supabase
-        .from("profiles")
-        .select("id, display_name, avatar_svg, website_url, is_verified, is_virtual")
-        .in("id", userIds)
-    : { data: [] };
-  
-  // Create a map for quick lookup
-  const profileRows: ProfileSummary[] = profiles || [];
-  const profileMap = new Map(profileRows.map((profile) => [profile.id, profile]));
+  type PlaybookWithJoins = PlaybookWithCounts & { publisher?: ProfileSummary | null };
+  const playbookRows = (data as unknown as PlaybookWithJoins[] | null) ?? [];
 
   // Transform count objects to numbers with consistent naming
   const playbooks = playbookRows.map((p) => {
-    const profile = profileMap.get(p.user_id);
+    const profile = p.publisher;
     return {
       ...p,
       personas_count: p.persona_name ? 1 : 0,
@@ -2811,12 +2525,13 @@ app.get("/public/skills", async (c) => {
   const search = c.req.query("search");
   const supabase = getServiceSupabase();
 
-  // Get skills from public playbooks
+  // Get skills from public playbooks with their publishers
   let query = supabase
     .from("skills")
     .select(`
       *,
-      playbook:playbooks!inner(id, guid, name, is_public, user_id)
+      playbook:playbooks!inner(id, guid, name, is_public),
+      publisher:profiles(id, display_name, avatar_svg, website_url, is_verified, is_virtual)
     `)
     .eq("playbook.is_public", true)
     .order("created_at", { ascending: false });
@@ -2831,30 +2546,12 @@ app.get("/public/skills", async (c) => {
     return c.json({ error: error.message }, 500);
   }
 
-  const skillsRows = (data as unknown as SkillWithPlaybook[] | null) ?? [];
-  // Get unique user_ids to fetch profiles
-  const userIds = [
-    ...new Set(
-      skillsRows
-        .map((skill) => skill.playbook?.user_id)
-        .filter((id): id is string => Boolean(id))
-    ),
-  ];
-  
-  // Fetch profiles
-  const { data: profiles } = userIds.length > 0 
-    ? await supabase
-        .from("profiles")
-        .select("id, display_name, avatar_svg, website_url, is_verified, is_virtual")
-        .in("id", userIds)
-    : { data: [] };
-  
-  const profileRows: ProfileSummary[] = profiles || [];
-  const profileMap = new Map(profileRows.map((profile) => [profile.id, profile]));
+  type SkillWithJoins = SkillWithPlaybook & { publisher?: ProfileSummary | null };
+  const skillsRows = (data as unknown as SkillWithJoins[] | null) ?? [];
 
   // Transform to include playbook and publisher info
   const skills = skillsRows.map((skill) => {
-    const profile = skill.playbook?.user_id ? profileMap.get(skill.playbook.user_id) : undefined;
+    const profile = skill.publisher;
     return {
       ...skill,
       playbook_guid: skill.playbook?.guid,
@@ -2907,11 +2604,13 @@ app.get("/public/mcp", async (c) => {
   const search = c.req.query("search");
   const supabase = getServiceSupabase();
 
+  // Get MCP servers from public playbooks with their publishers
   let query = supabase
     .from("mcp_servers")
     .select(`
       *,
-      playbook:playbooks!inner(id, guid, name, is_public, user_id)
+      playbook:playbooks!inner(id, guid, name, is_public),
+      publisher:profiles(id, display_name, avatar_svg, website_url, is_verified, is_virtual)
     `)
     .eq("playbook.is_public", true)
     .order("created_at", { ascending: false });
@@ -2926,30 +2625,12 @@ app.get("/public/mcp", async (c) => {
     return c.json({ error: error.message }, 500);
   }
 
-  const serverRows = (data as unknown as MCPServerWithPlaybook[] | null) ?? [];
-  // Get unique user_ids to fetch profiles
-  const userIds = [
-    ...new Set(
-      serverRows
-        .map((server) => server.playbook?.user_id)
-        .filter((id): id is string => Boolean(id))
-    ),
-  ];
-  
-  // Fetch profiles
-  const { data: profiles } = userIds.length > 0 
-    ? await supabase
-        .from("profiles")
-        .select("id, display_name, avatar_svg, website_url, is_verified, is_virtual")
-        .in("id", userIds)
-    : { data: [] };
-  
-  const profileRows: ProfileSummary[] = profiles || [];
-  const profileMap = new Map(profileRows.map((profile) => [profile.id, profile]));
+  type MCPServerWithJoins = MCPServerWithPlaybook & { publisher?: ProfileSummary | null };
+  const serverRows = (data as unknown as MCPServerWithJoins[] | null) ?? [];
 
   // Transform to include playbook and publisher info
   const servers = serverRows.map((server) => {
-    const profile = server.playbook?.user_id ? profileMap.get(server.playbook.user_id) : undefined;
+    const profile = server.publisher;
     return {
       ...server,
       playbook_guid: server.playbook?.guid,

@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@/lib/supabase/client";
+import { handle } from "hono/vercel";
+import { createApiApp } from "@/app/api/_shared/hono";
+import { getServiceSupabase } from "@/app/api/_shared/supabase";
 import { hashApiKey, generateGuid } from "@/lib/utils";
 import type { UserApiKeysRow, Playbook } from "@/lib/supabase/types";
 
@@ -16,14 +17,8 @@ type PersonaSource = Pick<
   "id" | "persona_name" | "persona_system_prompt" | "persona_metadata" | "created_at"
 >;
 
-function getServiceSupabase() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-  return createServerClient(url, key);
-}
-
 // Validate User API Key
-async function validateUserApiKey(request: NextRequest): Promise<UserApiKeysRow | null> {
+async function validateUserApiKey(request: Request): Promise<UserApiKeysRow | null> {
   const authHeader = request.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer apb_")) {
     return null;
@@ -298,9 +293,11 @@ const MCP_TOOLS = [
   },
 ];
 
+const app = createApiApp("/api/mcp/manage");
+
 // GET /api/mcp/manage - Return MCP server manifest
-export async function GET(request: NextRequest) {
-  const userKey = await validateUserApiKey(request);
+app.get("/", async (c) => {
+  const userKey = await validateUserApiKey(c.req.raw);
   
   // Return manifest even without auth (for discovery)
   // But indicate that auth is required for tool execution
@@ -324,20 +321,20 @@ export async function GET(request: NextRequest) {
     },
   };
 
-  return NextResponse.json(manifest);
-}
+  return c.json(manifest);
+});
 
 // POST /api/mcp/manage - Handle MCP JSON-RPC requests
-export async function POST(request: NextRequest) {
-  const userKey = await validateUserApiKey(request);
+app.post("/", async (c) => {
+  const userKey = await validateUserApiKey(c.req.raw);
   
-  const body = await request.json();
+  const body = await c.req.json();
   const { method, params, id } = body;
 
   // Handle MCP methods
   switch (method) {
     case "initialize":
-      return NextResponse.json({
+      return c.json({
         jsonrpc: "2.0",
         id,
         result: {
@@ -348,7 +345,7 @@ export async function POST(request: NextRequest) {
       });
 
     case "tools/list":
-      return NextResponse.json({
+      return c.json({
         jsonrpc: "2.0",
         id,
         result: { tools: MCP_TOOLS },
@@ -360,7 +357,7 @@ export async function POST(request: NextRequest) {
 
       // All tool calls require authentication
       if (!userKey) {
-        return NextResponse.json({
+        return c.json({
           jsonrpc: "2.0",
           id,
           error: {
@@ -372,7 +369,7 @@ export async function POST(request: NextRequest) {
 
       try {
         const result = await executeManagementTool(toolName, args, userKey);
-        return NextResponse.json({
+        return c.json({
           jsonrpc: "2.0",
           id,
           result: {
@@ -386,7 +383,7 @@ export async function POST(request: NextRequest) {
             : typeof error === "string"
               ? error
               : "Tool execution failed";
-        return NextResponse.json({
+        return c.json({
           jsonrpc: "2.0",
           id,
           error: {
@@ -398,13 +395,16 @@ export async function POST(request: NextRequest) {
     }
 
     default:
-      return NextResponse.json({
+      return c.json({
         jsonrpc: "2.0",
         id,
         error: { code: -32601, message: `Method not found: ${method}` },
       });
   }
-}
+});
+
+export const GET = handle(app);
+export const POST = handle(app);
 
 // Execute management tools
 async function executeManagementTool(

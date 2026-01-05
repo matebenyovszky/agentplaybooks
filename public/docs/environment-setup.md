@@ -8,7 +8,6 @@ Create a `.env.local` file in the project root with these variables:
 # Supabase Configuration
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-
 # Application URL (for production)
 NEXT_PUBLIC_APP_URL=https://agentplaybooks.ai
 ```

@@ -9,11 +9,13 @@ Before integrating, make sure you have:
 1. A published playbook with a public URL: `https://agentplaybooks.ai/api/playbooks/YOUR_GUID`
 2. (Optional) An API key for write-back functionality
 3. Your preferred format URL ready:
-   - **JSON**: `/api/playbooks/YOUR_GUID`
+   - **JSON**: `/api/playbooks/YOUR_GUID` (recommended for Gemini Gems)
    - **Markdown**: `/api/playbooks/YOUR_GUID?format=markdown`
    - **OpenAPI**: `/api/playbooks/YOUR_GUID?format=openapi`
    - **Anthropic**: `/api/playbooks/YOUR_GUID?format=anthropic`
    - **MCP**: `/api/mcp/YOUR_GUID`
+
+Note: The MCP manifest (`/api/playbooks/YOUR_GUID?format=mcp`) is a static export, while the MCP server endpoint (`/api/mcp/YOUR_GUID`) is a live MCP service.
 
 ---
 
@@ -227,7 +229,7 @@ Follow these instructions as your operational guidelines for this conversation.
 
 ---
 
-## Google Gemini
+## Google Gemini (Gems / Gem agent)
 
 ### Using Gems (Gemini Advanced)
 
@@ -244,7 +246,7 @@ Gemini Advanced users can create Gems with custom instructions.
 - **Name**: Your assistant's name
 - **Instructions**: Add your system prompt
 
-#### Step 3: Add System Instructions
+#### Step 3: Add System Instructions (JSON works well for Gems)
 
 ```
 You are an AI assistant configured with an AgentPlaybooks playbook.
@@ -252,7 +254,8 @@ You are an AI assistant configured with an AgentPlaybooks playbook.
 ## Your Configuration
 
 At the start of each conversation, reference your playbook configuration.
-Your playbook is available at: https://agentplaybooks.ai/api/playbooks/YOUR_GUID
+For Gemini Gems, the JSON format works well:
+https://agentplaybooks.ai/api/playbooks/YOUR_GUID
 
 ## Personas
 [Copy the personas section from your playbook's markdown export]

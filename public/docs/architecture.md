@@ -6,28 +6,28 @@ This document describes the technical architecture of AgentPlaybooks.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                        AI Consumers                              │
+│                        AI Consumers                             │
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────────┐ │
 │  │ ChatGPT  │  │  Claude  │  │  Custom  │  │  Enterprise AI   │ │
 │  │  (GPTs)  │  │  (MCP)   │  │  Agents  │  │     Systems      │ │
 │  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────────┬─────────┘ │
-│       │             │             │                  │           │
-│       │  OpenAPI    │   MCP       │   REST/JSON      │           │
-│       ▼             ▼             ▼                  ▼           │
-└───────┴─────────────┴─────────────┴──────────────────┴───────────┘
+│       │             │             │                 │           │
+│       │  OpenAPI    │   MCP       │   REST/JSON/    │           │
+│       ▼             ▼             ▼      Markdown   ▼           │
+└───────┴─────────────┴─────────────┴─────────────────┴───────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                    Cloudflare Edge Network                       │
+│                    Cloudflare Edge Network                      │
 │  ┌───────────────────────────────────────────────────────────┐  │
-│  │                   Cloudflare Workers                       │  │
+│  │                   Cloudflare Workers                      │  │
 │  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐    │  │
 │  │  │  REST API   │  │   OpenAPI   │  │   MCP Server    │    │  │
 │  │  │   (Hono)    │  │  Generator  │  │    Endpoint     │    │  │
 │  │  └─────────────┘  └─────────────┘  └─────────────────┘    │  │
 │  └───────────────────────────────────────────────────────────┘  │
 │  ┌───────────────────────────────────────────────────────────┐  │
-│  │                   Cloudflare Pages                         │  │
+│  │                   Cloudflare Pages                        │  │
 │  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐    │  │
 │  │  │   Landing   │  │  Dashboard  │  │      Docs       │    │  │
 │  │  │    Page     │  │   (React)   │  │     (MDX)       │    │  │
@@ -37,7 +37,7 @@ This document describes the technical architecture of AgentPlaybooks.
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                         Supabase                                 │
+│                         Supabase                                │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐  │
 │  │    Auth     │  │  PostgreSQL │  │   Row Level Security    │  │
 │  │  (JWT/OAuth)│  │  (Database) │  │      (RLS Policies)     │  │
@@ -184,10 +184,4 @@ GitHub Actions (CI/CD)
        └──► Build Workers ──► Cloudflare Workers
 ```
 
-The entire application deploys to Cloudflare's edge network, providing:
-- Global low-latency access
-- Automatic scaling
-- DDoS protection
-- Free SSL certificates
-
-
+The entire application could be deployed to Cloudflare's edge network.

@@ -15,13 +15,17 @@ import {
   Brain,
   Zap,
   Server,
+  Wrench,
+  FolderOpen,
   Filter,
   Clock,
   User,
   ExternalLink,
   Sparkles,
   Copy,
-  Check
+  Check,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 import type { Skill, MCPServer } from "@/lib/supabase/types";
 
@@ -488,7 +492,7 @@ export default function ExplorePage() {
                 ) : filteredMCPs.length === 0 ? (
                   <EmptyState type="mcp" />
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="space-y-4">
                     {filteredMCPs.map((mcp, idx) => (
                       <MCPCard key={mcp.id} mcp={mcp} index={idx} />
                     ))}
@@ -829,8 +833,12 @@ interface MCPWithPublisher extends MCPServer {
 
 function MCPCard({ mcp, index }: { mcp: MCPWithPublisher; index: number }) {
   const [copied, setCopied] = useState(false);
-  const toolCount = mcp.tools?.length || 0;
-  const resourceCount = mcp.resources?.length || 0;
+  const [expanded, setExpanded] = useState(false);
+  const tools = Array.isArray(mcp.tools) ? mcp.tools : [];
+  const resources = Array.isArray(mcp.resources) ? mcp.resources : [];
+  const toolCount = tools.length;
+  const resourceCount = resources.length;
+  const hasDetails = toolCount > 0 || resourceCount > 0;
 
   const copyConfig = async () => {
     const config = JSON.stringify(mcp.transport_config || {}, null, 2);
@@ -845,51 +853,122 @@ function MCPCard({ mcp, index }: { mcp: MCPWithPublisher; index: number }) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.03 }}
       className={cn(
-        "p-4 rounded-xl",
+        "rounded-xl overflow-hidden",
         "bg-gradient-to-br from-pink-900/20 to-slate-900/80",
         "border border-pink-500/20 hover:border-pink-500/40",
         "transition-all"
       )}
     >
-      <div className="flex items-start justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <Server className="h-4 w-4 text-pink-400" />
-          <h4 className="font-medium text-white">{mcp.name}</h4>
+      <div
+        className={cn(
+          "flex items-start justify-between gap-4 p-4",
+          hasDetails ? "cursor-pointer" : "cursor-default"
+        )}
+        onClick={() => {
+          if (!hasDetails) return;
+          setExpanded((prev) => !prev);
+        }}
+      >
+        <div className="flex items-start gap-3 flex-1 min-w-0">
+          <div className="p-2 rounded-lg bg-pink-500/10 border border-pink-500/20">
+            <Server className="h-4 w-4 text-pink-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <h4 className="font-medium text-white truncate">{mcp.name}</h4>
+            </div>
+            {mcp.description && (
+              <p className="text-sm text-slate-400 line-clamp-2">{mcp.description}</p>
+            )}
+            <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-slate-500">
+              <span className="flex items-center gap-1">
+                <Wrench className="h-3 w-3 text-pink-400" />
+                {toolCount} tools
+              </span>
+              <span className="flex items-center gap-1">
+                <FolderOpen className="h-3 w-3 text-purple-400" />
+                {resourceCount} resources
+              </span>
+              {mcp.transport_type && (
+                <span className="px-2 py-0.5 rounded bg-slate-700/30 text-slate-500">
+                  {mcp.transport_type}
+                </span>
+              )}
+            </div>
+          </div>
         </div>
-        <button
-          onClick={copyConfig}
-          className="p-1.5 text-slate-400 hover:text-pink-400 hover:bg-pink-500/10 rounded-lg transition-colors"
-          title="Copy MCP config"
-        >
-          {copied ? <Check className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4" />}
-        </button>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              copyConfig();
+            }}
+            className="p-1.5 text-slate-400 hover:text-pink-400 hover:bg-pink-500/10 rounded-lg transition-colors"
+            title="Copy MCP config"
+          >
+            {copied ? <Check className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4" />}
+          </button>
+          {hasDetails && (
+            <div className="text-slate-500">
+              {expanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+            </div>
+          )}
+        </div>
       </div>
-      
-      {mcp.description && (
-        <p className="text-sm text-slate-400 mb-3 line-clamp-2">{mcp.description}</p>
-      )}
-      
-      {/* Stats */}
-      <div className="flex gap-3 mb-3">
-        {toolCount > 0 && (
-          <span className="text-xs text-pink-400/70 bg-pink-500/10 px-2 py-0.5 rounded">
-            {toolCount} tools
-          </span>
+
+      {/* Expanded tools/resources */}
+      <AnimatePresence>
+        {expanded && hasDetails && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden border-t border-slate-800/60"
+          >
+            <div className="px-4 pb-4 pt-3 space-y-4">
+              {toolCount > 0 && (
+                <div className="space-y-2">
+                  <div className="text-xs uppercase tracking-wide text-slate-500">Tools</div>
+                  <div className="space-y-2">
+                    {tools.map((tool, toolIndex) => (
+                      <div
+                        key={`${tool.name}-${toolIndex}`}
+                        className="rounded-lg border border-pink-500/10 bg-slate-900/40 px-3 py-2"
+                      >
+                        <div className="text-sm font-mono text-pink-300">{tool.name}</div>
+                        {tool.description && (
+                          <div className="text-xs text-slate-400 mt-1">{tool.description}</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {resourceCount > 0 && (
+                <div className="space-y-2">
+                  <div className="text-xs uppercase tracking-wide text-slate-500">Resources</div>
+                  <div className="space-y-2">
+                    {resources.map((resource, resourceIndex) => (
+                      <div
+                        key={`${resource.name}-${resourceIndex}`}
+                        className="rounded-lg border border-purple-500/10 bg-slate-900/40 px-3 py-2"
+                      >
+                        <div className="text-sm text-purple-200">{resource.name}</div>
+                        <div className="text-xs text-slate-500 mt-1 break-all">{resource.uri}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </motion.div>
         )}
-        {resourceCount > 0 && (
-          <span className="text-xs text-purple-400/70 bg-purple-500/10 px-2 py-0.5 rounded">
-            {resourceCount} resources
-          </span>
-        )}
-        {mcp.transport_type && (
-          <span className="text-xs text-slate-500 bg-slate-700/30 px-2 py-0.5 rounded">
-            {mcp.transport_type}
-          </span>
-        )}
-      </div>
-      
+      </AnimatePresence>
+
       {/* Publisher info */}
-      <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-700/30">
+      <div className="flex items-center justify-between px-4 py-3 border-t border-slate-700/30">
         {mcp.publisher ? (
           <div className="flex items-center gap-2">
             {mcp.publisher.avatar_svg ? (
