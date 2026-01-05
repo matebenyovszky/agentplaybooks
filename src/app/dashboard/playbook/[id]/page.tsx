@@ -39,8 +39,9 @@ import { SkillEditor } from "@/components/playbook/SkillEditor";
 import { McpServerEditor } from "@/components/playbook/McpServerEditor";
 import { MemoryEditor } from "@/components/playbook/MemoryEditor";
 import { ApiKeyManager } from "@/components/playbook/ApiKeyManager";
+import { McpRegistrySearch } from "@/components/playbook/McpRegistrySearch";
 
-type TabType = "personas" | "skills" | "mcp" | "memory" | "apiKeys" | "settings";
+type TabType = "details" | "personas" | "skills" | "mcp" | "memory" | "apiKeys";
 
 // Debounce hook
 function useDebounce<T>(value: T, delay: number): T {
@@ -71,7 +72,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
   const [mcpServers, setMcpServers] = useState<MCPServer[]>([]);
   const [memories, setMemories] = useState<Memory[]>([]);
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
-  const [activeTab, setActiveTab] = useState<TabType>("personas");
+  const [activeTab, setActiveTab] = useState<TabType>("details");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
@@ -84,6 +85,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
   // Browse public modals
   const [showBrowseSkills, setShowBrowseSkills] = useState(false);
   const [showBrowseMCP, setShowBrowseMCP] = useState(false);
+  const [showMcpRegistry, setShowMcpRegistry] = useState(false);
   const [publicSkills, setPublicSkills] = useState<Skill[]>([]);
   const [publicMCPs, setPublicMCPs] = useState<MCPServer[]>([]);
   const [browseLoading, setBrowseLoading] = useState(false);
@@ -445,12 +447,12 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
   };
 
   const tabs = [
+    { id: "details" as TabType, label: t("editor.tabs.details"), icon: Settings, count: 0, color: "slate" },
     { id: "personas" as TabType, label: t("editor.tabs.personas"), icon: Brain, count: personas.length, color: "blue" },
     { id: "skills" as TabType, label: t("editor.tabs.skills"), icon: Zap, count: skills.length, color: "purple" },
     { id: "mcp" as TabType, label: t("editor.tabs.mcp"), icon: Server, count: mcpServers.length, color: "pink" },
     { id: "memory" as TabType, label: t("editor.tabs.memory"), icon: Database, count: memories.length, color: "teal" },
     { id: "apiKeys" as TabType, label: t("editor.tabs.apiKeys"), icon: Key, count: apiKeys.length, color: "amber" },
-    { id: "settings" as TabType, label: t("editor.tabs.settings"), icon: Settings, count: 0, color: "slate" },
   ];
 
   if (loading) {
@@ -810,6 +812,17 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                 {isOwner && (
                   <div className="flex items-center gap-2">
                     <button
+                      onClick={() => setShowMcpRegistry(true)}
+                      className={cn(
+                        "px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium",
+                        "bg-amber-500/20 text-amber-400 border border-amber-500/30",
+                        "hover:bg-amber-500/30 transition-colors"
+                      )}
+                    >
+                      <Globe className="h-4 w-4" />
+                      Official Registry
+                    </button>
+                    <button
                       onClick={openBrowseMCP}
                       className={cn(
                         "px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium",
@@ -908,10 +921,10 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
             </motion.div>
           )}
 
-          {/* Settings Tab */}
-          {activeTab === "settings" && (
+          {/* Details Tab */}
+          {activeTab === "details" && (
             <motion.div
-              key="settings"
+              key="details"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
@@ -919,7 +932,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
             >
               <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
                 <Settings className="h-5 w-5 text-slate-400" />
-                {t("editor.tabs.settings")}
+                {t("editor.tabs.details")}
               </h2>
               
               <div className="space-y-6">
@@ -1555,6 +1568,37 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
               </div>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* MCP Registry Search Modal */}
+      <AnimatePresence>
+        {showMcpRegistry && playbook && (
+          <McpRegistrySearch
+            playbookId={playbook.id}
+            onAdd={async (server) => {
+              // Call the instantiate API
+              const response = await fetch("/api/mcp-registry/instantiate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  registry_id: server.registry_id,
+                  playbook_id: playbook.id,
+                }),
+              });
+              
+              const result = await response.json();
+              
+              if (result.success && result.mcp_server) {
+                // Add to local state
+                setMcpServers([...mcpServers, result.mcp_server]);
+              } else {
+                console.error("Failed to add MCP server:", result.error);
+                throw new Error(result.error);
+              }
+            }}
+            onClose={() => setShowMcpRegistry(false)}
+          />
         )}
       </AnimatePresence>
     </div>

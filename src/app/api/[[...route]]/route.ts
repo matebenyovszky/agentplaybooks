@@ -240,7 +240,6 @@ app.get("/playbooks", async (c) => {
     .from("playbooks")
     .select(`
       *,
-      personas:personas(count),
       skills:skills(count),
       mcp_servers:mcp_servers(count)
     `)
@@ -251,13 +250,16 @@ app.get("/playbooks", async (c) => {
     return c.json({ error: error.message }, 500);
   }
 
-  // Transform count objects to numbers
+  // Transform count objects to numbers, include persona from playbook
   const playbooks = (data || []).map((p: any) => ({
     ...p,
-    persona_count: p.personas?.[0]?.count || 0,
     skill_count: p.skills?.[0]?.count || 0,
     mcp_server_count: p.mcp_servers?.[0]?.count || 0,
-    personas: undefined,
+    // Persona is now embedded in playbook
+    persona: p.persona_name ? {
+      name: p.persona_name,
+      system_prompt: p.persona_system_prompt,
+    } : null,
     skills: undefined,
     mcp_servers: undefined,
   }));
@@ -330,16 +332,20 @@ app.get("/playbooks/:guid", async (c) => {
     return c.json({ error: "Playbook not found" }, 404);
   }
 
-  // Get related data
-  const [personas, skills, mcpServers] = await Promise.all([
-    supabase.from("personas").select("*").eq("playbook_id", playbook.id),
+  // Get related data (persona is now embedded in playbook)
+  const [skills, mcpServers] = await Promise.all([
     supabase.from("skills").select("*").eq("playbook_id", playbook.id),
     supabase.from("mcp_servers").select("*").eq("playbook_id", playbook.id),
   ]);
 
   const fullPlaybook = {
     ...playbook,
-    personas: personas.data || [],
+    // Persona is embedded directly in playbook
+    persona: playbook.persona_name ? {
+      name: playbook.persona_name,
+      system_prompt: playbook.persona_system_prompt,
+      metadata: playbook.persona_metadata || {},
+    } : null,
     skills: skills.data || [],
     mcp_servers: mcpServers.data || [],
   };
@@ -426,11 +432,11 @@ app.delete("/playbooks/:id", async (c) => {
 });
 
 // ============================================
-// PERSONAS CRUD (authenticated)
+// PERSONA (embedded in playbook - 1 playbook = 1 persona)
 // ============================================
 
-// GET /api/playbooks/:id/personas - List personas (supports both UUID and GUID)
-app.get("/playbooks/:id/personas", async (c) => {
+// GET /api/playbooks/:id/persona - Get the playbook's persona (supports both UUID and GUID)
+app.get("/playbooks/:id/persona", async (c) => {
   const user = await getAuthenticatedUser(c);
   const idOrGuid = c.req.param("id");
   const supabase = getServiceSupabase();
@@ -441,7 +447,7 @@ app.get("/playbooks/:id/personas", async (c) => {
   // Find playbook by ID or GUID
   let query = supabase
     .from("playbooks")
-    .select("id, user_id, is_public");
+    .select("id, user_id, is_public, persona_name, persona_system_prompt, persona_metadata");
   
   if (isUuid) {
     query = query.eq("id", idOrGuid);
@@ -460,21 +466,15 @@ app.get("/playbooks/:id/personas", async (c) => {
     return c.json({ error: "Forbidden" }, 403);
   }
 
-  const { data, error } = await supabase
-    .from("personas")
-    .select("id, name, system_prompt, metadata")
-    .eq("playbook_id", playbook.id)
-    .order("created_at", { ascending: true });
-
-  if (error) {
-    return c.json({ error: error.message }, 500);
-  }
-
-  return c.json(data || []);
+  return c.json({
+    name: playbook.persona_name,
+    system_prompt: playbook.persona_system_prompt,
+    metadata: playbook.persona_metadata || {},
+  });
 });
 
-// POST /api/playbooks/:id/personas
-app.post("/playbooks/:id/personas", async (c) => {
+// PUT /api/playbooks/:id/persona - Update the playbook's persona
+app.put("/playbooks/:id/persona", async (c) => {
   const user = await requireAuth(c);
   if (!user) {
     return c.json({ error: "Unauthorized" }, 401);
@@ -489,96 +489,29 @@ app.post("/playbooks/:id/personas", async (c) => {
   const body = await c.req.json();
   const { name, system_prompt, metadata } = body;
 
-  if (!name || !system_prompt) {
-    return c.json({ error: "Name and system_prompt are required" }, 400);
-  }
-
   const supabase = getServiceSupabase();
 
-  const { data, error } = await supabase
-    .from("personas")
-    .insert({
-      playbook_id: playbookId,
-      name,
-      system_prompt,
-      metadata: metadata || {},
-    })
-    .select()
-    .single();
-
-  if (error) {
-    return c.json({ error: error.message }, 500);
-  }
-
-  return c.json(data, 201);
-});
-
-// PUT /api/playbooks/:id/personas/:pid
-app.put("/playbooks/:id/personas/:pid", async (c) => {
-  const user = await requireAuth(c);
-  if (!user) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
-
-  const playbookId = c.req.param("id");
-  const personaId = c.req.param("pid");
-  
-  if (!(await checkPlaybookOwnership(user.id, playbookId))) {
-    return c.json({ error: "Forbidden" }, 403);
-  }
-
-  const body = await c.req.json();
-  const { name, system_prompt, metadata } = body;
-
-  const supabase = getServiceSupabase();
-
-  const updateData: any = {};
-  if (name !== undefined) updateData.name = name;
-  if (system_prompt !== undefined) updateData.system_prompt = system_prompt;
-  if (metadata !== undefined) updateData.metadata = metadata;
+  const updateData: Record<string, unknown> = {};
+  if (name !== undefined) updateData.persona_name = name;
+  if (system_prompt !== undefined) updateData.persona_system_prompt = system_prompt;
+  if (metadata !== undefined) updateData.persona_metadata = metadata;
 
   const { data, error } = await supabase
-    .from("personas")
+    .from("playbooks")
     .update(updateData)
-    .eq("id", personaId)
-    .eq("playbook_id", playbookId)
-    .select()
+    .eq("id", playbookId)
+    .select("persona_name, persona_system_prompt, persona_metadata")
     .single();
 
   if (error) {
     return c.json({ error: error.message }, 500);
   }
 
-  return c.json(data);
-});
-
-// DELETE /api/playbooks/:id/personas/:pid
-app.delete("/playbooks/:id/personas/:pid", async (c) => {
-  const user = await requireAuth(c);
-  if (!user) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
-
-  const playbookId = c.req.param("id");
-  const personaId = c.req.param("pid");
-  
-  if (!(await checkPlaybookOwnership(user.id, playbookId))) {
-    return c.json({ error: "Forbidden" }, 403);
-  }
-
-  const supabase = getServiceSupabase();
-
-  const { error } = await supabase
-    .from("personas")
-    .delete()
-    .eq("id", personaId)
-    .eq("playbook_id", playbookId);
-
-  if (error) {
-    return c.json({ error: error.message }, 500);
-  }
-
-  return c.json({ success: true });
+  return c.json({
+    name: data.persona_name,
+    system_prompt: data.persona_system_prompt,
+    metadata: data.persona_metadata || {},
+  });
 });
 
 // ============================================
@@ -1201,8 +1134,7 @@ app.get("/profiles/:id/playbooks", async (c) => {
   const { data, error } = await supabase
     .from("playbooks")
     .select(`
-      id, guid, name, description, star_count, tags, created_at,
-      personas:personas(count),
+      id, guid, name, description, star_count, tags, created_at, persona_name,
       skills:skills(count),
       mcp_servers:mcp_servers(count)
     `)
@@ -1216,10 +1148,8 @@ app.get("/profiles/:id/playbooks", async (c) => {
 
   const playbooks = (data || []).map((p: any) => ({
     ...p,
-    personas_count: p.personas?.[0]?.count || 0,
     skills_count: p.skills?.[0]?.count || 0,
     mcp_servers_count: p.mcp_servers?.[0]?.count || 0,
-    personas: undefined,
     skills: undefined,
     mcp_servers: undefined,
   }));
@@ -1336,7 +1266,6 @@ app.get("/manage/playbooks", async (c) => {
     .from("playbooks")
     .select(`
       *,
-      personas:personas(count),
       skills:skills(count),
       mcp_servers:mcp_servers(count)
     `)
@@ -1349,10 +1278,13 @@ app.get("/manage/playbooks", async (c) => {
 
   const playbooks = (data || []).map((p: any) => ({
     ...p,
-    persona_count: p.personas?.[0]?.count || 0,
     skill_count: p.skills?.[0]?.count || 0,
     mcp_server_count: p.mcp_servers?.[0]?.count || 0,
-    personas: undefined,
+    // Persona is embedded in playbook
+    persona: p.persona_name ? {
+      name: p.persona_name,
+      system_prompt: p.persona_system_prompt,
+    } : null,
     skills: undefined,
     mcp_servers: undefined,
   }));
@@ -1418,16 +1350,20 @@ app.get("/manage/playbooks/:id", async (c) => {
     return c.json({ error: "Playbook not found" }, 404);
   }
 
-  // Get related data
-  const [personas, skills, mcpServers] = await Promise.all([
-    supabase.from("personas").select("*").eq("playbook_id", playbook.id),
+  // Get related data (persona is embedded in playbook)
+  const [skills, mcpServers] = await Promise.all([
     supabase.from("skills").select("*").eq("playbook_id", playbook.id),
     supabase.from("mcp_servers").select("*").eq("playbook_id", playbook.id),
   ]);
 
   return c.json({
     ...playbook,
-    personas: personas.data || [],
+    // Persona is embedded directly in playbook
+    persona: playbook.persona_name ? {
+      name: playbook.persona_name,
+      system_prompt: playbook.persona_system_prompt,
+      metadata: playbook.persona_metadata || {},
+    } : null,
     skills: skills.data || [],
     mcp_servers: mcpServers.data || [],
   });
@@ -1498,8 +1434,40 @@ app.delete("/manage/playbooks/:id", async (c) => {
   return c.json({ success: true });
 });
 
-// POST /api/manage/playbooks/:id/personas - Add persona (User API key supported)
-app.post("/manage/playbooks/:id/personas", async (c) => {
+// GET /api/manage/playbooks/:id/persona - Get playbook's persona (User API key supported)
+app.get("/manage/playbooks/:id/persona", async (c) => {
+  const user = await getUserFromAuthOrApiKey(c, "playbooks:read");
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const playbookId = c.req.param("id");
+  
+  if (!(await checkPlaybookOwnership(user.id, playbookId))) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+
+  const supabase = getServiceSupabase();
+
+  const { data: playbook, error } = await supabase
+    .from("playbooks")
+    .select("persona_name, persona_system_prompt, persona_metadata")
+    .eq("id", playbookId)
+    .single();
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json({
+    name: playbook.persona_name,
+    system_prompt: playbook.persona_system_prompt,
+    metadata: playbook.persona_metadata || {},
+  });
+});
+
+// PUT /api/manage/playbooks/:id/persona - Update playbook's persona (User API key supported)
+app.put("/manage/playbooks/:id/persona", async (c) => {
   const user = await getUserFromAuthOrApiKey(c, "personas:write");
   if (!user) {
     return c.json({ error: "Unauthorized" }, 401);
@@ -1514,89 +1482,29 @@ app.post("/manage/playbooks/:id/personas", async (c) => {
   const body = await c.req.json();
   const { name, system_prompt, metadata } = body;
 
-  if (!name || !system_prompt) {
-    return c.json({ error: "Name and system_prompt are required" }, 400);
-  }
-
   const supabase = getServiceSupabase();
 
+  const updateData: Record<string, unknown> = {};
+  if (name !== undefined) updateData.persona_name = name;
+  if (system_prompt !== undefined) updateData.persona_system_prompt = system_prompt;
+  if (metadata !== undefined) updateData.persona_metadata = metadata;
+
   const { data, error } = await supabase
-    .from("personas")
-    .insert({
-      playbook_id: playbookId,
-      name,
-      system_prompt,
-      metadata: metadata || {},
-    })
-    .select()
+    .from("playbooks")
+    .update(updateData)
+    .eq("id", playbookId)
+    .select("persona_name, persona_system_prompt, persona_metadata")
     .single();
 
   if (error) {
     return c.json({ error: error.message }, 500);
   }
 
-  return c.json(data, 201);
-});
-
-// PUT /api/manage/playbooks/:id/personas/:pid - Update persona (User API key supported)
-app.put("/manage/playbooks/:id/personas/:pid", async (c) => {
-  const user = await getUserFromAuthOrApiKey(c, "personas:write");
-  if (!user) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
-
-  const playbookId = c.req.param("id");
-  const personaId = c.req.param("pid");
-  
-  if (!(await checkPlaybookOwnership(user.id, playbookId))) {
-    return c.json({ error: "Forbidden" }, 403);
-  }
-
-  const body = await c.req.json();
-  const supabase = getServiceSupabase();
-
-  const { data, error } = await supabase
-    .from("personas")
-    .update(body)
-    .eq("id", personaId)
-    .eq("playbook_id", playbookId)
-    .select()
-    .single();
-
-  if (error) {
-    return c.json({ error: error.message }, 500);
-  }
-
-  return c.json(data);
-});
-
-// DELETE /api/manage/playbooks/:id/personas/:pid - Delete persona (User API key supported)
-app.delete("/manage/playbooks/:id/personas/:pid", async (c) => {
-  const user = await getUserFromAuthOrApiKey(c, "personas:write");
-  if (!user) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
-
-  const playbookId = c.req.param("id");
-  const personaId = c.req.param("pid");
-  
-  if (!(await checkPlaybookOwnership(user.id, playbookId))) {
-    return c.json({ error: "Forbidden" }, 403);
-  }
-
-  const supabase = getServiceSupabase();
-
-  const { error } = await supabase
-    .from("personas")
-    .delete()
-    .eq("id", personaId)
-    .eq("playbook_id", playbookId);
-
-  if (error) {
-    return c.json({ error: error.message }, 500);
-  }
-
-  return c.json({ success: true });
+  return c.json({
+    name: data.persona_name,
+    system_prompt: data.persona_system_prompt,
+    metadata: data.persona_metadata || {},
+  });
 });
 
 // POST /api/manage/playbooks/:id/skills - Add skill (User API key supported)
@@ -2688,7 +2596,36 @@ app.put("/agent/:guid/skills/:id", async (c) => {
   return c.json(data);
 });
 
-app.post("/agent/:guid/personas", async (c) => {
+// GET /api/agent/:guid/persona - Get playbook's persona (legacy, use /manage instead)
+app.get("/agent/:guid/persona", async (c) => {
+  const guid = c.req.param("guid");
+
+  const apiKeyData = await validateApiKey(c, "memory:read");
+  if (!apiKeyData || apiKeyData.playbooks.guid !== guid) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const supabase = getServiceSupabase();
+
+  const { data: playbook, error } = await supabase
+    .from("playbooks")
+    .select("persona_name, persona_system_prompt, persona_metadata")
+    .eq("id", apiKeyData.playbook_id)
+    .single();
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json({
+    name: playbook.persona_name,
+    system_prompt: playbook.persona_system_prompt,
+    metadata: playbook.persona_metadata || {},
+  });
+});
+
+// PUT /api/agent/:guid/persona - Update playbook's persona (legacy, use /manage instead)
+app.put("/agent/:guid/persona", async (c) => {
   const guid = c.req.param("guid");
 
   const apiKeyData = await validateApiKey(c, "personas:write");
@@ -2699,55 +2636,29 @@ app.post("/agent/:guid/personas", async (c) => {
   const body = await c.req.json();
   const { name, system_prompt, metadata } = body;
 
-  if (!name || !system_prompt) {
-    return c.json({ error: "Missing name or system_prompt" }, 400);
-  }
-
   const supabase = getServiceSupabase();
 
+  const updateData: Record<string, unknown> = {};
+  if (name !== undefined) updateData.persona_name = name;
+  if (system_prompt !== undefined) updateData.persona_system_prompt = system_prompt;
+  if (metadata !== undefined) updateData.persona_metadata = metadata;
+
   const { data, error } = await supabase
-    .from("personas")
-    .insert({
-      playbook_id: apiKeyData.playbook_id,
-      name,
-      system_prompt,
-      metadata: metadata || {},
-    })
-    .select()
+    .from("playbooks")
+    .update(updateData)
+    .eq("id", apiKeyData.playbook_id)
+    .select("persona_name, persona_system_prompt, persona_metadata")
     .single();
 
   if (error) {
     return c.json({ error: error.message }, 500);
   }
 
-  return c.json(data);
-});
-
-app.put("/agent/:guid/personas/:id", async (c) => {
-  const guid = c.req.param("guid");
-  const personaId = c.req.param("id");
-
-  const apiKeyData = await validateApiKey(c, "personas:write");
-  if (!apiKeyData || apiKeyData.playbooks.guid !== guid) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
-
-  const body = await c.req.json();
-  const supabase = getServiceSupabase();
-
-  const { data, error } = await supabase
-    .from("personas")
-    .update(body)
-    .eq("id", personaId)
-    .eq("playbook_id", apiKeyData.playbook_id)
-    .select()
-    .single();
-
-  if (error) {
-    return c.json({ error: error.message }, 500);
-  }
-
-  return c.json(data);
+  return c.json({
+    name: data.persona_name,
+    system_prompt: data.persona_system_prompt,
+    metadata: data.persona_metadata || {},
+  });
 });
 
 // ============================================
@@ -2764,8 +2675,7 @@ app.get("/public/playbooks", async (c) => {
   let query = supabase
     .from("playbooks")
     .select(`
-      id, guid, name, description, config, star_count, tags, created_at, updated_at, user_id,
-      personas:personas(count),
+      id, guid, name, description, config, star_count, tags, created_at, updated_at, user_id, persona_name,
       skills:skills(count),
       mcp_servers:mcp_servers(count)
     `)
@@ -2813,7 +2723,6 @@ app.get("/public/playbooks", async (c) => {
     const profile = profileMap.get(p.user_id);
     return {
       ...p,
-      personas_count: p.personas?.[0]?.count || 0,
       skills_count: p.skills?.[0]?.count || 0,
       mcp_servers_count: p.mcp_servers?.[0]?.count || 0,
       tags: p.tags || [],
@@ -2826,7 +2735,6 @@ app.get("/public/playbooks", async (c) => {
         is_verified: profile.is_verified,
         is_virtual: profile.is_virtual,
       } : null,
-      personas: undefined,
       skills: undefined,
       mcp_servers: undefined,
     };
@@ -3463,7 +3371,8 @@ function formatAsOpenAPI(playbook: any) {
     // Extension: include full playbook data for AI context
     "x-playbook": {
       guid: playbook.guid,
-      personas: playbook.personas,
+      // Persona is now a single object (1 playbook = 1 persona)
+      persona: playbook.persona,
       skills: tools,
       mcp_servers: playbook.mcp_servers?.map((mcp: any) => ({
         name: mcp.name,
@@ -3535,8 +3444,9 @@ function formatAsAnthropic(playbook: any) {
       description: playbook.description,
       guid: playbook.guid,
     },
-    system_prompt: playbook.personas.length > 0 
-      ? playbook.personas.map((p: any) => `## ${p.name}\n\n${p.system_prompt}`).join("\n\n---\n\n")
+    // Single persona (1 playbook = 1 persona)
+    system_prompt: playbook.persona 
+      ? `## ${playbook.persona.name}\n\n${playbook.persona.system_prompt}`
       : null,
     tools,
     mcp_servers: playbook.mcp_servers.map((mcp: any) => ({
@@ -3557,12 +3467,10 @@ function formatAsMarkdown(playbook: any): string {
 
   md += `**GUID:** \`${playbook.guid}\`\n\n`;
 
-  if (playbook.personas?.length) {
-    md += `## Personas\n\n`;
-    for (const persona of playbook.personas) {
-      md += `### ${persona.name}\n\n`;
-      md += `${persona.system_prompt}\n\n`;
-    }
+  // Single persona (1 playbook = 1 persona)
+  if (playbook.persona) {
+    md += `## Persona: ${playbook.persona.name}\n\n`;
+    md += `${playbook.persona.system_prompt}\n\n`;
   }
 
   if (playbook.skills?.length) {
@@ -3608,6 +3516,258 @@ function formatAsMarkdown(playbook: any): string {
 
   return md;
 }
+
+// ===========================================
+// MCP REGISTRY PROXY (Anthropic Official Registry)
+// ===========================================
+
+const MCP_REGISTRY_BASE_URL = "https://registry.modelcontextprotocol.io/v0.1";
+const ANTHROPIC_PUBLISHER_ID = "a0000000-0000-0000-0000-000000000001";
+
+// Search the official MCP Registry
+app.get("/mcp-registry/search", async (c) => {
+  const query = c.req.query("q") || "";
+  const latestOnly = c.req.query("latest") !== "false";
+  const limit = parseInt(c.req.query("limit") || "50");
+  
+  try {
+    // Fetch from official registry
+    const response = await fetch(`${MCP_REGISTRY_BASE_URL}/servers`, {
+      headers: { "Accept": "application/json" },
+    });
+    
+    if (!response.ok) {
+      console.error("MCP Registry error:", response.status, await response.text());
+      return c.json({ error: "Failed to fetch from MCP registry", servers: [] }, 502);
+    }
+    
+    const data = await response.json();
+    let servers = data.servers || [];
+    
+    // Filter by latest version if requested
+    if (latestOnly) {
+      servers = servers.filter((item: any) => 
+        item._meta?.["io.modelcontextprotocol.registry/official"]?.isLatest === true
+      );
+    }
+    
+    // Filter by search query
+    if (query) {
+      const q = query.toLowerCase();
+      servers = servers.filter((item: any) => {
+        const s = item.server;
+        return (
+          s.name?.toLowerCase().includes(q) ||
+          s.title?.toLowerCase().includes(q) ||
+          s.description?.toLowerCase().includes(q)
+        );
+      });
+    }
+    
+    // Transform to our format
+    const transformed = servers.slice(0, limit).map((item: any) => {
+      const s = item.server;
+      const meta = item._meta?.["io.modelcontextprotocol.registry/official"];
+      
+      // Determine transport type from remotes or packages
+      let transportType: string | null = null;
+      let transportConfig: Record<string, unknown> = {};
+      
+      if (s.remotes?.length > 0) {
+        const remote = s.remotes[0];
+        if (remote.type === "streamable-http" || remote.type === "sse") {
+          transportType = remote.type === "streamable-http" ? "http" : "sse";
+          transportConfig = { url: remote.url };
+        }
+      } else if (s.packages?.length > 0) {
+        const pkg = s.packages[0];
+        transportType = pkg.transport?.type || "stdio";
+        transportConfig = {
+          registryType: pkg.registryType,
+          identifier: pkg.identifier,
+          version: pkg.version,
+        };
+      }
+      
+      return {
+        registry_id: s.name,
+        name: s.title || s.name.split("/").pop() || s.name,
+        description: s.description,
+        version: s.version,
+        repository_url: s.repository?.url,
+        website_url: s.websiteUrl,
+        icon_url: s.icons?.[0]?.src,
+        transport_type: transportType,
+        transport_config: transportConfig,
+        is_latest: meta?.isLatest,
+        published_at: meta?.publishedAt,
+        updated_at: meta?.updatedAt,
+        source: "anthropic",
+        publisher: {
+          id: ANTHROPIC_PUBLISHER_ID,
+          display_name: "Anthropic MCP Registry",
+          is_verified: true,
+          is_virtual: true,
+          website_url: "https://registry.modelcontextprotocol.io",
+        },
+      };
+    });
+    
+    return c.json({
+      servers: transformed,
+      total: servers.length,
+      source: "anthropic",
+    });
+  } catch (error) {
+    console.error("MCP Registry fetch error:", error);
+    return c.json({ error: "Failed to connect to MCP registry", servers: [] }, 502);
+  }
+});
+
+// Get a specific server from the official MCP Registry
+app.get("/mcp-registry/servers/:name{.+}", async (c) => {
+  const name = c.req.param("name");
+  
+  try {
+    const response = await fetch(`${MCP_REGISTRY_BASE_URL}/servers`, {
+      headers: { "Accept": "application/json" },
+    });
+    
+    if (!response.ok) {
+      return c.json({ error: "Failed to fetch from MCP registry" }, 502);
+    }
+    
+    const data = await response.json();
+    
+    // Find the specific server (latest version)
+    const server = data.servers?.find((item: any) => 
+      item.server.name === name && 
+      item._meta?.["io.modelcontextprotocol.registry/official"]?.isLatest === true
+    );
+    
+    if (!server) {
+      return c.json({ error: "Server not found in registry" }, 404);
+    }
+    
+    return c.json(server);
+  } catch (error) {
+    console.error("MCP Registry fetch error:", error);
+    return c.json({ error: "Failed to connect to MCP registry" }, 502);
+  }
+});
+
+// Instantiate (copy) an MCP server from registry to a playbook
+app.post("/mcp-registry/instantiate", async (c) => {
+  const user = await requireAuth(c);
+  if (!user) {
+    return c.json({ error: "Authentication required" }, 401);
+  }
+  
+  const body = await c.req.json();
+  const { registry_id, playbook_id } = body;
+  
+  if (!registry_id || !playbook_id) {
+    return c.json({ error: "registry_id and playbook_id are required" }, 400);
+  }
+  
+  const supabase = getServiceSupabase();
+  
+  // Verify user owns the playbook
+  const { data: playbook, error: playbookError } = await supabase
+    .from("playbooks")
+    .select("id, user_id")
+    .eq("id", playbook_id)
+    .single();
+  
+  if (playbookError || !playbook) {
+    return c.json({ error: "Playbook not found" }, 404);
+  }
+  
+  if (playbook.user_id !== user.id) {
+    return c.json({ error: "You don't own this playbook" }, 403);
+  }
+  
+  // Fetch the server from registry
+  try {
+    const response = await fetch(`${MCP_REGISTRY_BASE_URL}/servers`, {
+      headers: { "Accept": "application/json" },
+    });
+    
+    if (!response.ok) {
+      return c.json({ error: "Failed to fetch from MCP registry" }, 502);
+    }
+    
+    const data = await response.json();
+    
+    // Find the specific server (latest version)
+    const item = data.servers?.find((item: any) => 
+      item.server.name === registry_id && 
+      item._meta?.["io.modelcontextprotocol.registry/official"]?.isLatest === true
+    );
+    
+    if (!item) {
+      return c.json({ error: "Server not found in registry" }, 404);
+    }
+    
+    const s = item.server;
+    const meta = item._meta?.["io.modelcontextprotocol.registry/official"];
+    
+    // Determine transport
+    let transportType: 'stdio' | 'http' | 'sse' = "http";
+    let transportConfig: Record<string, unknown> = {};
+    
+    if (s.remotes?.length > 0) {
+      const remote = s.remotes[0];
+      const remoteType = remote.type === "streamable-http" ? "http" : (remote.type || "http");
+      transportType = (remoteType === "stdio" || remoteType === "http" || remoteType === "sse") ? remoteType : "http";
+      transportConfig = { url: remote.url };
+    } else if (s.packages?.length > 0) {
+      const pkg = s.packages[0];
+      const pkgType = pkg.transport?.type || "stdio";
+      transportType = (pkgType === "stdio" || pkgType === "http" || pkgType === "sse") ? pkgType : "stdio";
+      transportConfig = {
+        registryType: pkg.registryType,
+        identifier: pkg.identifier,
+        version: pkg.version,
+        environmentVariables: pkg.environmentVariables,
+      };
+    }
+    
+    // Create the MCP server in the playbook
+    const { data: mcpServer, error: insertError } = await supabase
+      .from("mcp_servers")
+      .insert({
+        playbook_id: playbook_id,
+        name: s.title || s.name.split("/").pop() || s.name,
+        description: s.description,
+        tools: [],
+        resources: [],
+        transport_type: transportType,
+        transport_config: transportConfig,
+        source_registry: "anthropic",
+        source_registry_id: s.name,
+        source_url: s.repository?.url || s.websiteUrl,
+        source_version: s.version,
+        publisher_id: ANTHROPIC_PUBLISHER_ID,
+      })
+      .select()
+      .single();
+    
+    if (insertError) {
+      console.error("Failed to create MCP server:", insertError);
+      return c.json({ error: "Failed to add MCP server to playbook" }, 500);
+    }
+    
+    return c.json({
+      success: true,
+      mcp_server: mcpServer,
+      message: `Added "${s.title || s.name}" from Anthropic MCP Registry`,
+    });
+  } catch (error) {
+    console.error("MCP Registry instantiate error:", error);
+    return c.json({ error: "Failed to instantiate MCP server" }, 500);
+  }
+});
 
 // Health check
 app.get("/health", (c) => {

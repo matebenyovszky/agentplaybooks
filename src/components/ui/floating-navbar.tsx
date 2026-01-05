@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { Home, ChevronDown, BookOpen, LogOut, Globe, Building2 } from "lucide-react";
+import { Home, ChevronDown, BookOpen, LogOut, Globe, Server, Star, Settings } from "lucide-react";
 import { locales, localeNames, localeFlags, type Locale } from "@/i18n/config";
 import { useTranslations } from "next-intl";
 import { createBrowserClient } from "@/lib/supabase/client";
@@ -26,8 +26,16 @@ export const FloatingNav = ({
   // Default nav items - used if no custom items provided
   const defaultNavItems = useMemo(() => [
     { name: t("common.explore"), link: "/explore", icon: <Globe className="h-4 w-4" /> },
-    { name: t("common.enterprise"), link: "/enterprise", icon: <Building2 className="h-4 w-4" /> },
+    { name: t("common.selfHost"), link: "/enterprise", icon: <Server className="h-4 w-4" /> },
     { name: t("common.docs"), link: "/docs", icon: <BookOpen className="h-4 w-4" /> },
+  ], [t]);
+  
+  // Dashboard menu items - used in user dropdown
+  const dashboardItems = useMemo(() => [
+    { name: t("dashboard.myPlaybooks"), link: "/dashboard", icon: <BookOpen className="h-4 w-4" /> },
+    { name: t("dashboard.favorites"), link: "/dashboard/favorites", icon: <Star className="h-4 w-4" /> },
+    { name: t("common.explore"), link: "/explore", icon: <Globe className="h-4 w-4" /> },
+    { name: t("common.settings"), link: "/dashboard/settings", icon: <Settings className="h-4 w-4" /> },
   ], [t]);
   
   const navItems = customNavItems || defaultNavItems;
@@ -225,21 +233,26 @@ export const FloatingNav = ({
                   <div className="px-4 py-2 border-b border-neutral-700">
                     <p className="text-xs text-neutral-400 truncate">{user.email}</p>
                   </div>
-                  <Link
-                    href="/dashboard"
-                    className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 hover:bg-neutral-800 transition-colors text-neutral-300"
-                    onClick={() => setUserMenuOpen(false)}
-                  >
-                    <BookOpen className="h-4 w-4" />
-                    <span>{t("dashboard.myPlaybooks")}</span>
-                  </Link>
-                  <button
-                    onClick={handleSignOut}
-                    className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 hover:bg-neutral-800 transition-colors text-red-400"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    <span>{t("dashboard.signOut")}</span>
-                  </button>
+                  {dashboardItems.map((item, idx) => (
+                    <Link
+                      key={idx}
+                      href={item.link}
+                      className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 hover:bg-neutral-800 transition-colors text-neutral-300"
+                      onClick={() => setUserMenuOpen(false)}
+                    >
+                      {item.icon}
+                      <span>{item.name}</span>
+                    </Link>
+                  ))}
+                  <div className="border-t border-neutral-700 mt-1 pt-1">
+                    <button
+                      onClick={handleSignOut}
+                      className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 hover:bg-neutral-800 transition-colors text-red-400"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      <span>{t("dashboard.signOut")}</span>
+                    </button>
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>

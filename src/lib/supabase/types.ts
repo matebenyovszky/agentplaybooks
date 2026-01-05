@@ -33,6 +33,10 @@ export type PlaybooksRow = {
   is_public: boolean;
   star_count: number;
   tags: string[];
+  // Persona is embedded (1 playbook = 1 persona)
+  persona_name: string | null;
+  persona_system_prompt: string | null;
+  persona_metadata: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
 };
@@ -50,6 +54,8 @@ export type PlaybookStarsRow = {
 export type PlaybookStarsInsert = Partial<PlaybookStarsRow>;
 export type PlaybookStarsUpdate = Partial<PlaybookStarsRow>;
 
+// PersonasRow removed - persona is now embedded in PlaybooksRow (1 playbook = 1 persona)
+// Legacy types kept for backward compatibility during migration
 export type PersonasRow = {
   id: string;
   playbook_id: string;
@@ -82,6 +88,13 @@ export type MCPServersRow = {
   description: string | null;
   tools: McpTool[];
   resources: McpResource[];
+  transport_type: 'stdio' | 'http' | 'sse' | null;
+  transport_config: Record<string, unknown> | null;
+  source_registry: 'anthropic' | 'github' | 'manual' | null;
+  source_registry_id: string | null;
+  source_url: string | null;
+  source_version: string | null;
+  publisher_id: string | null;
   created_at: string;
 };
 
@@ -244,6 +257,70 @@ export const PUBLISHER_IDS = {
   AGENT_PLAYBOOKS: '00000000-0000-0000-0000-000000000001',
   ANTHROPIC: 'a0000000-0000-0000-0000-000000000001',
 } as const;
+
+// ===================
+// MCP REGISTRY TYPES (Anthropic Official Registry)
+// ===================
+
+export type McpRegistryPackage = {
+  registryType: 'pypi' | 'npm' | 'oci' | string;
+  registryBaseUrl?: string;
+  identifier: string;
+  version?: string;
+  transport?: {
+    type: 'stdio' | 'http' | 'sse';
+  };
+  environmentVariables?: Array<{
+    name: string;
+    description?: string;
+    isSecret?: boolean;
+  }>;
+};
+
+export type McpRegistryRemote = {
+  type: 'streamable-http' | 'sse' | 'stdio';
+  url?: string;
+};
+
+export type McpRegistryServer = {
+  $schema?: string;
+  name: string;
+  title?: string;
+  description: string;
+  version: string;
+  repository?: {
+    url?: string;
+    source?: 'github' | string;
+  };
+  websiteUrl?: string;
+  icons?: Array<{
+    src: string;
+    mimeType?: string;
+    theme?: 'light' | 'dark';
+  }>;
+  packages?: McpRegistryPackage[];
+  remotes?: McpRegistryRemote[];
+};
+
+export type McpRegistryItem = {
+  server: McpRegistryServer;
+  _meta: {
+    'io.modelcontextprotocol.registry/official': {
+      status: 'active' | 'inactive';
+      publishedAt: string;
+      updatedAt: string;
+      isLatest: boolean;
+    };
+  };
+};
+
+export type McpRegistryResponse = {
+  servers: McpRegistryItem[];
+  metadata: {
+    nextCursor?: string;
+    count: number;
+  };
+};
 
 export interface Database {
   public: {

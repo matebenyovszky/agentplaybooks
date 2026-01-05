@@ -2,6 +2,8 @@
   "name": "agentplaybooks",
   "version": "0.1.0",
   "private": true,
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "author": "AgentPlaybooks",
   "scripts": {
     "dev": "next dev",
     "prebuild": "tsx scripts/sync-sitemap-docs.ts",

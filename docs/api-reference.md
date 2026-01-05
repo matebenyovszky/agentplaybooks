@@ -46,6 +46,117 @@ See [Management API & MCP](./management-api.md) for details.
 
 ---
 
+## Connect with ChatGPT (Custom GPT Actions)
+
+You can connect any public playbook to ChatGPT as a Custom GPT Action. This allows ChatGPT to use your playbook's skills, read/write memory, and follow your persona's instructions.
+
+### Step-by-Step Setup
+
+1. **Open ChatGPT GPT Builder**
+   - Go to [chat.openai.com](https://chat.openai.com)
+   - Click "Explore GPTs" → "Create"
+   - Or edit an existing GPT
+
+2. **Add an Action**
+   - Go to **Configure** tab
+   - Scroll to **Actions** → Click **Create new action**
+
+3. **Import OpenAPI Specification**
+   - Click **Import from URL**
+   - Enter your playbook's OpenAPI URL:
+   ```
+   https://agentplaybooks.ai/api/playbooks/{your-guid}?format=openapi
+   ```
+   - ChatGPT will automatically parse the available endpoints
+
+4. **Set Up Authentication**
+   - Under **Authentication**, select **API Key**
+   - **Auth Type**: `Bearer`
+   - **API Key**: Your playbook API key (e.g., `apb_live_xxxxx...`)
+   
+   > 💡 Create an API key at: Dashboard → Your Playbook → Settings → API Keys
+
+5. **Configure Privacy Policy** (optional)
+   - Add a privacy policy URL if publishing publicly
+
+6. **Save and Test**
+   - Click **Save**
+   - Test by asking ChatGPT to use one of your playbook's skills
+
+### What ChatGPT Can Do
+
+Once connected, ChatGPT can:
+
+| Action | Endpoint | Description |
+|--------|----------|-------------|
+| Read Memory | `GET /memory` | Access stored data |
+| Search Memory | `GET /memory?search=...&tags=...` | Find specific entries |
+| Write Memory | `PUT /memory/:key` | Save new data (requires API key) |
+| Delete Memory | `DELETE /memory/:key` | Remove entries |
+| List Skills | `GET /skills` | See available capabilities |
+| Get Skill | `GET /skills/:id` | Get skill details & examples |
+| List Personas | `GET /personas` | Get AI personality instructions |
+
+### Example: Using Memory
+
+Ask ChatGPT:
+> "Save my preference for dark mode to the playbook memory"
+
+ChatGPT will call:
+```http
+PUT /api/playbooks/your-guid/memory/user_preferences
+Authorization: Bearer apb_live_xxxxx
+Content-Type: application/json
+
+{
+  "value": { "theme": "dark" },
+  "tags": ["preferences", "ui"],
+  "description": "User's display preferences"
+}
+```
+
+### Security Notes
+
+- **API Key** is stored encrypted by OpenAI
+- Keys only grant access to the specific playbook
+- Use separate keys for different integrations
+- Rotate keys periodically via Dashboard
+
+### OpenAPI Spec Contents
+
+The `?format=openapi` response includes:
+
+```json
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Your Playbook Name",
+    "description": "Your playbook description"
+  },
+  "servers": [{ "url": "https://agentplaybooks.ai/api" }],
+  "paths": { /* memory, skills, personas endpoints */ },
+  "components": {
+    "securitySchemes": {
+      "apiKey": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "API key starting with apb_live_"
+      }
+    }
+  },
+  "x-playbook": {
+    "guid": "your-guid",
+    "personas": [/* full persona data */],
+    "skills": [/* full skill definitions */],
+    "mcp_servers": [/* MCP server configs */]
+  }
+}
+```
+
+The `x-playbook` extension provides full context to the AI, including system prompts and skill definitions.
+
+---
+
 ## Public Endpoints
 
 These endpoints don't require authentication. They only work for playbooks marked as public.

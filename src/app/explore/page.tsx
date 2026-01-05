@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { FloatingNav } from "@/components/ui/floating-navbar";
 import { createBrowserClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
@@ -19,14 +19,20 @@ import {
   Clock,
   User,
   ExternalLink,
-  Sparkles
+  Sparkles,
+  Copy,
+  Check
 } from "lucide-react";
-import type { PublicPlaybook } from "@/lib/supabase/types";
+import type { PublicPlaybook, Skill, MCPServer } from "@/lib/supabase/types";
 
+type TabType = "playbooks" | "skills" | "mcp";
 type SortType = "stars" | "recent" | "name";
 
 export default function ExplorePage() {
   const t = useTranslations();
+  const [activeTab, setActiveTab] = useState<TabType>("playbooks");
+  
+  // Playbooks state
   const [playbooks, setPlaybooks] = useState<PublicPlaybook[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -35,10 +41,27 @@ export default function ExplorePage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [starredIds, setStarredIds] = useState<Set<string>>(new Set());
 
+  // Skills & MCP state
+  const [skills, setSkills] = useState<Skill[]>([]);
+  const [mcpServers, setMcpServers] = useState<MCPServer[]>([]);
+  const [skillsLoading, setSkillsLoading] = useState(false);
+  const [mcpLoading, setMcpLoading] = useState(false);
+  const [skillSearch, setSkillSearch] = useState("");
+  const [mcpSearch, setMcpSearch] = useState("");
+
   useEffect(() => {
     checkAuth();
-    loadPlaybooks();
-  }, [searchQuery, selectedTags, sortBy]);
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "playbooks") {
+      loadPlaybooks();
+    } else if (activeTab === "skills" && skills.length === 0) {
+      loadSkills();
+    } else if (activeTab === "mcp" && mcpServers.length === 0) {
+      loadMCPServers();
+    }
+  }, [activeTab, searchQuery, selectedTags, sortBy]);
 
   const checkAuth = async () => {
     const supabase = createBrowserClient();
@@ -82,9 +105,42 @@ export default function ExplorePage() {
     setLoading(false);
   };
 
+  const loadSkills = async () => {
+    setSkillsLoading(true);
+    const supabase = createBrowserClient();
+    
+    const { data } = await supabase
+      .from("skills")
+      .select(`
+        *,
+        playbooks!inner(is_public, name)
+      `)
+      .eq("playbooks.is_public", true)
+      .order("name");
+    
+    setSkills((data as Skill[]) || []);
+    setSkillsLoading(false);
+  };
+
+  const loadMCPServers = async () => {
+    setMcpLoading(true);
+    const supabase = createBrowserClient();
+    
+    const { data } = await supabase
+      .from("mcp_servers")
+      .select(`
+        *,
+        playbooks!inner(is_public, name)
+      `)
+      .eq("playbooks.is_public", true)
+      .order("name");
+    
+    setMcpServers((data as MCPServer[]) || []);
+    setMcpLoading(false);
+  };
+
   const toggleStar = async (playbookId: string) => {
     if (!userId) {
-      // Redirect to login
       window.location.href = "/login?redirect=/explore";
       return;
     }
@@ -105,7 +161,6 @@ export default function ExplorePage() {
         return next;
       });
       
-      // Update local count
       setPlaybooks(prev => prev.map(p => 
         p.id === playbookId ? { ...p, star_count: Math.max(0, p.star_count - 1) } : p
       ));
@@ -116,14 +171,13 @@ export default function ExplorePage() {
       
       setStarredIds(prev => new Set(prev).add(playbookId));
       
-      // Update local count
       setPlaybooks(prev => prev.map(p => 
         p.id === playbookId ? { ...p, star_count: p.star_count + 1 } : p
       ));
     }
   };
 
-  // Extract unique tags from all playbooks, sorted by frequency
+  // Extract unique tags from all playbooks
   const allTags = useMemo(() => {
     const tagCounts: Record<string, number> = {};
     playbooks.forEach(p => {
@@ -131,11 +185,10 @@ export default function ExplorePage() {
         tagCounts[tag] = (tagCounts[tag] || 0) + 1;
       });
     });
-    // Sort by frequency, then alphabetically
     return Object.entries(tagCounts)
       .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
       .map(([tag]) => tag)
-      .slice(0, 15); // Show top 15 tags
+      .slice(0, 15);
   }, [playbooks]);
 
   const toggleTag = (tag: string) => {
@@ -146,12 +199,29 @@ export default function ExplorePage() {
     }
   };
 
+  // Filtered skills and MCP servers
+  const filteredSkills = skills.filter(s => 
+    s.name.toLowerCase().includes(skillSearch.toLowerCase()) ||
+    (s.description || "").toLowerCase().includes(skillSearch.toLowerCase())
+  );
+
+  const filteredMCPs = mcpServers.filter(m => 
+    m.name.toLowerCase().includes(mcpSearch.toLowerCase()) ||
+    (m.description || "").toLowerCase().includes(mcpSearch.toLowerCase())
+  );
+
+  const tabs = [
+    { id: "playbooks" as TabType, label: t("explore.tabPlaybooks"), icon: BookOpen, count: playbooks.length },
+    { id: "skills" as TabType, label: t("explore.tabSkills"), icon: Zap, count: skills.length },
+    { id: "mcp" as TabType, label: t("explore.tabMCP"), icon: Server, count: mcpServers.length },
+  ];
+
   return (
     <div className="min-h-screen bg-[#0a0f1a] text-white">
       <FloatingNav />
 
       {/* Hero */}
-      <section className="pt-32 pb-12 px-4">
+      <section className="pt-32 pb-8 px-4">
         <div className="max-w-4xl mx-auto text-center">
           <motion.h1 
             initial={{ opacity: 0, y: 20 }}
@@ -171,103 +241,247 @@ export default function ExplorePage() {
         </div>
       </section>
 
-      {/* Search & Filters */}
-      <section className="px-4 pb-8">
+      {/* Tabs */}
+      <section className="px-4 pb-4">
         <div className="max-w-5xl mx-auto">
-          {/* Search */}
-          <div className="relative mb-6">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t("explore.searchPlaybooks")}
-              className={cn(
-                "w-full pl-12 pr-4 py-4 rounded-xl text-lg",
-                "bg-blue-950/30 border border-blue-900/50",
-                "focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20",
-                "placeholder:text-slate-600"
-              )}
-            />
-          </div>
-
-          {/* Tags */}
-          <div className="flex flex-wrap gap-2 mb-6">
-            <span className="flex items-center gap-1 text-sm text-slate-500 mr-2">
-              <Filter className="h-4 w-4" />
-              {t("explore.tags")}:
-            </span>
-            {allTags.map((tag) => (
+          <div className="flex gap-2 border-b border-blue-900/30">
+            {tabs.map((tab) => (
               <button
-                key={tag}
-                onClick={() => toggleTag(tag)}
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
                 className={cn(
-                  "px-3 py-1.5 rounded-full text-sm transition-colors",
-                  selectedTags.includes(tag)
-                    ? "bg-amber-500 text-slate-900 font-medium"
-                    : "bg-blue-950/50 text-slate-400 hover:bg-blue-900/50 border border-blue-800/30"
+                  "px-4 py-3 flex items-center gap-2 text-sm font-medium border-b-2 transition-all",
+                  activeTab === tab.id
+                    ? "border-amber-500 text-white"
+                    : "border-transparent text-slate-400 hover:text-white hover:border-slate-700"
                 )}
               >
-                {tag}
+                <tab.icon className="h-4 w-4" />
+                {tab.label}
+                {tab.count > 0 && (
+                  <span className={cn(
+                    "px-2 py-0.5 rounded-full text-xs",
+                    activeTab === tab.id ? "bg-amber-500/20 text-amber-400" : "bg-slate-800 text-slate-500"
+                  )}>
+                    {tab.count}
+                  </span>
+                )}
               </button>
             ))}
           </div>
+        </div>
+      </section>
 
-          {/* Sort & Stats */}
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-2 text-sm text-slate-400">
-              <span>{playbooks.length} {t("explore.playbooks")}</span>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-400">{t("explore.sortBy")}:</span>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as SortType)}
-                className={cn(
-                  "px-3 py-2 rounded-lg text-sm cursor-pointer",
-                  "bg-slate-800 border border-slate-600",
-                  "text-white focus:outline-none focus:border-amber-500",
-                  "[&>option]:bg-slate-800 [&>option]:text-white [&>option]:py-2"
+      <AnimatePresence mode="wait">
+        {/* Playbooks Tab */}
+        {activeTab === "playbooks" && (
+          <motion.div
+            key="playbooks"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            {/* Search & Filters */}
+            <section className="px-4 pb-8">
+              <div className="max-w-5xl mx-auto">
+                <div className="relative mb-6">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder={t("explore.searchPlaybooks")}
+                    className={cn(
+                      "w-full pl-12 pr-4 py-4 rounded-xl text-lg",
+                      "bg-blue-950/30 border border-blue-900/50",
+                      "focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20",
+                      "placeholder:text-slate-600"
+                    )}
+                  />
+                </div>
+
+                {/* Tags */}
+                <div className="flex flex-wrap gap-2 mb-6">
+                  <span className="flex items-center gap-1 text-sm text-slate-500 mr-2">
+                    <Filter className="h-4 w-4" />
+                    {t("explore.tags")}:
+                  </span>
+                  {allTags.map((tag) => (
+                    <button
+                      key={tag}
+                      onClick={() => toggleTag(tag)}
+                      className={cn(
+                        "px-3 py-1.5 rounded-full text-sm transition-colors",
+                        selectedTags.includes(tag)
+                          ? "bg-amber-500 text-slate-900 font-medium"
+                          : "bg-blue-950/50 text-slate-400 hover:bg-blue-900/50 border border-blue-800/30"
+                      )}
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Sort */}
+                <div className="flex items-center justify-between mb-8">
+                  <div className="flex items-center gap-2 text-sm text-slate-400">
+                    <span>{playbooks.length} {t("explore.playbooks")}</span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-slate-400">{t("explore.sortBy")}:</span>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as SortType)}
+                      className={cn(
+                        "px-3 py-2 rounded-lg text-sm cursor-pointer",
+                        "bg-slate-800 border border-slate-600",
+                        "text-white focus:outline-none focus:border-amber-500",
+                        "[&>option]:bg-slate-800 [&>option]:text-white"
+                      )}
+                    >
+                      <option value="stars">{t("explore.mostStarred")}</option>
+                      <option value="recent">{t("explore.mostRecent")}</option>
+                      <option value="name">{t("explore.alphabetical")}</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Results */}
+            <section className="px-4 pb-24">
+              <div className="max-w-6xl mx-auto">
+                {loading ? (
+                  <div className="flex justify-center py-12">
+                    <div className="animate-spin h-8 w-8 border-2 border-amber-500 border-t-transparent rounded-full" />
+                  </div>
+                ) : playbooks.length === 0 ? (
+                  <EmptyState type="playbooks" />
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {playbooks.map((playbook, idx) => (
+                      <PlaybookCard 
+                        key={playbook.id} 
+                        playbook={playbook} 
+                        index={idx}
+                        isStarred={starredIds.has(playbook.id)}
+                        onToggleStar={() => toggleStar(playbook.id)}
+                        isLoggedIn={!!userId}
+                        isOwner={playbook.user_id === userId}
+                      />
+                    ))}
+                  </div>
                 )}
-              >
-                <option value="stars">{t("explore.mostStarred")}</option>
-                <option value="recent">{t("explore.mostRecent")}</option>
-                <option value="name">{t("explore.alphabetical")}</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      </section>
+              </div>
+            </section>
+          </motion.div>
+        )}
 
-      {/* Results */}
-      <section className="px-4 pb-24">
-        <div className="max-w-6xl mx-auto">
-          {loading ? (
-            <div className="flex justify-center py-12">
-              <div className="animate-spin h-8 w-8 border-2 border-amber-500 border-t-transparent rounded-full" />
-            </div>
-          ) : playbooks.length === 0 ? (
-            <EmptyState />
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {playbooks.map((playbook, idx) => (
-                <PlaybookCard 
-                  key={playbook.id} 
-                  playbook={playbook} 
-                  index={idx}
-                  isStarred={starredIds.has(playbook.id)}
-                  onToggleStar={() => toggleStar(playbook.id)}
-                  isLoggedIn={!!userId}
-                  isOwner={playbook.user_id === userId}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
+        {/* Skills Tab */}
+        {activeTab === "skills" && (
+          <motion.div
+            key="skills"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <section className="px-4 pb-8">
+              <div className="max-w-5xl mx-auto">
+                <div className="relative mb-6">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
+                  <input
+                    type="text"
+                    value={skillSearch}
+                    onChange={(e) => setSkillSearch(e.target.value)}
+                    placeholder={t("explore.searchSkills")}
+                    className={cn(
+                      "w-full pl-12 pr-4 py-4 rounded-xl text-lg",
+                      "bg-blue-950/30 border border-blue-900/50",
+                      "focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20",
+                      "placeholder:text-slate-600"
+                    )}
+                  />
+                </div>
+                <p className="text-sm text-slate-400 mb-4">
+                  {filteredSkills.length} {t("explore.skillsAvailable")}
+                </p>
+              </div>
+            </section>
 
-      {/* CTA for creating playbook */}
+            <section className="px-4 pb-24">
+              <div className="max-w-6xl mx-auto">
+                {skillsLoading ? (
+                  <div className="flex justify-center py-12">
+                    <div className="animate-spin h-8 w-8 border-2 border-purple-500 border-t-transparent rounded-full" />
+                  </div>
+                ) : filteredSkills.length === 0 ? (
+                  <EmptyState type="skills" />
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {filteredSkills.map((skill, idx) => (
+                      <SkillCard key={skill.id} skill={skill} index={idx} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
+          </motion.div>
+        )}
+
+        {/* MCP Tab */}
+        {activeTab === "mcp" && (
+          <motion.div
+            key="mcp"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <section className="px-4 pb-8">
+              <div className="max-w-5xl mx-auto">
+                <div className="relative mb-6">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
+                  <input
+                    type="text"
+                    value={mcpSearch}
+                    onChange={(e) => setMcpSearch(e.target.value)}
+                    placeholder={t("explore.searchMCP")}
+                    className={cn(
+                      "w-full pl-12 pr-4 py-4 rounded-xl text-lg",
+                      "bg-blue-950/30 border border-blue-900/50",
+                      "focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20",
+                      "placeholder:text-slate-600"
+                    )}
+                  />
+                </div>
+                <p className="text-sm text-slate-400 mb-4">
+                  {filteredMCPs.length} {t("explore.mcpAvailable")}
+                </p>
+              </div>
+            </section>
+
+            <section className="px-4 pb-24">
+              <div className="max-w-6xl mx-auto">
+                {mcpLoading ? (
+                  <div className="flex justify-center py-12">
+                    <div className="animate-spin h-8 w-8 border-2 border-pink-500 border-t-transparent rounded-full" />
+                  </div>
+                ) : filteredMCPs.length === 0 ? (
+                  <EmptyState type="mcp" />
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {filteredMCPs.map((mcp, idx) => (
+                      <MCPCard key={mcp.id} mcp={mcp} index={idx} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* CTA */}
       <section className="px-4 pb-24">
         <div className="max-w-2xl mx-auto">
           <motion.div
@@ -301,20 +515,24 @@ export default function ExplorePage() {
   );
 }
 
-function EmptyState() {
+function EmptyState({ type }: { type: "playbooks" | "skills" | "mcp" }) {
   const t = useTranslations();
+  
+  const config = {
+    playbooks: { icon: Globe, color: "text-blue-700", title: t("explore.noPlaybooks"), desc: t("explore.noPlaybooksDesc") },
+    skills: { icon: Zap, color: "text-purple-700", title: t("explore.noSkills"), desc: t("explore.noSkillsDesc") },
+    mcp: { icon: Server, color: "text-pink-700", title: t("explore.noMCP"), desc: t("explore.noMCPDesc") },
+  };
+
+  const { icon: Icon, color, title, desc } = config[type];
   
   return (
     <div className="text-center py-16">
       <div className="w-16 h-16 mx-auto mb-4 bg-blue-900/30 rounded-full flex items-center justify-center">
-        <Globe className="h-8 w-8 text-blue-700" />
+        <Icon className={cn("h-8 w-8", color)} />
       </div>
-      <h3 className="text-xl font-semibold text-slate-400 mb-2">
-        {t("explore.noPlaybooks")}
-      </h3>
-      <p className="text-slate-500 mb-6">
-        {t("explore.noPlaybooksDesc")}
-      </p>
+      <h3 className="text-xl font-semibold text-slate-400 mb-2">{title}</h3>
+      <p className="text-slate-500 mb-6">{desc}</p>
       <Link
         href="/login"
         className={cn(
@@ -341,8 +559,6 @@ interface PlaybookCardProps {
 
 function PlaybookCard({ playbook, index, isStarred, onToggleStar, isLoggedIn, isOwner }: PlaybookCardProps) {
   const t = useTranslations();
-
-  // Use the dashboard playbook viewer for public playbooks
   const playbookUrl = `/dashboard/playbook/${playbook.id}`;
 
   return (
@@ -357,9 +573,7 @@ function PlaybookCard({ playbook, index, isStarred, onToggleStar, isLoggedIn, is
         "transition-all duration-300 hover:shadow-lg hover:shadow-amber-500/5"
       )}
     >
-      {/* Clickable card body */}
       <Link href={playbookUrl} className="block">
-        {/* Header */}
         <div className="p-5">
           <div className="flex items-start justify-between mb-3">
             <div className="flex-1 min-w-0">
@@ -381,7 +595,6 @@ function PlaybookCard({ playbook, index, isStarred, onToggleStar, isLoggedIn, is
               )}
             </div>
             
-            {/* Star button - stop propagation to prevent link navigation */}
             <button
               onClick={(e) => {
                 e.preventDefault();
@@ -401,14 +614,10 @@ function PlaybookCard({ playbook, index, isStarred, onToggleStar, isLoggedIn, is
             </button>
           </div>
 
-          {/* Description */}
           {playbook.description && (
-            <p className="text-sm text-slate-400 mb-4 line-clamp-2">
-              {playbook.description}
-            </p>
+            <p className="text-sm text-slate-400 mb-4 line-clamp-2">{playbook.description}</p>
           )}
 
-          {/* Stats */}
           <div className="flex flex-wrap gap-3 mb-4">
             <span className="flex items-center gap-1 text-xs text-slate-500">
               <Brain className="h-3.5 w-3.5 text-blue-400" />
@@ -424,28 +633,21 @@ function PlaybookCard({ playbook, index, isStarred, onToggleStar, isLoggedIn, is
             </span>
           </div>
 
-          {/* Tags */}
           {playbook.tags && playbook.tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {playbook.tags.slice(0, 4).map((tag) => (
-                <span
-                  key={tag}
-                  className="px-2 py-0.5 bg-blue-900/30 rounded text-xs text-slate-400"
-                >
+                <span key={tag} className="px-2 py-0.5 bg-blue-900/30 rounded text-xs text-slate-400">
                   {tag}
                 </span>
               ))}
               {playbook.tags.length > 4 && (
-                <span className="px-2 py-0.5 text-xs text-slate-500">
-                  +{playbook.tags.length - 4}
-                </span>
+                <span className="px-2 py-0.5 text-xs text-slate-500">+{playbook.tags.length - 4}</span>
               )}
             </div>
           )}
         </div>
       </Link>
 
-      {/* Footer - view action and date */}
       <div className="px-5 py-3 border-t border-slate-700/30 bg-slate-900/30">
         <div className="flex items-center justify-between">
           <Link
@@ -459,13 +661,127 @@ function PlaybookCard({ playbook, index, isStarred, onToggleStar, isLoggedIn, is
             <ExternalLink className="h-4 w-4" />
             {t("explore.view")}
           </Link>
-
           <span className="text-xs text-slate-500 flex items-center gap-1">
             <Clock className="h-3 w-3" />
             {new Date(playbook.created_at).toLocaleDateString()}
           </span>
         </div>
       </div>
+    </motion.div>
+  );
+}
+
+function SkillCard({ skill, index }: { skill: Skill; index: number }) {
+  const [copied, setCopied] = useState(false);
+
+  const copyToClipboard = async () => {
+    // Copy skill definition as JSON
+    const content = JSON.stringify(skill.definition || {}, null, 2);
+    await navigator.clipboard.writeText(content);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.03 }}
+      className={cn(
+        "p-4 rounded-xl",
+        "bg-gradient-to-br from-purple-900/20 to-slate-900/80",
+        "border border-purple-500/20 hover:border-purple-500/40",
+        "transition-all"
+      )}
+    >
+      <div className="flex items-start justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <Zap className="h-4 w-4 text-purple-400" />
+          <h4 className="font-medium text-white">{skill.name}</h4>
+        </div>
+        <button
+          onClick={copyToClipboard}
+          className="p-1.5 text-slate-400 hover:text-purple-400 hover:bg-purple-500/10 rounded-lg transition-colors"
+          title="Copy skill content"
+        >
+          {copied ? <Check className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4" />}
+        </button>
+      </div>
+      
+      {skill.description && (
+        <p className="text-sm text-slate-400 mb-3 line-clamp-2">{skill.description}</p>
+      )}
+      
+      {skill.definition && Object.keys(skill.definition).length > 0 && (
+        <div className="bg-slate-900/50 rounded-lg p-2 max-h-24 overflow-hidden">
+          <pre className="text-xs text-slate-500 font-mono line-clamp-3">{JSON.stringify(skill.definition, null, 2)}</pre>
+        </div>
+      )}
+      
+      {(skill as any).playbooks?.name && (
+        <p className="text-xs text-slate-500 mt-2 flex items-center gap-1">
+          <BookOpen className="h-3 w-3" />
+          {(skill as any).playbooks.name}
+        </p>
+      )}
+    </motion.div>
+  );
+}
+
+function MCPCard({ mcp, index }: { mcp: MCPServer; index: number }) {
+  const [copied, setCopied] = useState(false);
+
+  const copyConfig = async () => {
+    const config = JSON.stringify(mcp.transport_config || {}, null, 2);
+    await navigator.clipboard.writeText(config);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.03 }}
+      className={cn(
+        "p-4 rounded-xl",
+        "bg-gradient-to-br from-pink-900/20 to-slate-900/80",
+        "border border-pink-500/20 hover:border-pink-500/40",
+        "transition-all"
+      )}
+    >
+      <div className="flex items-start justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <Server className="h-4 w-4 text-pink-400" />
+          <h4 className="font-medium text-white">{mcp.name}</h4>
+        </div>
+        <button
+          onClick={copyConfig}
+          className="p-1.5 text-slate-400 hover:text-pink-400 hover:bg-pink-500/10 rounded-lg transition-colors"
+          title="Copy MCP config"
+        >
+          {copied ? <Check className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4" />}
+        </button>
+      </div>
+      
+      {mcp.description && (
+        <p className="text-sm text-slate-400 mb-3 line-clamp-2">{mcp.description}</p>
+      )}
+      
+      {mcp.transport_config && Object.keys(mcp.transport_config).length > 0 && (
+        <div className="bg-slate-900/50 rounded-lg p-2 max-h-24 overflow-hidden">
+          <pre className="text-xs text-slate-500 font-mono line-clamp-3">
+            {JSON.stringify(mcp.transport_config, null, 2)}
+          </pre>
+        </div>
+      )}
+      
+      {(mcp as any).playbooks?.name && (
+        <p className="text-xs text-slate-500 mt-2 flex items-center gap-1">
+          <BookOpen className="h-3 w-3" />
+          {(mcp as any).playbooks.name}
+        </p>
+      )}
     </motion.div>
   );
 }

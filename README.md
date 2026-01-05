@@ -194,4 +194,21 @@ All tables have Row Level Security (RLS) enabled.
 
 ## License
 
-MIT
+This project is licensed under the **PolyForm Noncommercial License 1.0.0**.
+
+### What this means:
+
+✅ **You CAN:**
+- Use the software for personal projects, learning, and experimentation
+- Use it internally within your organization for non-commercial purposes
+- Modify and adapt it for your own non-commercial use
+- Use it for research, education, and charitable purposes
+
+❌ **You CANNOT (without permission):**
+- Sell the software or offer it as a paid service
+- Use it to provide commercial services to others
+- Monetize the software or concept in any way
+
+📧 **For commercial licensing**, please contact the project maintainer.
+
+See the [LICENSE](./LICENSE) file for full details.

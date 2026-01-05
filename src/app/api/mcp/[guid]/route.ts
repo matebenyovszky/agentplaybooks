@@ -53,8 +53,8 @@ async function validateApiKey(request: NextRequest, playbookId: string, permissi
 // Built-in MCP tools for playbook access
 const PLAYBOOK_TOOLS: McpTool[] = [
   {
-    name: "list_personas",
-    description: "List all personas (AI personalities) in this playbook",
+    name: "get_persona",
+    description: "Get the AI persona (personality/system prompt) for this playbook",
     inputSchema: { type: "object", properties: {} },
   },
   {
@@ -142,15 +142,14 @@ export async function GET(
     return NextResponse.json({ error: "Playbook not found" }, { status: 404 });
   }
 
-  const [skillsRes, mcpRes, personasRes] = await Promise.all([
+  // Persona is now embedded in playbook, no separate table
+  const [skillsRes, mcpRes] = await Promise.all([
     supabase.from("skills").select("*").eq("playbook_id", playbook.id),
     supabase.from("mcp_servers").select("*").eq("playbook_id", playbook.id),
-    supabase.from("personas").select("*").eq("playbook_id", playbook.id),
   ]);
 
   const skills = skillsRes.data || [];
   const mcpServers = mcpRes.data || [];
-  const personas = personasRes.data || [];
 
   // Build tools: start with built-in playbook tools
   const tools: McpTool[] = [...PLAYBOOK_TOOLS];
@@ -171,12 +170,12 @@ export async function GET(
     }
   }
 
-  // Build resources
+  // Build resources (persona is now embedded in playbook)
   const resources: McpResource[] = [
     {
-      uri: `playbook://${guid}/personas`,
-      name: "Personas",
-      description: "AI personalities and system prompts",
+      uri: `playbook://${guid}/persona`,
+      name: "Persona",
+      description: "AI personality and system prompt",
       mimeType: "application/json",
     },
     {
@@ -214,14 +213,14 @@ export async function GET(
     },
     tools,
     resources,
-    // Extension: include personas for AI context
+    // Extension: include persona for AI context (1 playbook = 1 persona)
     _playbook: {
       guid: playbook.guid,
-      personas: personas.map((p) => ({
-        name: p.name,
-        systemPrompt: p.system_prompt,
-        metadata: p.metadata,
-      })),
+      persona: playbook.persona_name ? {
+        name: playbook.persona_name,
+        systemPrompt: playbook.persona_system_prompt,
+        metadata: playbook.persona_metadata,
+      } : null,
     },
   };
 
@@ -240,10 +239,10 @@ export async function POST(
 
   const supabase = getSupabase();
 
-  // Get playbook
+  // Get playbook (include persona fields for resource access)
   const { data: playbook } = await supabase
     .from("playbooks")
-    .select("id")
+    .select("id, persona_name, persona_system_prompt, persona_metadata")
     .eq("guid", guid)
     .eq("is_public", true)
     .single();
@@ -301,9 +300,9 @@ export async function POST(
 
       const resources: McpResource[] = [
         {
-          uri: `playbook://${guid}/personas`,
-          name: "Personas",
-          description: "AI personalities and system prompts",
+          uri: `playbook://${guid}/persona`,
+          name: "Persona",
+          description: "AI personality and system prompt (1 playbook = 1 persona)",
           mimeType: "application/json",
         },
         {
@@ -374,11 +373,13 @@ export async function POST(
       }
 
       // Personas resource
-      if (uri?.match(/\/personas$/)) {
-        const { data: personas } = await supabase
-          .from("personas")
-          .select("id, name, system_prompt, metadata")
-          .eq("playbook_id", playbook.id);
+      if (uri?.match(/\/persona$/)) {
+        // Persona is embedded in playbook (1 playbook = 1 persona)
+        const persona = playbook.persona_name ? {
+          name: playbook.persona_name,
+          system_prompt: playbook.persona_system_prompt,
+          metadata: playbook.persona_metadata || {},
+        } : null;
 
         return NextResponse.json({
           jsonrpc: "2.0",
@@ -388,7 +389,7 @@ export async function POST(
               {
                 uri,
                 mimeType: "application/json",
-                text: JSON.stringify(personas || []),
+                text: JSON.stringify(persona),
               },
             ],
           },
@@ -469,12 +470,13 @@ export async function POST(
         let result: unknown;
 
         switch (toolName) {
-          case "list_personas": {
-            const { data } = await serviceSupabase
-              .from("personas")
-              .select("id, name, system_prompt, metadata")
-              .eq("playbook_id", playbook.id);
-            result = data || [];
+          case "get_persona": {
+            // Persona is now embedded in playbook
+            result = playbook.persona_name ? {
+              name: playbook.persona_name,
+              system_prompt: playbook.persona_system_prompt,
+              metadata: playbook.persona_metadata || {},
+            } : null;
             break;
           }
 

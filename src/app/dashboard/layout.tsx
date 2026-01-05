@@ -51,11 +51,6 @@ export default function DashboardLayout({
 
   const sidebarLinks = [
     {
-      label: "Settings",
-      href: "/dashboard/settings",
-      icon: <Settings className="h-5 w-5 text-slate-400" />,
-    },
-    {
       label: t("dashboard.myPlaybooks"),
       href: "/dashboard",
       icon: <BookOpen className="h-5 w-5 text-blue-400" />,
@@ -69,6 +64,11 @@ export default function DashboardLayout({
       label: t("common.explore"),
       href: "/explore",
       icon: <Globe className="h-5 w-5 text-emerald-400" />,
+    },
+    {
+      label: "Settings",
+      href: "/dashboard/settings",
+      icon: <Settings className="h-5 w-5 text-slate-400" />,
     },
   ];
 

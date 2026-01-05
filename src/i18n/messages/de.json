@@ -10,6 +10,7 @@
     "explore": "Entdecken",
     "docs": "Dokumentation",
     "enterprise": "Unternehmen",
+    "selfHost": "Self-Hosting",
     "pricing": "Preise"
   },
   "landing": {
@@ -114,7 +115,8 @@
       "mcp": "MCP-Server",
       "memory": "Speicher",
       "apiKeys": "API-Schlüssel",
-      "settings": "Einstellungen"
+      "settings": "Einstellungen",
+      "details": "Details"
     },
     "save": "Speichern",
     "publish": "Veröffentlichen",
@@ -163,13 +165,20 @@
     }
   },
   "explore": {
-    "title": "Öffentliche Playbooks Entdecken",
-    "subtitle": "Entdecken Sie von der Community geteilte KI-Konfigurationen. Markieren Sie Ihre Favoriten und laden Sie sie in jedem Format herunter.",
+    "title": "Skills Store",
+    "subtitle": "Entdecken Sie von der Community geteilte KI-Skills, Playbooks und MCP-Server.",
+    "tabPlaybooks": "Playbooks",
+    "tabSkills": "Skills",
+    "tabMCP": "MCP-Server",
     "skills": "Skills",
     "personas": "Personas",
     "mcp": "MCP-Server",
     "search": "Suchen...",
     "searchPlaybooks": "Playbooks nach Name oder Beschreibung suchen...",
+    "searchSkills": "Skills nach Name oder Beschreibung suchen...",
+    "searchMCP": "MCP-Server nach Name oder Beschreibung suchen...",
+    "skillsAvailable": "Skills verfügbar",
+    "mcpAvailable": "MCP-Server verfügbar",
     "tags": "Tags",
     "verified": "Verifiziert",
     "addToPlaybook": "Zu Playbook Hinzufügen",
@@ -182,6 +191,10 @@
     "download": "Herunterladen",
     "noPlaybooks": "Keine öffentlichen Playbooks gefunden",
     "noPlaybooksDesc": "Seien Sie der Erste, der ein Playbook mit der Community teilt!",
+    "noSkills": "Keine öffentlichen Skills gefunden",
+    "noSkillsDesc": "Skills aus öffentlichen Playbooks werden hier angezeigt.",
+    "noMCP": "Keine öffentlichen MCP-Server gefunden",
+    "noMCPDesc": "MCP-Server aus öffentlichen Playbooks werden hier angezeigt.",
     "createFirst": "Erstellen Sie Ihr erstes Playbook",
     "createOwn": "Erstellen Sie Ihr eigenes Playbook",
     "createOwnDesc": "Erstellen und teilen Sie Ihre KI-Konfiguration mit der Welt. Registrieren Sie sich, um Ihre eigenen Playbooks zu erstellen und zu speichern.",

@@ -10,6 +10,7 @@
     "explore": "Felfedezés",
     "docs": "Dokumentáció",
     "enterprise": "Vállalati",
+    "selfHost": "Önálló futtatás",
     "pricing": "Árazás"
   },
   "landing": {
@@ -184,7 +185,8 @@
       "canvas": "Canvas",
       "memory": "Memória",
       "apiKeys": "API Kulcsok",
-      "settings": "Beállítások"
+      "settings": "Beállítások",
+      "details": "Részletek"
     },
     "save": "Mentés",
     "publish": "Publikálás",
@@ -243,13 +245,20 @@
     }
   },
   "explore": {
-    "title": "Publikus Playbookok Felfedezése",
-    "subtitle": "Fedezd fel a közösség által megosztott AI konfigurációkat. Csillagozd meg kedvenceidet és töltsd le bármilyen formátumban.",
+    "title": "Skills Store",
+    "subtitle": "Fedezd fel a közösség által megosztott AI skilleket, playbookokat és MCP szervereket.",
+    "tabPlaybooks": "Playbookok",
+    "tabSkills": "Skillek",
+    "tabMCP": "MCP Szerverek",
     "skills": "Skillek",
     "personas": "persona",
     "mcp": "MCP Szerverek",
     "search": "Keresés...",
     "searchPlaybooks": "Keresés név vagy leírás alapján...",
+    "searchSkills": "Skillek keresése név vagy leírás alapján...",
+    "searchMCP": "MCP szerverek keresése név vagy leírás alapján...",
+    "skillsAvailable": "elérhető skill",
+    "mcpAvailable": "elérhető MCP szerver",
     "tags": "Címkék",
     "verified": "Ellenőrzött",
     "addToPlaybook": "Hozzáadás Playbookhoz",
@@ -262,6 +271,10 @@
     "download": "Letöltés",
     "noPlaybooks": "Nem található publikus playbook",
     "noPlaybooksDesc": "Légy te az első, aki megoszt egy playbookot a közösséggel!",
+    "noSkills": "Nem található publikus skill",
+    "noSkillsDesc": "A publikus playbookok skilljei itt fognak megjelenni.",
+    "noMCP": "Nem található publikus MCP szerver",
+    "noMCPDesc": "A publikus playbookok MCP szerverei itt fognak megjelenni.",
     "createFirst": "Első Playbook Létrehozása",
     "createOwn": "Hozz Létre Saját Playbookot",
     "createOwnDesc": "Építsd és oszd meg AI konfigurációdat a világgal. Regisztrálj, hogy létrehozhasd és elmenthesd saját playbook-jaidat.",

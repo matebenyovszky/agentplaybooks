@@ -129,7 +129,9 @@ This document outlines the development roadmap for AgentPlaybooks - the first op
   - Load balancing across MCP servers
   - Caching layer for performance
 
-### MCP Proxy 📋
+### MCP Proxy & API Gateway 📋
+
+> **Why this matters:** MCP protocol can be token-inefficient for simple operations. Sometimes a plain webhook, curl command, or standard REST/OpenAPI call is more efficient and costs fewer tokens. We want to support the best tool for each job.
 
 - [ ] **Multi-Protocol MCP Server Exposure**
   - Expose MCP servers via OpenAPI/REST endpoints
@@ -146,6 +148,13 @@ This document outlines the development roadmap for AgentPlaybooks - the first op
   - Auto-generate OpenAPI specs from MCP server definitions
   - Enable ChatGPT Custom GPTs to use any MCP server
   - Swagger UI for MCP tool testing
+
+- [ ] **Universal API Proxy**
+  - Define skills as simple REST/webhook calls (token-efficient alternative to MCP)
+  - Curl-style skill definitions in playbooks
+  - OpenAPI spec import → auto-generate skills
+  - GraphQL endpoint support
+  - Response transformation and caching
 
 ### Dynamic Canvas 💡
 

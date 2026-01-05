@@ -10,6 +10,7 @@
     "explore": "Explorar",
     "docs": "Documentación",
     "enterprise": "Empresas",
+    "selfHost": "Auto-hospedaje",
     "pricing": "Precios"
   },
   "landing": {
@@ -114,7 +115,8 @@
       "mcp": "Servidores MCP",
       "memory": "Memoria",
       "apiKeys": "Claves API",
-      "settings": "Configuración"
+      "settings": "Configuración",
+      "details": "Detalles"
     },
     "save": "Guardar",
     "publish": "Publicar",
@@ -163,13 +165,20 @@
     }
   },
   "explore": {
-    "title": "Explorar Playbooks Públicos",
-    "subtitle": "Descubre configuraciones de IA compartidas por la comunidad. Marca tus favoritos y descarga en cualquier formato.",
+    "title": "Skills Store",
+    "subtitle": "Descubre habilidades de IA, playbooks y servidores MCP compartidos por la comunidad.",
+    "tabPlaybooks": "Playbooks",
+    "tabSkills": "Habilidades",
+    "tabMCP": "Servidores MCP",
     "skills": "Habilidades",
     "personas": "personas",
     "mcp": "Servidores MCP",
     "search": "Buscar...",
     "searchPlaybooks": "Buscar playbooks por nombre o descripción...",
+    "searchSkills": "Buscar habilidades por nombre o descripción...",
+    "searchMCP": "Buscar servidores MCP por nombre o descripción...",
+    "skillsAvailable": "habilidades disponibles",
+    "mcpAvailable": "servidores MCP disponibles",
     "tags": "Etiquetas",
     "verified": "Verificado",
     "addToPlaybook": "Añadir a Playbook",
@@ -182,6 +191,10 @@
     "download": "Descargar",
     "noPlaybooks": "No se encontraron playbooks públicos",
     "noPlaybooksDesc": "¡Sé el primero en compartir un playbook con la comunidad!",
+    "noSkills": "No se encontraron habilidades públicas",
+    "noSkillsDesc": "Las habilidades de playbooks públicos aparecerán aquí.",
+    "noMCP": "No se encontraron servidores MCP públicos",
+    "noMCPDesc": "Los servidores MCP de playbooks públicos aparecerán aquí.",
     "createFirst": "Crea Tu Primer Playbook",
     "createOwn": "Crea Tu Propio Playbook",
     "createOwnDesc": "Construye y comparte tu configuración de IA con el mundo. Regístrate para crear y guardar tus propios playbooks.",

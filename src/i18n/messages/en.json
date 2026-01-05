@@ -10,6 +10,7 @@
     "explore": "Explore",
     "docs": "Documentation",
     "enterprise": "Enterprise",
+    "selfHost": "Self-host",
     "pricing": "Pricing"
   },
   "landing": {
@@ -184,7 +185,8 @@
       "canvas": "Canvas",
       "memory": "Memory",
       "apiKeys": "API Keys",
-      "settings": "Settings"
+      "settings": "Settings",
+      "details": "Details"
     },
     "save": "Save",
     "publish": "Publish",
@@ -243,13 +245,20 @@
     }
   },
   "explore": {
-    "title": "Explore Public Playbooks",
-    "subtitle": "Discover AI configurations shared by the community. Star your favorites and download in any format.",
+    "title": "Skills Store",
+    "subtitle": "Discover AI skills, playbooks, and MCP servers shared by the community.",
+    "tabPlaybooks": "Playbooks",
+    "tabSkills": "Skills",
+    "tabMCP": "MCP Servers",
     "skills": "Skills",
     "personas": "personas",
     "mcp": "MCP Servers",
     "search": "Search...",
     "searchPlaybooks": "Search playbooks by name or description...",
+    "searchSkills": "Search skills by name or description...",
+    "searchMCP": "Search MCP servers by name or description...",
+    "skillsAvailable": "skills available",
+    "mcpAvailable": "MCP servers available",
     "tags": "Tags",
     "verified": "Verified",
     "addToPlaybook": "Add to Playbook",
@@ -262,6 +271,10 @@
     "download": "Download",
     "noPlaybooks": "No public playbooks found",
     "noPlaybooksDesc": "Be the first to share a playbook with the community!",
+    "noSkills": "No public skills found",
+    "noSkillsDesc": "Skills from public playbooks will appear here.",
+    "noMCP": "No public MCP servers found",
+    "noMCPDesc": "MCP servers from public playbooks will appear here.",
     "createFirst": "Create Your First Playbook",
     "createOwn": "Create Your Own Playbook",
     "createOwnDesc": "Build and share your AI configuration with the world. Sign up to create and save your own playbooks.",
