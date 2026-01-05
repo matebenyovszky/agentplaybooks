@@ -34,7 +34,11 @@ export default function DashboardLayout({
     const supabase = createBrowserClient();
 
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) {
+      // Allow viewing public playbooks without login (playbook/[id] pages)
+      // Only redirect if we're on main dashboard pages that require auth
+      const isPlaybookViewerPage = window.location.pathname.includes('/dashboard/playbook/');
+      
+      if (!user && !isPlaybookViewerPage) {
         window.location.href = "/login";
         return;
       }

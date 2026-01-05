@@ -76,9 +76,11 @@ export type SkillsRow = {
   playbook_id: string;
   name: string;
   description: string | null;
+  content: string | null; // Full markdown content (SKILL.md body)
   definition: SkillDefinition;
   examples: Record<string, unknown>[];
   created_at: string;
+  priority: number | null;
 };
 
 export type SkillsInsert = Partial<SkillsRow>;

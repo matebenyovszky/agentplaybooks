@@ -11,7 +11,8 @@
     "docs": "Dokumentation",
     "enterprise": "Unternehmen",
     "selfHost": "Self-Hosting",
-    "pricing": "Preise"
+    "pricing": "Preise",
+    "settings": "Einstellungen"
   },
   "landing": {
     "hero": {

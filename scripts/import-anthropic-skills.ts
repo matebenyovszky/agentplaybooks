@@ -409,17 +409,17 @@ async function insertSkill(
     return existing.id;
   }
   
-  // Insert skill
+  // Insert skill - store full markdown in content field
   const { data, error } = await supabase
     .from('skills')
     .insert({
       playbook_id: playbookId,
       name: skill.slug,
-      description: skill.description,
+      description: skill.description.slice(0, 500), // Short description for listing
+      content: skill.skillMd, // Full SKILL.md markdown content
       definition: {
-        type: 'skill',
+        type: 'anthropic-skill',
         source_url: skill.sourceUrl,
-        skill_md: skill.skillMd.slice(0, 65000), // Truncate if very long
       },
       examples: [],
     })

@@ -23,7 +23,34 @@ import {
   Copy,
   Check
 } from "lucide-react";
-import type { PublicPlaybook, Skill, MCPServer } from "@/lib/supabase/types";
+import type { Skill, MCPServer } from "@/lib/supabase/types";
+
+// Extended types from API that include publisher info
+interface Publisher {
+  id: string;
+  name: string;
+  avatar_svg?: string;
+  website_url?: string;
+  is_verified?: boolean;
+  is_virtual?: boolean;
+}
+
+interface PublicPlaybook {
+  id: string;
+  guid: string;
+  name: string;
+  description?: string;
+  config?: Record<string, unknown>;
+  star_count: number;
+  tags?: string[];
+  created_at: string;
+  updated_at?: string;
+  user_id: string;
+  personas_count: number;
+  skills_count: number;
+  mcp_servers_count: number;
+  publisher?: Publisher;
+}
 
 type TabType = "playbooks" | "skills" | "mcp";
 type SortType = "stars" | "recent" | "name";
@@ -107,35 +134,27 @@ export default function ExplorePage() {
 
   const loadSkills = async () => {
     setSkillsLoading(true);
-    const supabase = createBrowserClient();
-    
-    const { data } = await supabase
-      .from("skills")
-      .select(`
-        *,
-        playbooks!inner(is_public, name)
-      `)
-      .eq("playbooks.is_public", true)
-      .order("name");
-    
-    setSkills((data as Skill[]) || []);
+    try {
+      const res = await fetch("/api/public/skills");
+      const data = await res.json();
+      setSkills(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.error("Failed to load skills:", e);
+      setSkills([]);
+    }
     setSkillsLoading(false);
   };
 
   const loadMCPServers = async () => {
     setMcpLoading(true);
-    const supabase = createBrowserClient();
-    
-    const { data } = await supabase
-      .from("mcp_servers")
-      .select(`
-        *,
-        playbooks!inner(is_public, name)
-      `)
-      .eq("playbooks.is_public", true)
-      .order("name");
-    
-    setMcpServers((data as MCPServer[]) || []);
+    try {
+      const res = await fetch("/api/public/mcp");
+      const data = await res.json();
+      setMcpServers(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.error("Failed to load MCP servers:", e);
+      setMcpServers([]);
+    }
     setMcpLoading(false);
   };
 
@@ -587,11 +606,26 @@ function PlaybookCard({ playbook, index, isStarred, onToggleStar, isLoggedIn, is
                   </span>
                 )}
               </div>
-              {playbook.author_email && (
-                <p className="text-xs text-slate-500 flex items-center gap-1">
-                  <User className="h-3 w-3" />
-                  {playbook.author_email.split("@")[0]}
-                </p>
+              {/* Publisher profile */}
+              {playbook.publisher && (
+                <div className="flex items-center gap-2">
+                  {playbook.publisher.avatar_svg ? (
+                    <div 
+                      className="w-5 h-5 rounded-full overflow-hidden bg-slate-700 flex items-center justify-center"
+                      dangerouslySetInnerHTML={{ __html: playbook.publisher.avatar_svg }}
+                    />
+                  ) : (
+                    <div className="w-5 h-5 rounded-full bg-slate-700 flex items-center justify-center">
+                      <User className="h-3 w-3 text-slate-400" />
+                    </div>
+                  )}
+                  <span className="text-xs text-slate-400 flex items-center gap-1">
+                    {playbook.publisher.name}
+                    {playbook.publisher.is_verified && (
+                      <span className="text-blue-400" title="Verified">✓</span>
+                    )}
+                  </span>
+                </div>
               )}
             </div>
             
@@ -671,12 +705,26 @@ function PlaybookCard({ playbook, index, isStarred, onToggleStar, isLoggedIn, is
   );
 }
 
-function SkillCard({ skill, index }: { skill: Skill; index: number }) {
+// Extended skill type from API
+interface SkillWithPublisher extends Skill {
+  playbook_name?: string;
+  playbook_guid?: string;
+  publisher?: {
+    id: string;
+    name: string;
+    avatar_svg?: string;
+    is_verified?: boolean;
+    is_virtual?: boolean;
+  };
+}
+
+function SkillCard({ skill, index }: { skill: SkillWithPublisher; index: number }) {
   const [copied, setCopied] = useState(false);
+  const isMarkdownSkill = !!(skill.content && skill.content.length > 0);
 
   const copyToClipboard = async () => {
-    // Copy skill definition as JSON
-    const content = JSON.stringify(skill.definition || {}, null, 2);
+    // Copy skill content (markdown) or definition (JSON)
+    const content = skill.content || JSON.stringify(skill.definition || {}, null, 2);
     await navigator.clipboard.writeText(content);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -689,19 +737,30 @@ function SkillCard({ skill, index }: { skill: Skill; index: number }) {
       transition={{ delay: index * 0.03 }}
       className={cn(
         "p-4 rounded-xl",
-        "bg-gradient-to-br from-purple-900/20 to-slate-900/80",
-        "border border-purple-500/20 hover:border-purple-500/40",
-        "transition-all"
+        isMarkdownSkill 
+          ? "bg-gradient-to-br from-emerald-900/20 to-slate-900/80 border-emerald-500/20 hover:border-emerald-500/40"
+          : "bg-gradient-to-br from-purple-900/20 to-slate-900/80 border-purple-500/20 hover:border-purple-500/40",
+        "border transition-all"
       )}
     >
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-2">
-          <Zap className="h-4 w-4 text-purple-400" />
+          <Zap className={cn("h-4 w-4", isMarkdownSkill ? "text-emerald-400" : "text-purple-400")} />
           <h4 className="font-medium text-white">{skill.name}</h4>
+          {isMarkdownSkill && (
+            <span className="px-1.5 py-0.5 bg-emerald-500/20 text-emerald-400 text-[10px] rounded font-medium">
+              SKILL
+            </span>
+          )}
         </div>
         <button
           onClick={copyToClipboard}
-          className="p-1.5 text-slate-400 hover:text-purple-400 hover:bg-purple-500/10 rounded-lg transition-colors"
+          className={cn(
+            "p-1.5 rounded-lg transition-colors",
+            isMarkdownSkill 
+              ? "text-slate-400 hover:text-emerald-400 hover:bg-emerald-500/10"
+              : "text-slate-400 hover:text-purple-400 hover:bg-purple-500/10"
+          )}
           title="Copy skill content"
         >
           {copied ? <Check className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4" />}
@@ -712,24 +771,66 @@ function SkillCard({ skill, index }: { skill: Skill; index: number }) {
         <p className="text-sm text-slate-400 mb-3 line-clamp-2">{skill.description}</p>
       )}
       
-      {skill.definition && Object.keys(skill.definition).length > 0 && (
-        <div className="bg-slate-900/50 rounded-lg p-2 max-h-24 overflow-hidden">
+      {/* Show token count for markdown skills, or JSON preview for schema skills */}
+      {isMarkdownSkill ? (
+        <div className="text-xs text-slate-500 mb-2">
+          ~{Math.round((skill.content?.length || 0) / 4).toLocaleString()} tokens
+        </div>
+      ) : skill.definition && Object.keys(skill.definition).length > 0 && (
+        <div className="bg-slate-900/50 rounded-lg p-2 max-h-24 overflow-hidden mb-2">
           <pre className="text-xs text-slate-500 font-mono line-clamp-3">{JSON.stringify(skill.definition, null, 2)}</pre>
         </div>
       )}
       
-      {(skill as any).playbooks?.name && (
-        <p className="text-xs text-slate-500 mt-2 flex items-center gap-1">
-          <BookOpen className="h-3 w-3" />
-          {(skill as any).playbooks.name}
-        </p>
-      )}
+      {/* Publisher info */}
+      <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-700/30">
+        {skill.publisher ? (
+          <div className="flex items-center gap-2">
+            {skill.publisher.avatar_svg ? (
+              <div 
+                className="w-5 h-5 rounded-full overflow-hidden bg-slate-700 flex items-center justify-center"
+                dangerouslySetInnerHTML={{ __html: skill.publisher.avatar_svg }}
+              />
+            ) : (
+              <div className="w-5 h-5 rounded-full bg-slate-700 flex items-center justify-center">
+                <User className="h-3 w-3 text-slate-400" />
+              </div>
+            )}
+            <span className="text-xs text-slate-400 flex items-center gap-1">
+              {skill.publisher.name}
+              {skill.publisher.is_verified && (
+                <span className="text-blue-400" title="Verified">✓</span>
+              )}
+            </span>
+          </div>
+        ) : skill.playbook_name && (
+          <span className="text-xs text-slate-500 flex items-center gap-1">
+            <BookOpen className="h-3 w-3" />
+            {skill.playbook_name}
+          </span>
+        )}
+      </div>
     </motion.div>
   );
 }
 
-function MCPCard({ mcp, index }: { mcp: MCPServer; index: number }) {
+// Extended MCP type from API
+interface MCPWithPublisher extends MCPServer {
+  playbook_name?: string;
+  playbook_guid?: string;
+  publisher?: {
+    id: string;
+    name: string;
+    avatar_svg?: string;
+    is_verified?: boolean;
+    is_virtual?: boolean;
+  };
+}
+
+function MCPCard({ mcp, index }: { mcp: MCPWithPublisher; index: number }) {
   const [copied, setCopied] = useState(false);
+  const toolCount = mcp.tools?.length || 0;
+  const resourceCount = mcp.resources?.length || 0;
 
   const copyConfig = async () => {
     const config = JSON.stringify(mcp.transport_config || {}, null, 2);
@@ -768,20 +869,53 @@ function MCPCard({ mcp, index }: { mcp: MCPServer; index: number }) {
         <p className="text-sm text-slate-400 mb-3 line-clamp-2">{mcp.description}</p>
       )}
       
-      {mcp.transport_config && Object.keys(mcp.transport_config).length > 0 && (
-        <div className="bg-slate-900/50 rounded-lg p-2 max-h-24 overflow-hidden">
-          <pre className="text-xs text-slate-500 font-mono line-clamp-3">
-            {JSON.stringify(mcp.transport_config, null, 2)}
-          </pre>
-        </div>
-      )}
+      {/* Stats */}
+      <div className="flex gap-3 mb-3">
+        {toolCount > 0 && (
+          <span className="text-xs text-pink-400/70 bg-pink-500/10 px-2 py-0.5 rounded">
+            {toolCount} tools
+          </span>
+        )}
+        {resourceCount > 0 && (
+          <span className="text-xs text-purple-400/70 bg-purple-500/10 px-2 py-0.5 rounded">
+            {resourceCount} resources
+          </span>
+        )}
+        {mcp.transport_type && (
+          <span className="text-xs text-slate-500 bg-slate-700/30 px-2 py-0.5 rounded">
+            {mcp.transport_type}
+          </span>
+        )}
+      </div>
       
-      {(mcp as any).playbooks?.name && (
-        <p className="text-xs text-slate-500 mt-2 flex items-center gap-1">
-          <BookOpen className="h-3 w-3" />
-          {(mcp as any).playbooks.name}
-        </p>
-      )}
+      {/* Publisher info */}
+      <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-700/30">
+        {mcp.publisher ? (
+          <div className="flex items-center gap-2">
+            {mcp.publisher.avatar_svg ? (
+              <div 
+                className="w-5 h-5 rounded-full overflow-hidden bg-slate-700 flex items-center justify-center"
+                dangerouslySetInnerHTML={{ __html: mcp.publisher.avatar_svg }}
+              />
+            ) : (
+              <div className="w-5 h-5 rounded-full bg-slate-700 flex items-center justify-center">
+                <User className="h-3 w-3 text-slate-400" />
+              </div>
+            )}
+            <span className="text-xs text-slate-400 flex items-center gap-1">
+              {mcp.publisher.name}
+              {mcp.publisher.is_verified && (
+                <span className="text-blue-400" title="Verified">✓</span>
+              )}
+            </span>
+          </div>
+        ) : mcp.playbook_name && (
+          <span className="text-xs text-slate-500 flex items-center gap-1">
+            <BookOpen className="h-3 w-3" />
+            {mcp.playbook_name}
+          </span>
+        )}
+      </div>
     </motion.div>
   );
 }

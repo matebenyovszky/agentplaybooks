@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { 
@@ -19,7 +19,9 @@ import {
   File,
   Upload,
   X,
-  Loader2
+  Loader2,
+  FileText,
+  ExternalLink
 } from "lucide-react";
 import type { Skill, SkillAttachment, AttachmentFileType } from "@/lib/supabase/types";
 import { FILE_EXTENSION_MAP, ALLOWED_FILE_TYPES, ATTACHMENT_LIMITS } from "@/lib/supabase/types";
@@ -55,7 +57,16 @@ export function SkillEditor({ skill, storage, onUpdate, onDelete, readOnly = fal
   const [copied, setCopied] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [jsonError, setJsonError] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<"visual" | "json">("visual");
+  const [content, setContent] = useState(skill.content || "");
+  
+  // Determine if this is a markdown-based skill (Anthropic style) or JSON schema skill
+  const isMarkdownSkill = useMemo(() => {
+    return !!(skill.content && skill.content.length > 0);
+  }, [skill.content]);
+  
+  const [viewMode, setViewMode] = useState<"markdown" | "visual" | "json">(
+    isMarkdownSkill ? "markdown" : "visual"
+  );
   
   // Attachments state
   const [attachments, setAttachments] = useState<SkillAttachment[]>([]);
@@ -188,10 +199,11 @@ export function SkillEditor({ skill, storage, onUpdate, onDelete, readOnly = fal
     const changed = 
       name !== skill.name || 
       description !== (skill.description || "") ||
+      content !== (skill.content || "") ||
       definitionJson !== JSON.stringify(skill.definition, null, 2) ||
       examplesJson !== JSON.stringify(skill.examples || [], null, 2);
     setHasChanges(changed);
-  }, [name, description, definitionJson, examplesJson, skill]);
+  }, [name, description, content, definitionJson, examplesJson, skill]);
 
   const handleSave = useCallback(async () => {
     if (jsonError) return;
@@ -204,6 +216,7 @@ export function SkillEditor({ skill, storage, onUpdate, onDelete, readOnly = fal
       const updated = await storage.updateSkill(skill.id, {
         name,
         description,
+        content: content || null,
         definition: parsedDefinition,
         examples: parsedExamples
       });
@@ -217,7 +230,7 @@ export function SkillEditor({ skill, storage, onUpdate, onDelete, readOnly = fal
     } finally {
       setSaving(false);
     }
-  }, [name, description, definitionJson, examplesJson, skill.id, jsonError, onUpdate, storage]);
+  }, [name, description, content, definitionJson, examplesJson, skill.id, jsonError, onUpdate, storage]);
 
   // Debounced auto-save
   useEffect(() => {
@@ -328,10 +341,15 @@ export function SkillEditor({ skill, storage, onUpdate, onDelete, readOnly = fal
         <div className="flex items-center gap-3 flex-1">
           <div className={cn(
             "p-2 rounded-lg",
-            "bg-gradient-to-br from-purple-600/20 to-pink-600/20",
-            "border border-purple-500/20"
+            isMarkdownSkill 
+              ? "bg-gradient-to-br from-emerald-600/20 to-teal-600/20 border border-emerald-500/20"
+              : "bg-gradient-to-br from-purple-600/20 to-pink-600/20 border border-purple-500/20"
           )}>
-            <Zap className="h-5 w-5 text-purple-400" />
+            {isMarkdownSkill ? (
+              <FileText className="h-5 w-5 text-emerald-400" />
+            ) : (
+              <Zap className="h-5 w-5 text-purple-400" />
+            )}
           </div>
           
           <div className="flex-1 min-w-0">
@@ -352,7 +370,17 @@ export function SkillEditor({ skill, storage, onUpdate, onDelete, readOnly = fal
               placeholder="skill_name"
             />
             <p className="text-sm text-slate-500 truncate px-2">
-              {Object.keys(properties).length} parameters
+              {isMarkdownSkill ? (
+                <>
+                  <span className="text-emerald-400">Anthropic Skill</span>
+                  <span className="mx-1">•</span>
+                  {Math.round((content?.length || 0) / 4)} tokens
+                  <span className="mx-1">•</span>
+                  {attachments.length} files
+                </>
+              ) : (
+                <>{Object.keys(properties).length} parameters</>
+              )}
               {hasChanges && <span className="ml-2 text-amber-400">• unsaved</span>}
               {saving && <span className="ml-2 text-purple-400">• saving...</span>}
               {jsonError && <span className="ml-2 text-red-400">• {jsonError}</span>}
@@ -421,6 +449,20 @@ export function SkillEditor({ skill, storage, onUpdate, onDelete, readOnly = fal
 
               {/* View Mode Toggle */}
               <div className="flex items-center gap-2 border-b border-slate-700/50 pb-2">
+                {isMarkdownSkill && (
+                  <button
+                    onClick={() => setViewMode("markdown")}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg text-sm flex items-center gap-2 transition-colors",
+                      viewMode === "markdown" 
+                        ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" 
+                        : "text-slate-400 hover:text-slate-200"
+                    )}
+                  >
+                    <FileText className="h-4 w-4" />
+                    Skill Content
+                  </button>
+                )}
                 <button
                   onClick={() => setViewMode("visual")}
                   className={cn(
@@ -431,7 +473,7 @@ export function SkillEditor({ skill, storage, onUpdate, onDelete, readOnly = fal
                   )}
                 >
                   <Code2 className="h-4 w-4" />
-                  Visual Editor
+                  Parameters
                 </button>
                 <button
                   onClick={() => setViewMode("json")}
@@ -443,9 +485,72 @@ export function SkillEditor({ skill, storage, onUpdate, onDelete, readOnly = fal
                   )}
                 >
                   <FileJson className="h-4 w-4" />
-                  JSON Schema
+                  JSON
                 </button>
               </div>
+
+              {/* Markdown Content View (for Anthropic-style skills) */}
+              {viewMode === "markdown" && isMarkdownSkill && (
+                <div className="space-y-4">
+                  {/* Source info */}
+                  {(skill.definition as any)?.source_url && (
+                    <div className="flex items-center gap-2 text-sm text-slate-400 bg-slate-900/50 px-3 py-2 rounded-lg">
+                      <ExternalLink className="h-4 w-4" />
+                      <span>Source:</span>
+                      <a 
+                        href={(skill.definition as any).source_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-purple-400 hover:text-purple-300 underline"
+                      >
+                        {(skill.definition as any).source_url}
+                      </a>
+                    </div>
+                  )}
+                  
+                  {/* Markdown content */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-400 mb-2">
+                      SKILL.md Content
+                    </label>
+                    <div className={cn(
+                      "rounded-lg border overflow-hidden",
+                      "bg-slate-950/80 border-slate-700/50"
+                    )}>
+                      {/* Simple markdown renderer - headers, code blocks, lists */}
+                      <div className="p-4 prose prose-invert prose-sm max-w-none overflow-auto max-h-[600px]">
+                        <pre className="whitespace-pre-wrap text-sm text-slate-300 font-mono leading-relaxed">
+                          {content}
+                        </pre>
+                      </div>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-2">
+                      {content.length.toLocaleString()} characters • {Math.round(content.length / 4)} tokens (approx)
+                    </p>
+                  </div>
+
+                  {/* Edit content (only if not read-only) */}
+                  {!readOnly && (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-400 mb-2">
+                        Edit Content (Markdown)
+                      </label>
+                      <textarea
+                        value={content}
+                        onChange={(e) => setContent(e.target.value)}
+                        className={cn(
+                          "w-full h-80 p-4 rounded-lg",
+                          "bg-slate-900/70 border border-slate-700/50",
+                          "text-slate-200 placeholder:text-slate-600",
+                          "focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20",
+                          "font-mono text-sm resize-y"
+                        )}
+                        placeholder="# Skill Name&#10;&#10;Instructions for Claude..."
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Visual Editor */}
               {viewMode === "visual" && (

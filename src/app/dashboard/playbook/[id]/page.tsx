@@ -62,11 +62,12 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
   const { id } = use(params);
   const t = useTranslations();
   
-  // Create storage adapter
-  const storage = useMemo(() => createSupabaseAdapter(id), [id]);
-  
   // State
   const [playbook, setPlaybook] = useState<Playbook | null>(null);
+  
+  // Create storage adapter using the actual playbook ID (UUID), not the URL id param
+  // This is important when the URL uses a GUID slug instead of UUID
+  const storage = useMemo(() => createSupabaseAdapter(playbook?.id || id), [playbook?.id, id]);
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
   const [mcpServers, setMcpServers] = useState<MCPServer[]>([]);
@@ -118,6 +119,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
     const save = async () => {
       setSaving(true);
       const supabase = createBrowserClient();
+      // Use playbook.id (actual UUID) for updates, not the URL id param
       await supabase
         .from("playbooks")
         .update({
@@ -125,7 +127,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
           description: debouncedPlaybook.description,
           is_public: debouncedPlaybook.is_public,
         })
-        .eq("id", id);
+        .eq("id", playbook?.id || id);
       
       setSaving(false);
       setHasChanges(false);
@@ -142,22 +144,39 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
     const userId = user?.id || null;
     setCurrentUserId(userId);
 
-    const [playbookRes, skillsRes, mcpRes, memoriesRes, keysRes] = await Promise.all([
-      supabase.from("playbooks").select("*").eq("id", id).single(),
-      supabase.from("skills").select("*").eq("playbook_id", id).order("created_at"),
-      supabase.from("mcp_servers").select("*").eq("playbook_id", id).order("created_at"),
-      supabase.from("memories").select("*").eq("playbook_id", id).order("updated_at", { ascending: false }),
-      supabase.from("api_keys").select("*").eq("playbook_id", id).order("created_at", { ascending: false }),
+    // Try to determine if `id` is a UUID or a GUID (slug)
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    
+    // First, get the playbook (by id or guid)
+    let playbookRes;
+    if (isUUID) {
+      playbookRes = await supabase.from("playbooks").select("*").eq("id", id).single();
+    } else {
+      playbookRes = await supabase.from("playbooks").select("*").eq("guid", id).single();
+    }
+    
+    if (!playbookRes.data) {
+      setLoading(false);
+      return;
+    }
+    
+    const pb = playbookRes.data as Playbook;
+    const playbookId = pb.id; // Use the actual UUID for related queries
+
+    // Now fetch related data using the actual playbook ID
+    const [skillsRes, mcpRes, memoriesRes, keysRes] = await Promise.all([
+      supabase.from("skills").select("*").eq("playbook_id", playbookId).order("created_at"),
+      supabase.from("mcp_servers").select("*").eq("playbook_id", playbookId).order("created_at"),
+      supabase.from("memories").select("*").eq("playbook_id", playbookId).order("updated_at", { ascending: false }),
+      supabase.from("api_keys").select("*").eq("playbook_id", playbookId).order("created_at", { ascending: false }),
     ]);
 
-    if (playbookRes.data) {
-      const pb = playbookRes.data as Playbook;
-      setPlaybook(pb);
-      // Check if current user is the owner
-      setIsOwner(userId !== null && playbookRes.data.user_id === userId);
-      // 1 Playbook = 1 Persona (stored on playbook)
-      setPersonas([buildPersonaFromPlaybook(pb)]);
-    }
+    setPlaybook(pb);
+    // Check if current user is the owner
+    setIsOwner(userId !== null && pb.user_id === userId);
+    // 1 Playbook = 1 Persona (stored on playbook)
+    setPersonas([buildPersonaFromPlaybook(pb)]);
+    
     setSkills((skillsRes.data as Skill[]) || []);
     setMcpServers((mcpRes.data as MCPServer[]) || []);
     setMemories((memoriesRes.data as Memory[]) || []);
@@ -170,6 +189,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
     setSaving(true);
     
     const supabase = createBrowserClient();
+    // Use playbook.id (actual UUID) for updates
     await supabase
       .from("playbooks")
       .update({
@@ -177,7 +197,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
         description: playbook.description,
         is_public: playbook.is_public,
       })
-      .eq("id", id);
+      .eq("id", playbook.id);
 
     setSaving(false);
     setHasChanges(false);
@@ -1336,7 +1356,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                       if (!confirm("Really? This will delete ALL data in this playbook.")) return;
                       
                       const supabase = createBrowserClient();
-                      await supabase.from("playbooks").delete().eq("id", id);
+                      await supabase.from("playbooks").delete().eq("id", playbook?.id || id);
                       window.location.href = "/dashboard";
                     }}
                     className="px-4 py-2 bg-red-600/20 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-600/30 transition-colors"

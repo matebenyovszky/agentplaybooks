@@ -3074,7 +3074,7 @@ app.get("/public/skills/:id", async (c) => {
 // GET /api/public/mcp - Get MCP servers from all public playbooks (marketplace)
 app.get("/public/mcp", async (c) => {
   const search = c.req.query("search");
-  const supabase = getSupabase();
+  const supabase = getServiceSupabase();
 
   let query = supabase
     .from("mcp_servers")
@@ -3095,13 +3095,37 @@ app.get("/public/mcp", async (c) => {
     return c.json({ error: error.message }, 500);
   }
 
-  // Transform to include playbook info
-  const servers = (data || []).map((m: any) => ({
-    ...m,
-    playbook_guid: m.playbook?.guid,
-    playbook_name: m.playbook?.name,
-    playbook: undefined
-  }));
+  // Get unique user_ids to fetch profiles
+  const userIds = [...new Set((data || []).map((m: any) => m.playbook?.user_id).filter(Boolean))];
+  
+  // Fetch profiles
+  const { data: profiles } = userIds.length > 0 
+    ? await supabase
+        .from("profiles")
+        .select("id, display_name, avatar_svg, website_url, is_verified, is_virtual")
+        .in("id", userIds)
+    : { data: [] };
+  
+  const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+
+  // Transform to include playbook and publisher info
+  const servers = (data || []).map((m: any) => {
+    const profile = profileMap.get(m.playbook?.user_id);
+    return {
+      ...m,
+      playbook_guid: m.playbook?.guid,
+      playbook_name: m.playbook?.name,
+      publisher: profile ? {
+        id: profile.id,
+        name: profile.display_name,
+        avatar_svg: profile.avatar_svg,
+        website_url: profile.website_url,
+        is_verified: profile.is_verified,
+        is_virtual: profile.is_virtual,
+      } : null,
+      playbook: undefined
+    };
+  });
 
   return c.json(servers);
 });
