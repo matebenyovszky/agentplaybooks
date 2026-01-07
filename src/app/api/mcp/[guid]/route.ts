@@ -88,7 +88,7 @@ const PLAYBOOK_TOOLS: McpTool[] = [
   },
 ];
 
-export const app = createApiApp("/api/mcp/:guid");
+const app = createApiApp("/api/mcp/:guid");
 
 // GET /api/mcp/:guid - Return MCP server manifest
 app.get("/", async (c) => {

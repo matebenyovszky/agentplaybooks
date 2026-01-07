@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { app } from '@/app/api/[[...route]]/route';
+import { testApp as app } from '@/app/api/test-app';
 import { createMockRequest, mockUser, mockPlaybook } from '../utils';
 
 // Mock Supabase client

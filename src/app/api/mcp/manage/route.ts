@@ -293,7 +293,7 @@ const MCP_TOOLS = [
   },
 ];
 
-export const app = createApiApp("/api/mcp/manage");
+const app = createApiApp("/api/mcp/manage");
 
 // GET /api/mcp/manage - Return MCP server manifest
 app.get("/", async (c) => {

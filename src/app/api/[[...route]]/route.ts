@@ -71,7 +71,7 @@ type OpenApiSkillSchema = {
 
 type StarredPlaybookRow = { playbooks?: Playbook | null };
 
-export const app = new Hono<{ Bindings: Bindings; Variables: Variables }>().basePath("/api");
+const app = new Hono<{ Bindings: Bindings; Variables: Variables }>().basePath("/api");
 
 // CORS middleware
 app.use("*", cors({

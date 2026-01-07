@@ -376,7 +376,7 @@ export function ApiKeyManager({ playbook_id, apiKeys, onUpdate }: ApiKeyManagerP
                             name="role"
                             value={role.value}
                             checked={selectedRole === role.value}
-                            onChange={() => setSelectedRole(role.value as any)}
+                            onChange={() => setSelectedRole(role.value as 'viewer' | 'coworker' | 'admin')}
                             className="mt-0.5 rounded-full border-slate-600 text-amber-500 focus:ring-amber-500/20"
                           />
                           <div>

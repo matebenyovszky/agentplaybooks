@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { FloatingNav } from "@/components/ui/floating-navbar";
 import Link from "next/link";
-import { ChevronRight, Calendar, ArrowLeft, User, Share2, Twitter, Linkedin, Link as LinkIcon, Github } from "lucide-react";
+import { ChevronRight, Calendar, ArrowLeft, User, Twitter, Linkedin, Link as LinkIcon } from "lucide-react";
 import type { BlogPost } from "@/lib/blog-server";
 import { useState } from "react";
 

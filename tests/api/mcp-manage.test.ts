@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { app } from '@/app/api/mcp/manage/route';
+import { testMcpManageApp as app } from '@/app/api/test-app';
 import { createMockRequest, mockUser } from '../utils';
 import { createServerClient } from '@/lib/supabase/client';
 
