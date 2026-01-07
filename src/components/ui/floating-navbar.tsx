@@ -4,11 +4,12 @@ import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { Home, ChevronDown, BookOpen, LogOut, Globe, Server, Star, Settings, LayoutDashboard, Rss } from "lucide-react";
+import { Home, ChevronDown, BookOpen, LogOut, Globe, Server, Star, Settings, LayoutDashboard, Rss, Sun, Moon, Laptop } from "lucide-react";
 import { locales, localeNames, localeFlags, type Locale } from "@/i18n/config";
 import { useTranslations } from "next-intl";
 import { createBrowserClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
+import { useTheme } from "@/components/theme-provider";
 
 export const FloatingNav = ({
   navItems: customNavItems,
@@ -22,6 +23,8 @@ export const FloatingNav = ({
   className?: string;
 }) => {
   const t = useTranslations();
+  const { theme, setTheme } = useTheme();
+
 
   // State declarations - must come before useMemo that depends on them
   const [visible, setVisible] = useState(true);
@@ -149,14 +152,14 @@ export const FloatingNav = ({
           duration: 0.2,
         }}
         className={cn(
-          "flex max-w-fit fixed top-4 inset-x-0 mx-auto border border-white/[0.2] rounded-full bg-black shadow-[0px_2px_3px_-1px_rgba(0,0,0,0.1),0px_1px_0px_0px_rgba(25,28,33,0.02),0px_0px_0px_1px_rgba(25,28,33,0.08)] z-[5000] pr-2 pl-4 py-2 items-center justify-center space-x-4",
+          "flex max-w-fit fixed top-4 inset-x-0 mx-auto border dark:border-white/[0.2] border-black/[0.1] rounded-full dark:bg-black bg-white shadow-[0px_2px_3px_-1px_rgba(0,0,0,0.1),0px_1px_0px_0px_rgba(25,28,33,0.02),0px_0px_0px_1px_rgba(25,28,33,0.08)] z-[5000] pr-2 pl-4 py-2 items-center justify-center space-x-4",
           className
         )}
       >
         {/* Home link */}
         <Link
           href="/"
-          className="relative text-neutral-50 items-center flex space-x-1 hover:text-amber-400 transition-colors"
+          className="relative dark:text-neutral-50 text-neutral-600 items-center flex space-x-1 dark:hover:text-amber-400 hover:text-amber-600 transition-colors"
           title="Home"
         >
           <Home className="h-4 w-4" />
@@ -167,13 +170,28 @@ export const FloatingNav = ({
             key={`link-${idx}`}
             href={navItem.link}
             className={cn(
-              "relative text-neutral-50 items-center flex space-x-1 hover:text-amber-400 transition-colors"
+              "relative dark:text-neutral-50 text-neutral-600 items-center flex space-x-1 dark:hover:text-amber-400 hover:text-amber-600 transition-colors"
             )}
           >
             <span className="block sm:hidden">{navItem.icon}</span>
             <span className="hidden sm:block text-sm">{navItem.name}</span>
           </Link>
         ))}
+
+        {/* Theme Toggle */}
+        <button
+          onClick={() => {
+            if (theme === "light") setTheme("dark");
+            else if (theme === "dark") setTheme("system");
+            else setTheme("light");
+          }}
+          className="relative dark:text-neutral-50 text-neutral-600 dark:hover:text-amber-400 hover:text-amber-600 transition-colors p-1"
+          title={`Theme: ${theme.charAt(0).toUpperCase() + theme.slice(1)}`}
+        >
+          {theme === "light" && <Sun className="h-4 w-4" />}
+          {theme === "dark" && <Moon className="h-4 w-4" />}
+          {theme === "system" && <Laptop className="h-4 w-4" />}
+        </button>
 
         {/* Language selector */}
         <div className="relative">
@@ -182,7 +200,7 @@ export const FloatingNav = ({
               e.stopPropagation();
               setLangMenuOpen(!langMenuOpen);
             }}
-            className="flex items-center gap-1 text-sm text-neutral-50 hover:text-amber-400 transition-colors px-2 py-1"
+            className="flex items-center gap-1 text-sm dark:text-neutral-50 text-neutral-600 dark:hover:text-amber-400 hover:text-amber-600 transition-colors px-2 py-1"
           >
             <span>{localeFlags[currentLocale]}</span>
             <ChevronDown className={cn("h-3 w-3 transition-transform", langMenuOpen && "rotate-180")} />
@@ -195,7 +213,7 @@ export const FloatingNav = ({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.15 }}
-                className="absolute top-full right-0 mt-2 py-2 bg-neutral-900 border border-neutral-700 rounded-lg shadow-xl min-w-[140px]"
+                className="absolute top-full right-0 mt-2 py-2 dark:bg-neutral-900 bg-white border dark:border-neutral-700 border-neutral-200 rounded-lg shadow-xl min-w-[140px]"
                 onClick={(e) => e.stopPropagation()}
               >
                 {locales.map((locale) => (
@@ -203,8 +221,8 @@ export const FloatingNav = ({
                     key={locale}
                     onClick={() => handleLocaleSelect(locale)}
                     className={cn(
-                      "w-full px-4 py-2 text-left text-sm flex items-center gap-2 hover:bg-neutral-800 transition-colors",
-                      currentLocale === locale ? "text-amber-400" : "text-neutral-300"
+                      "w-full px-4 py-2 text-left text-sm flex items-center gap-2 dark:hover:bg-neutral-800 hover:bg-neutral-100 transition-colors",
+                      currentLocale === locale ? "text-amber-400" : "dark:text-neutral-300 text-neutral-600"
                     )}
                   >
                     <span>{localeFlags[locale]}</span>
@@ -224,7 +242,7 @@ export const FloatingNav = ({
                 e.stopPropagation();
                 setUserMenuOpen(!userMenuOpen);
               }}
-              className="flex items-center gap-2 text-sm font-medium border border-amber-500/50 text-white px-3 py-2 rounded-full hover:border-amber-400 hover:bg-amber-500/10 transition-all"
+              className="flex items-center gap-2 text-sm font-medium border border-amber-500/50 dark:text-white text-neutral-900 px-3 py-2 rounded-full hover:border-amber-400 hover:bg-amber-500/10 transition-all"
             >
               <span className="w-6 h-6 rounded-full bg-amber-500/30 flex items-center justify-center text-xs font-bold text-amber-400">
                 {user.email?.charAt(0).toUpperCase() || "U"}
@@ -239,27 +257,27 @@ export const FloatingNav = ({
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
                   transition={{ duration: 0.15 }}
-                  className="absolute top-full right-0 mt-2 py-2 bg-neutral-900 border border-neutral-700 rounded-lg shadow-xl min-w-[180px]"
+                  className="absolute top-full right-0 mt-2 py-2 dark:bg-neutral-900 bg-white border dark:border-neutral-700 border-neutral-200 rounded-lg shadow-xl min-w-[180px]"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <div className="px-4 py-2 border-b border-neutral-700">
-                    <p className="text-xs text-neutral-400 truncate">{user.email}</p>
+                  <div className="px-4 py-2 border-b dark:border-neutral-700 border-neutral-200">
+                    <p className="text-xs dark:text-neutral-400 text-neutral-500 truncate">{user.email}</p>
                   </div>
                   {dashboardItems.map((item, idx) => (
                     <Link
                       key={idx}
                       href={item.link}
-                      className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 hover:bg-neutral-800 transition-colors text-neutral-300"
+                      className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 dark:hover:bg-neutral-800 hover:bg-neutral-100 transition-colors dark:text-neutral-300 text-neutral-600"
                       onClick={() => setUserMenuOpen(false)}
                     >
                       {item.icon}
                       <span>{item.name}</span>
                     </Link>
                   ))}
-                  <div className="border-t border-neutral-700 mt-1 pt-1">
+                  <div className="border-t dark:border-neutral-700 border-neutral-200 mt-1 pt-1">
                     <button
                       onClick={handleSignOut}
-                      className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 hover:bg-neutral-800 transition-colors text-red-400"
+                      className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 dark:hover:bg-neutral-800 hover:bg-neutral-100 transition-colors text-red-400"
                     >
                       <LogOut className="h-4 w-4" />
                       <span>{t("dashboard.signOut")}</span>
@@ -272,7 +290,7 @@ export const FloatingNav = ({
         ) : (
           <Link
             href="/login"
-            className="text-sm font-medium relative border border-amber-500/50 text-white px-4 py-2 rounded-full hover:border-amber-400 hover:bg-amber-500/10 transition-all"
+            className="text-sm font-medium relative border border-amber-500/50 dark:text-white text-neutral-900 px-4 py-2 rounded-full hover:border-amber-400 hover:bg-amber-500/10 transition-all"
           >
             <span>{t("common.signIn")}</span>
           </Link>

@@ -12,8 +12,9 @@ Give your AI agents, GPTs, and robots a platform-independent vault. Store skills
 - MCP servers: tools and resources in Model Context Protocol format
 - Memory: key-value store with tags and descriptions
 - Export formats: JSON, OpenAPI, MCP, Anthropic, Markdown
-- API keys: playbook keys for agents, user keys for management
-- Marketplace: public playbooks, skills, MCP servers, and stars
+- API keys: Role-Based Access Control (Viewer, Coworker, Admin)
+- Marketplace: Public and Unlisted playbooks, skills, MCP servers
+- Theme: System-aware Light and Dark modes
 
 ## Tech Stack
 
@@ -81,7 +82,10 @@ npx wrangler deploy
 
 ## API Overview
 
-### Public playbook access
+### Public and Unlisted playbook access
+
+Public playbooks are visible to everyone. Unlisted playbooks are accessible via GUID but hidden from search.
+
 
 ```
 GET /api/playbooks/:guid
@@ -137,7 +141,8 @@ POST   /api/playbooks/:id/api-keys
 DELETE /api/playbooks/:id/api-keys/:kid
 ```
 
-### User profile and user API keys
+### User profile and user API keys (Management)
+
 
 ```
 GET    /api/user/profile
@@ -244,12 +249,12 @@ agentplaybooks/
 
 ## Database Schema
 
-- playbooks: core entity (includes persona fields)
+- playbooks: core entity (includes visibility enum: private, public, unlisted)
 - skills: skill definitions and optional SKILL.md content
 - skill_attachments: secure attachment storage for skills
 - mcp_servers: MCP tools and resources
 - memories: key-value memory store
-- api_keys: playbook-scoped API keys
+- api_keys: playbook-scoped API keys with RBAC roles
 - user_api_keys: user-scoped API keys
 - profiles: public user profile data
 - playbook_stars: marketplace stars

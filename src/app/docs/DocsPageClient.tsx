@@ -6,9 +6,9 @@ import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { FloatingNav } from "@/components/ui/floating-navbar";
 import { docsEntries, getDocTitle, normalizeDocSlug } from "./docs-data";
-import { 
+import {
   BookOpen,
-  Globe, 
+  Globe,
   ChevronRight,
   FileText,
   Rocket,
@@ -38,17 +38,18 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
 
 type DocsPageClientProps = {
   initialSlug?: string;
+  initialContent?: string;
 };
 
-export default function DocsPageClient({ initialSlug = "readme" }: DocsPageClientProps) {
+export default function DocsPageClient({ initialSlug = "readme", initialContent }: DocsPageClientProps) {
   const searchParams = useSearchParams();
   const pageParam = searchParams.get("page");
   const page = useMemo(
     () => normalizeDocSlug(pageParam || initialSlug),
     [pageParam, initialSlug]
   );
-  const [content, setContent] = useState<string>("");
-  const [loading, setLoading] = useState(true);
+  const [content, setContent] = useState<string>(initialContent || "");
+  const [loading, setLoading] = useState(!initialContent);
 
   const docsGuides = docsEntries
     .filter((entry) => entry.section === "guides")
@@ -86,15 +87,20 @@ export default function DocsPageClient({ initialSlug = "readme" }: DocsPageClien
   }, []);
 
   useEffect(() => {
-    loadContent(page);
-  }, [page]);
+    if (initialContent) {
+      setContent(initialContent);
+      setLoading(false);
+    } else {
+      loadContent(page);
+    }
+  }, [page, initialContent]);
 
   // Handle hash changes for anchor links
   useEffect(() => {
     if (!loading) {
       scrollToAnchor();
     }
-    
+
     // Listen for hash changes
     const handleHashChange = () => scrollToAnchor();
     window.addEventListener("hashchange", handleHashChange);
@@ -107,10 +113,10 @@ export default function DocsPageClient({ initialSlug = "readme" }: DocsPageClien
       // Map slug to filename
       const normalizedSlug = normalizeDocSlug(slug);
       const filename = normalizedSlug === "readme" ? "README.md" : `${normalizedSlug}.md`;
-      
+
       // Fetch from static /docs folder in public directory
       const response = await fetch(`/docs/${filename}`);
-      
+
       if (response.ok) {
         const text = await response.text();
         setContent(text);
@@ -140,11 +146,10 @@ export default function DocsPageClient({ initialSlug = "readme" }: DocsPageClien
           <nav className="space-y-1">
             <Link
               href="/docs"
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
-                page === "readme" 
-                  ? "bg-indigo-500/10 text-indigo-400" 
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${page === "readme"
+                  ? "bg-indigo-500/10 text-indigo-400"
                   : "text-neutral-400 hover:text-white hover:bg-neutral-800"
-              }`}
+                }`}
             >
               <FileText className="h-4 w-4" />
               Overview
@@ -160,11 +165,10 @@ export default function DocsPageClient({ initialSlug = "readme" }: DocsPageClien
               <Link
                 key={doc.slug}
                 href={`/docs/${normalizeDocSlug(doc.slug)}`}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
-                  page === normalizeDocSlug(doc.slug)
-                    ? "bg-indigo-500/10 text-indigo-400" 
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${page === normalizeDocSlug(doc.slug)
+                    ? "bg-indigo-500/10 text-indigo-400"
                     : "text-neutral-400 hover:text-white hover:bg-neutral-800"
-                }`}
+                  }`}
               >
                 <doc.icon className="h-4 w-4" />
                 {doc.title}
@@ -181,11 +185,10 @@ export default function DocsPageClient({ initialSlug = "readme" }: DocsPageClien
               <Link
                 key={doc.slug}
                 href={`/docs/${normalizeDocSlug(doc.slug)}`}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
-                  page === normalizeDocSlug(doc.slug)
-                    ? "bg-indigo-500/10 text-indigo-400" 
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${page === normalizeDocSlug(doc.slug)
+                    ? "bg-indigo-500/10 text-indigo-400"
                     : "text-neutral-400 hover:text-white hover:bg-neutral-800"
-                }`}
+                  }`}
               >
                 <doc.icon className="h-4 w-4" />
                 {doc.title}
@@ -202,11 +205,10 @@ export default function DocsPageClient({ initialSlug = "readme" }: DocsPageClien
               <Link
                 key={doc.slug}
                 href={`/docs/${normalizeDocSlug(doc.slug)}`}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
-                  page === normalizeDocSlug(doc.slug)
-                    ? "bg-indigo-500/10 text-indigo-400" 
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${page === normalizeDocSlug(doc.slug)
+                    ? "bg-indigo-500/10 text-indigo-400"
                     : "text-neutral-400 hover:text-white hover:bg-neutral-800"
-                }`}
+                  }`}
               >
                 <doc.icon className="h-4 w-4" />
                 {doc.title}
@@ -289,11 +291,11 @@ export default function DocsPageClient({ initialSlug = "readme" }: DocsPageClien
 function MarkdownRenderer({ content }: { content: string }) {
   // Parse and render markdown
   const html = parseMarkdown(content);
-  
+
   return (
-    <div 
+    <div
       className="markdown-content"
-      dangerouslySetInnerHTML={{ __html: html }} 
+      dangerouslySetInnerHTML={{ __html: html }}
     />
   );
 }
@@ -318,9 +320,8 @@ function TableOfContents({ content }: { content: string }) {
         <a
           key={i}
           href={`#${heading.id}`}
-          className={`block text-neutral-400 hover:text-white transition-colors ${
-            heading.level === 3 ? "pl-4" : ""
-          }`}
+          className={`block text-neutral-400 hover:text-white transition-colors ${heading.level === 3 ? "pl-4" : ""
+            }`}
         >
           {heading.text}
         </a>
@@ -367,8 +368,8 @@ function parseMarkdown(md: string): string {
       if (cells.every(c => /^[-:]+$/.test(c.trim()))) return ''; // Header separator
       const isHeader = cells.some(c => c.includes('---'));
       const tag = isHeader ? 'th' : 'td';
-      const cellClass = isHeader 
-        ? 'px-4 py-3 text-left text-sm font-semibold text-neutral-200 bg-neutral-900' 
+      const cellClass = isHeader
+        ? 'px-4 py-3 text-left text-sm font-semibold text-neutral-200 bg-neutral-900'
         : 'px-4 py-3 text-sm text-neutral-300';
       return `<tr>${cells.map(c => `<${tag} class="${cellClass}">${c.trim()}</${tag}>`).join('')}</tr>`;
     })

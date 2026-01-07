@@ -5,11 +5,16 @@
   Primary: Deep navy/midnight blue
   Accent: Ochre/Amber/Golden yellow
 */
-/* Force dark mode - ignore system preferences */
+@variant dark (&:where(.dark, .dark *));
+
+/* System preference based theming */
 :root {
-  --background: #0a0f1a;
-  --foreground: #f1f5f9;
-  
+  /* Light Mode - Golden/Cream Background, Deep Blue Text */
+  --background: #fffbeb;
+  /* accent-50 */
+  --foreground: #0f172a;
+  /* primary-900 */
+
   /* Primary - Deep Blue */
   --primary-50: #eff6ff;
   --primary-100: #dbeafe;
@@ -22,7 +27,7 @@
   --primary-800: #172554;
   --primary-900: #0f172a;
   --primary-950: #020617;
-  
+
   /* Accent - Ochre/Amber/Golden */
   --accent-50: #fffbeb;
   --accent-100: #fef3c7;
@@ -34,8 +39,13 @@
   --accent-700: #92400e;
   --accent-800: #78350f;
   --accent-900: #451a03;
-  
-  /* Force dark color-scheme for browser UI elements */
+}
+
+.dark {
+  --background: #0a0f1a;
+  --foreground: #f1f5f9;
+
+  /* Force dark color-scheme for browser UI elements only in dark mode */
   color-scheme: dark;
 }
 
@@ -58,6 +68,7 @@ body {
     opacity: 0;
     transform: translate(-72%, -62%) scale(0.5);
   }
+
   100% {
     opacity: 1;
     transform: translate(-50%, -40%) scale(1);

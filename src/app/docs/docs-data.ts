@@ -24,7 +24,7 @@ export const docsEntries: DocEntry[] = [
     slug: "architecture",
     title: "Architecture",
     description: "System design and components",
-    section: "guides",
+    section: "reference",
   },
   {
     slug: "playbooks",
@@ -78,7 +78,7 @@ export const docsEntries: DocEntry[] = [
     slug: "roadmap",
     title: "Roadmap",
     description: "Development roadmap and future plans",
-    section: "reference",
+    section: "guides",
   },
 ];
 
