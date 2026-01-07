@@ -12,7 +12,8 @@
     "enterprise": "Enterprise",
     "selfHost": "Self-host",
     "pricing": "Pricing",
-    "settings": "Settings"
+    "settings": "Settings",
+    "blog": "Blog"
   },
   "landing": {
     "hero": {
@@ -283,4 +284,3 @@
     "yours": "Yours"
   }
 }
-

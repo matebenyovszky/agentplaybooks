@@ -5,10 +5,10 @@ import { cors } from "hono/cors";
 import { createServerClient } from "@/lib/supabase/client";
 import type { UserApiKeysRow, Playbook, Skill, MCPServer, ProfilesRow, Persona } from "@/lib/supabase/types";
 import { ATTACHMENT_LIMITS, ALLOWED_FILE_TYPES } from "@/lib/supabase/types";
-import { 
-  validateAttachment, 
-  validateFilename, 
-  validateContent 
+import {
+  validateAttachment,
+  validateFilename,
+  validateContent
 } from "@/lib/attachment-validator";
 import { hashApiKey, generateApiKey, generateGuid, getKeyPrefix } from "@/lib/utils";
 import { cookies } from "next/headers";
@@ -45,14 +45,14 @@ type ProfileSummary = Pick<
   "id" | "display_name" | "avatar_svg" | "website_url" | "is_verified" | "is_virtual"
 >;
 
-type SkillWithPlaybookAccess = Skill & { playbooks?: { is_public?: boolean; user_id?: string } };
+type SkillWithPlaybookAccess = Skill & { playbooks?: { visibility?: 'public' | 'private' | 'unlisted'; user_id?: string } };
 type SkillWithPlaybookOwner = Skill & { playbooks?: { user_id?: string } };
 type SkillWithPlaybook = Skill & {
-  playbook?: { id?: string; guid?: string; name?: string; is_public?: boolean; user_id?: string };
+  playbook?: { id?: string; guid?: string; name?: string; visibility?: 'public' | 'private' | 'unlisted'; user_id?: string };
 };
 
 type MCPServerWithPlaybook = MCPServer & {
-  playbook?: { id?: string; guid?: string; name?: string; is_public?: boolean; user_id?: string };
+  playbook?: { id?: string; guid?: string; name?: string; visibility?: 'public' | 'private' | 'unlisted'; user_id?: string };
 };
 
 type PlaybookWithExports = Playbook & {
@@ -71,7 +71,7 @@ type OpenApiSkillSchema = {
 
 type StarredPlaybookRow = { playbooks?: Playbook | null };
 
-const app = new Hono<{ Bindings: Bindings; Variables: Variables }>().basePath("/api");
+export const app = new Hono<{ Bindings: Bindings; Variables: Variables }>().basePath("/api");
 
 // CORS middleware
 app.use("*", cors({
@@ -97,13 +97,13 @@ function getServiceSupabase() {
 // Helper: Get authenticated user from cookies or Authorization header
 async function getAuthenticatedUser(c: AppContext): Promise<{ id: string } | null> {
   const supabase = getSupabase();
-  
+
   // Try to get user from cookie
   try {
     const cookieStore = await cookies();
     const accessToken = cookieStore.get("sb-access-token")?.value;
     const refreshToken = cookieStore.get("sb-refresh-token")?.value;
-    
+
     if (accessToken && refreshToken) {
       const { data: { user }, error } = await supabase.auth.setSession({
         access_token: accessToken,
@@ -117,7 +117,7 @@ async function getAuthenticatedUser(c: AppContext): Promise<{ id: string } | nul
     // Cookie parsing might fail in some environments
     // Silently fall through to header auth
   }
-  
+
   // Try Authorization header (for API calls)
   const authHeader = c.req.header("Authorization");
   if (authHeader?.startsWith("Bearer ") && !authHeader.startsWith("Bearer apb_")) {
@@ -127,7 +127,7 @@ async function getAuthenticatedUser(c: AppContext): Promise<{ id: string } | nul
       return { id: user.id };
     }
   }
-  
+
   return null;
 }
 
@@ -214,13 +214,13 @@ async function getUserFromAuthOrApiKey(c: AppContext, requiredPermission: string
   if (user) {
     return user;
   }
-  
+
   // Try User API key
   const userApiKey = await validateUserApiKey(c, requiredPermission);
   if (userApiKey) {
     return { id: userApiKey.user_id };
   }
-  
+
   return null;
 }
 
@@ -236,7 +236,7 @@ app.get("/playbooks", async (c) => {
   }
 
   const supabase = getServiceSupabase();
-  
+
   const { data, error } = await supabase
     .from("playbooks")
     .select(`
@@ -326,8 +326,11 @@ app.get("/playbooks/:guid", async (c) => {
     return c.json({ error: "Playbook not found" }, 404);
   }
 
-  // Check access: either public or owned by user
-  if (!playbook.is_public && (!user || playbook.user_id !== user.id)) {
+  // Check access: Public/Unlisted OR Owner
+  const isOwner = user && playbook.user_id === user.id;
+  const isPublicOrUnlisted = playbook.visibility === 'public' || playbook.visibility === 'unlisted';
+
+  if (!isPublicOrUnlisted && !isOwner) {
     return c.json({ error: "Playbook not found" }, 404);
   }
 
@@ -372,7 +375,7 @@ app.put("/playbooks/:id", async (c) => {
   }
 
   const playbookId = c.req.param("id");
-  
+
   // Check ownership
   if (!(await checkPlaybookOwnership(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
@@ -411,7 +414,7 @@ app.delete("/playbooks/:id", async (c) => {
   }
 
   const playbookId = c.req.param("id");
-  
+
   if (!(await checkPlaybookOwnership(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
   }
@@ -446,8 +449,8 @@ app.get("/playbooks/:id/personas", async (c) => {
   // Find playbook by ID or GUID
   let query = supabase
     .from("playbooks")
-    .select("id, user_id, is_public, created_at, persona_name, persona_system_prompt, persona_metadata");
-  
+    .select("id, user_id, visibility, created_at, persona_name, persona_system_prompt, persona_metadata");
+
   if (isUuid) {
     query = query.eq("id", idOrGuid);
   } else {
@@ -461,7 +464,7 @@ app.get("/playbooks/:id/personas", async (c) => {
   }
 
   // Must be public or owned
-  if (!playbook.is_public && (!user || playbook.user_id !== user.id)) {
+  if (!['public', 'unlisted'].includes(playbook.visibility) && (!user || playbook.user_id !== user.id)) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -477,7 +480,7 @@ app.post("/playbooks/:id/personas", async (c) => {
   }
 
   const playbookId = c.req.param("id");
-  
+
   if (!(await checkPlaybookOwnership(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
   }
@@ -519,7 +522,7 @@ app.put("/playbooks/:id/personas/:pid", async (c) => {
 
   const playbookId = c.req.param("id");
   const personaId = c.req.param("pid");
-  
+
   if (!(await checkPlaybookOwnership(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
   }
@@ -562,7 +565,7 @@ app.delete("/playbooks/:id/personas/:pid", async (c) => {
 
   const playbookId = c.req.param("id");
   const personaId = c.req.param("pid");
-  
+
   if (!(await checkPlaybookOwnership(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
   }
@@ -605,8 +608,8 @@ app.get("/playbooks/:id/skills", async (c) => {
   // Find playbook by ID or GUID
   let query = supabase
     .from("playbooks")
-    .select("id, user_id, is_public");
-  
+    .select("id, user_id, visibility");
+
   if (isUuid) {
     query = query.eq("id", idOrGuid);
   } else {
@@ -620,7 +623,7 @@ app.get("/playbooks/:id/skills", async (c) => {
   }
 
   // Check access - public playbooks are readable by anyone, private only by owner
-  if (!playbook.is_public && (!user || playbook.user_id !== user.id)) {
+  if (!['public', 'unlisted'].includes(playbook.visibility) && (!user || playbook.user_id !== user.id)) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -645,7 +648,7 @@ app.post("/playbooks/:id/skills", async (c) => {
   }
 
   const playbookId = c.req.param("id");
-  
+
   if (!(await checkPlaybookOwnership(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
   }
@@ -687,7 +690,7 @@ app.put("/playbooks/:id/skills/:sid", async (c) => {
 
   const playbookId = c.req.param("id");
   const skillId = c.req.param("sid");
-  
+
   if (!(await checkPlaybookOwnership(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
   }
@@ -727,7 +730,7 @@ app.delete("/playbooks/:id/skills/:sid", async (c) => {
 
   const playbookId = c.req.param("id");
   const skillId = c.req.param("sid");
-  
+
   if (!(await checkPlaybookOwnership(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
   }
@@ -769,7 +772,7 @@ app.get("/playbooks/:id/api-keys", async (c) => {
   }
 
   const playbookId = c.req.param("id");
-  
+
   if (!(await checkPlaybookOwnership(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
   }
@@ -797,7 +800,7 @@ app.post("/playbooks/:id/api-keys", async (c) => {
   }
 
   const playbookId = c.req.param("id");
-  
+
   if (!(await checkPlaybookOwnership(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
   }
@@ -847,7 +850,7 @@ app.delete("/playbooks/:id/api-keys/:kid", async (c) => {
 
   const playbookId = c.req.param("id");
   const keyId = c.req.param("kid");
-  
+
   if (!(await checkPlaybookOwnership(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
   }
@@ -996,7 +999,7 @@ app.get("/profiles/:id/playbooks", async (c) => {
       mcp_servers:mcp_servers(count)
     `)
     .eq("user_id", id)
-    .eq("is_public", true)
+    .eq("visibility", "public")
     .order("star_count", { ascending: false });
 
   if (error) {
@@ -1120,7 +1123,7 @@ app.get("/manage/playbooks", async (c) => {
   }
 
   const supabase = getServiceSupabase();
-  
+
   const { data, error } = await supabase
     .from("playbooks")
     .select(`
@@ -1231,7 +1234,7 @@ app.put("/manage/playbooks/:id", async (c) => {
   }
 
   const playbookId = c.req.param("id");
-  
+
   if (!(await checkPlaybookOwnership(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
   }
@@ -1269,7 +1272,7 @@ app.delete("/manage/playbooks/:id", async (c) => {
   }
 
   const playbookId = c.req.param("id");
-  
+
   if (!(await checkPlaybookOwnership(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
   }
@@ -1296,7 +1299,7 @@ app.post("/manage/playbooks/:id/personas", async (c) => {
   }
 
   const playbookId = c.req.param("id");
-  
+
   if (!(await checkPlaybookOwnership(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
   }
@@ -1338,7 +1341,7 @@ app.put("/manage/playbooks/:id/personas/:pid", async (c) => {
 
   const playbookId = c.req.param("id");
   const personaId = c.req.param("pid");
-  
+
   if (!(await checkPlaybookOwnership(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
   }
@@ -1378,7 +1381,7 @@ app.delete("/manage/playbooks/:id/personas/:pid", async (c) => {
 
   const playbookId = c.req.param("id");
   const personaId = c.req.param("pid");
-  
+
   if (!(await checkPlaybookOwnership(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
   }
@@ -1413,7 +1416,7 @@ app.post("/manage/playbooks/:id/skills", async (c) => {
   }
 
   const playbookId = c.req.param("id");
-  
+
   if (!(await checkPlaybookOwnership(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
   }
@@ -1455,7 +1458,7 @@ app.put("/manage/playbooks/:id/skills/:sid", async (c) => {
 
   const playbookId = c.req.param("id");
   const skillId = c.req.param("sid");
-  
+
   if (!(await checkPlaybookOwnership(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
   }
@@ -1487,7 +1490,7 @@ app.delete("/manage/playbooks/:id/skills/:sid", async (c) => {
 
   const playbookId = c.req.param("id");
   const skillId = c.req.param("sid");
-  
+
   if (!(await checkPlaybookOwnership(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
   }
@@ -1519,7 +1522,7 @@ app.get("/manage/skills/:skillId/attachments", async (c) => {
   // First check if skill exists and is accessible
   const { data: skillData, error: skillError } = await supabase
     .from("skills")
-    .select("id, playbook_id, playbooks!inner(is_public, user_id)")
+    .select("id, playbook_id, playbooks!inner(visibility, user_id)")
     .eq("id", skillId)
     .single();
 
@@ -1531,10 +1534,10 @@ app.get("/manage/skills/:skillId/attachments", async (c) => {
 
   // Check if public or owned
   const user = await getAuthenticatedUser(c);
-  const isPublic = skill.playbooks?.is_public;
+  const isPublicOrUnlisted = skill.playbooks?.visibility === 'public' || skill.playbooks?.visibility === 'unlisted';
   const isOwner = user && skill.playbooks?.user_id === user.id;
 
-  if (!isPublic && !isOwner) {
+  if (!isPublicOrUnlisted && !isOwner) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -1560,7 +1563,7 @@ app.get("/manage/skills/:skillId/attachments/:attachmentId", async (c) => {
   // Check skill access
   const { data: skillData } = await supabase
     .from("skills")
-    .select("id, playbook_id, playbooks!inner(is_public, user_id)")
+    .select("id, playbook_id, playbooks!inner(visibility, user_id)")
     .eq("id", skillId)
     .single();
 
@@ -1571,10 +1574,10 @@ app.get("/manage/skills/:skillId/attachments/:attachmentId", async (c) => {
   }
 
   const user = await getAuthenticatedUser(c);
-  const isPublic = skill.playbooks?.is_public;
+  const isPublicOrUnlisted = skill.playbooks?.visibility === 'public' || skill.playbooks?.visibility === 'unlisted';
   const isOwner = user && skill.playbooks?.user_id === user.id;
 
-  if (!isPublic && !isOwner) {
+  if (!isPublicOrUnlisted && !isOwner) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -1638,8 +1641,8 @@ app.post("/manage/skills/:skillId/attachments", async (c) => {
     .eq("skill_id", skillId);
 
   if ((count || 0) >= ATTACHMENT_LIMITS.MAX_FILES_PER_SKILL) {
-    return c.json({ 
-      error: `Maximum ${ATTACHMENT_LIMITS.MAX_FILES_PER_SKILL} attachments per skill` 
+    return c.json({
+      error: `Maximum ${ATTACHMENT_LIMITS.MAX_FILES_PER_SKILL} attachments per skill`
     }, 400);
   }
 
@@ -1984,7 +1987,7 @@ app.delete("/manage/playbooks/:id/memory/:key", async (c) => {
 // GET /api/manage/openapi.json - OpenAPI spec for management API
 app.get("/manage/openapi.json", (c) => {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://agentplaybooks.ai";
-  
+
   return c.json({
     openapi: "3.1.0",
     info: {
@@ -2023,7 +2026,7 @@ app.get("/manage/openapi.json", (c) => {
                   properties: {
                     name: { type: "string", description: "Playbook name" },
                     description: { type: "string", description: "Playbook description" },
-                    is_public: { type: "boolean", default: false, description: "Whether the playbook is public" }
+                    visibility: { type: "string", enum: ["public", "private", "unlisted"], description: "Visibility of the playbook" }
                   }
                 }
               }
@@ -2051,7 +2054,7 @@ app.get("/manage/openapi.json", (c) => {
                   properties: {
                     name: { type: "string" },
                     description: { type: "string" },
-                    is_public: { type: "boolean" }
+                    visibility: { type: "string", enum: ["public", "private", "unlisted"], description: "Visibility of the playbook" }
                   }
                 }
               }
@@ -2282,7 +2285,7 @@ app.get("/manage/openapi.json", (c) => {
             guid: { type: "string", description: "Public identifier for the playbook" },
             name: { type: "string" },
             description: { type: "string" },
-            is_public: { type: "boolean" },
+            visibility: { type: "string" },
             persona_count: { type: "integer" },
             skill_count: { type: "integer" },
             mcp_server_count: { type: "integer" },
@@ -2349,7 +2352,7 @@ app.get("/public/playbooks", async (c) => {
       mcp_servers:mcp_servers(count),
       publisher:profiles(id, display_name, avatar_svg, website_url, is_verified, is_virtual)
     `)
-    .eq("is_public", true);
+    .eq("visibility", "public");
 
   if (search) {
     query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
@@ -2436,7 +2439,7 @@ app.post("/playbooks/:id/star", async (c) => {
   // Check if playbook exists and is public
   const { data: playbook } = await supabase
     .from("playbooks")
-    .select("id, is_public")
+    .select("id, visibility")
     .eq("id", playbookId)
     .single();
 
@@ -2444,7 +2447,7 @@ app.post("/playbooks/:id/star", async (c) => {
     return c.json({ error: "Playbook not found" }, 404);
   }
 
-  if (!playbook.is_public) {
+  if (playbook.visibility !== 'public') {
     return c.json({ error: "Cannot star private playbooks" }, 403);
   }
 
@@ -2688,7 +2691,7 @@ function formatAsOpenAPI(playbook: PlaybookWithExports) {
   const personaHeader = persona?.name && persona?.system_prompt
     ? `## Persona: ${persona.name}\n\n${persona.system_prompt}\n\n---\n\n`
     : "";
-  
+
   // Convert skills to OpenAPI-compatible tool definitions
   const tools = playbook.skills.map((skill) => ({
     type: "function",
@@ -2968,10 +2971,10 @@ function formatAsOpenAPI(playbook: PlaybookWithExports) {
           properties: {
             key: { type: "string", description: "Unique key identifier" },
             value: { type: "object", description: "Stored value (any JSON)" },
-            tags: { 
-              type: "array", 
+            tags: {
+              type: "array",
               items: { type: "string" },
-              description: "Tags for categorization and search" 
+              description: "Tags for categorization and search"
             },
             description: { type: "string", description: "Human-readable description" },
             updated_at: { type: "string", format: "date-time", description: "Last update timestamp" },
@@ -2982,10 +2985,10 @@ function formatAsOpenAPI(playbook: PlaybookWithExports) {
           description: "Data for creating/updating a memory entry",
           properties: {
             value: { type: "object", description: "Value to store (any JSON object)" },
-            tags: { 
-              type: "array", 
+            tags: {
+              type: "array",
               items: { type: "string" },
-              description: "Optional tags for categorization" 
+              description: "Optional tags for categorization"
             },
             description: { type: "string", description: "Optional description" },
           },
@@ -2998,17 +3001,17 @@ function formatAsOpenAPI(playbook: PlaybookWithExports) {
             id: { type: "string", format: "uuid" },
             name: { type: "string", description: "Skill name (snake_case)" },
             description: { type: "string", description: "What this skill does" },
-            definition: { 
-              type: "object", 
+            definition: {
+              type: "object",
               description: "Skill definition with parameters schema",
               properties: {
                 parameters: { type: "object", description: "JSON Schema for input parameters" },
               },
             },
-            examples: { 
-              type: "array", 
+            examples: {
+              type: "array",
               items: { type: "object" },
-              description: "Example usages" 
+              description: "Example usages"
             },
           },
         },
@@ -3090,7 +3093,7 @@ function formatAsMCP(playbook: PlaybookWithExports) {
       description: tool.description || tool.name,
       inputSchema: (tool.inputSchema || { type: "object", properties: {} }) as {
         type?: string;
-        properties?: Record<string, { type?: string; description?: string; enum?: string[]; [key: string]: unknown }>;
+        properties?: Record<string, { type?: string; description?: string; enum?: string[];[key: string]: unknown }>;
         required?: string[];
       },
     }));
@@ -3119,11 +3122,11 @@ function formatAsMCP(playbook: PlaybookWithExports) {
     persona: persona
       ? { name: persona.name, systemPrompt: persona.system_prompt }
       : null,
-  personas: Array.isArray(playbook.personas)
+    personas: Array.isArray(playbook.personas)
       ? playbook.personas.map((personaItem) => ({
-          name: personaItem.name,
-          systemPrompt: personaItem.system_prompt,
-        }))
+        name: personaItem.name,
+        systemPrompt: personaItem.system_prompt,
+      }))
       : [],
   };
 }
@@ -3157,7 +3160,7 @@ function formatAsAnthropic(playbook: PlaybookWithExports) {
 function formatAsMarkdown(playbook: PlaybookWithExports): string {
   let md = `# ${playbook.name}\n\n`;
   const persona = playbook.persona || (Array.isArray(playbook.personas) ? playbook.personas[0] : null);
-  
+
   if (playbook.description) {
     md += `${playbook.description}\n\n`;
   }

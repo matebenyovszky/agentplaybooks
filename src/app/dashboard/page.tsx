@@ -5,8 +5,8 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useDashboardAuth } from "./DashboardAuthContext";
-import { 
-  BookOpen, 
+import {
+  BookOpen,
   Plus,
   Brain,
   Zap,
@@ -30,7 +30,7 @@ export default function DashboardPage() {
         .from("playbooks")
         .select("*")
         .order("created_at", { ascending: false });
-      
+
       if (!active) return;
       setPlaybooks((data as Playbook[]) || []);
       setLoading(false);
@@ -132,10 +132,15 @@ export default function DashboardPage() {
               >
                 <div className="flex items-start justify-between mb-4">
                   <h3 className="text-lg font-semibold">{playbook.name}</h3>
-                  {playbook.is_public ? (
+                  {playbook.visibility === 'public' ? (
                     <span className="flex items-center gap-1 text-xs text-amber-400 bg-amber-500/10 px-2 py-1 rounded-full">
                       <Eye className="h-3 w-3" />
                       {t("dashboard.playbookCard.public")}
+                    </span>
+                  ) : playbook.visibility === 'unlisted' ? (
+                    <span className="flex items-center gap-1 text-xs text-gray-400 bg-gray-500/10 px-2 py-1 rounded-full">
+                      <Eye className="h-3 w-3" />
+                      Unlisted
                     </span>
                   ) : (
                     <span className="flex items-center gap-1 text-xs text-slate-400 bg-blue-900/30 px-2 py-1 rounded-full">
@@ -144,7 +149,7 @@ export default function DashboardPage() {
                     </span>
                   )}
                 </div>
-                
+
                 {playbook.description && (
                   <p className="text-sm text-slate-400 mb-4 line-clamp-2">
                     {playbook.description}

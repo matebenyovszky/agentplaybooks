@@ -79,7 +79,9 @@ export async function validateApiKey(
     return null;
   }
 
-  if (!apiKeyData.permissions.includes(requiredPermission) && !apiKeyData.permissions.includes("full")) {
+  if (apiKeyData.role === 'admin') {
+    // Admin has full access
+  } else if (!apiKeyData.permissions.includes(requiredPermission) && !apiKeyData.permissions.includes("full")) {
     return null;
   }
 

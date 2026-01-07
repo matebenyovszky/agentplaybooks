@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { locales } from "@/i18n/config";
+import { getBlogPosts, type BlogPost } from "@/lib/blog-server";
 
 export const dynamic = "force-static";
 
@@ -69,5 +70,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       };
     });
 
-  return [...baseEntries, ...docEntries];
+  const blogPosts = await getBlogPosts("en");
+  const blogEntries = blogPosts.map((post: BlogPost) => {
+    const url = `${baseUrl}/blog/${post.slug}`;
+
+    return {
+      url,
+      lastModified: new Date(post.date),
+      alternates: buildAlternates(url),
+    };
+  });
+
+  return [...baseEntries, ...docEntries, ...blogEntries];
 }

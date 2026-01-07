@@ -8,7 +8,7 @@ import JSZip from "jszip";
 import { createBrowserClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { createSupabaseAdapter } from "@/lib/storage";
-import { 
+import {
   ArrowLeft,
   Brain,
   Zap,
@@ -62,10 +62,10 @@ function useDebounce<T>(value: T, delay: number): T {
 export default function PlaybookEditorPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const t = useTranslations();
-  
+
   // State
   const [playbook, setPlaybook] = useState<Playbook | null>(null);
-  
+
   // Create storage adapter using the actual playbook ID (UUID), not the URL id param
   // This is important when the URL uses a GUID slug instead of UUID
   const storage = useMemo(() => createSupabaseAdapter(playbook?.id || id), [playbook?.id, id]);
@@ -84,7 +84,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
   const [forking, setForking] = useState(false);
   const [forkSuccess, setForkSuccess] = useState(false);
   const [exporting, setExporting] = useState(false);
-  
+
   // Browse public modals
   const [showBrowseSkills, setShowBrowseSkills] = useState(false);
   const [showBrowseMCP, setShowBrowseMCP] = useState(false);
@@ -120,7 +120,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
 
     // Try to determine if `id` is a UUID or a GUID (slug)
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-    
+
     // First, get the playbook (by id or guid)
     let playbookRes;
     if (isUUID) {
@@ -128,12 +128,12 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
     } else {
       playbookRes = await supabase.from("playbooks").select("*").eq("guid", id).single();
     }
-    
+
     if (!playbookRes.data) {
       setLoading(false);
       return;
     }
-    
+
     const pb = playbookRes.data as Playbook;
     const playbookId = pb.id; // Use the actual UUID for related queries
 
@@ -150,7 +150,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
     setIsOwner(userId !== null && pb.user_id === userId);
     // 1 Playbook = 1 Persona (stored on playbook)
     setPersonas([buildPersonaFromPlaybook(pb)]);
-    
+
     setSkills((skillsRes.data as Skill[]) || []);
     setMcpServers((mcpRes.data as MCPServer[]) || []);
     setMemories((memoriesRes.data as Memory[]) || []);
@@ -176,10 +176,10 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
         .update({
           name: debouncedPlaybook.name,
           description: debouncedPlaybook.description,
-          is_public: debouncedPlaybook.is_public,
+          visibility: debouncedPlaybook.visibility,
         })
         .eq("id", playbookIdForSave);
-      
+
       setSaving(false);
       setHasChanges(false);
     };
@@ -190,7 +190,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
   const handleManualSave = async () => {
     if (!playbook) return;
     setSaving(true);
-    
+
     const supabase = createBrowserClient();
     // Use playbook.id (actual UUID) for updates
     await supabase
@@ -198,7 +198,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
       .update({
         name: playbook.name,
         description: playbook.description,
-        is_public: playbook.is_public,
+        visibility: playbook.visibility,
       })
       .eq("id", playbook.id);
 
@@ -214,7 +214,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
 
   const handleAddSkill = async () => {
     const defaultName = `new_skill_${skills.length + 1}`;
-    
+
     const data = await storage.addSkill({
       name: defaultName,
       description: "",
@@ -238,7 +238,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
 
   const handleAddMCP = async () => {
     const defaultName = `New MCP Server ${mcpServers.length + 1}`;
-    
+
     const data = await storage.addMcpServer({
       name: defaultName,
       description: "",
@@ -255,7 +255,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
   // Import handlers for public skills/MCP servers
   const handleImportSkill = async (publicSkill: Skill) => {
     const supabase = createBrowserClient();
-    
+
     const { data, error } = await supabase
       .from("skills")
       .insert({
@@ -275,7 +275,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
 
   const handleImportMCP = async (publicMCP: MCPServer) => {
     const supabase = createBrowserClient();
-    
+
     const { data, error } = await supabase
       .from("mcp_servers")
       .insert({
@@ -298,7 +298,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
   const loadPublicSkills = async () => {
     setBrowseLoading(true);
     const supabase = createBrowserClient();
-    
+
     const { data } = await supabase
       .from("skills")
       .select(`
@@ -307,7 +307,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
       `)
       .eq("playbooks.is_public", true)
       .order("name");
-    
+
     setPublicSkills((data as Skill[]) || []);
     setBrowseLoading(false);
   };
@@ -316,7 +316,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
   const loadPublicMCPs = async () => {
     setBrowseLoading(true);
     const supabase = createBrowserClient();
-    
+
     const { data } = await supabase
       .from("mcp_servers")
       .select(`
@@ -325,7 +325,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
       `)
       .eq("playbooks.is_public", true)
       .order("name");
-    
+
     setPublicMCPs((data as MCPServer[]) || []);
     setBrowseLoading(false);
   };
@@ -344,12 +344,12 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
   };
 
   // Filter public items by search
-  const filteredPublicSkills = publicSkills.filter(s => 
+  const filteredPublicSkills = publicSkills.filter(s =>
     s.name.toLowerCase().includes(browseSearch.toLowerCase()) ||
     (s.description || "").toLowerCase().includes(browseSearch.toLowerCase())
   );
 
-  const filteredPublicMCPs = publicMCPs.filter(m => 
+  const filteredPublicMCPs = publicMCPs.filter(m =>
     m.name.toLowerCase().includes(browseSearch.toLowerCase()) ||
     (m.description || "").toLowerCase().includes(browseSearch.toLowerCase())
   );
@@ -357,14 +357,14 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
   // Fork playbook handler - copy entire playbook to current user
   const handleForkPlaybook = async () => {
     if (!playbook || !currentUserId) return;
-    
+
     setForking(true);
     const supabase = createBrowserClient();
-    
+
     try {
       // Create new playbook with same data
       const newGuid = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
-      
+
       const { data: newPlaybook, error: playbookError } = await supabase
         .from("playbooks")
         .insert({
@@ -373,7 +373,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
           name: `${playbook.name} (Copy)`,
           description: playbook.description,
           config: playbook.config,
-          is_public: false, // Start as private
+          visibility: 'private', // Start as private
           tags: playbook.tags,
           // Copy singleton persona
           persona_name: playbook.persona_name,
@@ -382,11 +382,11 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
         })
         .select()
         .single();
-      
+
       if (playbookError || !newPlaybook) {
         throw playbookError;
       }
-      
+
       // Copy all skills
       if (skills.length > 0) {
         await supabase.from("skills").insert(
@@ -399,7 +399,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
           }))
         );
       }
-      
+
       // Copy all MCP servers
       if (mcpServers.length > 0) {
         await supabase.from("mcp_servers").insert(
@@ -412,13 +412,13 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
           }))
         );
       }
-      
+
       setForkSuccess(true);
       setTimeout(() => {
         // Redirect to the new playbook
         window.location.href = `/dashboard/playbook/${newPlaybook.id}`;
       }, 1500);
-      
+
     } catch (error) {
       console.error("Fork failed:", error);
       alert("Failed to copy playbook. Please try again.");
@@ -635,7 +635,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
         name: playbook.name,
         description: playbook.description,
         config: playbook.config,
-        is_public: playbook.is_public,
+        visibility: playbook.visibility,
         tags: playbook.tags,
         created_at: playbook.created_at,
         updated_at: playbook.updated_at,
@@ -737,7 +737,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
       <div className="min-h-screen bg-[#0a0f1a] flex items-center justify-center">
         <div className="text-center">
           <p className="text-xl text-slate-400 mb-4">Playbook not found</p>
-          <Link 
+          <Link
             href="/dashboard"
             className="text-blue-400 hover:text-blue-300 transition-colors"
           >
@@ -791,7 +791,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
               </div>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-3">
             {/* Read-only badge for non-owners */}
             {!isOwner && (
@@ -800,9 +800,9 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                 {t("editor.readOnly") || "Read Only"}
               </span>
             )}
-            
+
             {/* Fork button for logged-in non-owners viewing public playbooks */}
-            {!isOwner && playbook.is_public && currentUserId && (
+            {!isOwner && playbook.visibility === 'public' && currentUserId && (
               <button
                 onClick={handleForkPlaybook}
                 disabled={forking || forkSuccess}
@@ -831,9 +831,9 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                 )}
               </button>
             )}
-            
+
             {/* Sign in prompt for non-logged users viewing public playbooks */}
-            {!isOwner && playbook.is_public && !currentUserId && (
+            {!isOwner && playbook.visibility === 'public' && !currentUserId && (
               <Link
                 href="/login"
                 className="px-4 py-2 rounded-lg text-sm text-amber-400 border border-amber-500/30 hover:bg-amber-500/10 transition-colors flex items-center gap-2"
@@ -842,7 +842,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                 {t("editor.signInToFork")}
               </Link>
             )}
-            
+
             {/* Status indicators - only for owners */}
             {isOwner && hasChanges && !saving && (
               <span className="text-amber-400 text-sm">Unsaved changes</span>
@@ -853,33 +853,33 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                 Saving...
               </span>
             )}
-            
+
             {/* Public/Private toggle - only for owners */}
             {isOwner ? (
               <button
-                onClick={() => updatePlaybook({ is_public: !playbook.is_public })}
+                onClick={() => updatePlaybook({ visibility: playbook.visibility === 'public' ? 'private' : 'public' })}
                 className={cn(
                   "px-3 py-2 rounded-lg flex items-center gap-2 text-sm transition-colors",
-                  playbook.is_public 
-                    ? "bg-green-500/10 text-green-400 border border-green-500/20 hover:bg-green-500/20" 
+                  playbook.visibility === 'public'
+                    ? "bg-green-500/10 text-green-400 border border-green-500/20 hover:bg-green-500/20"
                     : "bg-slate-800/50 text-slate-400 border border-slate-700/50 hover:border-slate-600"
                 )}
               >
-                {playbook.is_public ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                {playbook.is_public ? "Public" : "Private"}
+                {playbook.visibility === 'public' ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                {playbook.visibility === 'public' ? "Public" : "Private"}
               </button>
             ) : (
               <span className={cn(
                 "px-3 py-2 rounded-lg flex items-center gap-2 text-sm",
-                playbook.is_public 
-                  ? "bg-green-500/10 text-green-400 border border-green-500/20" 
+                playbook.visibility === 'public'
+                  ? "bg-green-500/10 text-green-400 border border-green-500/20"
                   : "bg-slate-800/50 text-slate-400 border border-slate-700/50"
               )}>
-                {playbook.is_public ? <Globe className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
-                {playbook.is_public ? "Public" : "Private"}
+                {playbook.visibility === 'public' ? <Globe className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                {playbook.visibility === 'public' ? "Public" : "Private"}
               </span>
             )}
-            
+
             {/* Save button - only for owners */}
             {isOwner && (
               <button
@@ -915,13 +915,13 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                     : "border-transparent text-slate-400 hover:text-white hover:border-slate-700"
                 )}
                 style={{
-                  borderBottomColor: activeTab === tab.id 
-                    ? tab.color === "blue" ? "#3b82f6" 
-                      : tab.color === "purple" ? "#a855f7" 
-                      : tab.color === "pink" ? "#ec4899" 
-                      : tab.color === "teal" ? "#14b8a6" 
-                      : tab.color === "amber" ? "#f59e0b" 
-                      : "#64748b"
+                  borderBottomColor: activeTab === tab.id
+                    ? tab.color === "blue" ? "#3b82f6"
+                      : tab.color === "purple" ? "#a855f7"
+                        : tab.color === "pink" ? "#ec4899"
+                          : tab.color === "teal" ? "#14b8a6"
+                            : tab.color === "amber" ? "#f59e0b"
+                              : "#64748b"
                     : "transparent"
                 }}
               >
@@ -983,11 +983,11 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                   </div>
                 )}
               </div>
-              
+
               {skills.length === 0 ? (
-                <EmptyState 
+                <EmptyState
                   icon={Zap}
-                  message="No skills yet" 
+                  message="No skills yet"
                   description="Skills define structured capabilities using JSON Schema."
                   color="purple"
                 />
@@ -1061,11 +1061,11 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                   </div>
                 )}
               </div>
-              
+
               {mcpServers.length === 0 ? (
-                <EmptyState 
+                <EmptyState
                   icon={Server}
-                  message="No MCP servers yet" 
+                  message="No MCP servers yet"
                   description="MCP servers provide tools and resources for AI agents."
                   color="pink"
                 />
@@ -1120,7 +1120,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
               />
             </motion.div>
           )}
-          
+
           {/* API Keys Tab - not owner message */}
           {activeTab === "apiKeys" && !isOwner && (
             <motion.div
@@ -1148,7 +1148,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                 <Settings className="h-5 w-5 text-slate-400" />
                 {t("editor.tabs.details")}
               </h2>
-              
+
               <div className="space-y-6">
                 {/* Description */}
                 <div className={cn(
@@ -1222,7 +1222,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                       Add tags to help others find your playbook in the Explore page
                     </p>
                   )}
-                  
+
                   {/* Existing tags */}
                   <div className="flex flex-wrap gap-2 mb-3">
                     {(playbook.tags || []).map((tag) => (
@@ -1248,7 +1248,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                       <span className="text-sm text-slate-500 italic">No tags yet</span>
                     )}
                   </div>
-                  
+
                   {/* Add new tag - only for owner */}
                   {isOwner && (
                     <>
@@ -1295,7 +1295,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                           <Plus className="h-4 w-4" />
                         </button>
                       </div>
-                      
+
                       {/* Popular tags suggestions */}
                       <div className="mt-3 flex flex-wrap gap-1.5">
                         <span className="text-xs text-slate-500 mr-1">Popular:</span>
@@ -1303,18 +1303,18 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                           <button
                             key={tag}
                             onClick={() => {
-                          if (!(playbook.tags || []).includes(tag)) {
-                            updatePlaybook({ tags: [...(playbook.tags || []), tag] });
-                          }
-                        }}
-                        disabled={(playbook.tags || []).includes(tag)}
-                        className={cn(
-                          "px-2 py-0.5 rounded text-xs transition-colors",
-                          (playbook.tags || []).includes(tag)
-                            ? "bg-slate-800 text-slate-600 cursor-not-allowed"
-                            : "bg-slate-800/50 text-slate-400 hover:bg-slate-700 hover:text-slate-300"
-                        )}
-                      >
+                              if (!(playbook.tags || []).includes(tag)) {
+                                updatePlaybook({ tags: [...(playbook.tags || []), tag] });
+                              }
+                            }}
+                            disabled={(playbook.tags || []).includes(tag)}
+                            className={cn(
+                              "px-2 py-0.5 rounded text-xs transition-colors",
+                              (playbook.tags || []).includes(tag)
+                                ? "bg-slate-800 text-slate-600 cursor-not-allowed"
+                                : "bg-slate-800/50 text-slate-400 hover:bg-slate-700 hover:text-slate-300"
+                            )}
+                          >
                             +{tag}
                           </button>
                         ))}
@@ -1335,10 +1335,10 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                     </label>
                     <div className="flex gap-4">
                       <button
-                        onClick={() => updatePlaybook({ is_public: false })}
+                        onClick={() => updatePlaybook({ visibility: 'private' })}
                         className={cn(
                           "flex-1 p-4 rounded-xl border flex items-center gap-3 transition-all",
-                          !playbook.is_public
+                          playbook.visibility === 'private'
                             ? "border-blue-500/50 bg-blue-500/10"
                             : "border-slate-700/50 bg-slate-900/50 hover:border-slate-600"
                         )}
@@ -1350,10 +1350,10 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                         </div>
                       </button>
                       <button
-                        onClick={() => updatePlaybook({ is_public: true })}
+                        onClick={() => updatePlaybook({ visibility: 'public' })}
                         className={cn(
                           "flex-1 p-4 rounded-xl border flex items-center gap-3 transition-all",
-                          playbook.is_public
+                          playbook.visibility === 'public'
                             ? "border-green-500/50 bg-green-500/10"
                             : "border-slate-700/50 bg-slate-900/50 hover:border-slate-600"
                         )}
@@ -1362,6 +1362,21 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                         <div className="text-left">
                           <p className="font-medium">Public</p>
                           <p className="text-sm text-slate-400">Anyone with the link</p>
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => updatePlaybook({ visibility: 'unlisted' })}
+                        className={cn(
+                          "flex-1 p-4 rounded-xl border flex items-center gap-3 transition-all",
+                          playbook.visibility === 'unlisted'
+                            ? "border-amber-500/50 bg-amber-500/10"
+                            : "border-slate-700/50 bg-slate-900/50 hover:border-slate-600"
+                        )}
+                      >
+                        <Eye className="h-5 w-5" />
+                        <div className="text-left">
+                          <p className="font-medium">Unlisted</p>
+                          <p className="text-sm text-slate-400">Anyone with the link (not searchable)</p>
                         </div>
                       </button>
                     </div>
@@ -1377,15 +1392,19 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                     </label>
                     <div className={cn(
                       "p-4 rounded-xl border flex items-center gap-3",
-                      playbook.is_public
+                      playbook.visibility === 'public'
                         ? "border-green-500/50 bg-green-500/10"
-                        : "border-blue-500/50 bg-blue-500/10"
+                        : playbook.visibility === 'unlisted'
+                          ? "border-amber-500/50 bg-amber-500/10"
+                          : "border-blue-500/50 bg-blue-500/10"
                     )}>
-                      {playbook.is_public ? <Globe className="h-5 w-5" /> : <Lock className="h-5 w-5" />}
+                      {playbook.visibility === 'public' ? <Globe className="h-5 w-5" /> : playbook.visibility === 'unlisted' ? <Eye className="h-5 w-5" /> : <Lock className="h-5 w-5" />}
                       <div className="text-left">
-                        <p className="font-medium">{playbook.is_public ? "Public" : "Private"}</p>
+                        <p className="font-medium">
+                          {playbook.visibility === 'public' ? "Public" : playbook.visibility === 'unlisted' ? "Unlisted" : "Private"}
+                        </p>
                         <p className="text-sm text-slate-400">
-                          {playbook.is_public ? "Anyone with the link can view" : "Only the owner can access"}
+                          {playbook.visibility === 'public' ? "Anyone with the link can view" : playbook.visibility === 'unlisted' ? "Anyone with the link can view (not searchable)" : "Only the owner can access"}
                         </p>
                       </div>
                     </div>
@@ -1525,7 +1544,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                       { method: "GET", path: `/api/playbooks/${playbook.guid}?format=markdown`, desc: "Markdown for Claude/Gemini/Grok" },
                       { method: "GET", path: `/api/mcp/${playbook.guid}`, desc: "MCP server (live endpoint)" },
                     ].map(({ method, path, desc }) => (
-                      <div 
+                      <div
                         key={path}
                         className="flex items-center gap-3 p-3 bg-slate-900/70 rounded-lg border border-slate-700/50 group"
                       >
@@ -1557,50 +1576,50 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
 
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
                     {[
-                      { 
-                        name: "ChatGPT", 
-                        icon: "🤖", 
-                        color: "from-emerald-600/20 to-teal-600/20", 
+                      {
+                        name: "ChatGPT",
+                        icon: "🤖",
+                        color: "from-emerald-600/20 to-teal-600/20",
                         borderColor: "border-emerald-500/30",
                         desc: "Custom GPTs with Actions",
                         anchor: "#openai-chatgpt-custom-gpts"
                       },
-                      { 
-                        name: "Claude", 
-                        icon: "🧠", 
-                        color: "from-orange-600/20 to-amber-600/20", 
+                      {
+                        name: "Claude",
+                        icon: "🧠",
+                        color: "from-orange-600/20 to-amber-600/20",
                         borderColor: "border-orange-500/30",
                         desc: "Projects & Instructions",
                         anchor: "#anthropic-claude-claude-ai"
                       },
-                      { 
-                        name: "Gemini", 
-                        icon: "💎", 
-                        color: "from-blue-600/20 to-cyan-600/20", 
+                      {
+                        name: "Gemini",
+                        icon: "💎",
+                        color: "from-blue-600/20 to-cyan-600/20",
                         borderColor: "border-blue-500/30",
                         desc: "Gems Configuration",
                         anchor: "#google-gemini"
                       },
-                      { 
-                        name: "Grok", 
-                        icon: "⚡", 
-                        color: "from-slate-600/20 to-zinc-600/20", 
+                      {
+                        name: "Grok",
+                        icon: "⚡",
+                        color: "from-slate-600/20 to-zinc-600/20",
                         borderColor: "border-slate-500/30",
                         desc: "Projects & System Prompts",
                         anchor: "#xai-grok"
                       },
-                      { 
-                        name: "Claude Code", 
-                        icon: "💻", 
-                        color: "from-violet-600/20 to-purple-600/20", 
+                      {
+                        name: "Claude Code",
+                        icon: "💻",
+                        color: "from-violet-600/20 to-purple-600/20",
                         borderColor: "border-violet-500/30",
                         desc: "MCP Integration",
                         anchor: "#claude-code-cli-agent"
                       },
-                      { 
-                        name: "Any API", 
-                        icon: "🔌", 
-                        color: "from-pink-600/20 to-rose-600/20", 
+                      {
+                        name: "Any API",
+                        icon: "🔌",
+                        color: "from-pink-600/20 to-rose-600/20",
                         borderColor: "border-pink-500/30",
                         desc: "Generic Integration",
                         anchor: "#generic-integration-template"
@@ -1626,7 +1645,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                       </Link>
                     ))}
                   </div>
-                  
+
                   {/* Full docs link */}
                   <div className="mt-4 pt-3 border-t border-slate-700/50">
                     <Link
@@ -1655,7 +1674,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                     onClick={async () => {
                       if (!confirm("Are you SURE you want to delete this entire playbook? This cannot be undone!")) return;
                       if (!confirm("Really? This will delete ALL data in this playbook.")) return;
-                      
+
                       const supabase = createBrowserClient();
                       await supabase.from("playbooks").delete().eq("id", playbook?.id || id);
                       window.location.href = "/dashboard";
@@ -1724,7 +1743,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                   </div>
                 ) : filteredPublicSkills.length === 0 ? (
                   <div className="text-center py-8 text-slate-500">
-                    {publicSkills.length === 0 
+                    {publicSkills.length === 0
                       ? t("editor.noPublicSkills")
                       : t("editor.noMatchingSkills")
                     }
@@ -1820,7 +1839,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                   </div>
                 ) : filteredPublicMCPs.length === 0 ? (
                   <div className="text-center py-8 text-slate-500">
-                    {publicMCPs.length === 0 
+                    {publicMCPs.length === 0
                       ? t("editor.noPublicMCP")
                       : t("editor.noMatchingMCP")
                     }
@@ -1880,9 +1899,9 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                   playbook_id: playbook.id,
                 }),
               });
-              
+
               const result = await response.json();
-              
+
               if (result.success && result.mcp_server) {
                 // Add to local state
                 setMcpServers([...mcpServers, result.mcp_server]);
@@ -1900,13 +1919,13 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
 }
 
 // Empty state component
-function EmptyState({ 
-  icon: Icon, 
-  message, 
+function EmptyState({
+  icon: Icon,
+  message,
   description,
-  color 
-}: { 
-  icon: React.ComponentType<{ className?: string }>; 
+  color
+}: {
+  icon: React.ComponentType<{ className?: string }>;
   message: string;
   description: string;
   color: string;

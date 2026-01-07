@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { createBrowserClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { generateApiKey, hashApiKey, getKeyPrefix } from "@/lib/utils";
-import { 
+import {
   Key,
   Trash2,
   Copy,
@@ -25,32 +25,32 @@ interface ApiKeyManagerProps {
 }
 
 // Available permissions
-const PERMISSIONS = [
-  { value: "memory:read", label: "Read Memory", description: "Read memory values" },
-  { value: "memory:write", label: "Write Memory", description: "Create and update memory values" },
-  { value: "skills:read", label: "Read Skills", description: "Read skill definitions" },
-  { value: "skills:write", label: "Write Skills", description: "Create and update skills" },
-  { value: "personas:read", label: "Read Personas", description: "Read persona definitions" },
-  { value: "personas:write", label: "Write Personas", description: "Create and update personas" },
+// Available roles
+const ROLES = [
+  { value: "viewer", label: "Viewer", description: "Read-only access to values" },
+  { value: "coworker", label: "Coworker", description: "Read and write access" },
+  { value: "admin", label: "Admin", description: "Full access to modify playbook structure" },
 ];
+
+const ROLE_PERMISSIONS: Record<string, string[]> = {
+  viewer: ["memory:read", "skills:read", "personas:read"],
+  coworker: ["memory:read", "memory:write", "skills:read", "skills:write", "personas:read", "personas:write"],
+  admin: ["full"],
+};
 
 export function ApiKeyManager({ playbook_id, apiKeys, onUpdate }: ApiKeyManagerProps) {
   const [newApiKey, setNewApiKey] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [creating, setCreating] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
-  
+
   // Create form state
   const [keyName, setKeyName] = useState("");
-  const [selectedPermissions, setSelectedPermissions] = useState<string[]>([
-    "memory:read", "memory:write", "skills:read", "personas:read"
-  ]);
+  const [selectedRole, setSelectedRole] = useState<'viewer' | 'coworker' | 'admin'>("viewer");
 
   const handleCreateKey = async () => {
-    if (selectedPermissions.length === 0) {
-      alert("Please select at least one permission");
-      return;
-    }
+    // Role always selected
+
 
     setCreating(true);
     try {
@@ -66,7 +66,8 @@ export function ApiKeyManager({ playbook_id, apiKeys, onUpdate }: ApiKeyManagerP
           key_hash: keyHash,
           key_prefix: prefix,
           name: keyName || null,
-          permissions: selectedPermissions,
+          role: selectedRole,
+          permissions: ROLE_PERMISSIONS[selectedRole],
           is_active: true,
         })
         .select()
@@ -78,7 +79,7 @@ export function ApiKeyManager({ playbook_id, apiKeys, onUpdate }: ApiKeyManagerP
         setShowCreateModal(false);
         // Reset form
         setKeyName("");
-        setSelectedPermissions(["memory:read", "memory:write", "skills:read", "personas:read"]);
+        setSelectedRole("viewer");
       }
     } catch (e) {
       console.error("Create key error:", e);
@@ -105,14 +106,6 @@ export function ApiKeyManager({ playbook_id, apiKeys, onUpdate }: ApiKeyManagerP
     navigator.clipboard.writeText(text);
     setCopiedKey(id);
     setTimeout(() => setCopiedKey(null), 2000);
-  };
-
-  const togglePermission = (perm: string) => {
-    if (selectedPermissions.includes(perm)) {
-      setSelectedPermissions(selectedPermissions.filter(p => p !== perm));
-    } else {
-      setSelectedPermissions([...selectedPermissions, perm]);
-    }
   };
 
   const hasExpired = (key: ApiKey) => key.expires_at && new Date(key.expires_at) < new Date();
@@ -241,9 +234,9 @@ export function ApiKeyManager({ playbook_id, apiKeys, onUpdate }: ApiKeyManagerP
                 className={cn(
                   "p-4 rounded-xl border transition-all",
                   "bg-gradient-to-br from-slate-900/80 to-slate-800/80",
-                  hasExpired(apiKey) 
+                  hasExpired(apiKey)
                     ? "border-red-900/30 opacity-60"
-                    : apiKey.is_active 
+                    : apiKey.is_active
                       ? "border-amber-900/30 hover:border-amber-700/50"
                       : "border-slate-700/30 opacity-60"
                 )}
@@ -257,7 +250,7 @@ export function ApiKeyManager({ playbook_id, apiKeys, onUpdate }: ApiKeyManagerP
                     )}>
                       <Key className="h-5 w-5 text-amber-400" />
                     </div>
-                    
+
                     <div>
                       <div className="flex items-center gap-3">
                         <code className="text-amber-300 font-mono">
@@ -274,19 +267,17 @@ export function ApiKeyManager({ playbook_id, apiKeys, onUpdate }: ApiKeyManagerP
                           </span>
                         )}
                       </div>
-                      
+
                       <div className="flex flex-wrap gap-1.5 mt-2">
-                        {apiKey.permissions.map((perm) => (
-                          <span
-                            key={perm}
-                            className={cn(
-                              "px-2 py-0.5 rounded text-xs",
-                              "bg-slate-800 text-slate-400 border border-slate-700"
-                            )}
-                          >
-                            {perm}
-                          </span>
-                        ))}
+                        <span className={cn(
+                          "px-2 py-0.5 rounded text-xs font-medium",
+                          apiKey.role === 'admin' ? "bg-red-500/20 text-red-400 border border-red-500/30" :
+                            apiKey.role === 'coworker' ? "bg-amber-500/20 text-amber-400 border border-amber-500/30" :
+                              "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                        )}>
+                          {apiKey.role ? apiKey.role.charAt(0).toUpperCase() + apiKey.role.slice(1) : 'Viewer'}
+                        </span>
+                        {/* Legacy permissions display if needed, but role is better */}
                       </div>
                     </div>
                   </div>
@@ -343,7 +334,7 @@ export function ApiKeyManager({ playbook_id, apiKeys, onUpdate }: ApiKeyManagerP
                   <Shield className="h-5 w-5 text-amber-400" />
                   Create New API Key
                 </h3>
-                
+
                 <div className="space-y-4">
                   {/* Name */}
                   <div>
@@ -364,31 +355,33 @@ export function ApiKeyManager({ playbook_id, apiKeys, onUpdate }: ApiKeyManagerP
                     />
                   </div>
 
-                  {/* Permissions */}
+                  {/* Role Selection */}
                   <div>
                     <label className="block text-sm font-medium text-slate-400 mb-2">
-                      Permissions
+                      Role
                     </label>
                     <div className="space-y-2">
-                      {PERMISSIONS.map((perm) => (
+                      {ROLES.map((role) => (
                         <label
-                          key={perm.value}
+                          key={role.value}
                           className={cn(
                             "flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors",
-                            selectedPermissions.includes(perm.value)
+                            selectedRole === role.value
                               ? "bg-amber-500/10 border border-amber-500/30"
                               : "bg-slate-900/50 border border-slate-700/50 hover:border-slate-600"
                           )}
                         >
                           <input
-                            type="checkbox"
-                            checked={selectedPermissions.includes(perm.value)}
-                            onChange={() => togglePermission(perm.value)}
-                            className="mt-0.5 rounded border-slate-600 text-amber-500 focus:ring-amber-500/20"
+                            type="radio"
+                            name="role"
+                            value={role.value}
+                            checked={selectedRole === role.value}
+                            onChange={() => setSelectedRole(role.value as any)}
+                            className="mt-0.5 rounded-full border-slate-600 text-amber-500 focus:ring-amber-500/20"
                           />
                           <div>
-                            <p className="font-medium text-slate-200">{perm.label}</p>
-                            <p className="text-sm text-slate-500">{perm.description}</p>
+                            <p className="font-medium text-slate-200">{role.label}</p>
+                            <p className="text-sm text-slate-500">{role.description}</p>
                           </div>
                         </label>
                       ))}
@@ -405,7 +398,7 @@ export function ApiKeyManager({ playbook_id, apiKeys, onUpdate }: ApiKeyManagerP
                   </button>
                   <button
                     onClick={handleCreateKey}
-                    disabled={creating || selectedPermissions.length === 0}
+                    disabled={creating}
                     className={cn(
                       "px-4 py-2 rounded-lg font-medium",
                       "bg-amber-600 text-white",

@@ -88,7 +88,7 @@ const MCP_TOOLS = [
       properties: {
         name: { type: "string", description: "Name of the playbook" },
         description: { type: "string", description: "Description of what the playbook is for" },
-        is_public: { type: "boolean", description: "Whether the playbook should be publicly visible", default: false },
+        visibility: { type: "string", enum: ["public", "private", "unlisted"], description: "Visibility of the playbook", default: "private" },
       },
       required: ["name"],
     },
@@ -113,7 +113,7 @@ const MCP_TOOLS = [
         playbook_id: { type: "string", description: "UUID of the playbook" },
         name: { type: "string", description: "New name" },
         description: { type: "string", description: "New description" },
-        is_public: { type: "boolean", description: "Whether the playbook should be public" },
+        visibility: { type: "string", enum: ["public", "private", "unlisted"], description: "New visibility" },
       },
       required: ["playbook_id"],
     },
@@ -293,15 +293,15 @@ const MCP_TOOLS = [
   },
 ];
 
-const app = createApiApp("/api/mcp/manage");
+export const app = createApiApp("/api/mcp/manage");
 
 // GET /api/mcp/manage - Return MCP server manifest
 app.get("/", async (c) => {
   const userKey = await validateUserApiKey(c.req.raw);
-  
+
   // Return manifest even without auth (for discovery)
   // But indicate that auth is required for tool execution
-  
+
   const manifest = {
     protocolVersion: "2024-11-05",
     serverInfo: {
@@ -327,7 +327,7 @@ app.get("/", async (c) => {
 // POST /api/mcp/manage - Handle MCP JSON-RPC requests
 app.post("/", async (c) => {
   const userKey = await validateUserApiKey(c.req.raw);
-  
+
   const body = await c.req.json();
   const { method, params, id } = body;
 
@@ -439,7 +439,7 @@ async function executeManagementTool(
         guid: p.guid,
         name: p.name,
         description: p.description,
-        is_public: p.is_public,
+        visibility: p.visibility,
         persona_count: p.persona_name ? 1 : 0,
         skill_count: p.skills?.[0]?.count || 0,
         mcp_server_count: p.mcp_servers?.[0]?.count || 0,
@@ -453,10 +453,10 @@ async function executeManagementTool(
         throw new Error("Permission denied: playbooks:write required");
       }
 
-      const { name, description, is_public } = args as {
+      const { name, description, visibility } = args as {
         name: string;
         description?: string;
-        is_public?: boolean;
+        visibility?: 'public' | 'private' | 'unlisted';
       };
 
       if (!name) throw new Error("name is required");
@@ -470,7 +470,7 @@ async function executeManagementTool(
           guid,
           name,
           description: description || null,
-          is_public: is_public || false,
+          visibility: visibility || 'private',
           config: {},
         })
         .select()
@@ -519,11 +519,11 @@ async function executeManagementTool(
         throw new Error("Permission denied: playbooks:write required");
       }
 
-      const { playbook_id, name, description, is_public } = args as {
+      const { playbook_id, name, description, visibility } = args as {
         playbook_id: string;
         name?: string;
         description?: string;
-        is_public?: boolean;
+        visibility?: 'public' | 'private' | 'unlisted';
       };
 
       if (!playbook_id) throw new Error("playbook_id is required");
@@ -531,7 +531,7 @@ async function executeManagementTool(
       const updateData: Record<string, unknown> = {};
       if (name !== undefined) updateData.name = name;
       if (description !== undefined) updateData.description = description;
-      if (is_public !== undefined) updateData.is_public = is_public;
+      if (visibility !== undefined) updateData.visibility = visibility;
 
       const { data, error } = await supabase
         .from("playbooks")

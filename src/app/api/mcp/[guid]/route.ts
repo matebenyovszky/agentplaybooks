@@ -88,7 +88,7 @@ const PLAYBOOK_TOOLS: McpTool[] = [
   },
 ];
 
-const app = createApiApp("/api/mcp/:guid");
+export const app = createApiApp("/api/mcp/:guid");
 
 // GET /api/mcp/:guid - Return MCP server manifest
 app.get("/", async (c) => {
@@ -201,7 +201,7 @@ app.post("/", async (c) => {
     }, 400);
   }
   const body = await c.req.json();
-  
+
   const { method, params: rpcParams, id } = body;
 
   const supabase = getSupabase();
@@ -310,7 +310,7 @@ app.post("/", async (c) => {
     case "resources/read": {
       const uri = rpcParams?.uri as string;
       const serviceSupabase = getServiceSupabase();
-      
+
       // Memory resource
       if (uri?.match(/\/memory$/)) {
         const { data: memories } = await serviceSupabase
@@ -439,7 +439,7 @@ app.post("/", async (c) => {
           case "get_skill": {
             const skillId = args.skill_id as string;
             const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(skillId);
-            
+
             let query = serviceSupabase
               .from("skills")
               .select("*, skill_attachments(*)")

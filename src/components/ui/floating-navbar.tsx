@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { Home, ChevronDown, BookOpen, LogOut, Globe, Server, Star, Settings, LayoutDashboard } from "lucide-react";
+import { Home, ChevronDown, BookOpen, LogOut, Globe, Server, Star, Settings, LayoutDashboard, Rss } from "lucide-react";
 import { locales, localeNames, localeFlags, type Locale } from "@/i18n/config";
 import { useTranslations } from "next-intl";
 import { createBrowserClient } from "@/lib/supabase/client";
@@ -22,7 +22,7 @@ export const FloatingNav = ({
   className?: string;
 }) => {
   const t = useTranslations();
-  
+
   // State declarations - must come before useMemo that depends on them
   const [visible, setVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
@@ -30,36 +30,38 @@ export const FloatingNav = ({
   const [currentLocale, setCurrentLocale] = useState<Locale>("en");
   const [user, setUser] = useState<User | null>(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  
+
   // Default nav items - used if no custom items provided
   const defaultNavItems = useMemo(() => [
     { name: t("common.explore"), link: "/explore", icon: <Globe className="h-4 w-4" /> },
     { name: t("common.selfHost"), link: "/enterprise", icon: <Server className="h-4 w-4" /> },
     { name: t("common.docs"), link: "/docs", icon: <BookOpen className="h-4 w-4" /> },
+    { name: t("common.blog"), link: "/blog", icon: <Rss className="h-4 w-4" /> },
   ], [t]);
-  
+
   // Nav items for logged-in users - includes Dashboard link
   const loggedInNavItems = useMemo(() => [
     { name: t("common.dashboard"), link: "/dashboard", icon: <LayoutDashboard className="h-4 w-4" /> },
     { name: t("common.explore"), link: "/explore", icon: <Globe className="h-4 w-4" /> },
     { name: t("common.selfHost"), link: "/enterprise", icon: <Server className="h-4 w-4" /> },
     { name: t("common.docs"), link: "/docs", icon: <BookOpen className="h-4 w-4" /> },
+    { name: t("common.blog"), link: "/blog", icon: <Rss className="h-4 w-4" /> },
   ], [t]);
-  
+
   // Dashboard menu items - used in user dropdown
   const dashboardItems = useMemo(() => [
     { name: t("dashboard.myPlaybooks"), link: "/dashboard", icon: <BookOpen className="h-4 w-4" /> },
     { name: t("dashboard.favorites"), link: "/dashboard/favorites", icon: <Star className="h-4 w-4" /> },
     { name: t("common.settings"), link: "/dashboard/settings", icon: <Settings className="h-4 w-4" /> },
   ], [t]);
-  
+
   // Use logged-in nav items when user is authenticated, otherwise default
   const navItems = customNavItems || (user ? loggedInNavItems : defaultNavItems);
 
   // Check authentication status
   useEffect(() => {
     const supabase = createBrowserClient();
-    
+
     // Get initial user
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user);
@@ -79,7 +81,7 @@ export const FloatingNav = ({
       .split("; ")
       .find((row) => row.startsWith("NEXT_LOCALE="))
       ?.split("=")[1] as Locale | undefined;
-    
+
     if (cookieLocale && locales.includes(cookieLocale)) {
       setCurrentLocale(cookieLocale);
     }
@@ -88,7 +90,7 @@ export const FloatingNav = ({
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
-      
+
       if (currentScrollY < 100) {
         setVisible(true);
       } else if (currentScrollY > lastScrollY) {
@@ -96,7 +98,7 @@ export const FloatingNav = ({
       } else {
         setVisible(true);
       }
-      
+
       setLastScrollY(currentScrollY);
     };
 

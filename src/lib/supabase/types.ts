@@ -17,7 +17,7 @@ export type McpResource = {
 export type SkillDefinition = {
   parameters?: {
     type?: string;
-    properties?: Record<string, { type?: string; description?: string; enum?: string[]; [key: string]: unknown }>;
+    properties?: Record<string, { type?: string; description?: string; enum?: string[];[key: string]: unknown }>;
     required?: string[];
   };
   [key: string]: unknown;
@@ -31,7 +31,7 @@ export type PlaybooksRow = {
   name: string;
   description: string | null;
   config: Record<string, unknown>;
-  is_public: boolean;
+  visibility: 'public' | 'private' | 'unlisted';
   star_count: number;
   tags: string[];
   // 1 Playbook = 1 Persona (embedded into playbooks table)
@@ -137,7 +137,9 @@ export type ApiKeysRow = {
   playbook_id: string;
   key_hash: string;
   key_prefix: string;
+
   name: string | null;
+  role: 'viewer' | 'coworker' | 'admin';
   permissions: string[];
   last_used_at: string | null;
   expires_at: string | null;

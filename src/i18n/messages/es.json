@@ -12,7 +12,8 @@
     "enterprise": "Empresas",
     "selfHost": "Auto-hospedaje",
     "pricing": "Precios",
-    "settings": "Configuración"
+    "settings": "Configuración",
+    "blog": "Blog"
   },
   "landing": {
     "hero": {
@@ -203,4 +204,3 @@
     "yours": "Tuyo"
   }
 }
-

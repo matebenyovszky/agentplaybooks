@@ -12,7 +12,8 @@
     "enterprise": "Vállalati",
     "selfHost": "Önálló futtatás",
     "pricing": "Árazás",
-    "settings": "Beállítások"
+    "settings": "Beállítások",
+    "blog": "Blog"
   },
   "landing": {
     "hero": {
@@ -283,4 +284,3 @@
     "yours": "Saját"
   }
 }
-
