@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { createBrowserClient } from "@/lib/supabase/client";
-import { 
+import {
   Star,
   Brain,
   Zap,
@@ -43,13 +43,13 @@ export default function FavoritesPage() {
 
   const loadFavorites = async (userId: string) => {
     const supabase = createBrowserClient();
-    
+
     // Get starred playbook IDs
     const { data: stars } = await supabase
       .from("playbook_stars")
       .select("playbook_id")
       .eq("user_id", userId);
-    
+
     if (!stars || stars.length === 0) {
       setFavorites([]);
       setLoading(false);
@@ -57,12 +57,12 @@ export default function FavoritesPage() {
     }
 
     const playbookIds = stars.map(s => s.playbook_id);
-    
+
     // Get playbook details
     const { data: playbooks } = await supabase
       .from("playbooks")
       .select(`
-        id, guid, name, description, is_public, star_count, tags, created_at, user_id,
+        id, guid, name, description, visibility, star_count, tags, created_at, user_id,
         persona_name,
         skills:skills(count),
         mcp_servers:mcp_servers(count)
@@ -84,14 +84,14 @@ export default function FavoritesPage() {
 
   const handleUnstar = async (playbookId: string) => {
     if (!user) return;
-    
+
     const supabase = createBrowserClient();
     await supabase
       .from("playbook_stars")
       .delete()
       .eq("playbook_id", playbookId)
       .eq("user_id", user.id);
-    
+
     setFavorites(prev => prev.filter(p => p.id !== playbookId));
   };
 

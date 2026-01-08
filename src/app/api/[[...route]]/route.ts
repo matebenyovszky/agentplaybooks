@@ -274,7 +274,7 @@ app.post("/playbooks", async (c) => {
   }
 
   const body = await c.req.json();
-  const { name, description, is_public, config } = body;
+  const { name, description, is_public, visibility, config } = body;
 
   if (!name) {
     return c.json({ error: "Name is required" }, 400);
@@ -283,6 +283,13 @@ app.post("/playbooks", async (c) => {
   const supabase = getServiceSupabase();
   const guid = generateGuid();
 
+  // Determine visibility
+  let visibilityValue = visibility;
+  if (!visibilityValue && is_public !== undefined) {
+    visibilityValue = is_public ? 'public' : 'private';
+  }
+  if (!visibilityValue) visibilityValue = 'private';
+
   const { data, error } = await supabase
     .from("playbooks")
     .insert({
@@ -290,7 +297,7 @@ app.post("/playbooks", async (c) => {
       guid,
       name,
       description: description || null,
-      is_public: is_public || false,
+      visibility: visibilityValue,
       config: config || {},
     })
     .select()
@@ -382,14 +389,18 @@ app.put("/playbooks/:id", async (c) => {
   }
 
   const body = await c.req.json();
-  const { name, description, is_public, config } = body;
+  const { name, description, is_public, visibility, config } = body;
 
   const supabase = getServiceSupabase();
 
   const updateData: Record<string, unknown> = {};
   if (name !== undefined) updateData.name = name;
   if (description !== undefined) updateData.description = description;
-  if (is_public !== undefined) updateData.is_public = is_public;
+  if (visibility !== undefined) {
+    updateData.visibility = visibility;
+  } else if (is_public !== undefined) {
+    updateData.visibility = is_public ? 'public' : 'private';
+  }
   if (config !== undefined) updateData.config = config;
 
   const { data, error } = await supabase
@@ -1159,7 +1170,7 @@ app.post("/manage/playbooks", async (c) => {
   }
 
   const body = await c.req.json();
-  const { name, description, is_public, config } = body;
+  const { name, description, is_public, visibility, config } = body;
 
   if (!name) {
     return c.json({ error: "Name is required" }, 400);
@@ -1168,6 +1179,13 @@ app.post("/manage/playbooks", async (c) => {
   const supabase = getServiceSupabase();
   const guid = generateGuid();
 
+  // Determine visibility
+  let visibilityValue = visibility;
+  if (!visibilityValue && is_public !== undefined) {
+    visibilityValue = is_public ? 'public' : 'private';
+  }
+  if (!visibilityValue) visibilityValue = 'private';
+
   const { data, error } = await supabase
     .from("playbooks")
     .insert({
@@ -1175,7 +1193,7 @@ app.post("/manage/playbooks", async (c) => {
       guid,
       name,
       description: description || null,
-      is_public: is_public || false,
+      visibility: visibilityValue,
       config: config || {},
     })
     .select()
@@ -1240,14 +1258,18 @@ app.put("/manage/playbooks/:id", async (c) => {
   }
 
   const body = await c.req.json();
-  const { name, description, is_public, config } = body;
+  const { name, description, is_public, visibility, config } = body;
 
   const supabase = getServiceSupabase();
 
   const updateData: Record<string, unknown> = {};
   if (name !== undefined) updateData.name = name;
   if (description !== undefined) updateData.description = description;
-  if (is_public !== undefined) updateData.is_public = is_public;
+  if (visibility !== undefined) {
+    updateData.visibility = visibility;
+  } else if (is_public !== undefined) {
+    updateData.visibility = is_public ? 'public' : 'private';
+  }
   if (config !== undefined) updateData.config = config;
 
   const { data, error } = await supabase
@@ -2533,10 +2555,10 @@ app.get("/public/skills", async (c) => {
     .from("skills")
     .select(`
       *,
-      playbook:playbooks!inner(id, guid, name, is_public),
+      playbook:playbooks!inner(id, guid, name, visibility),
       publisher:profiles(id, display_name, avatar_svg, website_url, is_verified, is_virtual)
     `)
-    .eq("playbook.is_public", true)
+    .eq("playbook.visibility", "public")
     .order("created_at", { ascending: false });
 
   if (search) {
@@ -2583,10 +2605,10 @@ app.get("/public/skills/:id", async (c) => {
     .from("skills")
     .select(`
       *,
-      playbook:playbooks!inner(id, guid, name, is_public)
+      playbook:playbooks!inner(id, guid, name, visibility)
     `)
     .eq("id", id)
-    .eq("playbook.is_public", true)
+    .eq("playbook.visibility", "public")
     .single();
 
   if (error || !data) {
@@ -2612,10 +2634,10 @@ app.get("/public/mcp", async (c) => {
     .from("mcp_servers")
     .select(`
       *,
-      playbook:playbooks!inner(id, guid, name, is_public),
+      playbook:playbooks!inner(id, guid, name, visibility),
       publisher:profiles(id, display_name, avatar_svg, website_url, is_verified, is_virtual)
     `)
-    .eq("playbook.is_public", true)
+    .eq("playbook.visibility", "public")
     .order("created_at", { ascending: false });
 
   if (search) {
@@ -2662,10 +2684,10 @@ app.get("/public/mcp/:id", async (c) => {
     .from("mcp_servers")
     .select(`
       *,
-      playbook:playbooks!inner(id, guid, name, is_public)
+      playbook:playbooks!inner(id, guid, name, visibility)
     `)
     .eq("id", id)
-    .eq("playbook.is_public", true)
+    .eq("playbook.visibility", "public")
     .single();
 
   if (error || !data) {

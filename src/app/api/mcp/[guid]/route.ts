@@ -103,7 +103,7 @@ app.get("/", async (c) => {
     .from("playbooks")
     .select("*")
     .eq("guid", guid)
-    .eq("is_public", true)
+    .eq("visibility", "public")
     .single();
 
   if (error || !playbook) {
@@ -211,7 +211,7 @@ app.post("/", async (c) => {
     .from("playbooks")
     .select("id, persona_name, persona_system_prompt, persona_metadata")
     .eq("guid", guid)
-    .eq("is_public", true)
+    .eq("visibility", "public")
     .single();
 
   if (!playbook) {

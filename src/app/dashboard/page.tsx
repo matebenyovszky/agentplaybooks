@@ -57,7 +57,7 @@ export default function DashboardPage() {
         name,
         description: "",
         config: {},
-        is_public: false,
+        visibility: 'private',
       })
       .select()
       .single();
