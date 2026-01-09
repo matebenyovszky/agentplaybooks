@@ -722,7 +722,13 @@ interface SkillWithPublisher extends Skill {
     is_verified?: boolean;
     is_virtual?: boolean;
   };
-  skill_attachments?: any[];
+  skill_attachments?: SkillAttachment[];
+}
+
+interface SkillAttachment {
+  type: 'file' | 'link';
+  url?: string;
+  filename?: string;
 }
 
 function SkillCard({ skill, index }: { skill: SkillWithPublisher; index: number }) {
@@ -792,7 +798,7 @@ function SkillCard({ skill, index }: { skill: SkillWithPublisher; index: number 
       {/* Attachments */}
       {skill.skill_attachments && skill.skill_attachments.length > 0 && (
         <div className="mb-3 flex flex-wrap gap-2">
-          {skill.skill_attachments.map((att: any, i: number) => (
+          {skill.skill_attachments.map((att: SkillAttachment, i: number) => (
             <div
               key={i}
               className="flex items-center gap-1.5 px-2 py-1 bg-slate-800/50 border border-slate-700/50 rounded text-xs text-slate-300 max-w-full"

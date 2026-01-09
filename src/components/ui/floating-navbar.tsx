@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { Home, ChevronDown, BookOpen, LogOut, Globe, Server, Star, Settings, LayoutDashboard, Rss, Sun, Moon, Laptop } from "lucide-react";
-import { locales, localeNames, localeFlags, type Locale } from "@/i18n/config";
+import { locales, type Locale } from "@/i18n/config";
 import { useTranslations } from "next-intl";
 import { createBrowserClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
@@ -30,7 +30,6 @@ export const FloatingNav = ({
   const [visible, setVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
-  const [currentLocale, setCurrentLocale] = useState<Locale>("en");
   const [user, setUser] = useState<User | null>(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
@@ -78,17 +77,7 @@ export const FloatingNav = ({
     return () => subscription.unsubscribe();
   }, []);
 
-  // Read locale from cookie on mount
-  useEffect(() => {
-    const cookieLocale = document.cookie
-      .split("; ")
-      .find((row) => row.startsWith("NEXT_LOCALE="))
-      ?.split("=")[1] as Locale | undefined;
 
-    if (cookieLocale && locales.includes(cookieLocale)) {
-      setCurrentLocale(cookieLocale);
-    }
-  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -129,13 +118,7 @@ export const FloatingNav = ({
     window.location.href = "/";
   };
 
-  const handleLocaleSelect = (newLocale: Locale) => {
-    setLangMenuOpen(false);
-    setCurrentLocale(newLocale);
-    // Set cookie and reload to apply new locale
-    document.cookie = `NEXT_LOCALE=${newLocale};path=/;max-age=31536000`;
-    window.location.reload();
-  };
+
 
   return (
     <AnimatePresence mode="wait">
