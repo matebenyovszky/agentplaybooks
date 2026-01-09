@@ -130,15 +130,15 @@ export default function DocsPageClient({ initialSlug = "readme", initialContent 
   };
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-background text-foreground">
       <FloatingNav />
 
       <div className="flex pt-20">
         {/* Sidebar */}
-        <aside className="w-64 fixed left-0 top-20 bottom-0 border-r border-neutral-800 p-6 overflow-y-auto hidden lg:block">
+        <aside className="w-64 fixed left-0 top-20 bottom-0 border-r border-neutral-200 dark:border-neutral-800 p-6 overflow-y-auto hidden lg:block">
           <div className="mb-8">
-            <Link href="/docs" className="flex items-center gap-2 text-lg font-semibold">
-              <BookOpen className="h-5 w-5 text-indigo-400" />
+            <Link href="/docs" className="flex items-center gap-2 text-lg font-semibold text-neutral-900 dark:text-white">
+              <BookOpen className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
               Documentation
             </Link>
           </div>
@@ -147,8 +147,8 @@ export default function DocsPageClient({ initialSlug = "readme", initialContent 
             <Link
               href="/docs"
               className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${page === "readme"
-                  ? "bg-indigo-500/10 text-indigo-400"
-                  : "text-neutral-400 hover:text-white hover:bg-neutral-800"
+                ? "bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400"
+                : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800"
                 }`}
             >
               <FileText className="h-4 w-4" />
@@ -166,8 +166,8 @@ export default function DocsPageClient({ initialSlug = "readme", initialContent 
                 key={doc.slug}
                 href={`/docs/${normalizeDocSlug(doc.slug)}`}
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${page === normalizeDocSlug(doc.slug)
-                    ? "bg-indigo-500/10 text-indigo-400"
-                    : "text-neutral-400 hover:text-white hover:bg-neutral-800"
+                  ? "bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400"
+                  : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800"
                   }`}
               >
                 <doc.icon className="h-4 w-4" />
@@ -186,8 +186,8 @@ export default function DocsPageClient({ initialSlug = "readme", initialContent 
                 key={doc.slug}
                 href={`/docs/${normalizeDocSlug(doc.slug)}`}
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${page === normalizeDocSlug(doc.slug)
-                    ? "bg-indigo-500/10 text-indigo-400"
-                    : "text-neutral-400 hover:text-white hover:bg-neutral-800"
+                  ? "bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400"
+                  : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800"
                   }`}
               >
                 <doc.icon className="h-4 w-4" />
@@ -206,8 +206,8 @@ export default function DocsPageClient({ initialSlug = "readme", initialContent 
                 key={doc.slug}
                 href={`/docs/${normalizeDocSlug(doc.slug)}`}
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${page === normalizeDocSlug(doc.slug)
-                    ? "bg-indigo-500/10 text-indigo-400"
-                    : "text-neutral-400 hover:text-white hover:bg-neutral-800"
+                  ? "bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400"
+                  : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800"
                   }`}
               >
                 <doc.icon className="h-4 w-4" />
@@ -216,12 +216,12 @@ export default function DocsPageClient({ initialSlug = "readme", initialContent 
             ))}
           </nav>
 
-          <div className="mt-8 pt-8 border-t border-neutral-800">
+          <div className="mt-8 pt-8 border-t border-neutral-200 dark:border-neutral-800">
             <a
               href="https://github.com/matebenyovszky/agentplaybooks"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 px-3 py-2 text-sm text-neutral-400 hover:text-white transition-colors"
+              className="flex items-center gap-2 px-3 py-2 text-sm text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
             >
               <Github className="h-4 w-4" />
               View on GitHub
@@ -234,13 +234,13 @@ export default function DocsPageClient({ initialSlug = "readme", initialContent 
         <main className="flex-1 lg:ml-64 px-6 lg:px-12 py-8 max-w-4xl">
           {/* Breadcrumb */}
           <div className="flex items-center gap-2 text-sm text-neutral-500 mb-8">
-            <Link href="/docs" className="hover:text-white transition-colors">
+            <Link href="/docs" className="hover:text-neutral-900 dark:hover:text-white transition-colors">
               Docs
             </Link>
             {page !== "readme" && (
               <>
                 <ChevronRight className="h-4 w-4" />
-                <span className="text-neutral-300">
+                <span className="text-neutral-900 dark:text-neutral-300">
                   {getDocTitle(page)}
                 </span>
               </>
@@ -255,19 +255,19 @@ export default function DocsPageClient({ initialSlug = "readme", initialContent 
             <motion.article
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="prose prose-invert max-w-none"
+              className="prose dark:prose-invert max-w-none"
             >
               <MarkdownRenderer content={content} />
             </motion.article>
           )}
 
           {/* Edit on GitHub */}
-          <div className="mt-12 pt-8 border-t border-neutral-800">
+          <div className="mt-12 pt-8 border-t border-neutral-200 dark:border-neutral-800">
             <a
               href={`https://github.com/matebenyovszky/agentplaybooks/edit/main/docs/${page === "readme" ? "README.md" : `${page}.md`}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors"
+              className="inline-flex items-center gap-2 text-sm text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors"
             >
               <Github className="h-4 w-4" />
               Edit this page on GitHub
@@ -320,7 +320,7 @@ function TableOfContents({ content }: { content: string }) {
         <a
           key={i}
           href={`#${heading.id}`}
-          className={`block text-neutral-400 hover:text-white transition-colors ${heading.level === 3 ? "pl-4" : ""
+          className={`block text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors ${heading.level === 3 ? "pl-4" : ""
             }`}
         >
           {heading.text}

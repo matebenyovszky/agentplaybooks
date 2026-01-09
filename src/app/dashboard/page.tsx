@@ -82,14 +82,14 @@ export default function DashboardPage() {
     <>
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold">
+          <h1 className="text-3xl font-bold text-neutral-900 dark:text-white">
             {t("dashboard.welcome")}, {user?.email?.split("@")[0]}
           </h1>
-          <p className="text-slate-400 mt-1">{t("dashboard.myPlaybooks")}</p>
+          <p className="text-neutral-600 dark:text-slate-400 mt-1">{t("dashboard.myPlaybooks")}</p>
         </div>
         <button
           onClick={handleCreatePlaybook}
-          className="px-4 py-2 bg-gradient-to-r from-amber-600 to-amber-400 text-slate-900 rounded-lg font-semibold flex items-center gap-2 hover:opacity-90 transition-opacity shadow-lg shadow-amber-500/25"
+          className="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-400 text-slate-900 rounded-lg font-semibold flex items-center gap-2 hover:opacity-90 transition-opacity shadow-lg shadow-amber-500/25"
         >
           <Plus className="h-5 w-5" />
           {t("dashboard.createPlaybook")}
@@ -103,10 +103,10 @@ export default function DashboardPage() {
           className="text-center py-16"
         >
           <BookOpen className="h-16 w-16 text-blue-800 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-slate-400 mb-2">
+          <h2 className="text-xl font-semibold text-neutral-600 dark:text-slate-400 mb-2">
             {t("dashboard.noPlaybooks")}
           </h2>
-          <p className="text-slate-500 mb-6">
+          <p className="text-neutral-500 dark:text-slate-500 mb-6">
             Create your first playbook to get started
           </p>
           <button
@@ -128,22 +128,22 @@ export default function DashboardPage() {
             >
               <Link
                 href={`/dashboard/playbook/${playbook.id}`}
-                className="block p-6 bg-blue-950/30 border border-blue-900/50 rounded-xl hover:border-amber-500/30 transition-colors"
+                className="block p-6 bg-white dark:bg-blue-950/30 border border-neutral-200 dark:border-blue-900/50 rounded-xl hover:border-amber-500/30 hover:shadow-lg dark:hover:shadow-none transition-all"
               >
                 <div className="flex items-start justify-between mb-4">
-                  <h3 className="text-lg font-semibold">{playbook.name}</h3>
+                  <h3 className="text-lg font-semibold text-neutral-900 dark:text-white">{playbook.name}</h3>
                   {playbook.visibility === 'public' ? (
-                    <span className="flex items-center gap-1 text-xs text-amber-400 bg-amber-500/10 px-2 py-1 rounded-full">
+                    <span className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-500/10 px-2 py-1 rounded-full">
                       <Eye className="h-3 w-3" />
                       {t("dashboard.playbookCard.public")}
                     </span>
                   ) : playbook.visibility === 'unlisted' ? (
-                    <span className="flex items-center gap-1 text-xs text-gray-400 bg-gray-500/10 px-2 py-1 rounded-full">
+                    <span className="flex items-center gap-1 text-xs text-neutral-500 dark:text-gray-400 bg-neutral-100 dark:bg-gray-500/10 px-2 py-1 rounded-full">
                       <Eye className="h-3 w-3" />
                       Unlisted
                     </span>
                   ) : (
-                    <span className="flex items-center gap-1 text-xs text-slate-400 bg-blue-900/30 px-2 py-1 rounded-full">
+                    <span className="flex items-center gap-1 text-xs text-neutral-500 dark:text-slate-400 bg-neutral-100 dark:bg-blue-900/30 px-2 py-1 rounded-full">
                       <Lock className="h-3 w-3" />
                       {t("dashboard.playbookCard.private")}
                     </span>
@@ -151,12 +151,12 @@ export default function DashboardPage() {
                 </div>
 
                 {playbook.description && (
-                  <p className="text-sm text-slate-400 mb-4 line-clamp-2">
+                  <p className="text-sm text-neutral-600 dark:text-slate-400 mb-4 line-clamp-2">
                     {playbook.description}
                   </p>
                 )}
 
-                <div className="flex items-center gap-4 text-sm text-slate-500">
+                <div className="flex items-center gap-4 text-sm text-neutral-500 dark:text-slate-500">
                   <span className="flex items-center gap-1">
                     <Brain className="h-4 w-4" />
                     0 {t("dashboard.playbookCard.personas")}
@@ -167,8 +167,8 @@ export default function DashboardPage() {
                   </span>
                 </div>
 
-                <div className="mt-4 pt-4 border-t border-blue-900/30">
-                  <code className="text-xs text-slate-500 font-mono">
+                <div className="mt-4 pt-4 border-t border-neutral-100 dark:border-blue-900/30">
+                  <code className="text-xs text-neutral-400 dark:text-slate-500 font-mono">
                     /{playbook.guid}
                   </code>
                 </div>

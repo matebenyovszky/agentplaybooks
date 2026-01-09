@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { Home, ChevronDown, BookOpen, LogOut, Globe, Server, Star, Settings, LayoutDashboard, Rss, Sun, Moon, Laptop } from "lucide-react";
-import { locales, type Locale } from "@/i18n/config";
+import { locales, localeNames, localeFlags, type Locale } from "@/i18n/config";
 import { useTranslations } from "next-intl";
 import { createBrowserClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
@@ -30,6 +30,7 @@ export const FloatingNav = ({
   const [visible, setVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
+  const [currentLocale, setCurrentLocale] = useState<Locale>("en");
   const [user, setUser] = useState<User | null>(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
@@ -118,6 +119,26 @@ export const FloatingNav = ({
     window.location.href = "/";
   };
 
+  const handleLocaleSelect = (newLocale: Locale) => {
+    setLangMenuOpen(false);
+    setCurrentLocale(newLocale);
+    // Set cookie and reload to apply new locale
+    document.cookie = `NEXT_LOCALE=${newLocale};path=/;max-age=31536000`;
+    window.location.reload();
+  };
+
+  // Read locale from cookie on mount
+  useEffect(() => {
+    const cookieLocale = document.cookie
+      .split("; ")
+      .find((row) => row.startsWith("NEXT_LOCALE="))
+      ?.split("=")[1] as Locale | undefined;
+
+    if (cookieLocale && locales.includes(cookieLocale)) {
+      setCurrentLocale(cookieLocale);
+    }
+  }, []);
+
 
 
   return (
@@ -160,6 +181,47 @@ export const FloatingNav = ({
             <span className="hidden sm:block text-sm">{navItem.name}</span>
           </Link>
         ))}
+
+        {/* Language selector */}
+        <div className="relative">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setLangMenuOpen(!langMenuOpen);
+            }}
+            className="flex items-center gap-1 text-sm dark:text-neutral-50 text-neutral-600 dark:hover:text-amber-400 hover:text-amber-600 transition-colors px-2 py-1"
+          >
+            <span>{localeFlags[currentLocale]}</span>
+            <ChevronDown className={cn("h-3 w-3 transition-transform", langMenuOpen && "rotate-180")} />
+          </button>
+
+          <AnimatePresence>
+            {langMenuOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.15 }}
+                className="absolute top-full right-0 mt-2 py-2 dark:bg-neutral-900 bg-white border dark:border-neutral-700 border-neutral-200 rounded-lg shadow-xl min-w-[140px]"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {locales.map((locale) => (
+                  <button
+                    key={locale}
+                    onClick={() => handleLocaleSelect(locale)}
+                    className={cn(
+                      "w-full px-4 py-2 text-left text-sm flex items-center gap-2 dark:hover:bg-neutral-800 hover:bg-neutral-100 transition-colors",
+                      currentLocale === locale ? "text-amber-500" : "dark:text-neutral-300 text-neutral-600"
+                    )}
+                  >
+                    <span>{localeFlags[locale]}</span>
+                    <span>{localeNames[locale]}</span>
+                  </button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
         {/* Auth section - show user menu or sign in */}
         {user ? (

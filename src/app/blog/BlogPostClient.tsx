@@ -5,7 +5,7 @@ import { FloatingNav } from "@/components/ui/floating-navbar";
 import Link from "next/link";
 import { ChevronRight, Calendar, ArrowLeft, User, Twitter, Linkedin, Link as LinkIcon } from "lucide-react";
 import type { BlogPost } from "@/lib/blog-server";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 type BlogPostClientProps = {
     posts: BlogPost[];
@@ -14,7 +14,7 @@ type BlogPostClientProps = {
 
 export default function BlogPostClient({ posts, currentPost }: BlogPostClientProps) {
     return (
-        <div className="min-h-screen bg-black text-white">
+        <div className="min-h-screen bg-background text-foreground">
             <FloatingNav />
 
             <main className="pt-24 pb-16 px-6 lg:px-8 max-w-5xl mx-auto">
@@ -32,10 +32,10 @@ function BlogIndexView({ posts }: { posts: BlogPost[] }) {
     return (
         <div className="space-y-12">
             <div className="text-center space-y-4">
-                <h1 className="text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-b from-white to-white/60">
+                <h1 className="text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-b from-neutral-900 to-neutral-500 dark:from-white dark:to-white/60">
                     Blog
                 </h1>
-                <p className="text-xl text-neutral-400 max-w-2xl mx-auto">
+                <p className="text-xl text-neutral-600 dark:text-neutral-400 max-w-2xl mx-auto">
                     Thoughts, updates, and guides on building autonomous agents.
                 </p>
             </div>
@@ -47,7 +47,7 @@ function BlogIndexView({ posts }: { posts: BlogPost[] }) {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: idx * 0.1 }}
-                        className="group relative flex flex-col p-6 rounded-2xl bg-neutral-900/50 border border-white/10 hover:border-indigo-500/50 hover:bg-neutral-900 transition-all duration-300"
+                        className="group relative flex flex-col p-6 rounded-2xl bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-white/10 hover:border-indigo-500/50 hover:shadow-lg dark:hover:bg-neutral-900 transition-all duration-300"
                     >
                         <div className="flex items-center gap-3 text-sm text-neutral-500 mb-4">
                             <span className="flex items-center gap-1">
@@ -62,18 +62,18 @@ function BlogIndexView({ posts }: { posts: BlogPost[] }) {
                             )}
                         </div>
 
-                        <h2 className="text-2xl font-bold text-white mb-3 group-hover:text-indigo-400 transition-colors">
+                        <h2 className="text-2xl font-bold text-neutral-900 dark:text-white mb-3 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                             <Link href={`/blog/${post.slug}`} className="focus:outline-none">
                                 <span className="absolute inset-0" aria-hidden="true" />
                                 {post.title}
                             </Link>
                         </h2>
 
-                        <p className="text-neutral-400 mb-6 flex-1 line-clamp-3">
+                        <p className="text-neutral-600 dark:text-neutral-400 mb-6 flex-1 line-clamp-3">
                             {post.description}
                         </p>
 
-                        <div className="flex items-center text-indigo-400 font-medium text-sm group-hover:translate-x-1 transition-transform">
+                        <div className="flex items-center text-indigo-600 dark:text-indigo-400 font-medium text-sm group-hover:translate-x-1 transition-transform">
                             Read more <ChevronRight className="h-4 w-4 ml-1" />
                         </div>
                     </motion.article>
@@ -91,6 +91,14 @@ function BlogIndexView({ posts }: { posts: BlogPost[] }) {
 
 function SinglePostView({ post }: { post: BlogPost }) {
     const [copied, setCopied] = useState(false);
+    const [shareUrl, setShareUrl] = useState('');
+
+    // Set shareUrl on client-side only to avoid hydration mismatch
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            setShareUrl(window.location.href);
+        }
+    }, []);
 
     const copyLink = () => {
         navigator.clipboard.writeText(window.location.href);
@@ -98,13 +106,12 @@ function SinglePostView({ post }: { post: BlogPost }) {
         setTimeout(() => setCopied(false), 2000);
     };
 
-    const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
     const shareText = `Check out this article: ${post.title}`;
 
     return (
         <article className="max-w-3xl mx-auto">
             <div className="mb-8">
-                <Link href="/blog" className="inline-flex items-center text-sm text-neutral-400 hover:text-white transition-colors mb-6">
+                <Link href="/blog" className="inline-flex items-center text-sm text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white transition-colors mb-6">
                     <ArrowLeft className="h-4 w-4 mr-1" />
                     Back to Blog
                 </Link>
@@ -122,26 +129,26 @@ function SinglePostView({ post }: { post: BlogPost }) {
                     )}
                 </div>
 
-                <h1 className="text-4xl md:text-5xl font-bold text-white mb-6 leading-tight">
+                <h1 className="text-4xl md:text-5xl font-bold text-neutral-900 dark:text-white mb-6 leading-tight">
                     {post.title}
                 </h1>
 
                 {post.description && (
-                    <p className="text-xl text-neutral-300 leading-relaxed border-l-4 border-indigo-500/50 pl-5">
+                    <p className="text-xl text-neutral-600 dark:text-neutral-300 leading-relaxed border-l-4 border-indigo-500/50 pl-5">
                         {post.description}
                     </p>
                 )}
             </div>
 
-            <div className="w-full h-px bg-neutral-800 mb-10" />
+            <div className="w-full h-px bg-neutral-200 dark:bg-neutral-800 mb-10" />
 
-            <div className="prose prose-invert prose-lg max-w-none mb-12">
+            <div className="prose dark:prose-invert prose-lg max-w-none mb-12">
                 <MarkdownRenderer content={post.content} />
             </div>
 
-            <div className="border-t border-neutral-800 pt-8 mt-12 mb-20">
+            <div className="border-t border-neutral-200 dark:border-neutral-800 pt-8 mt-12 mb-20">
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
-                    <div className="text-neutral-400 font-medium">
+                    <div className="text-neutral-500 dark:text-neutral-400 font-medium">
                         Share this article
                     </div>
                     <div className="flex items-center gap-3">
@@ -149,7 +156,7 @@ function SinglePostView({ post }: { post: BlogPost }) {
                             href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-2.5 bg-neutral-900 rounded-full text-neutral-400 hover:text-sky-400 hover:bg-neutral-800 transition-colors"
+                            className="p-2.5 bg-neutral-100 dark:bg-neutral-900 rounded-full text-neutral-500 dark:text-neutral-400 hover:text-sky-500 dark:hover:text-sky-400 hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors"
                             aria-label="Share on Twitter"
                         >
                             <Twitter className="h-5 w-5" />
@@ -158,14 +165,14 @@ function SinglePostView({ post }: { post: BlogPost }) {
                             href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-2.5 bg-neutral-900 rounded-full text-neutral-400 hover:text-blue-500 hover:bg-neutral-800 transition-colors"
+                            className="p-2.5 bg-neutral-100 dark:bg-neutral-900 rounded-full text-neutral-500 dark:text-neutral-400 hover:text-blue-600 dark:hover:text-blue-500 hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors"
                             aria-label="Share on LinkedIn"
                         >
                             <Linkedin className="h-5 w-5" />
                         </a>
                         <button
                             onClick={copyLink}
-                            className="p-2.5 bg-neutral-900 rounded-full text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors relative"
+                            className="p-2.5 bg-neutral-100 dark:bg-neutral-900 rounded-full text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors relative"
                             aria-label="Copy link"
                         >
                             <LinkIcon className="h-5 w-5" />

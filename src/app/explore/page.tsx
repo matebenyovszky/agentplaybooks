@@ -59,7 +59,7 @@ interface PublicPlaybook {
 type TabType = "playbooks" | "skills" | "mcp";
 type SortType = "stars" | "recent" | "name";
 
-import { FileText, Link as LinkIcon, AlertCircle } from "lucide-react"; // Import missing icons
+import { FileText, Link as LinkIcon } from "lucide-react"; // Import missing icons
 
 export default function ExplorePage() {
   const t = useTranslations();
@@ -242,7 +242,7 @@ export default function ExplorePage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#0a0f1a] text-white">
+    <div className="min-h-screen bg-background text-foreground">
       <FloatingNav />
 
       {/* Hero */}
@@ -259,7 +259,7 @@ export default function ExplorePage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="text-xl text-slate-400"
+            className="text-xl text-neutral-600 dark:text-slate-400"
           >
             {t("explore.subtitle")}
           </motion.p>
@@ -269,7 +269,7 @@ export default function ExplorePage() {
       {/* Tabs */}
       <section className="px-4 pb-4">
         <div className="max-w-5xl mx-auto">
-          <div className="flex gap-2 border-b border-blue-900/30">
+          <div className="flex gap-2 border-b border-neutral-200 dark:border-blue-900/30">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
@@ -277,8 +277,8 @@ export default function ExplorePage() {
                 className={cn(
                   "px-4 py-3 flex items-center gap-2 text-sm font-medium border-b-2 transition-all",
                   activeTab === tab.id
-                    ? "border-amber-500 text-white"
-                    : "border-transparent text-slate-400 hover:text-white hover:border-slate-700"
+                    ? "border-amber-500 text-neutral-900 dark:text-white"
+                    : "border-transparent text-neutral-500 dark:text-slate-400 hover:text-neutral-900 dark:hover:text-white hover:border-neutral-300 dark:hover:border-slate-700"
                 )}
               >
                 <tab.icon className="h-4 w-4" />
@@ -286,7 +286,7 @@ export default function ExplorePage() {
                 {tab.count > 0 && (
                   <span className={cn(
                     "px-2 py-0.5 rounded-full text-xs",
-                    activeTab === tab.id ? "bg-amber-500/20 text-amber-400" : "bg-slate-800 text-slate-500"
+                    activeTab === tab.id ? "bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400" : "bg-neutral-100 dark:bg-slate-800 text-neutral-500 dark:text-slate-500"
                   )}>
                     {tab.count}
                   </span>
@@ -318,16 +318,17 @@ export default function ExplorePage() {
                     placeholder={t("explore.searchPlaybooks")}
                     className={cn(
                       "w-full pl-12 pr-4 py-4 rounded-xl text-lg",
-                      "bg-blue-950/30 border border-blue-900/50",
+                      "bg-white dark:bg-blue-950/30 border border-neutral-200 dark:border-blue-900/50",
                       "focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20",
-                      "placeholder:text-slate-600"
+                      "placeholder:text-neutral-400 dark:placeholder:text-slate-600",
+                      "text-neutral-900 dark:text-white"
                     )}
                   />
                 </div>
 
                 {/* Tags */}
                 <div className="flex flex-wrap gap-2 mb-6">
-                  <span className="flex items-center gap-1 text-sm text-slate-500 mr-2">
+                  <span className="flex items-center gap-1 text-sm text-neutral-500 dark:text-slate-500 mr-2">
                     <Filter className="h-4 w-4" />
                     {t("explore.tags")}:
                   </span>
@@ -339,7 +340,7 @@ export default function ExplorePage() {
                         "px-3 py-1.5 rounded-full text-sm transition-colors",
                         selectedTags.includes(tag)
                           ? "bg-amber-500 text-slate-900 font-medium"
-                          : "bg-blue-950/50 text-slate-400 hover:bg-blue-900/50 border border-blue-800/30"
+                          : "bg-white dark:bg-blue-950/50 text-neutral-600 dark:text-slate-400 hover:bg-neutral-100 dark:hover:bg-blue-900/50 border border-neutral-200 dark:border-blue-800/30"
                       )}
                     >
                       {tag}
@@ -349,20 +350,20 @@ export default function ExplorePage() {
 
                 {/* Sort */}
                 <div className="flex items-center justify-between mb-8">
-                  <div className="flex items-center gap-2 text-sm text-slate-400">
+                  <div className="flex items-center gap-2 text-sm text-neutral-500 dark:text-slate-400">
                     <span>{playbooks.length} {t("explore.playbooks")}</span>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-slate-400">{t("explore.sortBy")}:</span>
+                    <span className="text-sm text-neutral-500 dark:text-slate-400">{t("explore.sortBy")}:</span>
                     <select
                       value={sortBy}
                       onChange={(e) => setSortBy(e.target.value as SortType)}
                       className={cn(
                         "px-3 py-2 rounded-lg text-sm cursor-pointer",
-                        "bg-slate-800 border border-slate-600",
-                        "text-white focus:outline-none focus:border-amber-500",
-                        "[&>option]:bg-slate-800 [&>option]:text-white"
+                        "bg-white dark:bg-slate-800 border border-neutral-200 dark:border-slate-600",
+                        "text-neutral-900 dark:text-white focus:outline-none focus:border-amber-500",
+                        "[&>option]:bg-white [&>option]:text-neutral-900 dark:[&>option]:bg-slate-800 dark:[&>option]:text-white"
                       )}
                     >
                       <option value="stars">{t("explore.mostStarred")}</option>
@@ -593,9 +594,9 @@ function PlaybookCard({ playbook, index, isStarred, onToggleStar, isLoggedIn, is
       transition={{ delay: index * 0.05 }}
       className={cn(
         "rounded-xl overflow-hidden group cursor-pointer",
-        "bg-gradient-to-br from-slate-900/80 to-slate-800/80",
-        "border border-blue-900/30 hover:border-amber-500/30",
-        "transition-all duration-300 hover:shadow-lg hover:shadow-amber-500/5"
+        "bg-white dark:bg-gradient-to-br dark:from-slate-900/80 dark:to-slate-800/80",
+        "border border-neutral-200 dark:border-blue-900/30 hover:border-amber-500/30",
+        "transition-all duration-300 hover:shadow-lg hover:shadow-amber-500/5 shadow-sm dark:shadow-none"
       )}
     >
       <Link href={playbookUrl} className="block">
@@ -603,11 +604,11 @@ function PlaybookCard({ playbook, index, isStarred, onToggleStar, isLoggedIn, is
           <div className="flex items-start justify-between mb-3">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
-                <h3 className="font-semibold text-lg truncate group-hover:text-amber-400 transition-colors">
+                <h3 className="font-semibold text-lg truncate text-neutral-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
                   {playbook.name}
                 </h3>
                 {isOwner && (
-                  <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 text-xs rounded-full font-medium shrink-0">
+                  <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs rounded-full font-medium shrink-0">
                     {t("explore.yours")}
                   </span>
                 )}
@@ -617,18 +618,18 @@ function PlaybookCard({ playbook, index, isStarred, onToggleStar, isLoggedIn, is
                 <div className="flex items-center gap-2">
                   {playbook.publisher.avatar_svg ? (
                     <div
-                      className="w-5 h-5 rounded-full overflow-hidden bg-slate-700 flex items-center justify-center"
+                      className="w-5 h-5 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-700 flex items-center justify-center"
                       dangerouslySetInnerHTML={{ __html: playbook.publisher.avatar_svg }}
                     />
                   ) : (
-                    <div className="w-5 h-5 rounded-full bg-slate-700 flex items-center justify-center">
-                      <User className="h-3 w-3 text-slate-400" />
+                    <div className="w-5 h-5 rounded-full bg-neutral-100 dark:bg-slate-700 flex items-center justify-center">
+                      <User className="h-3 w-3 text-neutral-400 dark:text-slate-400" />
                     </div>
                   )}
-                  <span className="text-xs text-slate-400 flex items-center gap-1">
+                  <span className="text-xs text-neutral-500 dark:text-slate-400 flex items-center gap-1">
                     {playbook.publisher.name}
                     {playbook.publisher.is_verified && (
-                      <span className="text-blue-400" title="Verified">✓</span>
+                      <span className="text-blue-500 dark:text-blue-400" title="Verified">✓</span>
                     )}
                   </span>
                 </div>
@@ -644,8 +645,8 @@ function PlaybookCard({ playbook, index, isStarred, onToggleStar, isLoggedIn, is
               className={cn(
                 "flex items-center gap-1 px-3 py-1.5 rounded-lg transition-all",
                 isStarred
-                  ? "bg-amber-500/20 text-amber-400"
-                  : "bg-slate-800/50 text-slate-400 hover:text-amber-400 hover:bg-amber-500/10"
+                  ? "bg-amber-500/20 text-amber-600 dark:text-amber-400"
+                  : "bg-neutral-100 dark:bg-slate-800/50 text-neutral-500 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-500/10"
               )}
               title={isLoggedIn ? (isStarred ? "Unstar" : "Star") : "Sign in to star"}
             >
@@ -655,20 +656,20 @@ function PlaybookCard({ playbook, index, isStarred, onToggleStar, isLoggedIn, is
           </div>
 
           {playbook.description && (
-            <p className="text-sm text-slate-400 mb-4 line-clamp-2">{playbook.description}</p>
+            <p className="text-sm text-neutral-600 dark:text-slate-400 mb-4 line-clamp-2">{playbook.description}</p>
           )}
 
           <div className="flex flex-wrap gap-3 mb-4">
-            <span className="flex items-center gap-1 text-xs text-slate-500">
-              <Brain className="h-3.5 w-3.5 text-blue-400" />
+            <span className="flex items-center gap-1 text-xs text-neutral-500 dark:text-slate-500">
+              <Brain className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
               {playbook.personas_count} {t("explore.personas")}
             </span>
-            <span className="flex items-center gap-1 text-xs text-slate-500">
-              <Zap className="h-3.5 w-3.5 text-purple-400" />
+            <span className="flex items-center gap-1 text-xs text-neutral-500 dark:text-slate-500">
+              <Zap className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
               {playbook.skills_count} {t("explore.skills")}
             </span>
-            <span className="flex items-center gap-1 text-xs text-slate-500">
-              <Server className="h-3.5 w-3.5 text-pink-400" />
+            <span className="flex items-center gap-1 text-xs text-neutral-500 dark:text-slate-500">
+              <Server className="h-3.5 w-3.5 text-pink-600 dark:text-pink-400" />
               {playbook.mcp_servers_count} MCP
             </span>
           </div>
@@ -676,32 +677,32 @@ function PlaybookCard({ playbook, index, isStarred, onToggleStar, isLoggedIn, is
           {playbook.tags && playbook.tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {playbook.tags.slice(0, 4).map((tag) => (
-                <span key={tag} className="px-2 py-0.5 bg-blue-900/30 rounded text-xs text-slate-400">
+                <span key={tag} className="px-2 py-0.5 bg-neutral-100 dark:bg-blue-900/30 rounded text-xs text-neutral-500 dark:text-slate-400">
                   {tag}
                 </span>
               ))}
               {playbook.tags.length > 4 && (
-                <span className="px-2 py-0.5 text-xs text-slate-500">+{playbook.tags.length - 4}</span>
+                <span className="px-2 py-0.5 text-xs text-neutral-500 dark:text-slate-500">+{playbook.tags.length - 4}</span>
               )}
             </div>
           )}
         </div>
       </Link>
 
-      <div className="px-5 py-3 border-t border-slate-700/30 bg-slate-900/30">
+      <div className="px-5 py-3 border-t border-neutral-100 dark:border-slate-700/30 bg-neutral-50 dark:bg-slate-900/30">
         <div className="flex items-center justify-between">
           <Link
             href={playbookUrl}
             className={cn(
               "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm",
-              "bg-amber-500/10 text-amber-400 hover:bg-amber-500/20",
+              "bg-amber-100 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-500/20",
               "transition-colors"
             )}
           >
             <ExternalLink className="h-4 w-4" />
             {t("explore.view")}
           </Link>
-          <span className="text-xs text-slate-500 flex items-center gap-1">
+          <span className="text-xs text-neutral-500 dark:text-slate-500 flex items-center gap-1">
             <Clock className="h-3 w-3" />
             {new Date(playbook.created_at).toLocaleDateString()}
           </span>
@@ -749,19 +750,19 @@ function SkillCard({ skill, index }: { skill: SkillWithPublisher; index: number 
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.03 }}
       className={cn(
-        "p-4 rounded-xl",
+        "p-4 rounded-xl shadow-sm dark:shadow-none",
         isMarkdownSkill
-          ? "bg-gradient-to-br from-emerald-900/20 to-slate-900/80 border-emerald-500/20 hover:border-emerald-500/40"
-          : "bg-gradient-to-br from-purple-900/20 to-slate-900/80 border-purple-500/20 hover:border-purple-500/40",
+          ? "bg-white dark:bg-gradient-to-br dark:from-emerald-900/20 dark:to-slate-900/80 border-emerald-500/20 hover:border-emerald-500/40"
+          : "bg-white dark:bg-gradient-to-br dark:from-purple-900/20 dark:to-slate-900/80 border-purple-500/20 hover:border-purple-500/40",
         "border transition-all"
       )}
     >
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-2">
-          <Zap className={cn("h-4 w-4", isMarkdownSkill ? "text-emerald-400" : "text-purple-400")} />
-          <h4 className="font-medium text-white">{skill.name}</h4>
+          <Zap className={cn("h-4 w-4", isMarkdownSkill ? "text-emerald-600 dark:text-emerald-400" : "text-purple-600 dark:text-purple-400")} />
+          <h4 className="font-medium text-neutral-900 dark:text-white">{skill.name}</h4>
           {isMarkdownSkill && (
-            <span className="px-1.5 py-0.5 bg-emerald-500/20 text-emerald-400 text-[10px] rounded font-medium">
+            <span className="px-1.5 py-0.5 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-[10px] rounded font-medium">
               SKILL
             </span>
           )}
@@ -771,8 +772,8 @@ function SkillCard({ skill, index }: { skill: SkillWithPublisher; index: number 
           className={cn(
             "p-1.5 rounded-lg transition-colors",
             isMarkdownSkill
-              ? "text-slate-400 hover:text-emerald-400 hover:bg-emerald-500/10"
-              : "text-slate-400 hover:text-purple-400 hover:bg-purple-500/10"
+              ? "text-neutral-400 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10"
+              : "text-neutral-400 dark:text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-500/10"
           )}
           title="Copy skill content"
         >
@@ -877,8 +878,8 @@ function MCPCard({ mcp, index }: { mcp: MCPWithPublisher; index: number }) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.03 }}
       className={cn(
-        "rounded-xl overflow-hidden",
-        "bg-gradient-to-br from-pink-900/20 to-slate-900/80",
+        "rounded-xl overflow-hidden shadow-sm dark:shadow-none",
+        "bg-white dark:bg-gradient-to-br dark:from-pink-900/20 dark:to-slate-900/80",
         "border border-pink-500/20 hover:border-pink-500/40",
         "transition-all"
       )}
@@ -894,27 +895,27 @@ function MCPCard({ mcp, index }: { mcp: MCPWithPublisher; index: number }) {
         }}
       >
         <div className="flex items-start gap-3 flex-1 min-w-0">
-          <div className="p-2 rounded-lg bg-pink-500/10 border border-pink-500/20">
-            <Server className="h-4 w-4 text-pink-400" />
+          <div className="p-2 rounded-lg bg-pink-100 dark:bg-pink-500/10 border border-pink-200 dark:border-pink-500/20">
+            <Server className="h-4 w-4 text-pink-600 dark:text-pink-400" />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <h4 className="font-medium text-white truncate">{mcp.name}</h4>
+              <h4 className="font-medium text-neutral-900 dark:text-white truncate">{mcp.name}</h4>
             </div>
             {mcp.description && (
-              <p className="text-sm text-slate-400 line-clamp-2">{mcp.description}</p>
+              <p className="text-sm text-neutral-600 dark:text-slate-400 line-clamp-2">{mcp.description}</p>
             )}
-            <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-slate-500">
+            <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-neutral-500 dark:text-slate-500">
               <span className="flex items-center gap-1">
-                <Wrench className="h-3 w-3 text-pink-400" />
+                <Wrench className="h-3 w-3 text-pink-600 dark:text-pink-400" />
                 {toolCount} tools
               </span>
               <span className="flex items-center gap-1">
-                <FolderOpen className="h-3 w-3 text-purple-400" />
+                <FolderOpen className="h-3 w-3 text-purple-600 dark:text-purple-400" />
                 {resourceCount} resources
               </span>
               {mcp.transport_type && (
-                <span className="px-2 py-0.5 rounded bg-slate-700/30 text-slate-500">
+                <span className="px-2 py-0.5 rounded bg-neutral-100 dark:bg-slate-700/30 text-neutral-500 dark:text-slate-500">
                   {mcp.transport_type}
                 </span>
               )}
@@ -928,13 +929,13 @@ function MCPCard({ mcp, index }: { mcp: MCPWithPublisher; index: number }) {
               e.stopPropagation();
               copyConfig();
             }}
-            className="p-1.5 text-slate-400 hover:text-pink-400 hover:bg-pink-500/10 rounded-lg transition-colors"
+            className="p-1.5 text-neutral-400 dark:text-slate-400 hover:text-pink-600 dark:hover:text-pink-400 hover:bg-pink-50 dark:hover:bg-pink-500/10 rounded-lg transition-colors"
             title="Copy MCP config"
           >
-            {copied ? <Check className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4" />}
+            {copied ? <Check className="h-4 w-4 text-green-500 dark:text-green-400" /> : <Copy className="h-4 w-4" />}
           </button>
           {hasDetails && (
-            <div className="text-slate-500">
+            <div className="text-neutral-400 dark:text-slate-500">
               {expanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
             </div>
           )}
@@ -949,21 +950,21 @@ function MCPCard({ mcp, index }: { mcp: MCPWithPublisher; index: number }) {
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="overflow-hidden border-t border-slate-800/60"
+            className="overflow-hidden border-t border-neutral-100 dark:border-slate-800/60"
           >
             <div className="px-4 pb-4 pt-3 space-y-4">
               {toolCount > 0 && (
                 <div className="space-y-2">
-                  <div className="text-xs uppercase tracking-wide text-slate-500">Tools</div>
+                  <div className="text-xs uppercase tracking-wide text-neutral-500 dark:text-slate-500">Tools</div>
                   <div className="space-y-2">
                     {tools.map((tool, toolIndex) => (
                       <div
                         key={`${tool.name}-${toolIndex}`}
-                        className="rounded-lg border border-pink-500/10 bg-slate-900/40 px-3 py-2"
+                        className="rounded-lg border border-pink-200 dark:border-pink-500/10 bg-neutral-50 dark:bg-slate-900/40 px-3 py-2"
                       >
-                        <div className="text-sm font-mono text-pink-300">{tool.name}</div>
+                        <div className="text-sm font-mono text-pink-700 dark:text-pink-300">{tool.name}</div>
                         {tool.description && (
-                          <div className="text-xs text-slate-400 mt-1">{tool.description}</div>
+                          <div className="text-xs text-neutral-600 dark:text-slate-400 mt-1">{tool.description}</div>
                         )}
                       </div>
                     ))}
@@ -972,15 +973,15 @@ function MCPCard({ mcp, index }: { mcp: MCPWithPublisher; index: number }) {
               )}
               {resourceCount > 0 && (
                 <div className="space-y-2">
-                  <div className="text-xs uppercase tracking-wide text-slate-500">Resources</div>
+                  <div className="text-xs uppercase tracking-wide text-neutral-500 dark:text-slate-500">Resources</div>
                   <div className="space-y-2">
                     {resources.map((resource, resourceIndex) => (
                       <div
                         key={`${resource.name}-${resourceIndex}`}
-                        className="rounded-lg border border-purple-500/10 bg-slate-900/40 px-3 py-2"
+                        className="rounded-lg border border-purple-200 dark:border-purple-500/10 bg-neutral-50 dark:bg-slate-900/40 px-3 py-2"
                       >
-                        <div className="text-sm text-purple-200">{resource.name}</div>
-                        <div className="text-xs text-slate-500 mt-1 break-all">{resource.uri}</div>
+                        <div className="text-sm text-purple-700 dark:text-purple-200">{resource.name}</div>
+                        <div className="text-xs text-neutral-500 dark:text-slate-500 mt-1 break-all">{resource.uri}</div>
                       </div>
                     ))}
                   </div>
@@ -992,28 +993,28 @@ function MCPCard({ mcp, index }: { mcp: MCPWithPublisher; index: number }) {
       </AnimatePresence>
 
       {/* Publisher info */}
-      <div className="flex items-center justify-between px-4 py-3 border-t border-slate-700/30">
+      <div className="flex items-center justify-between px-4 py-3 border-t border-neutral-100 dark:border-slate-700/30">
         {mcp.publisher ? (
           <div className="flex items-center gap-2">
             {mcp.publisher.avatar_svg ? (
               <div
-                className="w-5 h-5 rounded-full overflow-hidden bg-slate-700 flex items-center justify-center"
+                className="w-5 h-5 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-700 flex items-center justify-center"
                 dangerouslySetInnerHTML={{ __html: mcp.publisher.avatar_svg }}
               />
             ) : (
-              <div className="w-5 h-5 rounded-full bg-slate-700 flex items-center justify-center">
-                <User className="h-3 w-3 text-slate-400" />
+              <div className="w-5 h-5 rounded-full bg-neutral-100 dark:bg-slate-700 flex items-center justify-center">
+                <User className="h-3 w-3 text-neutral-400 dark:text-slate-400" />
               </div>
             )}
-            <span className="text-xs text-slate-400 flex items-center gap-1">
+            <span className="text-xs text-neutral-500 dark:text-slate-400 flex items-center gap-1">
               {mcp.publisher.name}
               {mcp.publisher.is_verified && (
-                <span className="text-blue-400" title="Verified">✓</span>
+                <span className="text-blue-500 dark:text-blue-400" title="Verified">✓</span>
               )}
             </span>
           </div>
         ) : mcp.playbook_name && (
-          <span className="text-xs text-slate-500 flex items-center gap-1">
+          <span className="text-xs text-neutral-500 dark:text-slate-500 flex items-center gap-1">
             <BookOpen className="h-3 w-3" />
             {mcp.playbook_name}
           </span>
