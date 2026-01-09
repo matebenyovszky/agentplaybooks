@@ -2368,7 +2368,7 @@ app.get("/public/playbooks", async (c) => {
   let query = supabase
     .from("playbooks")
     .select(`
-      id, guid, name, description, config, star_count, tags, created_at, updated_at, user_id,
+      id, guid, name, description, config, visibility, star_count, tags, created_at, updated_at, user_id,
       persona_name,
       skills:skills(count),
       mcp_servers:mcp_servers(count),
@@ -2555,6 +2555,7 @@ app.get("/public/skills", async (c) => {
     .from("skills")
     .select(`
       *,
+      skill_attachments(*),
       playbook:playbooks!inner(id, guid, name, visibility),
       publisher:profiles(id, display_name, avatar_svg, website_url, is_verified, is_virtual)
     `)
@@ -2605,6 +2606,7 @@ app.get("/public/skills/:id", async (c) => {
     .from("skills")
     .select(`
       *,
+      skill_attachments(*),
       playbook:playbooks!inner(id, guid, name, visibility)
     `)
     .eq("id", id)

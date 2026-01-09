@@ -178,62 +178,6 @@ export const FloatingNav = ({
           </Link>
         ))}
 
-        {/* Theme Toggle */}
-        <button
-          onClick={() => {
-            if (theme === "light") setTheme("dark");
-            else if (theme === "dark") setTheme("system");
-            else setTheme("light");
-          }}
-          className="relative dark:text-neutral-50 text-neutral-600 dark:hover:text-amber-400 hover:text-amber-600 transition-colors p-1"
-          title={`Theme: ${theme.charAt(0).toUpperCase() + theme.slice(1)}`}
-        >
-          {theme === "light" && <Sun className="h-4 w-4" />}
-          {theme === "dark" && <Moon className="h-4 w-4" />}
-          {theme === "system" && <Laptop className="h-4 w-4" />}
-        </button>
-
-        {/* Language selector */}
-        <div className="relative">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setLangMenuOpen(!langMenuOpen);
-            }}
-            className="flex items-center gap-1 text-sm dark:text-neutral-50 text-neutral-600 dark:hover:text-amber-400 hover:text-amber-600 transition-colors px-2 py-1"
-          >
-            <span>{localeFlags[currentLocale]}</span>
-            <ChevronDown className={cn("h-3 w-3 transition-transform", langMenuOpen && "rotate-180")} />
-          </button>
-
-          <AnimatePresence>
-            {langMenuOpen && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.15 }}
-                className="absolute top-full right-0 mt-2 py-2 dark:bg-neutral-900 bg-white border dark:border-neutral-700 border-neutral-200 rounded-lg shadow-xl min-w-[140px]"
-                onClick={(e) => e.stopPropagation()}
-              >
-                {locales.map((locale) => (
-                  <button
-                    key={locale}
-                    onClick={() => handleLocaleSelect(locale)}
-                    className={cn(
-                      "w-full px-4 py-2 text-left text-sm flex items-center gap-2 dark:hover:bg-neutral-800 hover:bg-neutral-100 transition-colors",
-                      currentLocale === locale ? "text-amber-400" : "dark:text-neutral-300 text-neutral-600"
-                    )}
-                  >
-                    <span>{localeFlags[locale]}</span>
-                    <span>{localeNames[locale]}</span>
-                  </button>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
         {/* Auth section - show user menu or sign in */}
         {user ? (
           <div className="relative">
@@ -295,6 +239,21 @@ export const FloatingNav = ({
             <span>{t("common.signIn")}</span>
           </Link>
         )}
+
+        {/* Theme Toggle */}
+        <button
+          onClick={() => {
+            if (theme === "light") setTheme("dark");
+            else if (theme === "dark") setTheme("system");
+            else setTheme("light");
+          }}
+          className="relative dark:text-neutral-50 text-neutral-600 dark:hover:text-amber-400 hover:text-amber-600 transition-colors p-1"
+          title={`Theme: ${theme.charAt(0).toUpperCase() + theme.slice(1)}`}
+        >
+          {theme === "light" && <Sun className="h-4 w-4" />}
+          {theme === "dark" && <Moon className="h-4 w-4" />}
+          {theme === "system" && <Laptop className="h-4 w-4" />}
+        </button>
       </motion.div>
     </AnimatePresence>
   );

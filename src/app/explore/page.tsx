@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { FloatingNav } from "@/components/ui/floating-navbar";
 import { createBrowserClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
-import { 
+import {
   Search,
   BookOpen,
   Globe,
@@ -59,10 +59,12 @@ interface PublicPlaybook {
 type TabType = "playbooks" | "skills" | "mcp";
 type SortType = "stars" | "recent" | "name";
 
+import { FileText, Link as LinkIcon, AlertCircle } from "lucide-react"; // Import missing icons
+
 export default function ExplorePage() {
   const t = useTranslations();
   const [activeTab, setActiveTab] = useState<TabType>("playbooks");
-  
+
   // Playbooks state
   const [playbooks, setPlaybooks] = useState<PublicPlaybook[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -86,7 +88,7 @@ export default function ExplorePage() {
       .from("playbook_stars")
       .select("playbook_id")
       .eq("user_id", uid);
-    
+
     if (data) {
       setStarredIds(new Set(data.map(s => s.playbook_id)));
     }
@@ -103,7 +105,7 @@ export default function ExplorePage() {
 
   const loadPlaybooks = useCallback(async () => {
     setLoading(true);
-    
+
     try {
       const params = new URLSearchParams();
       if (searchQuery) params.set("search", searchQuery);
@@ -112,13 +114,13 @@ export default function ExplorePage() {
 
       const res = await fetch(`/api/public/playbooks?${params}`);
       const data = await res.json();
-      
+
       setPlaybooks(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Failed to load playbooks:", error);
       setPlaybooks([]);
     }
-    
+
     setLoading(false);
   }, [searchQuery, selectedTags, sortBy]);
 
@@ -177,24 +179,24 @@ export default function ExplorePage() {
         .delete()
         .eq("playbook_id", playbookId)
         .eq("user_id", userId);
-      
+
       setStarredIds(prev => {
         const next = new Set(prev);
         next.delete(playbookId);
         return next;
       });
-      
-      setPlaybooks(prev => prev.map(p => 
+
+      setPlaybooks(prev => prev.map(p =>
         p.id === playbookId ? { ...p, star_count: Math.max(0, p.star_count - 1) } : p
       ));
     } else {
       await supabase
         .from("playbook_stars")
         .insert({ playbook_id: playbookId, user_id: userId });
-      
+
       setStarredIds(prev => new Set(prev).add(playbookId));
-      
-      setPlaybooks(prev => prev.map(p => 
+
+      setPlaybooks(prev => prev.map(p =>
         p.id === playbookId ? { ...p, star_count: p.star_count + 1 } : p
       ));
     }
@@ -223,12 +225,12 @@ export default function ExplorePage() {
   };
 
   // Filtered skills and MCP servers
-  const filteredSkills = skills.filter(s => 
+  const filteredSkills = skills.filter(s =>
     s.name.toLowerCase().includes(skillSearch.toLowerCase()) ||
     (s.description || "").toLowerCase().includes(skillSearch.toLowerCase())
   );
 
-  const filteredMCPs = mcpServers.filter(m => 
+  const filteredMCPs = mcpServers.filter(m =>
     m.name.toLowerCase().includes(mcpSearch.toLowerCase()) ||
     (m.description || "").toLowerCase().includes(mcpSearch.toLowerCase())
   );
@@ -246,14 +248,14 @@ export default function ExplorePage() {
       {/* Hero */}
       <section className="pt-32 pb-8 px-4">
         <div className="max-w-4xl mx-auto text-center">
-          <motion.h1 
+          <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="text-4xl md:text-5xl font-bold mb-4 gradient-text"
           >
             {t("explore.title")}
           </motion.h1>
-          <motion.p 
+          <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
@@ -350,7 +352,7 @@ export default function ExplorePage() {
                   <div className="flex items-center gap-2 text-sm text-slate-400">
                     <span>{playbooks.length} {t("explore.playbooks")}</span>
                   </div>
-                  
+
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-slate-400">{t("explore.sortBy")}:</span>
                     <select
@@ -384,9 +386,9 @@ export default function ExplorePage() {
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {playbooks.map((playbook, idx) => (
-                      <PlaybookCard 
-                        key={playbook.id} 
-                        playbook={playbook} 
+                      <PlaybookCard
+                        key={playbook.id}
+                        playbook={playbook}
                         index={idx}
                         isStarred={starredIds.has(playbook.id)}
                         onToggleStar={() => toggleStar(playbook.id)}
@@ -540,7 +542,7 @@ export default function ExplorePage() {
 
 function EmptyState({ type }: { type: "playbooks" | "skills" | "mcp" }) {
   const t = useTranslations();
-  
+
   const config = {
     playbooks: { icon: Globe, color: "text-blue-700", title: t("explore.noPlaybooks"), desc: t("explore.noPlaybooksDesc") },
     skills: { icon: Zap, color: "text-purple-700", title: t("explore.noSkills"), desc: t("explore.noSkillsDesc") },
@@ -548,7 +550,7 @@ function EmptyState({ type }: { type: "playbooks" | "skills" | "mcp" }) {
   };
 
   const { icon: Icon, color, title, desc } = config[type];
-  
+
   return (
     <div className="text-center py-16">
       <div className="w-16 h-16 mx-auto mb-4 bg-blue-900/30 rounded-full flex items-center justify-center">
@@ -614,7 +616,7 @@ function PlaybookCard({ playbook, index, isStarred, onToggleStar, isLoggedIn, is
               {playbook.publisher && (
                 <div className="flex items-center gap-2">
                   {playbook.publisher.avatar_svg ? (
-                    <div 
+                    <div
                       className="w-5 h-5 rounded-full overflow-hidden bg-slate-700 flex items-center justify-center"
                       dangerouslySetInnerHTML={{ __html: playbook.publisher.avatar_svg }}
                     />
@@ -632,7 +634,7 @@ function PlaybookCard({ playbook, index, isStarred, onToggleStar, isLoggedIn, is
                 </div>
               )}
             </div>
-            
+
             <button
               onClick={(e) => {
                 e.preventDefault();
@@ -641,8 +643,8 @@ function PlaybookCard({ playbook, index, isStarred, onToggleStar, isLoggedIn, is
               }}
               className={cn(
                 "flex items-center gap-1 px-3 py-1.5 rounded-lg transition-all",
-                isStarred 
-                  ? "bg-amber-500/20 text-amber-400" 
+                isStarred
+                  ? "bg-amber-500/20 text-amber-400"
                   : "bg-slate-800/50 text-slate-400 hover:text-amber-400 hover:bg-amber-500/10"
               )}
               title={isLoggedIn ? (isStarred ? "Unstar" : "Star") : "Sign in to star"}
@@ -720,6 +722,7 @@ interface SkillWithPublisher extends Skill {
     is_verified?: boolean;
     is_virtual?: boolean;
   };
+  skill_attachments?: any[];
 }
 
 function SkillCard({ skill, index }: { skill: SkillWithPublisher; index: number }) {
@@ -741,7 +744,7 @@ function SkillCard({ skill, index }: { skill: SkillWithPublisher; index: number 
       transition={{ delay: index * 0.03 }}
       className={cn(
         "p-4 rounded-xl",
-        isMarkdownSkill 
+        isMarkdownSkill
           ? "bg-gradient-to-br from-emerald-900/20 to-slate-900/80 border-emerald-500/20 hover:border-emerald-500/40"
           : "bg-gradient-to-br from-purple-900/20 to-slate-900/80 border-purple-500/20 hover:border-purple-500/40",
         "border transition-all"
@@ -761,7 +764,7 @@ function SkillCard({ skill, index }: { skill: SkillWithPublisher; index: number 
           onClick={copyToClipboard}
           className={cn(
             "p-1.5 rounded-lg transition-colors",
-            isMarkdownSkill 
+            isMarkdownSkill
               ? "text-slate-400 hover:text-emerald-400 hover:bg-emerald-500/10"
               : "text-slate-400 hover:text-purple-400 hover:bg-purple-500/10"
           )}
@@ -770,11 +773,11 @@ function SkillCard({ skill, index }: { skill: SkillWithPublisher; index: number 
           {copied ? <Check className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4" />}
         </button>
       </div>
-      
+
       {skill.description && (
         <p className="text-sm text-slate-400 mb-3 line-clamp-2">{skill.description}</p>
       )}
-      
+
       {/* Show token count for markdown skills, or JSON preview for schema skills */}
       {isMarkdownSkill ? (
         <div className="text-xs text-slate-500 mb-2">
@@ -785,13 +788,28 @@ function SkillCard({ skill, index }: { skill: SkillWithPublisher; index: number 
           <pre className="text-xs text-slate-500 font-mono line-clamp-3">{JSON.stringify(skill.definition, null, 2)}</pre>
         </div>
       )}
-      
+
+      {/* Attachments */}
+      {skill.skill_attachments && skill.skill_attachments.length > 0 && (
+        <div className="mb-3 flex flex-wrap gap-2">
+          {skill.skill_attachments.map((att: any, i: number) => (
+            <div
+              key={i}
+              className="flex items-center gap-1.5 px-2 py-1 bg-slate-800/50 border border-slate-700/50 rounded text-xs text-slate-300 max-w-full"
+            >
+              {att.type === 'file' ? <FileText className="h-3 w-3" /> : <LinkIcon className="h-3 w-3" />}
+              <span className="truncate max-w-[150px]">{att.url || att.filename}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Publisher info */}
       <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-700/30">
         {skill.publisher ? (
           <div className="flex items-center gap-2">
             {skill.publisher.avatar_svg ? (
-              <div 
+              <div
                 className="w-5 h-5 rounded-full overflow-hidden bg-slate-700 flex items-center justify-center"
                 dangerouslySetInnerHTML={{ __html: skill.publisher.avatar_svg }}
               />
@@ -972,7 +990,7 @@ function MCPCard({ mcp, index }: { mcp: MCPWithPublisher; index: number }) {
         {mcp.publisher ? (
           <div className="flex items-center gap-2">
             {mcp.publisher.avatar_svg ? (
-              <div 
+              <div
                 className="w-5 h-5 rounded-full overflow-hidden bg-slate-700 flex items-center justify-center"
                 dangerouslySetInnerHTML={{ __html: mcp.publisher.avatar_svg }}
               />

@@ -8,7 +8,7 @@ Welcome to the AgentPlaybooks documentation.
 - [What is a Playbook?](./playbooks.md) - Understanding the core concept
 - [Getting Started](./getting-started.md) - First steps with AgentPlaybooks
 - [Platform Integrations](./platform-integrations.md) - Connect to ChatGPT, Claude, Gemini, Grok & more
-- [Architecture](./architecture.md) - System design and components
+- [Roadmap](./roadmap.md) - Development roadmap and future plans
 
 ### Core Concepts
 - [Playbooks](./playbooks.md) - Complete agent operating environment
@@ -21,7 +21,7 @@ Welcome to the AgentPlaybooks documentation.
 - [Management API & MCP](./management-api.md) - AI-driven playbook management
 - [Developer Guide](./developer-guide.md) - Contributing and development
 - [Self-Hosting](./self-hosting.md) - Deploy your own instance
-- [Roadmap](./roadmap.md) - Development roadmap and future plans
+- [Architecture](./architecture.md) - System design and components
 
 ## What is AgentPlaybooks?
 
