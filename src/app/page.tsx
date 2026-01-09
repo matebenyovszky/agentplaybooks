@@ -161,7 +161,7 @@ export default function LandingPage() {
             {["Agent Rules", "AI Chores", "Skills Store", "Anthropic Skills", "skills.md", "MCP Protocol", "Agent Memory", "OpenAPI", "JSON Schema", "Cursor Rules"].map((tech) => (
               <span
                 key={tech}
-                className="px-3 py-1 text-sm bg-blue-950/50 border border-blue-800/50 rounded-full text-blue-300"
+                className="px-3 py-1 text-sm bg-amber-100 dark:bg-amber-950/50 border border-amber-300 dark:border-amber-800/50 rounded-full text-amber-700 dark:text-amber-300"
               >
                 {tech}
               </span>

@@ -723,10 +723,10 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0f1a] flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 text-blue-500 animate-spin" />
-          <p className="text-slate-400">Loading playbook...</p>
+          <p className="text-neutral-600 dark:text-slate-400">Loading playbook...</p>
         </div>
       </div>
     );
@@ -734,12 +734,12 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
 
   if (!playbook) {
     return (
-      <div className="min-h-screen bg-[#0a0f1a] flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <p className="text-xl text-slate-400 mb-4">Playbook not found</p>
+          <p className="text-xl text-neutral-600 dark:text-slate-400 mb-4">Playbook not found</p>
           <Link
             href="/dashboard"
-            className="text-blue-400 hover:text-blue-300 transition-colors"
+            className="text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 transition-colors"
           >
             ← Back to Dashboard
           </Link>
@@ -749,14 +749,14 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0f1a] text-white">
+    <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-blue-900/30 bg-[#0a0f1a]/90 backdrop-blur-md px-6 py-4">
+      <header className="sticky top-0 z-40 border-b border-neutral-200 dark:border-blue-900/30 bg-white/90 dark:bg-[#0a0f1a]/90 backdrop-blur-md px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link
               href="/dashboard"
-              className="p-2 hover:bg-slate-800/50 rounded-lg transition-colors text-slate-400 hover:text-white"
+              className="p-2 hover:bg-neutral-100 dark:hover:bg-slate-800/50 rounded-lg transition-colors text-neutral-500 dark:text-slate-400 hover:text-neutral-900 dark:hover:text-white"
             >
               <ArrowLeft className="h-5 w-5" />
             </Link>
@@ -768,14 +768,14 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                   onChange={(e) => updatePlaybook({ name: e.target.value })}
                   className={cn(
                     "text-xl font-bold bg-transparent border-none focus:outline-none",
-                    "text-white placeholder:text-slate-500",
-                    "hover:bg-slate-800/50 focus:bg-slate-800/70 rounded px-2 py-1 -ml-2"
+                    "text-neutral-900 dark:text-white placeholder:text-neutral-400 dark:placeholder:text-slate-500",
+                    "hover:bg-neutral-100 dark:hover:bg-slate-800/50 focus:bg-neutral-100 dark:focus:bg-slate-800/70 rounded px-2 py-1 -ml-2"
                   )}
                 />
               ) : (
-                <h1 className="text-xl font-bold text-white px-2 py-1 -ml-2">{playbook.name}</h1>
+                <h1 className="text-xl font-bold text-neutral-900 dark:text-white px-2 py-1 -ml-2">{playbook.name}</h1>
               )}
-              <div className="flex items-center gap-2 text-sm text-slate-500 px-2">
+              <div className="flex items-center gap-2 text-sm text-neutral-500 dark:text-slate-500 px-2">
                 <code className="font-mono">/{playbook.guid}</code>
                 <button
                   onClick={() => copyToClipboard(`${getBaseUrl()}/api/playbooks/${playbook.guid}`, "api-url")}
@@ -795,7 +795,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
           <div className="flex items-center gap-3">
             {/* Read-only badge for non-owners */}
             {!isOwner && (
-              <span className="px-3 py-1.5 bg-slate-700/50 text-slate-400 text-sm rounded-lg border border-slate-600/50 flex items-center gap-2">
+              <span className="px-3 py-1.5 bg-neutral-100 dark:bg-slate-700/50 text-neutral-600 dark:text-slate-400 text-sm rounded-lg border border-neutral-200 dark:border-slate-600/50 flex items-center gap-2">
                 <Eye className="h-4 w-4" />
                 {t("editor.readOnly") || "Read Only"}
               </span>
@@ -901,7 +901,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
       </header>
 
       {/* Tabs */}
-      <div className="border-b border-blue-900/30 bg-[#0a0f1a]/50">
+      <div className="border-b border-neutral-200 dark:border-blue-900/30 bg-neutral-50 dark:bg-[#0a0f1a]/50">
         <div className="max-w-7xl mx-auto px-6">
           <nav className="flex gap-1 -mb-px overflow-x-auto">
             {tabs.map((tab) => (
@@ -911,8 +911,8 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                 className={cn(
                   "px-4 py-3 flex items-center gap-2 text-sm font-medium border-b-2 transition-all whitespace-nowrap",
                   activeTab === tab.id
-                    ? `border-${tab.color}-500 text-white`
-                    : "border-transparent text-slate-400 hover:text-white hover:border-slate-700"
+                    ? `border-${tab.color}-500 text-neutral-900 dark:text-white`
+                    : "border-transparent text-neutral-500 dark:text-slate-400 hover:text-neutral-900 dark:hover:text-white hover:border-neutral-300 dark:hover:border-slate-700"
                 )}
                 style={{
                   borderBottomColor: activeTab === tab.id
@@ -928,7 +928,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                 <tab.icon className="h-4 w-4" />
                 {tab.label}
                 {tab.count > 0 && (
-                  <span className="px-2 py-0.5 bg-slate-800 rounded-full text-xs">
+                  <span className="px-2 py-0.5 bg-neutral-100 dark:bg-slate-800 rounded-full text-xs">
                     {tab.count}
                   </span>
                 )}

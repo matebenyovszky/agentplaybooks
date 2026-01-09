@@ -255,7 +255,7 @@ export default function DocsPageClient({ initialSlug = "readme", initialContent 
             <motion.article
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="prose dark:prose-invert max-w-none"
+              className="prose prose-neutral dark:prose-invert max-w-none"
             >
               <MarkdownRenderer content={content} />
             </motion.article>

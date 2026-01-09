@@ -10,7 +10,7 @@
     "explore": "Felfedezés",
     "docs": "Dokumentáció",
     "enterprise": "Vállalati",
-    "selfHost": "Önálló futtatás",
+    "selfHost": "Saját üzemeltetés",
     "pricing": "Árazás",
     "settings": "Beállítások",
     "blog": "Blog"
@@ -19,8 +19,8 @@
     "hero": {
       "title": "Az AI Univerzális Memóriája",
       "subtitle": "Adj AI agentjeidnek, GPT-idnek és robotjaidnak egy platformfüggetlen tárhelyet. Tárold a skilleket, personákat és MCP szervereket - válts AI platformot anélkül, hogy bármit elveszítenél.",
-      "cta": "Playbook-ok Felfedezése",
-      "tryDemo": "Próbáld Ki"
+      "cta": "Playbook-ok felfedezése",
+      "tryDemo": "Próbáld ki"
     },
     "whatIsPlaybook": {
       "title": "Mi az a Playbook?",
@@ -29,17 +29,17 @@
       "components": {
         "persona": {
           "title": "Persona",
-          "subtitle": "Személyiség és Stílus",
+          "subtitle": "Személyiség és stílus",
           "description": "Az agent alap személyisége, kommunikációs stílusa és system prompt. Ez határozza meg, HOGYAN viselkedik és válaszol az agent."
         },
         "skills": {
           "title": "Skillek",
-          "subtitle": "Tudás és Képességek",
+          "subtitle": "Tudás és képességek",
           "description": "Strukturált feladatdefiníciók és tudás, amit az agent használhat. A skillek határozzák meg, MIT tud az agent. Később: dokumentumok csatolása mélyebb tudáshoz."
         },
         "mcp": {
           "title": "MCP Szerverek",
-          "subtitle": "Eszközök és Integrációk",
+          "subtitle": "Eszközök és integrációk",
           "description": "Külső eszközök és API-k, amiket az agent elérhet a Model Context Protocol-on keresztül. A kódfuttatás magánál az agentnél történik - ezek a csatlakozások."
         },
         "canvas": {
@@ -49,14 +49,14 @@
         },
         "memory": {
           "title": "Memória",
-          "subtitle": "Perzisztens Kontextus",
+          "subtitle": "Perzisztens kontextus",
           "description": "Kulcs-érték tároló tények, preferenciák és állapot megjegyzésére munkamenetek között. Az agent hosszú távú memóriája."
         }
       },
-      "cta": "Hozd Létre Első Playbookodat"
+      "cta": "Hozd létre első playbookodat"
     },
     "features": {
-      "title": "Minden, Amire AI-odnak Szüksége Van",
+      "title": "Minden, amire AI-odnak szüksége van",
       "personas": {
         "title": "Personák",
         "description": "Definiálj system promptokat és AI személyiségeket, amelyek bármely platformon működnek"
@@ -79,22 +79,22 @@
         "description": "Perzisztens kulcs-érték tároló, amit AI-od olvashat és írhat"
       },
       "formats": {
-        "title": "AI Platform Kompatibilis",
+        "title": "AI platform kompatibilis",
         "description": "Minden nagy AI platformmal működik - OpenAI Actions, Anthropic MCP & Skills, Gemini Functions, és még sok más"
       },
       "api": {
-        "title": "API Kulcs Hozzáférés",
+        "title": "API kulcs hozzáférés",
         "description": "Engedd, hogy AI-od visszaírjon - frissítse a memóriát, skilleket és personákat programozottan"
       }
     },
     "howItWorks": {
-      "title": "Hogyan Működik",
+      "title": "Hogyan működik",
       "step1": {
-        "title": "Hozz Létre Playbookot",
+        "title": "Hozz létre playbookot",
         "description": "Definiáld a personákat, skilleket és MCP konfigurációkat egy helyen"
       },
       "step2": {
-        "title": "Publikálj és Oszd Meg",
+        "title": "Publikálj és oszd meg",
         "description": "Kapj egy egyedi URL-t, ami bármilyen formátumban szolgálja a playbokodat"
       },
       "step3": {
@@ -103,10 +103,10 @@
       }
     },
     "publicRepo": {
-      "title": "Közösségi Repository",
+      "title": "Közösségi készlet",
       "description": "Böngéssz és adj hozzá előre elkészített skilleket és MCP szervereket a közösségtől",
-      "browseSkills": "Skillek Böngészése",
-      "browseMCP": "MCP Szerverek Böngészése"
+      "browseSkills": "Skillek böngészése",
+      "browseMCP": "MCP szerverek böngészése"
     },
     "useCases": {
       "title": "Ismerős?",
@@ -142,24 +142,24 @@
   },
   "enterprise": {
     "hero": {
-      "title": "Vállalati AI Orchestráció",
+      "title": "Vállalati AI rendszerezés",
       "subtitle": "Szabványosítsd, hogyan dolgozik csapatod az AI-val. Hozz létre megosztott playbookokat betanításhoz, legjobb gyakorlatokhoz és konzisztens AI viselkedéshez a szervezeteden belül."
     },
     "features": {
       "onboarding": {
-        "title": "AI-Támogatott Betanítás",
+        "title": "Egyszerűsített betanítás és AI onboarding",
         "description": "Új munkatársak vagy AI agentek azonnal megtanulják folyamataidat szabványos playbookok letöltésével"
       },
       "bestPractices": {
-        "title": "Kodifikált Legjobb Gyakorlatok",
+        "title": "Kodifikált legjobb gyakorlatok",
         "description": "Alakítsd a csapattudást strukturált skillekké, amit bármely AI követni tud"
       },
       "consistency": {
-        "title": "Konzisztens AI Viselkedés",
+        "title": "Konzisztens AI viselkedés",
         "description": "Minden csapattag AI asszisztense ugyanazokat az irányelveket és eljárásokat követi"
       },
       "governance": {
-        "title": "AI Governance",
+        "title": "AI governance",
         "description": "Kontrollálj, milyen skillek és képességek érhetők el AI agentjeid számára szervezetedben"
       }
     },

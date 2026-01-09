@@ -782,17 +782,17 @@ function SkillCard({ skill, index }: { skill: SkillWithPublisher; index: number 
       </div>
 
       {skill.description && (
-        <p className="text-sm text-slate-400 mb-3 line-clamp-2">{skill.description}</p>
+        <p className="text-sm text-neutral-600 dark:text-slate-400 mb-3 line-clamp-2">{skill.description}</p>
       )}
 
       {/* Show token count for markdown skills, or JSON preview for schema skills */}
       {isMarkdownSkill ? (
-        <div className="text-xs text-slate-500 mb-2">
+        <div className="text-xs text-neutral-500 dark:text-slate-500 mb-2">
           ~{Math.round((skill.content?.length || 0) / 4).toLocaleString()} tokens
         </div>
       ) : skill.definition && Object.keys(skill.definition).length > 0 && (
-        <div className="bg-slate-900/50 rounded-lg p-2 max-h-24 overflow-hidden mb-2">
-          <pre className="text-xs text-slate-500 font-mono line-clamp-3">{JSON.stringify(skill.definition, null, 2)}</pre>
+        <div className="bg-neutral-100 dark:bg-slate-900/50 rounded-lg p-2 max-h-24 overflow-hidden mb-2">
+          <pre className="text-xs text-neutral-600 dark:text-slate-500 font-mono line-clamp-3">{JSON.stringify(skill.definition, null, 2)}</pre>
         </div>
       )}
 
@@ -802,7 +802,7 @@ function SkillCard({ skill, index }: { skill: SkillWithPublisher; index: number 
           {skill.skill_attachments.map((att: SkillAttachment, i: number) => (
             <div
               key={i}
-              className="flex items-center gap-1.5 px-2 py-1 bg-slate-800/50 border border-slate-700/50 rounded text-xs text-slate-300 max-w-full"
+              className="flex items-center gap-1.5 px-2 py-1 bg-neutral-100 dark:bg-slate-800/50 border border-neutral-200 dark:border-slate-700/50 rounded text-xs text-neutral-600 dark:text-slate-300 max-w-full"
             >
               {att.type === 'file' ? <FileText className="h-3 w-3" /> : <LinkIcon className="h-3 w-3" />}
               <span className="truncate max-w-[150px]">{att.url || att.filename}</span>
@@ -812,28 +812,28 @@ function SkillCard({ skill, index }: { skill: SkillWithPublisher; index: number 
       )}
 
       {/* Publisher info */}
-      <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-700/30">
+      <div className="flex items-center justify-between mt-2 pt-2 border-t border-neutral-100 dark:border-slate-700/30">
         {skill.publisher ? (
           <div className="flex items-center gap-2">
             {skill.publisher.avatar_svg ? (
               <div
-                className="w-5 h-5 rounded-full overflow-hidden bg-slate-700 flex items-center justify-center"
+                className="w-5 h-5 rounded-full overflow-hidden bg-neutral-100 dark:bg-slate-700 flex items-center justify-center"
                 dangerouslySetInnerHTML={{ __html: skill.publisher.avatar_svg }}
               />
             ) : (
-              <div className="w-5 h-5 rounded-full bg-slate-700 flex items-center justify-center">
-                <User className="h-3 w-3 text-slate-400" />
+              <div className="w-5 h-5 rounded-full bg-neutral-100 dark:bg-slate-700 flex items-center justify-center">
+                <User className="h-3 w-3 text-neutral-400 dark:text-slate-400" />
               </div>
             )}
-            <span className="text-xs text-slate-400 flex items-center gap-1">
+            <span className="text-xs text-neutral-500 dark:text-slate-400 flex items-center gap-1">
               {skill.publisher.name}
               {skill.publisher.is_verified && (
-                <span className="text-blue-400" title="Verified">✓</span>
+                <span className="text-blue-500 dark:text-blue-400" title="Verified">✓</span>
               )}
             </span>
           </div>
         ) : skill.playbook_name && (
-          <span className="text-xs text-slate-500 flex items-center gap-1">
+          <span className="text-xs text-neutral-500 dark:text-slate-500 flex items-center gap-1">
             <BookOpen className="h-3 w-3" />
             {skill.playbook_name}
           </span>
