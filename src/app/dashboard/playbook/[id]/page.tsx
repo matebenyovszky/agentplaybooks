@@ -219,15 +219,8 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
       name: defaultName,
       description: "",
       content: null,
+      licence: null,
       publisher_id: currentUserId,
-      definition: {
-        parameters: {
-          type: "object",
-          properties: {},
-          required: []
-        }
-      },
-      examples: [],
       priority: null,
     });
 
@@ -262,8 +255,8 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
         playbook_id: id,
         name: publicSkill.name,
         description: publicSkill.description,
-        definition: publicSkill.definition,
-        examples: publicSkill.examples,
+        content: publicSkill.content,
+        licence: publicSkill.licence,
       })
       .select()
       .single();
@@ -394,8 +387,8 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
             playbook_id: newPlaybook.id,
             name: s.name,
             description: s.description,
-            definition: s.definition,
-            examples: s.examples,
+            content: s.content,
+            licence: s.licence,
           }))
         );
       }
@@ -618,8 +611,8 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
       const skillsExport = skills.map((skill) => ({
         name: skill.name,
         description: skill.description,
-        definition: skill.definition,
-        examples: skill.examples,
+        content: skill.content,
+        licence: skill.licence,
       }));
 
       const mcpExport = mcpServers.map((server) => ({

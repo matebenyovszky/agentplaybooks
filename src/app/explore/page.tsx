@@ -737,8 +737,8 @@ function SkillCard({ skill, index }: { skill: SkillWithPublisher; index: number 
   const isMarkdownSkill = !!(skill.content && skill.content.length > 0);
 
   const copyToClipboard = async () => {
-    // Copy skill content (markdown) or definition (JSON)
-    const content = skill.content || JSON.stringify(skill.definition || {}, null, 2);
+    // Copy skill content or basic info as JSON
+    const content = skill.content || JSON.stringify({ name: skill.name, description: skill.description, licence: skill.licence }, null, 2);
     await navigator.clipboard.writeText(content);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -785,14 +785,14 @@ function SkillCard({ skill, index }: { skill: SkillWithPublisher; index: number 
         <p className="text-sm text-neutral-600 dark:text-slate-400 mb-3 line-clamp-2">{skill.description}</p>
       )}
 
-      {/* Show token count for markdown skills, or JSON preview for schema skills */}
+      {/* Show token count for skills with content, or licence info */}
       {isMarkdownSkill ? (
         <div className="text-xs text-neutral-500 dark:text-slate-500 mb-2">
           ~{Math.round((skill.content?.length || 0) / 4).toLocaleString()} tokens
         </div>
-      ) : skill.definition && Object.keys(skill.definition).length > 0 && (
-        <div className="bg-neutral-100 dark:bg-slate-900/50 rounded-lg p-2 max-h-24 overflow-hidden mb-2">
-          <pre className="text-xs text-neutral-600 dark:text-slate-500 font-mono line-clamp-3">{JSON.stringify(skill.definition, null, 2)}</pre>
+      ) : skill.licence && (
+        <div className="text-xs text-neutral-500 dark:text-slate-500 mb-2">
+          Licence: {skill.licence}
         </div>
       )}
 

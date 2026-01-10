@@ -14,14 +14,7 @@ export type McpResource = {
   mimeType?: string;
 };
 
-export type SkillDefinition = {
-  parameters?: {
-    type?: string;
-    properties?: Record<string, { type?: string; description?: string; enum?: string[];[key: string]: unknown }>;
-    required?: string[];
-  };
-  [key: string]: unknown;
-};
+
 
 export type PlaybooksRow = {
   id: string;
@@ -79,8 +72,7 @@ export type SkillsRow = {
   name: string;
   description: string | null;
   content: string | null; // Full markdown content (SKILL.md body)
-  definition: SkillDefinition;
-  examples: Record<string, unknown>[];
+  licence: string | null; // License information (e.g., MIT, Apache 2.0)
   created_at: string;
   priority: number | null;
 };

@@ -123,11 +123,12 @@ app.get("/", async (c) => {
   const tools: McpTool[] = [...PLAYBOOK_TOOLS];
 
   // Add skill-based tools (prefixed with skill_ to distinguish from built-in)
+  // Note: Skills no longer have parameters, so use empty schema
   for (const skill of skills) {
     tools.push({
       name: `skill_${skill.name.toLowerCase().replace(/\s+/g, "_")}`,
       description: skill.description || skill.name,
-      inputSchema: (skill.definition?.parameters || { type: "object", properties: {} }) as Record<string, unknown>,
+      inputSchema: { type: "object", properties: {} } as Record<string, unknown>,
     });
   }
 
@@ -242,10 +243,11 @@ app.post("/", async (c) => {
         .eq("playbook_id", playbook.id);
 
       // Skill-based tools (from playbook definition)
+      // Note: Skills no longer have parameters, use empty schema
       const skillTools = (skills || []).map((skill) => ({
         name: `skill_${skill.name.toLowerCase().replace(/\s+/g, "_")}`,
         description: skill.description || skill.name,
-        inputSchema: skill.definition?.parameters || { type: "object", properties: {} },
+        inputSchema: { type: "object", properties: {} },
       }));
 
       // Combine with built-in playbook tools

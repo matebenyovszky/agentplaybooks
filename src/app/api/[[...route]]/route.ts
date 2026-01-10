@@ -665,7 +665,7 @@ app.post("/playbooks/:id/skills", async (c) => {
   }
 
   const body = await c.req.json();
-  const { name, description, definition, examples } = body;
+  const { name, description, content, licence } = body;
 
   if (!name) {
     return c.json({ error: "Name is required" }, 400);
@@ -679,8 +679,8 @@ app.post("/playbooks/:id/skills", async (c) => {
       playbook_id: playbookId,
       name,
       description: description || null,
-      definition: definition || {},
-      examples: examples || [],
+      content: content || null,
+      licence: licence || null,
     })
     .select()
     .single();
@@ -707,15 +707,15 @@ app.put("/playbooks/:id/skills/:sid", async (c) => {
   }
 
   const body = await c.req.json();
-  const { name, description, definition, examples } = body;
+  const { name, description, content, licence } = body;
 
   const supabase = getServiceSupabase();
 
   const updateData: Record<string, unknown> = {};
   if (name !== undefined) updateData.name = name;
   if (description !== undefined) updateData.description = description;
-  if (definition !== undefined) updateData.definition = definition;
-  if (examples !== undefined) updateData.examples = examples;
+  if (content !== undefined) updateData.content = content;
+  if (licence !== undefined) updateData.licence = licence;
 
   const { data, error } = await supabase
     .from("skills")
@@ -1444,7 +1444,7 @@ app.post("/manage/playbooks/:id/skills", async (c) => {
   }
 
   const body = await c.req.json();
-  const { name, description, definition, examples } = body;
+  const { name, description, content, licence } = body;
 
   if (!name) {
     return c.json({ error: "Name is required" }, 400);
@@ -1458,8 +1458,8 @@ app.post("/manage/playbooks/:id/skills", async (c) => {
       playbook_id: playbookId,
       name,
       description: description || null,
-      definition: definition || {},
-      examples: examples || [],
+      content: content || null,
+      licence: licence || null,
     })
     .select()
     .single();
@@ -2717,12 +2717,13 @@ function formatAsOpenAPI(playbook: PlaybookWithExports) {
     : "";
 
   // Convert skills to OpenAPI-compatible tool definitions
+  // Note: Skills no longer have parameters (definition removed)
   const tools = playbook.skills.map((skill) => ({
     type: "function",
     function: {
       name: skill.name.toLowerCase().replace(/\s+/g, "_"),
       description: skill.description || skill.name,
-      parameters: skill.definition?.parameters || { type: "object", properties: {} },
+      parameters: { type: "object", properties: {} },
     },
   }));
 
@@ -2733,8 +2734,8 @@ function formatAsOpenAPI(playbook: PlaybookWithExports) {
     skillSchemas[`Skill_${skillName}`] = {
       type: "object",
       description: skill.description || skill.name,
-      properties: skill.definition?.parameters?.properties || {},
-      required: skill.definition?.parameters?.required || [],
+      properties: {},
+      required: [],
     };
   });
 
@@ -3092,7 +3093,7 @@ function formatAsMCP(playbook: PlaybookWithExports) {
   const tools = playbook.skills.map((skill) => ({
     name: skill.name.toLowerCase().replace(/\s+/g, "_"),
     description: skill.description || skill.name,
-    inputSchema: skill.definition?.parameters || { type: "object", properties: {} },
+    inputSchema: { type: "object", properties: {} },
   }));
 
   const resources = [
@@ -3115,10 +3116,9 @@ function formatAsMCP(playbook: PlaybookWithExports) {
     const mcpTools = (mcp.tools || []).map((tool) => ({
       name: tool.name,
       description: tool.description || tool.name,
-      inputSchema: (tool.inputSchema || { type: "object", properties: {} }) as {
-        type?: string;
-        properties?: Record<string, { type?: string; description?: string; enum?: string[];[key: string]: unknown }>;
-        required?: string[];
+      inputSchema: {
+        type: (tool.inputSchema?.type as string) || "object",
+        properties: (tool.inputSchema?.properties as Record<string, unknown>) || {},
       },
     }));
     tools.push(...mcpTools);
@@ -3161,7 +3161,7 @@ function formatAsAnthropic(playbook: PlaybookWithExports) {
   const tools = playbook.skills.map((skill) => ({
     name: skill.name.toLowerCase().replace(/\s+/g, "_"),
     description: skill.description || skill.name,
-    input_schema: skill.definition?.parameters || { type: "object", properties: {} },
+    input_schema: { type: "object", properties: {} },
   }));
 
   return {
@@ -3204,15 +3204,11 @@ function formatAsMarkdown(playbook: PlaybookWithExports): string {
       if (skill.description) {
         md += `${skill.description}\n\n`;
       }
-      if (skill.definition?.parameters) {
-        md += `**Parameters:**\n\`\`\`json\n${JSON.stringify(skill.definition.parameters, null, 2)}\n\`\`\`\n\n`;
+      if (skill.licence) {
+        md += `**Licence:** ${skill.licence}\n\n`;
       }
-      if (skill.examples?.length) {
-        md += `**Examples:**\n\n`;
-        for (const example of skill.examples) {
-          md += `- ${JSON.stringify(example)}\n`;
-        }
-        md += "\n";
+      if (skill.content) {
+        md += `**Content:**\n\n${skill.content}\n\n`;
       }
     }
   }
