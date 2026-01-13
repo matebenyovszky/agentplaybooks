@@ -134,7 +134,7 @@ export default function LandingPage() {
             </Link>
             <Link
               href="/login"
-              className="px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-500 rounded-full font-semibold text-lg text-white hover:opacity-90 transition-opacity flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25"
+              className="px-8 py-4 bg-gradient-to-r from-amber-600 to-amber-500 rounded-full font-semibold text-lg text-slate-900 hover:opacity-90 transition-opacity flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25"
             >
               <Play className="h-5 w-5" />
               {t("common.signIn")}
@@ -219,12 +219,12 @@ export default function LandingPage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0 }}
-              className="p-5 rounded-2xl dark:bg-gradient-to-b dark:from-blue-900/40 dark:to-blue-950/20 bg-white border dark:border-blue-700/30 border-blue-100 hover:border-blue-500/50 shadow-sm transition-all group"
+              className="p-5 rounded-2xl dark:bg-blue-950/30 bg-white border dark:border-blue-700/30 border-blue-100 hover:border-blue-500/50 shadow-sm transition-all group"
             >
               <div className="w-12 h-12 rounded-xl dark:bg-blue-500/20 bg-blue-100 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                 <Brain className="w-6 h-6 text-blue-500 dark:text-blue-400" />
               </div>
-              <h3 className="text-lg font-semibold mb-1">{t("landing.whatIsPlaybook.components.persona.title")}</h3>
+              <h3 className="text-lg font-semibold mb-1 text-neutral-900 dark:text-white">{t("landing.whatIsPlaybook.components.persona.title")}</h3>
               <p className="text-xs text-blue-600 dark:text-blue-300 mb-2">{t("landing.whatIsPlaybook.components.persona.subtitle")}</p>
               <p className="text-sm text-slate-600 dark:text-slate-400">{t("landing.whatIsPlaybook.components.persona.description")}</p>
             </motion.div>
@@ -235,12 +235,12 @@ export default function LandingPage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.1 }}
-              className="p-5 rounded-2xl dark:bg-gradient-to-b dark:from-amber-900/40 dark:to-amber-950/20 bg-white border dark:border-amber-700/30 border-amber-100 hover:border-amber-500/50 shadow-sm transition-all group"
+              className="p-5 rounded-2xl dark:bg-amber-950/30 bg-white border dark:border-amber-700/30 border-amber-100 hover:border-amber-500/50 shadow-sm transition-all group"
             >
               <div className="w-12 h-12 rounded-xl dark:bg-amber-500/20 bg-amber-100 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                 <Zap className="w-6 h-6 text-amber-500 dark:text-amber-400" />
               </div>
-              <h3 className="text-lg font-semibold mb-1">{t("landing.whatIsPlaybook.components.skills.title")}</h3>
+              <h3 className="text-lg font-semibold mb-1 text-neutral-900 dark:text-white">{t("landing.whatIsPlaybook.components.skills.title")}</h3>
               <p className="text-xs text-amber-600 dark:text-amber-300 mb-2">{t("landing.whatIsPlaybook.components.skills.subtitle")}</p>
               <p className="text-sm text-slate-600 dark:text-slate-400">{t("landing.whatIsPlaybook.components.skills.description")}</p>
             </motion.div>
@@ -251,12 +251,12 @@ export default function LandingPage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.2 }}
-              className="p-5 rounded-2xl dark:bg-gradient-to-b dark:from-purple-900/40 dark:to-purple-950/20 bg-white border dark:border-purple-700/30 border-purple-100 hover:border-purple-500/50 shadow-sm transition-all group"
+              className="p-5 rounded-2xl dark:bg-purple-950/30 bg-white border dark:border-purple-700/30 border-purple-100 hover:border-purple-500/50 shadow-sm transition-all group"
             >
               <div className="w-12 h-12 rounded-xl dark:bg-purple-500/20 bg-purple-100 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                 <Server className="w-6 h-6 text-purple-500 dark:text-purple-400" />
               </div>
-              <h3 className="text-lg font-semibold mb-1">{t("landing.whatIsPlaybook.components.mcp.title")}</h3>
+              <h3 className="text-lg font-semibold mb-1 text-neutral-900 dark:text-white">{t("landing.whatIsPlaybook.components.mcp.title")}</h3>
               <p className="text-xs text-purple-600 dark:text-purple-300 mb-2">{t("landing.whatIsPlaybook.components.mcp.subtitle")}</p>
               <p className="text-sm text-slate-600 dark:text-slate-400">{t("landing.whatIsPlaybook.components.mcp.description")}</p>
             </motion.div>
@@ -267,7 +267,7 @@ export default function LandingPage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.3 }}
-              className="p-5 rounded-2xl dark:bg-gradient-to-b dark:from-green-900/40 dark:to-green-950/20 bg-white border dark:border-green-700/30 border-green-100 hover:border-green-500/50 shadow-sm transition-all group relative opacity-70"
+              className="p-5 rounded-2xl dark:bg-green-950/30 bg-white border dark:border-green-700/30 border-green-100 hover:border-green-500/50 shadow-sm transition-all group relative opacity-70"
             >
               <span className="absolute top-2 right-2 px-2 py-0.5 text-[10px] font-medium bg-purple-500/20 text-purple-600 dark:text-purple-300 rounded-full border border-purple-500/30">
                 Coming Soon
@@ -275,7 +275,7 @@ export default function LandingPage() {
               <div className="w-12 h-12 rounded-xl dark:bg-green-500/20 bg-green-100 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                 <FileText className="w-6 h-6 text-green-500 dark:text-green-400" />
               </div>
-              <h3 className="text-lg font-semibold mb-1">{t("landing.whatIsPlaybook.components.canvas.title")}</h3>
+              <h3 className="text-lg font-semibold mb-1 text-neutral-900 dark:text-white">{t("landing.whatIsPlaybook.components.canvas.title")}</h3>
               <p className="text-xs text-green-600 dark:text-green-300 mb-2">{t("landing.whatIsPlaybook.components.canvas.subtitle")}</p>
               <p className="text-sm text-slate-600 dark:text-slate-400">{t("landing.whatIsPlaybook.components.canvas.description")}</p>
             </motion.div>
@@ -286,12 +286,12 @@ export default function LandingPage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.4 }}
-              className="p-5 rounded-2xl dark:bg-gradient-to-b dark:from-cyan-900/40 dark:to-cyan-950/20 bg-white border dark:border-cyan-700/30 border-cyan-100 hover:border-cyan-500/50 shadow-sm transition-all group"
+              className="p-5 rounded-2xl dark:bg-cyan-950/30 bg-white border dark:border-cyan-700/30 border-cyan-100 hover:border-cyan-500/50 shadow-sm transition-all group"
             >
               <div className="w-12 h-12 rounded-xl dark:bg-cyan-500/20 bg-cyan-100 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                 <Database className="w-6 h-6 text-cyan-500 dark:text-cyan-400" />
               </div>
-              <h3 className="text-lg font-semibold mb-1">{t("landing.whatIsPlaybook.components.memory.title")}</h3>
+              <h3 className="text-lg font-semibold mb-1 text-neutral-900 dark:text-white">{t("landing.whatIsPlaybook.components.memory.title")}</h3>
               <p className="text-xs text-cyan-600 dark:text-cyan-300 mb-2">{t("landing.whatIsPlaybook.components.memory.subtitle")}</p>
               <p className="text-sm text-slate-600 dark:text-slate-400">{t("landing.whatIsPlaybook.components.memory.description")}</p>
             </motion.div>

@@ -137,3 +137,57 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--primary-600);
 }
+
+/* Custom prose styles for better light mode readability */
+html:not(.dark) .prose {
+  --tw-prose-body: #374151;
+  --tw-prose-headings: #030712;
+  /* Gray 950 */
+  --tw-prose-lead: #4b5563;
+  --tw-prose-links: #2563eb;
+  --tw-prose-bold: #111827;
+  --tw-prose-counters: #6b7280;
+  --tw-prose-bullets: #4b5563;
+  --tw-prose-hr: #e5e7eb;
+  --tw-prose-quotes: #111827;
+  --tw-prose-quote-borders: #e5e7eb;
+  --tw-prose-captions: #6b7280;
+  --tw-prose-code: #111827;
+  --tw-prose-pre-code: #e5e7eb;
+  --tw-prose-pre-bg: #1f2937;
+  --tw-prose-th-borders: #d1d5db;
+  --tw-prose-td-borders: #e5e7eb;
+  color: #374151;
+  /* Fallback */
+}
+
+/* Force dark text for table cells specifically in light mode if not covered by prose vars */
+html:not(.dark) .prose td {
+  color: #374151;
+}
+
+html:not(.dark) .prose h1,
+html:not(.dark) .prose h2,
+html:not(.dark) .prose h3,
+html:not(.dark) .prose h4 {
+  color: #030712;
+}
+
+.dark .prose {
+  --tw-prose-body: #d1d5db;
+  --tw-prose-headings: #f9fafb;
+  --tw-prose-lead: #9ca3af;
+  --tw-prose-links: #60a5fa;
+  --tw-prose-bold: #f9fafb;
+  --tw-prose-counters: #9ca3af;
+  --tw-prose-bullets: #6b7280;
+  --tw-prose-hr: #374151;
+  --tw-prose-quotes: #f3f4f6;
+  --tw-prose-quote-borders: #374151;
+  --tw-prose-captions: #9ca3af;
+  --tw-prose-code: #f9fafb;
+  --tw-prose-pre-code: #d1d5db;
+  --tw-prose-pre-bg: #111827;
+  --tw-prose-th-borders: #4b5563;
+  --tw-prose-td-borders: #374151;
+}

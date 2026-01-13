@@ -7,16 +7,16 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { createBrowserClient } from "@/lib/supabase/client";
 import { DashboardAuthProvider } from "./DashboardAuthContext";
-import { 
-  Sidebar, 
-  SidebarBody, 
-  SidebarLink 
+import {
+  Sidebar,
+  SidebarBody,
+  SidebarLink
 } from "@/components/ui/sidebar";
-import { 
-  BookOpen, 
-  Globe, 
-  Settings, 
-  LogOut, 
+import {
+  BookOpen,
+  Globe,
+  Settings,
+  LogOut,
   Star,
   Play
 } from "lucide-react";
@@ -40,7 +40,7 @@ export default function DashboardLayout({
       // Allow viewing public playbooks without login (playbook/[id] pages)
       // Only redirect if we're on main dashboard pages that require auth
       const isPlaybookViewerPage = pathname.includes('/dashboard/playbook/');
-      
+
       if (!user && !isPlaybookViewerPage) {
         router.push("/login");
         return;
@@ -80,7 +80,7 @@ export default function DashboardLayout({
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0f1a] flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-spin h-8 w-8 border-2 border-amber-500 border-t-transparent rounded-full" />
       </div>
     );
@@ -88,7 +88,7 @@ export default function DashboardLayout({
 
   return (
     <DashboardAuthProvider value={{ supabase, user, loading }}>
-      <div className="min-h-screen bg-[#0a0f1a] text-white flex">
+      <div className="min-h-screen bg-background text-foreground flex">
         <Sidebar open={sidebarOpen} setOpen={setSidebarOpen}>
           <SidebarBody className="justify-between gap-10 border-r border-blue-900/30">
             <div className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
@@ -100,7 +100,7 @@ export default function DashboardLayout({
                   </div>
                 </span>
                 <motion.span
-                  animate={{ 
+                  animate={{
                     opacity: sidebarOpen ? 1 : 0,
                     width: sidebarOpen ? "auto" : 0
                   }}
@@ -128,7 +128,7 @@ export default function DashboardLayout({
                   </div>
                 </span>
                 <motion.div
-                  animate={{ 
+                  animate={{
                     opacity: sidebarOpen ? 1 : 0,
                     width: sidebarOpen ? "auto" : 0
                   }}
@@ -152,7 +152,7 @@ export default function DashboardLayout({
                   <LogOut className="h-5 w-5" />
                 </span>
                 <motion.span
-                  animate={{ 
+                  animate={{
                     opacity: sidebarOpen ? 1 : 0,
                     width: sidebarOpen ? "auto" : 0
                   }}

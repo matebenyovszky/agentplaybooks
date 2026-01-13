@@ -415,7 +415,7 @@ export default function ExplorePage() {
             <section className="px-4 pb-8">
               <div className="max-w-5xl mx-auto">
                 <div className="relative mb-6">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-neutral-400 dark:text-slate-500" />
                   <input
                     type="text"
                     value={skillSearch}
@@ -423,13 +423,14 @@ export default function ExplorePage() {
                     placeholder={t("explore.searchSkills")}
                     className={cn(
                       "w-full pl-12 pr-4 py-4 rounded-xl text-lg",
-                      "bg-blue-950/30 border border-blue-900/50",
+                      "bg-white dark:bg-blue-950/30 border border-neutral-200 dark:border-blue-900/50",
                       "focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20",
-                      "placeholder:text-slate-600"
+                      "placeholder:text-neutral-400 dark:placeholder:text-slate-600",
+                      "text-neutral-900 dark:text-white"
                     )}
                   />
                 </div>
-                <p className="text-sm text-slate-400 mb-4">
+                <p className="text-sm text-neutral-600 dark:text-slate-400 mb-4">
                   {filteredSkills.length} {t("explore.skillsAvailable")}
                 </p>
               </div>
@@ -466,7 +467,7 @@ export default function ExplorePage() {
             <section className="px-4 pb-8">
               <div className="max-w-5xl mx-auto">
                 <div className="relative mb-6">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-neutral-400 dark:text-slate-500" />
                   <input
                     type="text"
                     value={mcpSearch}
@@ -474,13 +475,14 @@ export default function ExplorePage() {
                     placeholder={t("explore.searchMCP")}
                     className={cn(
                       "w-full pl-12 pr-4 py-4 rounded-xl text-lg",
-                      "bg-blue-950/30 border border-blue-900/50",
+                      "bg-white dark:bg-blue-950/30 border border-neutral-200 dark:border-blue-900/50",
                       "focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20",
-                      "placeholder:text-slate-600"
+                      "placeholder:text-neutral-400 dark:placeholder:text-slate-600",
+                      "text-neutral-900 dark:text-white"
                     )}
                   />
                 </div>
-                <p className="text-sm text-slate-400 mb-4">
+                <p className="text-sm text-neutral-600 dark:text-slate-400 mb-4">
                   {filteredMCPs.length} {t("explore.mcpAvailable")}
                 </p>
               </div>
@@ -593,13 +595,13 @@ function PlaybookCard({ playbook, index, isStarred, onToggleStar, isLoggedIn, is
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05 }}
       className={cn(
-        "rounded-xl overflow-hidden group cursor-pointer",
+        "rounded-xl overflow-hidden group cursor-pointer flex flex-col",
         "bg-white dark:bg-gradient-to-br dark:from-slate-900/80 dark:to-slate-800/80",
         "border border-neutral-200 dark:border-blue-900/30 hover:border-amber-500/30",
         "transition-all duration-300 hover:shadow-lg hover:shadow-amber-500/5 shadow-sm dark:shadow-none"
       )}
     >
-      <Link href={playbookUrl} className="block">
+      <Link href={playbookUrl} className="block flex-1">
         <div className="p-5">
           <div className="flex items-start justify-between mb-3">
             <div className="flex-1 min-w-0">
@@ -750,66 +752,68 @@ function SkillCard({ skill, index }: { skill: SkillWithPublisher; index: number 
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.03 }}
       className={cn(
-        "p-4 rounded-xl shadow-sm dark:shadow-none",
+        "p-4 rounded-xl shadow-sm dark:shadow-none flex flex-col",
         isMarkdownSkill
-          ? "bg-white dark:bg-gradient-to-br dark:from-emerald-900/20 dark:to-slate-900/80 border-emerald-500/20 hover:border-emerald-500/40"
-          : "bg-white dark:bg-gradient-to-br dark:from-purple-900/20 dark:to-slate-900/80 border-purple-500/20 hover:border-purple-500/40",
+          ? "bg-white dark:bg-emerald-950/30 border-emerald-500/20 hover:border-emerald-500/40"
+          : "bg-white dark:bg-purple-950/30 border-purple-500/20 hover:border-purple-500/40",
         "border transition-all"
       )}
     >
-      <div className="flex items-start justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <Zap className={cn("h-4 w-4", isMarkdownSkill ? "text-emerald-600 dark:text-emerald-400" : "text-purple-600 dark:text-purple-400")} />
-          <h4 className="font-medium text-neutral-900 dark:text-white">{skill.name}</h4>
-          {isMarkdownSkill && (
-            <span className="px-1.5 py-0.5 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-[10px] rounded font-medium">
-              SKILL
-            </span>
-          )}
+      <div className="flex-1">
+        <div className="flex items-start justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <Zap className={cn("h-4 w-4", isMarkdownSkill ? "text-emerald-600 dark:text-emerald-400" : "text-purple-600 dark:text-purple-400")} />
+            <h4 className="font-medium text-neutral-900 dark:text-white">{skill.name}</h4>
+            {isMarkdownSkill && (
+              <span className="px-1.5 py-0.5 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-[10px] rounded font-medium">
+                SKILL
+              </span>
+            )}
+          </div>
+          <button
+            onClick={copyToClipboard}
+            className={cn(
+              "p-1.5 rounded-lg transition-colors",
+              isMarkdownSkill
+                ? "text-neutral-400 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10"
+                : "text-neutral-400 dark:text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-500/10"
+            )}
+            title="Copy skill content"
+          >
+            {copied ? <Check className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4" />}
+          </button>
         </div>
-        <button
-          onClick={copyToClipboard}
-          className={cn(
-            "p-1.5 rounded-lg transition-colors",
-            isMarkdownSkill
-              ? "text-neutral-400 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10"
-              : "text-neutral-400 dark:text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-500/10"
-          )}
-          title="Copy skill content"
-        >
-          {copied ? <Check className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4" />}
-        </button>
+
+        {skill.description && (
+          <p className="text-sm text-neutral-600 dark:text-slate-400 mb-3 line-clamp-2">{skill.description}</p>
+        )}
+
+        {/* Show token count for skills with content, or licence info */}
+        {isMarkdownSkill ? (
+          <div className="text-xs text-neutral-500 dark:text-slate-500 mb-2">
+            ~{Math.round((skill.content?.length || 0) / 4).toLocaleString()} tokens
+          </div>
+        ) : skill.licence && (
+          <div className="text-xs text-neutral-500 dark:text-slate-500 mb-2">
+            Licence: {skill.licence}
+          </div>
+        )}
+
+        {/* Attachments */}
+        {skill.skill_attachments && skill.skill_attachments.length > 0 && (
+          <div className="mb-3 flex flex-wrap gap-2">
+            {skill.skill_attachments.map((att: SkillAttachment, i: number) => (
+              <div
+                key={i}
+                className="flex items-center gap-1.5 px-2 py-1 bg-neutral-100 dark:bg-slate-800/50 border border-neutral-200 dark:border-slate-700/50 rounded text-xs text-neutral-600 dark:text-slate-300 max-w-full"
+              >
+                {att.type === 'file' ? <FileText className="h-3 w-3" /> : <LinkIcon className="h-3 w-3" />}
+                <span className="truncate max-w-[150px]">{att.url || att.filename}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
-
-      {skill.description && (
-        <p className="text-sm text-neutral-600 dark:text-slate-400 mb-3 line-clamp-2">{skill.description}</p>
-      )}
-
-      {/* Show token count for skills with content, or licence info */}
-      {isMarkdownSkill ? (
-        <div className="text-xs text-neutral-500 dark:text-slate-500 mb-2">
-          ~{Math.round((skill.content?.length || 0) / 4).toLocaleString()} tokens
-        </div>
-      ) : skill.licence && (
-        <div className="text-xs text-neutral-500 dark:text-slate-500 mb-2">
-          Licence: {skill.licence}
-        </div>
-      )}
-
-      {/* Attachments */}
-      {skill.skill_attachments && skill.skill_attachments.length > 0 && (
-        <div className="mb-3 flex flex-wrap gap-2">
-          {skill.skill_attachments.map((att: SkillAttachment, i: number) => (
-            <div
-              key={i}
-              className="flex items-center gap-1.5 px-2 py-1 bg-neutral-100 dark:bg-slate-800/50 border border-neutral-200 dark:border-slate-700/50 rounded text-xs text-neutral-600 dark:text-slate-300 max-w-full"
-            >
-              {att.type === 'file' ? <FileText className="h-3 w-3" /> : <LinkIcon className="h-3 w-3" />}
-              <span className="truncate max-w-[150px]">{att.url || att.filename}</span>
-            </div>
-          ))}
-        </div>
-      )}
 
       {/* Publisher info */}
       <div className="flex items-center justify-between mt-2 pt-2 border-t border-neutral-100 dark:border-slate-700/30">
@@ -878,15 +882,15 @@ function MCPCard({ mcp, index }: { mcp: MCPWithPublisher; index: number }) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.03 }}
       className={cn(
-        "rounded-xl overflow-hidden shadow-sm dark:shadow-none",
-        "bg-white dark:bg-gradient-to-br dark:from-pink-900/20 dark:to-slate-900/80",
+        "rounded-xl overflow-hidden shadow-sm dark:shadow-none flex flex-col",
+        "bg-white dark:bg-pink-950/30",
         "border border-pink-500/20 hover:border-pink-500/40",
         "transition-all"
       )}
     >
       <div
         className={cn(
-          "flex items-start justify-between gap-4 p-4",
+          "flex items-start justify-between gap-4 p-4 flex-1",
           hasDetails ? "cursor-pointer" : "cursor-default"
         )}
         onClick={() => {
@@ -993,7 +997,7 @@ function MCPCard({ mcp, index }: { mcp: MCPWithPublisher; index: number }) {
       </AnimatePresence>
 
       {/* Publisher info */}
-      <div className="flex items-center justify-between px-4 py-3 border-t border-neutral-100 dark:border-slate-700/30">
+      <div className="flex items-center justify-between px-4 py-3 border-t border-neutral-100 dark:border-slate-700/30 bg-neutral-50 dark:bg-slate-900/30 mt-auto">
         {mcp.publisher ? (
           <div className="flex items-center gap-2">
             {mcp.publisher.avatar_svg ? (

@@ -125,9 +125,9 @@ const marketplaceFeatures = [
 
 export default function EnterprisePage() {
   return (
-    <div className="min-h-screen bg-[#0a0f1a] text-white">
+    <div className="min-h-screen bg-background text-foreground">
       <FloatingNav />
-      
+
       {/* Hero Section */}
       <section className="relative overflow-hidden pt-32 pb-20">
         <div className="absolute inset-0 bg-gradient-to-b from-blue-900/20 via-transparent to-transparent" />
@@ -145,19 +145,19 @@ export default function EnterprisePage() {
               <span className="text-sm text-green-300">100% Open Source</span>
             </div>
 
-            <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-white via-blue-200 to-amber-400">
+            <h1 className="text-5xl md:text-7xl font-bold mb-6 gradient-text">
               The First Agent &
               <br />
               Robot Skills Store
             </h1>
 
-            <p className="text-xl text-slate-400 max-w-3xl mx-auto mb-6">
-              A platform-independent marketplace for AI capabilities. 
-              Share skills, personas, and MCP servers across any agent - 
+            <p className="text-xl text-neutral-600 dark:text-slate-400 max-w-3xl mx-auto mb-6">
+              A platform-independent marketplace for AI capabilities.
+              Share skills, personas, and MCP servers across any agent -
               from ChatGPT to physical robots.
             </p>
 
-            <p className="text-lg text-amber-400 max-w-2xl mx-auto mb-10 font-medium">
+            <p className="text-lg text-amber-600 dark:text-amber-400 max-w-2xl mx-auto mb-10 font-medium">
               Open source. Self-hostable. Zero vendor lock-in.
             </p>
 
@@ -173,7 +173,7 @@ export default function EnterprisePage() {
                 href="https://github.com/matebenyovszky/agentplaybooks"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-8 py-4 bg-blue-950/50 hover:bg-blue-900/50 rounded-full font-semibold transition-colors border border-blue-800/50"
+                className="inline-flex items-center gap-2 px-8 py-4 bg-white dark:bg-blue-950/50 hover:bg-neutral-50 dark:hover:bg-blue-900/50 rounded-full font-semibold transition-colors border border-neutral-200 dark:border-blue-800/50"
               >
                 <Github className="w-5 h-5" />
                 View on GitHub
@@ -190,7 +190,7 @@ export default function EnterprisePage() {
               {["Anthropic Skills", "skills.md", "MCP Protocol", "OpenAPI", "JSON Schema", "Docker Ready"].map((tech) => (
                 <span
                   key={tech}
-                  className="px-3 py-1 text-sm bg-blue-950/50 border border-blue-800/50 rounded-full text-blue-300"
+                  className="px-3 py-1 text-sm bg-amber-100 dark:bg-amber-950/50 border border-amber-300 dark:border-amber-800/50 rounded-full text-amber-700 dark:text-amber-300"
                 >
                   {tech}
                 </span>
@@ -201,7 +201,7 @@ export default function EnterprisePage() {
       </section>
 
       {/* Why Open Source */}
-      <section className="py-20 border-t border-blue-900/30">
+      <section className="py-20 border-t border-neutral-200 dark:border-blue-900/30">
         <div className="max-w-7xl mx-auto px-6">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -209,8 +209,8 @@ export default function EnterprisePage() {
             viewport={{ once: true }}
             className="text-center mb-16"
           >
-            <h2 className="text-4xl font-bold mb-4">Why Open Source?</h2>
-            <p className="text-slate-400 text-lg max-w-2xl mx-auto">
+            <h2 className="text-4xl font-bold mb-4 text-neutral-900 dark:text-white">Why Open Source?</h2>
+            <p className="text-neutral-600 dark:text-slate-400 text-lg max-w-2xl mx-auto">
               Your AI knowledge is valuable. Do not let it be locked in proprietary platforms.
             </p>
           </motion.div>
@@ -223,11 +223,11 @@ export default function EnterprisePage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.1 }}
-                className="p-6 rounded-xl bg-blue-950/30 border border-blue-900/50 hover:border-green-500/30 transition-all hover:bg-blue-950/50"
+                className="p-6 rounded-xl bg-white dark:bg-blue-950/30 border border-neutral-200 dark:border-blue-900/50 hover:border-green-500/30 transition-all hover:bg-neutral-50 dark:hover:bg-blue-950/50"
               >
                 <item.icon className="w-10 h-10 text-green-400 mb-4" />
-                <h3 className="text-lg font-semibold mb-2">{item.title}</h3>
-                <p className="text-slate-400 text-sm">{item.description}</p>
+                <h3 className="text-lg font-semibold mb-2 text-neutral-900 dark:text-white">{item.title}</h3>
+                <p className="text-neutral-600 dark:text-slate-400 text-sm">{item.description}</p>
               </motion.div>
             ))}
           </div>
@@ -243,8 +243,8 @@ export default function EnterprisePage() {
             viewport={{ once: true }}
             className="text-center mb-16"
           >
-            <h2 className="text-4xl font-bold mb-4">For Every Kind of Agent</h2>
-            <p className="text-slate-400 text-lg max-w-2xl mx-auto">
+            <h2 className="text-4xl font-bold mb-4 text-neutral-900 dark:text-white">For Every Kind of Agent</h2>
+            <p className="text-neutral-600 dark:text-slate-400 text-lg max-w-2xl mx-auto">
               From code assistants to warehouse robots - the same playbook format works everywhere
             </p>
           </motion.div>
@@ -257,18 +257,18 @@ export default function EnterprisePage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.1 }}
-                className="p-8 rounded-2xl bg-gradient-to-b from-blue-950/50 to-transparent border border-blue-900/50 hover:border-amber-500/30 transition-colors"
+                className="p-8 rounded-2xl bg-white dark:bg-blue-950/30 border border-neutral-200 dark:border-blue-900/50 hover:border-amber-500/30 transition-colors"
               >
                 <div className="w-14 h-14 rounded-xl bg-amber-500/20 flex items-center justify-center mb-6">
                   <item.icon className="w-7 h-7 text-amber-400" />
                 </div>
-                <h3 className="text-xl font-semibold mb-3">{item.title}</h3>
-                <p className="text-slate-400 mb-6">{item.description}</p>
+                <h3 className="text-xl font-semibold mb-3 text-neutral-900 dark:text-white">{item.title}</h3>
+                <p className="text-neutral-600 dark:text-slate-400 mb-6">{item.description}</p>
                 <ul className="space-y-2">
                   {item.examples.map((example) => (
                     <li
                       key={example}
-                      className="flex items-center gap-2 text-sm text-slate-300"
+                      className="flex items-center gap-2 text-sm text-neutral-700 dark:text-slate-300"
                     >
                       <CheckCircle2 className="w-4 h-4 text-green-400 flex-shrink-0" />
                       {example}
@@ -295,8 +295,8 @@ export default function EnterprisePage() {
               <span className="text-sm text-amber-300">The Agent App Store</span>
             </div>
             <h2 className="text-4xl font-bold mb-4">Skills Marketplace</h2>
-            <p className="text-slate-400 text-lg max-w-2xl mx-auto">
-              Like an app store, but for AI capabilities. Browse, share, and discover 
+            <p className="text-neutral-600 dark:text-neutral-400 text-lg max-w-2xl mx-auto">
+              Like an app store, but for AI capabilities. Browse, share, and discover
               what your agents can learn.
             </p>
           </motion.div>
@@ -315,7 +315,7 @@ export default function EnterprisePage() {
                   <item.icon className="w-8 h-8 text-amber-400" />
                 </div>
                 <h3 className="text-xl font-semibold mb-3">{item.title}</h3>
-                <p className="text-slate-400">{item.description}</p>
+                <p className="text-neutral-600 dark:text-slate-400">{item.description}</p>
               </motion.div>
             ))}
           </div>
@@ -347,7 +347,7 @@ export default function EnterprisePage() {
             className="text-center mb-16"
           >
             <h2 className="text-4xl font-bold mb-4">How It Works</h2>
-            <p className="text-slate-400 text-lg max-w-2xl mx-auto">
+            <p className="text-neutral-600 dark:text-slate-400 text-lg max-w-2xl mx-auto">
               Get started in minutes - whether you use our hosted service or self-host
             </p>
           </motion.div>
@@ -385,7 +385,7 @@ export default function EnterprisePage() {
                   {item.step}
                 </div>
                 <h3 className="text-xl font-semibold mb-2">{item.title}</h3>
-                <p className="text-slate-400">{item.description}</p>
+                <p className="text-neutral-600 dark:text-slate-400">{item.description}</p>
               </motion.div>
             ))}
           </div>
@@ -403,8 +403,8 @@ export default function EnterprisePage() {
           >
             <Server className="w-12 h-12 text-green-400 mx-auto mb-6" />
             <h2 className="text-3xl font-bold mb-4">Self-Host in Minutes</h2>
-            <p className="text-slate-400 mb-8 max-w-xl mx-auto">
-              Deploy AgentPlaybooks on your own infrastructure with Docker, Kubernetes, 
+            <p className="text-neutral-600 dark:text-slate-400 mb-8 max-w-xl mx-auto">
+              Deploy AgentPlaybooks on your own infrastructure with Docker, Kubernetes,
               or your preferred platform. Full documentation included.
             </p>
             <div className="bg-slate-900/80 rounded-xl p-4 mb-8 max-w-md mx-auto">
@@ -424,7 +424,7 @@ export default function EnterprisePage() {
                 href="https://github.com/matebenyovszky/agentplaybooks"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-blue-950/50 hover:bg-blue-900/50 rounded-full font-semibold transition-colors border border-blue-800/50"
+                className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white dark:bg-blue-950/50 hover:bg-neutral-50 dark:hover:bg-blue-900/50 rounded-full font-semibold transition-colors border border-neutral-200 dark:border-blue-800/50"
               >
                 <Github className="w-5 h-5" />
                 Star on GitHub
@@ -464,17 +464,17 @@ export default function EnterprisePage() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: i * 0.05 }}
-                  className="p-4 rounded-xl bg-blue-950/20 border border-blue-900/30 hover:border-purple-500/20 transition-colors group"
+                  className="p-4 rounded-xl bg-white dark:bg-blue-950/20 border border-neutral-200 dark:border-blue-900/30 hover:border-purple-500/20 transition-colors group"
                 >
                   <item.icon className="w-5 h-5 text-purple-400/60 mx-auto mb-2 group-hover:text-purple-400 transition-colors" />
-                  <p className="text-xs font-medium text-slate-300">{item.label}</p>
-                  <p className="text-[10px] text-slate-500 mt-0.5">{item.desc}</p>
+                  <p className="text-xs font-medium text-neutral-700 dark:text-slate-300">{item.label}</p>
+                  <p className="text-[10px] text-neutral-500 dark:text-slate-500 mt-0.5">{item.desc}</p>
                 </motion.div>
               ))}
             </div>
 
-            <p className="mt-8 text-xs text-slate-500 max-w-lg mx-auto">
-              Enterprise features are under active development. Self-host today and get these features as they ship. 
+            <p className="mt-8 text-xs text-neutral-500 dark:text-slate-500 max-w-lg mx-auto">
+              Enterprise features are under active development. Self-host today and get these features as they ship.
               <a href="https://github.com/matebenyovszky/agentplaybooks" className="text-purple-400/70 hover:text-purple-400 ml-1">
                 Star on GitHub to follow progress →
               </a>

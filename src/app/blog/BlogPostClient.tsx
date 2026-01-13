@@ -32,7 +32,7 @@ function BlogIndexView({ posts }: { posts: BlogPost[] }) {
     return (
         <div className="space-y-12">
             <div className="text-center space-y-4">
-                <h1 className="text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-b from-neutral-900 to-neutral-500 dark:from-white dark:to-white/60">
+                <h1 className="text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-b from-neutral-900 to-neutral-500 dark:from-white dark:to-white/60 pb-2">
                     Blog
                 </h1>
                 <p className="text-xl text-neutral-600 dark:text-neutral-400 max-w-2xl mx-auto">
