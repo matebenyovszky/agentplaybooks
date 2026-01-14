@@ -32,32 +32,70 @@ function parseFrontmatter(fileContent: string): { metadata: Record<string, strin
 }
 
 /**
- * Client-side function to fetch a blog post by slug and locale.
- * Works in Cloudflare Workers by fetching static files from /blog/
+ * Fetch blog post content.
+ * Uses fs during build time (SSG) and fetch during runtime (Cloudflare).
+ */
+async function fetchBlogContent(filename: string): Promise<string | null> {
+    // Check if we're in a Node.js environment (build time)
+    const isNodeEnv = typeof process !== 'undefined' && process.versions?.node;
+
+    if (isNodeEnv) {
+        // Build time: Use fs module
+        try {
+            const fs = await import('fs');
+            const path = await import('path');
+            const filePath = path.join(process.cwd(), 'public', 'blog', filename);
+
+            if (!fs.existsSync(filePath)) {
+                return null;
+            }
+
+            return fs.readFileSync(filePath, 'utf-8');
+        } catch (error) {
+            console.error(`Error reading blog file ${filename}:`, error);
+            return null;
+        }
+    } else {
+        // Runtime (Cloudflare Workers): Use fetch
+        try {
+            const response = await fetch(`/blog/${filename}`);
+            if (!response.ok) {
+                return null;
+            }
+            return response.text();
+        } catch (error) {
+            console.error(`Error fetching blog file ${filename}:`, error);
+            return null;
+        }
+    }
+}
+
+/**
+ * Get a blog post by slug and locale.
+ * Works in both build time (SSG) and runtime (Cloudflare Workers).
  */
 export async function getBlogPost(slug: string, locale: string = "en"): Promise<BlogPost | null> {
     // Try exact locale first: slug.locale.md
     let filename = `${slug}.${locale}.md`;
-    let response = await fetch(`/blog/${filename}`);
+    let content = await fetchBlogContent(filename);
 
-    if (!response.ok) {
+    if (!content) {
         // Try default: slug.md
         filename = `${slug}.md`;
-        response = await fetch(`/blog/${filename}`);
+        content = await fetchBlogContent(filename);
     }
 
     // Handle case where default might be explicitly named slug.en.md
-    if (!response.ok && locale !== "en") {
+    if (!content && locale !== "en") {
         filename = `${slug}.en.md`;
-        response = await fetch(`/blog/${filename}`);
+        content = await fetchBlogContent(filename);
     }
 
-    if (!response.ok) {
+    if (!content) {
         return null;
     }
 
-    const fileContent = await response.text();
-    const { metadata, content } = parseFrontmatter(fileContent);
+    const { metadata, content: postContent } = parseFrontmatter(content);
 
     return {
         slug,
@@ -65,14 +103,13 @@ export async function getBlogPost(slug: string, locale: string = "en"): Promise<
         description: metadata.description || "",
         date: metadata.date || new Date().toISOString(),
         author: metadata.author,
-        content,
+        content: postContent,
     };
 }
 
 /**
- * Client-side function to get all blog posts for a locale.
- * Note: In Cloudflare environment, we need to know the list of files ahead of time
- * since we can't read directories. This function fetches known posts.
+ * Get all blog posts for a locale.
+ * Works in both build time (SSG) and runtime (Cloudflare Workers).
  */
 export async function getBlogPosts(locale: string = "en"): Promise<BlogPost[]> {
     // Import auto-generated known slugs

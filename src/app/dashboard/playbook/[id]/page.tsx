@@ -1936,11 +1936,11 @@ function EmptyState({
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="p-12 text-center bg-slate-900/50 rounded-xl border border-dashed border-slate-700"
+      className="p-12 text-center bg-neutral-100 dark:bg-slate-900/50 rounded-xl border border-dashed border-neutral-300 dark:border-slate-700"
     >
       <Icon className={cn("h-12 w-12 mx-auto mb-4", colorMap[color] || "text-slate-700")} />
-      <h3 className="text-lg font-medium text-slate-400 mb-2">{message}</h3>
-      <p className="text-sm text-slate-500">{description}</p>
+      <h3 className="text-lg font-medium text-neutral-600 dark:text-slate-400 mb-2">{message}</h3>
+      <p className="text-sm text-neutral-500 dark:text-slate-500">{description}</p>
     </motion.div>
   );
 }
