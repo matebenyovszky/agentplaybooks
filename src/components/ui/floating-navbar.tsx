@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { Home, ChevronDown, BookOpen, LogOut, Globe, Server, Star, Settings, LayoutDashboard, Rss, Sun, Moon, Laptop } from "lucide-react";
+import { Home, ChevronDown, BookOpen, LogOut, Globe, Server, Star, Settings, LayoutDashboard, Rss, Sun, Moon, Laptop, UserCircle } from "lucide-react";
 import { locales, localeNames, localeFlags, type Locale } from "@/i18n/config";
 import { useTranslations } from "next-intl";
 import { createBrowserClient } from "@/lib/supabase/client";
@@ -240,9 +240,10 @@ export const FloatingNav = ({
         ) : (
           <Link
             href="/login"
-            className="text-sm font-medium relative border border-amber-500/50 dark:text-white text-neutral-900 px-4 py-2 rounded-full hover:border-amber-400 hover:bg-amber-500/10 transition-all"
+            className="text-sm font-medium relative border border-amber-500/50 dark:text-white text-neutral-900 px-3 sm:px-4 py-2 rounded-full hover:border-amber-400 hover:bg-amber-500/10 transition-all flex items-center gap-2"
           >
-            <span>{t("common.signIn")}</span>
+            <UserCircle className="h-4 w-4 sm:hidden" />
+            <span className="hidden sm:inline">{t("common.signIn")}</span>
           </Link>
         )}
 

@@ -107,11 +107,11 @@ export default function FavoritesPage() {
     <>
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold flex items-center gap-3">
-            <Star className="h-8 w-8 text-amber-400" />
+          <h1 className="text-3xl font-bold flex items-center gap-3 text-neutral-900 dark:text-white">
+            <Star className="h-8 w-8 text-amber-500 dark:text-amber-400" />
             {t("dashboard.favorites")}
           </h1>
-          <p className="text-slate-400 mt-1">
+          <p className="text-neutral-600 dark:text-slate-400 mt-1">
             Playbooks you&apos;ve starred
           </p>
         </div>
@@ -119,11 +119,11 @@ export default function FavoritesPage() {
 
       {favorites.length === 0 ? (
         <div className="text-center py-16">
-          <Star className="h-16 w-16 text-slate-700 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-slate-400 mb-2">
+          <Star className="h-16 w-16 text-neutral-400 dark:text-slate-700 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-neutral-600 dark:text-slate-400 mb-2">
             No favorites yet
           </h2>
-          <p className="text-slate-500 mb-6">
+          <p className="text-neutral-500 dark:text-slate-500 mb-6">
             Star playbooks from the Explore page to add them here
           </p>
           <Link
@@ -143,12 +143,12 @@ export default function FavoritesPage() {
               animate={{ opacity: 1, y: 0 }}
               className={cn(
                 "p-5 rounded-xl border transition-all group",
-                "bg-gradient-to-br from-slate-900/80 to-slate-800/50",
-                "border-slate-700/50 hover:border-amber-500/30"
+                "bg-white dark:bg-gradient-to-br dark:from-slate-900/80 dark:to-slate-800/50",
+                "border-neutral-200 dark:border-slate-700/50 hover:border-amber-500/30"
               )}
             >
               <div className="flex items-start justify-between mb-3">
-                <h3 className="font-semibold text-lg group-hover:text-amber-400 transition-colors">
+                <h3 className="font-semibold text-lg text-neutral-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
                   {playbook.name}
                 </h3>
                 <div className="flex items-center gap-2">
@@ -167,12 +167,12 @@ export default function FavoritesPage() {
               </div>
 
               {playbook.description && (
-                <p className="text-sm text-slate-400 mb-4 line-clamp-2">
+                <p className="text-sm text-neutral-600 dark:text-slate-400 mb-4 line-clamp-2">
                   {playbook.description}
                 </p>
               )}
 
-              <div className="flex items-center gap-4 text-xs text-slate-500 mb-4">
+              <div className="flex items-center gap-4 text-xs text-neutral-500 dark:text-slate-500 mb-4">
                 <span className="flex items-center gap-1">
                   <Brain className="h-3.5 w-3.5" />
                   {playbook.personas_count} persona
@@ -188,7 +188,7 @@ export default function FavoritesPage() {
                   {playbook.tags.slice(0, 3).map((tag) => (
                     <span
                       key={tag}
-                      className="px-2 py-0.5 bg-blue-900/30 rounded text-xs text-slate-400"
+                      className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 rounded text-xs text-blue-700 dark:text-slate-400"
                     >
                       {tag}
                     </span>

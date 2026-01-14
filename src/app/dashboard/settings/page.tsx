@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { createBrowserClient } from "@/lib/supabase/client";
-import { 
+import {
   Key,
   Plus,
   Trash2,
@@ -184,39 +184,39 @@ export default function SettingsPage() {
   return (
     <>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold flex items-center gap-3">
-          <Settings className="h-8 w-8 text-slate-400" />
+        <h1 className="text-3xl font-bold flex items-center gap-3 text-neutral-900 dark:text-white">
+          <Settings className="h-8 w-8 text-neutral-500 dark:text-slate-400" />
           Settings
         </h1>
-        <p className="text-slate-400 mt-1">Manage your account and API keys</p>
+        <p className="text-neutral-600 dark:text-slate-400 mt-1">Manage your account and API keys</p>
       </div>
 
       {/* User Info */}
-      <div className="bg-blue-950/30 rounded-xl border border-blue-900/50 p-6 mb-8">
-        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-          <Shield className="h-5 w-5 text-blue-400" />
+      <div className="bg-white dark:bg-blue-950/30 rounded-xl border border-neutral-200 dark:border-blue-900/50 p-6 mb-8">
+        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-neutral-900 dark:text-white">
+          <Shield className="h-5 w-5 text-blue-500 dark:text-blue-400" />
           Account
         </h2>
         <div className="space-y-2">
-          <p className="text-slate-300">
-            <span className="text-slate-500">Email:</span> {user?.email}
+          <p className="text-neutral-700 dark:text-slate-300">
+            <span className="text-neutral-500 dark:text-slate-500">Email:</span> {user?.email}
           </p>
-          <p className="text-slate-300">
-            <span className="text-slate-500">User ID:</span>{" "}
-            <code className="text-xs bg-slate-800 px-2 py-1 rounded">{user?.id}</code>
+          <p className="text-neutral-700 dark:text-slate-300">
+            <span className="text-neutral-500 dark:text-slate-500">User ID:</span>{" "}
+            <code className="text-xs bg-neutral-100 dark:bg-slate-800 text-neutral-700 dark:text-slate-300 px-2 py-1 rounded">{user?.id}</code>
           </p>
         </div>
       </div>
 
       {/* User API Keys */}
-      <div className="bg-blue-950/30 rounded-xl border border-blue-900/50 p-6">
+      <div className="bg-white dark:bg-blue-950/30 rounded-xl border border-neutral-200 dark:border-blue-900/50 p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-xl font-semibold flex items-center gap-2">
-              <Key className="h-5 w-5 text-amber-400" />
+            <h2 className="text-xl font-semibold flex items-center gap-2 text-neutral-900 dark:text-white">
+              <Key className="h-5 w-5 text-amber-500 dark:text-amber-400" />
               User API Keys
             </h2>
-            <p className="text-slate-400 text-sm mt-1">
+            <p className="text-neutral-600 dark:text-slate-400 text-sm mt-1">
               API keys for programmatic access to all your playbooks. Used by AI agents.
             </p>
           </div>
@@ -231,9 +231,9 @@ export default function SettingsPage() {
 
         {apiKeys.length === 0 ? (
           <div className="text-center py-8">
-            <Key className="h-12 w-12 text-slate-600 mx-auto mb-4" />
-            <p className="text-slate-400">No API keys yet</p>
-            <p className="text-slate-500 text-sm mt-1">
+            <Key className="h-12 w-12 text-neutral-400 dark:text-slate-600 mx-auto mb-4" />
+            <p className="text-neutral-600 dark:text-slate-400">No API keys yet</p>
+            <p className="text-neutral-500 dark:text-slate-500 text-sm mt-1">
               Create an API key to allow AI agents to manage your playbooks
             </p>
           </div>
@@ -242,16 +242,16 @@ export default function SettingsPage() {
             {apiKeys.map((key) => (
               <div
                 key={key.id}
-                className="bg-slate-900/50 rounded-lg p-4 border border-blue-900/30"
+                className="bg-neutral-50 dark:bg-slate-900/50 rounded-lg p-4 border border-neutral-200 dark:border-blue-900/30"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
-                      <code className="text-sm bg-slate-800 px-2 py-1 rounded text-amber-400">
+                      <code className="text-sm bg-neutral-100 dark:bg-slate-800 px-2 py-1 rounded text-amber-600 dark:text-amber-400">
                         {key.key_prefix}
                       </code>
                       {key.name && (
-                        <span className="text-white font-medium">{key.name}</span>
+                        <span className="text-neutral-900 dark:text-white font-medium">{key.name}</span>
                       )}
                       {!key.is_active && (
                         <span className="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded">
@@ -263,13 +263,13 @@ export default function SettingsPage() {
                       {key.permissions.map((perm) => (
                         <span
                           key={perm}
-                          className="text-xs bg-blue-900/30 text-slate-300 px-2 py-1 rounded"
+                          className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-slate-300 px-2 py-1 rounded"
                         >
                           {perm}
                         </span>
                       ))}
                     </div>
-                    <div className="text-xs text-slate-500">
+                    <div className="text-xs text-neutral-500 dark:text-slate-500">
                       Created: {formatDate(key.created_at)}
                       {key.last_used_at && (
                         <> · Last used: {formatDate(key.last_used_at)}</>
@@ -293,19 +293,19 @@ export default function SettingsPage() {
         )}
 
         {/* Usage Info */}
-        <div className="mt-6 p-4 bg-blue-900/20 rounded-lg border border-blue-800/30">
-          <h3 className="text-sm font-medium text-blue-400 mb-2">How to use</h3>
-          <p className="text-sm text-slate-400 mb-3">
+        <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800/30">
+          <h3 className="text-sm font-medium text-blue-600 dark:text-blue-400 mb-2">How to use</h3>
+          <p className="text-sm text-neutral-600 dark:text-slate-400 mb-3">
             Use your API key with the Management API or MCP Server:
           </p>
-          <div className="bg-slate-900 rounded p-3 font-mono text-xs text-slate-300 overflow-x-auto">
-            <div className="text-slate-500"># REST API</div>
+          <div className="bg-neutral-100 dark:bg-slate-900 rounded p-3 font-mono text-xs text-neutral-700 dark:text-slate-300 overflow-x-auto">
+            <div className="text-neutral-500 dark:text-slate-500"># REST API</div>
             <div>curl -H &quot;Authorization: Bearer YOUR_API_KEY&quot; \</div>
             <div className="pl-4">https://agentplaybooks.ai/api/manage/playbooks</div>
-            <div className="mt-2 text-slate-500"># MCP Server URL</div>
+            <div className="mt-2 text-neutral-500 dark:text-slate-500"># MCP Server URL</div>
             <div>https://agentplaybooks.ai/api/mcp/manage</div>
           </div>
-          <p className="text-xs text-slate-500 mt-2">
+          <p className="text-xs text-neutral-500 dark:text-slate-500 mt-2">
             <Link href="/docs/management-api" className="text-amber-400 hover:underline">
               View full documentation →
             </Link>
@@ -394,11 +394,10 @@ export default function SettingsPage() {
                       {AVAILABLE_PERMISSIONS.map((perm) => (
                         <label
                           key={perm.id}
-                          className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
-                            selectedPermissions.includes(perm.id)
-                              ? "bg-amber-500/20 border border-amber-500/50"
-                              : "bg-slate-800 border border-blue-900/30 hover:border-blue-800"
-                          }`}
+                          className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors ${selectedPermissions.includes(perm.id)
+                            ? "bg-amber-500/20 border border-amber-500/50"
+                            : "bg-slate-800 border border-blue-900/30 hover:border-blue-800"
+                            }`}
                         >
                           <input
                             type="checkbox"

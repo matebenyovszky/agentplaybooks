@@ -12,13 +12,17 @@ import {
   SidebarBody,
   SidebarLink
 } from "@/components/ui/sidebar";
+import { useTheme } from "@/components/theme-provider";
 import {
   BookOpen,
   Globe,
   Settings,
   LogOut,
   Star,
-  Play
+  Play,
+  Sun,
+  Moon,
+  Laptop
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 
@@ -33,6 +37,7 @@ export default function DashboardLayout({
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { theme, setTheme } = useTheme();
   const supabase = useMemo(() => createBrowserClient(), []);
 
   useEffect(() => {
@@ -74,7 +79,7 @@ export default function DashboardLayout({
     {
       label: "Settings",
       href: "/dashboard/settings",
-      icon: <Settings className="h-5 w-5 text-slate-400" />,
+      icon: <Settings className="h-5 w-5 text-neutral-500 dark:text-slate-400" />,
     },
   ];
 
@@ -143,6 +148,33 @@ export default function DashboardLayout({
                   </p>
                 </motion.div>
               </div>
+
+              {/* Theme Toggle */}
+              <button
+                onClick={() => {
+                  if (theme === "light") setTheme("dark");
+                  else if (theme === "dark") setTheme("system");
+                  else setTheme("light");
+                }}
+                className="flex items-center gap-3 py-2.5 px-2 text-neutral-600 dark:text-slate-400 hover:bg-neutral-100 dark:hover:bg-blue-900/20 rounded-lg transition-colors w-full"
+                title={`Theme: ${theme.charAt(0).toUpperCase() + theme.slice(1)}`}
+              >
+                <span className="shrink-0 flex items-center justify-center w-6">
+                  {theme === "light" && <Sun className="h-5 w-5" />}
+                  {theme === "dark" && <Moon className="h-5 w-5" />}
+                  {theme === "system" && <Laptop className="h-5 w-5" />}
+                </span>
+                <motion.span
+                  animate={{
+                    opacity: sidebarOpen ? 1 : 0,
+                    width: sidebarOpen ? "auto" : 0
+                  }}
+                  transition={{ duration: 0.2 }}
+                  className="text-sm whitespace-nowrap overflow-hidden"
+                >
+                  Theme: {theme.charAt(0).toUpperCase() + theme.slice(1)}
+                </motion.span>
+              </button>
 
               <button
                 onClick={handleSignOut}

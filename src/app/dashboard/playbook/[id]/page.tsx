@@ -1123,8 +1123,8 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
               exit={{ opacity: 0, y: -10 }}
               className="text-center py-16"
             >
-              <Lock className="h-12 w-12 mx-auto text-slate-600 mb-4" />
-              <p className="text-slate-400">{t("editor.apiKeysPrivate") || "API Keys are only visible to the playbook owner"}</p>
+              <Lock className="h-12 w-12 mx-auto text-neutral-400 dark:text-slate-600 mb-4" />
+              <p className="text-neutral-600 dark:text-slate-400">{t("editor.apiKeysPrivate") || "API Keys are only visible to the playbook owner"}</p>
             </motion.div>
           )}
 
@@ -1137,8 +1137,8 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
               exit={{ opacity: 0, y: -10 }}
               className="max-w-3xl"
             >
-              <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
-                <Settings className="h-5 w-5 text-slate-400" />
+              <h2 className="text-xl font-semibold mb-6 flex items-center gap-2 text-neutral-900 dark:text-white">
+                <Settings className="h-5 w-5 text-neutral-500 dark:text-slate-400" />
                 {t("editor.tabs.details")}
               </h2>
 
@@ -1146,10 +1146,10 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                 {/* Description */}
                 <div className={cn(
                   "p-5 rounded-xl",
-                  "bg-gradient-to-br from-slate-900/80 to-slate-800/80",
-                  "border border-slate-700/50"
+                  "bg-white dark:bg-gradient-to-br dark:from-slate-900/80 dark:to-slate-800/80",
+                  "border border-neutral-200 dark:border-slate-700/50"
                 )}>
-                  <label className="block text-sm font-medium text-slate-400 mb-2">
+                  <label className="block text-sm font-medium text-neutral-600 dark:text-slate-400 mb-2">
                     Description
                   </label>
                   {isOwner ? (
@@ -1158,16 +1158,16 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                       onChange={(e) => updatePlaybook({ description: e.target.value })}
                       className={cn(
                         "w-full p-3 rounded-lg",
-                        "bg-slate-900/70 border border-slate-700/50",
-                        "text-slate-200 placeholder:text-slate-600",
+                        "bg-neutral-50 dark:bg-slate-900/70 border border-neutral-200 dark:border-slate-700/50",
+                        "text-neutral-900 dark:text-slate-200 placeholder:text-neutral-400 dark:placeholder:text-slate-600",
                         "focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20",
                         "resize-y min-h-[100px]"
                       )}
                       placeholder="Describe what this playbook is for..."
                     />
                   ) : (
-                    <p className="text-slate-300 p-3 bg-slate-900/50 rounded-lg min-h-[60px]">
-                      {playbook.description || <span className="text-slate-500 italic">No description</span>}
+                    <p className="text-neutral-700 dark:text-slate-300 p-3 bg-neutral-50 dark:bg-slate-900/50 rounded-lg min-h-[60px]">
+                      {playbook.description || <span className="text-neutral-500 dark:text-slate-500 italic">No description</span>}
                     </p>
                   )}
                 </div>
@@ -1175,13 +1175,13 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                 {/* Persona (1 Playbook = 1 Persona) */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <label className="block text-sm font-medium text-slate-400 flex items-center gap-2">
-                      <Brain className="h-4 w-4 text-blue-400" />
+                    <label className="block text-sm font-medium text-neutral-600 dark:text-slate-400 flex items-center gap-2">
+                      <Brain className="h-4 w-4 text-blue-500 dark:text-blue-400" />
                       Persona
                     </label>
-                    <span className="text-xs text-slate-500">1 playbook = 1 persona</span>
+                    <span className="text-xs text-neutral-500 dark:text-slate-500">1 playbook = 1 persona</span>
                   </div>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-neutral-500 dark:text-slate-500">
                     This is the system prompt and personality definition ChatGPT and MCP clients should follow when using this playbook.
                   </p>
 
@@ -1194,7 +1194,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                       onUpdate={(updated) => setPersonas([updated])}
                     />
                   ) : (
-                    <div className="text-sm text-slate-500 italic">
+                    <div className="text-sm text-neutral-500 dark:text-slate-500 italic">
                       Persona not loaded.
                     </div>
                   )}
@@ -1203,15 +1203,15 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                 {/* Tags */}
                 <div className={cn(
                   "p-5 rounded-xl",
-                  "bg-gradient-to-br from-slate-900/80 to-slate-800/80",
-                  "border border-slate-700/50"
+                  "bg-white dark:bg-gradient-to-br dark:from-slate-900/80 dark:to-slate-800/80",
+                  "border border-neutral-200 dark:border-slate-700/50"
                 )}>
-                  <label className="block text-sm font-medium text-slate-400 mb-2 flex items-center gap-2">
+                  <label className="block text-sm font-medium text-neutral-600 dark:text-slate-400 mb-2 flex items-center gap-2">
                     <Tag className="h-4 w-4" />
                     Tags
                   </label>
                   {isOwner && (
-                    <p className="text-xs text-slate-500 mb-3">
+                    <p className="text-xs text-neutral-500 dark:text-slate-500 mb-3">
                       Add tags to help others find your playbook in the Explore page
                     </p>
                   )}
@@ -1238,7 +1238,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                       </span>
                     ))}
                     {(!playbook.tags || playbook.tags.length === 0) && (
-                      <span className="text-sm text-slate-500 italic">No tags yet</span>
+                      <span className="text-sm text-neutral-500 dark:text-slate-500 italic">No tags yet</span>
                     )}
                   </div>
 
@@ -1262,8 +1262,8 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                           }}
                           className={cn(
                             "flex-1 px-3 py-2 rounded-lg",
-                            "bg-slate-900/70 border border-slate-700/50",
-                            "text-slate-200 placeholder:text-slate-600",
+                            "bg-neutral-50 dark:bg-slate-900/70 border border-neutral-200 dark:border-slate-700/50",
+                            "text-neutral-900 dark:text-slate-200 placeholder:text-neutral-400 dark:placeholder:text-slate-600",
                             "focus:outline-none focus:border-amber-500/50"
                           )}
                           placeholder="Add a tag (e.g. coding, writing, automation)"
@@ -1291,7 +1291,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
 
                       {/* Popular tags suggestions */}
                       <div className="mt-3 flex flex-wrap gap-1.5">
-                        <span className="text-xs text-slate-500 mr-1">Popular:</span>
+                        <span className="text-xs text-neutral-500 dark:text-slate-500 mr-1">Popular:</span>
                         {["coding", "writing", "data", "automation", "research", "creative", "productivity"].map(tag => (
                           <button
                             key={tag}
@@ -1320,10 +1320,10 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                 {isOwner ? (
                   <div className={cn(
                     "p-5 rounded-xl",
-                    "bg-gradient-to-br from-slate-900/80 to-slate-800/80",
-                    "border border-slate-700/50"
+                    "bg-white dark:bg-gradient-to-br dark:from-slate-900/80 dark:to-slate-800/80",
+                    "border border-neutral-200 dark:border-slate-700/50"
                   )}>
-                    <label className="block text-sm font-medium text-slate-400 mb-4">
+                    <label className="block text-sm font-medium text-neutral-600 dark:text-slate-400 mb-4">
                       Visibility
                     </label>
                     <div className="flex gap-4">
@@ -1338,8 +1338,8 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                       >
                         <Lock className="h-5 w-5" />
                         <div className="text-left">
-                          <p className="font-medium">Private</p>
-                          <p className="text-sm text-slate-400">Only you can access</p>
+                          <p className="font-medium text-neutral-900 dark:text-white">Private</p>
+                          <p className="text-sm text-neutral-600 dark:text-slate-400">Only you can access</p>
                         </div>
                       </button>
                       <button
@@ -1353,8 +1353,8 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                       >
                         <Globe className="h-5 w-5" />
                         <div className="text-left">
-                          <p className="font-medium">Public</p>
-                          <p className="text-sm text-slate-400">Anyone with the link</p>
+                          <p className="font-medium text-neutral-900 dark:text-white">Public</p>
+                          <p className="text-sm text-neutral-600 dark:text-slate-400">Anyone with the link</p>
                         </div>
                       </button>
                       <button
@@ -1368,8 +1368,8 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                       >
                         <Eye className="h-5 w-5" />
                         <div className="text-left">
-                          <p className="font-medium">Unlisted</p>
-                          <p className="text-sm text-slate-400">Anyone with the link (not searchable)</p>
+                          <p className="font-medium text-neutral-900 dark:text-white">Unlisted</p>
+                          <p className="text-sm text-neutral-600 dark:text-slate-400">Anyone with the link (not searchable)</p>
                         </div>
                       </button>
                     </div>
@@ -1377,10 +1377,10 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                 ) : (
                   <div className={cn(
                     "p-5 rounded-xl",
-                    "bg-gradient-to-br from-slate-900/80 to-slate-800/80",
-                    "border border-slate-700/50"
+                    "bg-white dark:bg-gradient-to-br dark:from-slate-900/80 dark:to-slate-800/80",
+                    "border border-neutral-200 dark:border-slate-700/50"
                   )}>
-                    <label className="block text-sm font-medium text-slate-400 mb-4">
+                    <label className="block text-sm font-medium text-neutral-600 dark:text-slate-400 mb-4">
                       Visibility
                     </label>
                     <div className={cn(
@@ -1393,10 +1393,10 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                     )}>
                       {playbook.visibility === 'public' ? <Globe className="h-5 w-5" /> : playbook.visibility === 'unlisted' ? <Eye className="h-5 w-5" /> : <Lock className="h-5 w-5" />}
                       <div className="text-left">
-                        <p className="font-medium">
+                        <p className="font-medium text-neutral-900 dark:text-white">
                           {playbook.visibility === 'public' ? "Public" : playbook.visibility === 'unlisted' ? "Unlisted" : "Private"}
                         </p>
-                        <p className="text-sm text-slate-400">
+                        <p className="text-sm text-neutral-600 dark:text-slate-400">
                           {playbook.visibility === 'public' ? "Anyone with the link can view" : playbook.visibility === 'unlisted' ? "Anyone with the link can view (not searchable)" : "Only the owner can access"}
                         </p>
                       </div>
@@ -1407,14 +1407,14 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                 {/* Use with AI Platforms (API Endpoints) */}
                 <div className={cn(
                   "p-5 rounded-xl",
-                  "bg-gradient-to-br from-slate-900/80 to-slate-800/80",
-                  "border border-slate-700/50"
+                  "bg-white dark:bg-gradient-to-br dark:from-slate-900/80 dark:to-slate-800/80",
+                  "border border-neutral-200 dark:border-slate-700/50"
                 )}>
-                  <h3 className="font-medium mb-3 flex items-center gap-2">
-                    <Zap className="h-4 w-4 text-amber-400" />
+                  <h3 className="font-medium mb-3 flex items-center gap-2 text-neutral-900 dark:text-white">
+                    <Zap className="h-4 w-4 text-amber-500 dark:text-amber-400" />
                     Use with AI Platforms (API Endpoints)
                   </h3>
-                  <p className="text-base text-slate-400 mb-4">
+                  <p className="text-base text-neutral-600 dark:text-slate-400 mb-4">
                     Open in a chat UI or use the endpoints below to integrate this playbook.
                   </p>
 
@@ -1539,7 +1539,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                     ].map(({ method, path, desc }) => (
                       <div
                         key={path}
-                        className="flex items-center gap-3 p-3 bg-slate-900/70 rounded-lg border border-slate-700/50 group"
+                        className="flex items-center gap-3 p-3 bg-neutral-50 dark:bg-slate-900/70 rounded-lg border border-neutral-200 dark:border-slate-700/50 group"
                       >
                         <span className={cn(
                           "text-base font-mono px-2.5 py-1 rounded",
@@ -1547,15 +1547,15 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                         )}>
                           {method}
                         </span>
-                        <code className="flex-1 text-base text-slate-200 font-mono truncate">
+                        <code className="flex-1 text-base text-neutral-900 dark:text-slate-200 font-mono truncate">
                           {path}
                         </code>
-                        <span className="text-base text-slate-400 hidden sm:block">
+                        <span className="text-base text-neutral-600 dark:text-slate-400 hidden sm:block">
                           {desc}
                         </span>
                         <button
                           onClick={() => copyToClipboard(`${getBaseUrl()}${path}`, path)}
-                          className="p-1.5 text-slate-400 hover:text-white opacity-0 group-hover:opacity-100 transition-all"
+                          className="p-1.5 text-neutral-500 dark:text-slate-400 hover:text-neutral-900 dark:hover:text-white opacity-0 group-hover:opacity-100 transition-all"
                         >
                           {copied === path ? (
                             <Check className="h-4 w-4 text-green-400" />
@@ -1631,10 +1631,10 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                       >
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-lg">{platform.icon}</span>
-                          <span className="font-medium text-base">{platform.name}</span>
-                          <ExternalLink className="h-3 w-3 text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity ml-auto" />
+                          <span className="font-medium text-base text-neutral-900 dark:text-white">{platform.name}</span>
+                          <ExternalLink className="h-3 w-3 text-neutral-500 dark:text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity ml-auto" />
                         </div>
-                        <p className="text-base text-slate-400">{platform.desc}</p>
+                        <p className="text-base text-neutral-600 dark:text-slate-400">{platform.desc}</p>
                       </Link>
                     ))}
                   </div>
@@ -1660,7 +1660,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                   "border border-red-900/30"
                 )}>
                   <h3 className="font-medium text-red-400 mb-2">Danger Zone</h3>
-                  <p className="text-sm text-slate-400 mb-4">
+                  <p className="text-sm text-neutral-600 dark:text-slate-400 mb-4">
                     Deleting this playbook will remove all associated personas, skills, MCP servers, memories, and API keys.
                   </p>
                   <button

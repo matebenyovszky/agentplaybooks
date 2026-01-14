@@ -141,8 +141,8 @@ export default function EnterprisePage() {
             className="text-center"
           >
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-500/10 border border-green-500/20 mb-6">
-              <Github className="w-4 h-4 text-green-400" />
-              <span className="text-sm text-green-300">100% Open Source</span>
+              <Github className="w-4 h-4 text-green-600 dark:text-green-400" />
+              <span className="text-sm text-green-700 dark:text-green-300">100% Open Source</span>
             </div>
 
             <h1 className="text-5xl md:text-7xl font-bold mb-6 gradient-text">

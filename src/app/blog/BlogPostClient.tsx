@@ -208,37 +208,37 @@ function parseMarkdown(md: string): string {
     let html = md
         // Code blocks
         .replace(/```(\w+)?\n([\s\S]*?)```/g, (_, lang, code) => {
-            return `<pre class="bg-neutral-900 border border-neutral-800 rounded-lg p-4 overflow-x-auto mb-6 text-sm"><code class="language-${lang || 'text'}">${escapeHtml(code.trim())}</code></pre>`;
+            return `<pre class="bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg p-4 overflow-x-auto mb-6 text-sm"><code class="language-${lang || 'text'}">${escapeHtml(code.trim())}</code></pre>`;
         })
         // Inline code
-        .replace(/`([^`]+)`/g, '<code class="bg-neutral-800 text-indigo-300 px-1.5 py-0.5 rounded text-sm font-mono">$1</code>')
+        .replace(/`([^`]+)`/g, '<code class="bg-neutral-100 dark:bg-neutral-800 text-indigo-600 dark:text-indigo-300 px-1.5 py-0.5 rounded text-sm font-mono">$1</code>')
         // Headers
-        .replace(/^#### (.*$)/gm, '<h4 id="$1" class="text-lg font-semibold mt-6 mb-2 text-neutral-200">$1</h4>')
-        .replace(/^### (.*$)/gm, '<h3 id="$1" class="text-xl font-semibold mt-8 mb-3 text-white">$1</h3>')
-        .replace(/^## (.*$)/gm, '<h2 id="$1" class="text-2xl font-bold mt-10 mb-4 text-white border-b border-neutral-800 pb-2">$1</h2>')
+        .replace(/^#### (.*$)/gm, '<h4 id="$1" class="text-lg font-semibold mt-6 mb-2 text-neutral-900 dark:text-neutral-200">$1</h4>')
+        .replace(/^### (.*$)/gm, '<h3 id="$1" class="text-xl font-semibold mt-8 mb-3 text-neutral-900 dark:text-white">$1</h3>')
+        .replace(/^## (.*$)/gm, '<h2 id="$1" class="text-2xl font-bold mt-10 mb-4 text-neutral-900 dark:text-white border-b border-neutral-200 dark:border-neutral-800 pb-2">$1</h2>')
         .replace(/^# (.*$)/gm, '<h1 id="$1" class="text-4xl font-bold mt-6 mb-6 gradient-text">$1</h1>')
         // Bold and italic
-        .replace(/\*\*([^*]+)\*\*/g, '<strong class="font-semibold text-white">$1</strong>')
-        .replace(/\*([^*]+)\*/g, '<em class="italic text-neutral-200">$1</em>')
+        .replace(/\*\*([^*]+)\*\*/g, '<strong class="font-semibold text-neutral-900 dark:text-white">$1</strong>')
+        .replace(/\*([^*]+)\*/g, '<em class="italic text-neutral-700 dark:text-neutral-200">$1</em>')
         // Links (standard markdown links)
-        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-indigo-400 hover:text-indigo-300 underline underline-offset-2">$1</a>')
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 underline underline-offset-2">$1</a>')
         // Lists
         .replace(/^\- (.*$)/gm, '<li class="ml-4">$1</li>')
         .replace(/^(\d+)\. (.*$)/gm, '<li class="ml-4">$2</li>')
         // Blockquotes
-        .replace(/^> (.*$)/gm, '<blockquote class="border-l-4 border-indigo-500 pl-4 my-4 text-neutral-400 italic">$1</blockquote>')
+        .replace(/^> (.*$)/gm, '<blockquote class="border-l-4 border-indigo-500 pl-4 my-4 text-neutral-600 dark:text-neutral-400 italic">$1</blockquote>')
         // Horizontal rules
-        .replace(/^---$/gm, '<hr class="border-neutral-800 my-8" />')
+        .replace(/^---$/gm, '<hr class="border-neutral-200 dark:border-neutral-800 my-8" />')
         // Paragraphs
-        .replace(/\n\n/g, '</p><p class="text-neutral-300 leading-relaxed mb-4">');
+        .replace(/\n\n/g, '</p><p class="text-neutral-700 dark:text-neutral-300 leading-relaxed mb-4">');
 
     if (!html.startsWith('<')) {
-        html = `<p class="text-neutral-300 leading-relaxed mb-4">${html}</p>`;
+        html = `<p class="text-neutral-700 dark:text-neutral-300 leading-relaxed mb-4">${html}</p>`;
     }
 
     // Wrap lists
     html = html.replace(/(<li[^>]*>.*?<\/li>\n?)+/g, (match) => {
-        return `<ul class="list-disc list-inside mb-4 space-y-2 text-neutral-300">${match}</ul>`;
+        return `<ul class="list-disc list-inside mb-4 space-y-2 text-neutral-700 dark:text-neutral-300">${match}</ul>`;
     });
 
     return html;

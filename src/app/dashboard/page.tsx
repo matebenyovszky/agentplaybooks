@@ -102,7 +102,7 @@ export default function DashboardPage() {
           animate={{ opacity: 1, y: 0 }}
           className="text-center py-16"
         >
-          <BookOpen className="h-16 w-16 text-blue-800 mx-auto mb-4" />
+          <BookOpen className="h-16 w-16 text-blue-500 dark:text-blue-400 mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-neutral-600 dark:text-slate-400 mb-2">
             {t("dashboard.noPlaybooks")}
           </h2>

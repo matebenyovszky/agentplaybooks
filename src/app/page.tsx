@@ -224,9 +224,9 @@ export default function LandingPage() {
               <div className="w-12 h-12 rounded-xl dark:bg-blue-500/20 bg-blue-100 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                 <Brain className="w-6 h-6 text-blue-500 dark:text-blue-400" />
               </div>
-              <h3 className="text-lg font-semibold mb-1 text-neutral-900 dark:text-white">{t("landing.whatIsPlaybook.components.persona.title")}</h3>
-              <p className="text-xs text-blue-600 dark:text-blue-300 mb-2">{t("landing.whatIsPlaybook.components.persona.subtitle")}</p>
-              <p className="text-sm text-slate-600 dark:text-slate-400">{t("landing.whatIsPlaybook.components.persona.description")}</p>
+              <h3 className="text-xl font-semibold mb-1 text-neutral-900 dark:text-white">{t("landing.whatIsPlaybook.components.persona.title")}</h3>
+              <p className="text-sm text-blue-600 dark:text-blue-300 mb-2">{t("landing.whatIsPlaybook.components.persona.subtitle")}</p>
+              <p className="text-base text-slate-600 dark:text-slate-400">{t("landing.whatIsPlaybook.components.persona.description")}</p>
             </motion.div>
 
             {/* Skills */}
@@ -240,9 +240,9 @@ export default function LandingPage() {
               <div className="w-12 h-12 rounded-xl dark:bg-amber-500/20 bg-amber-100 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                 <Zap className="w-6 h-6 text-amber-500 dark:text-amber-400" />
               </div>
-              <h3 className="text-lg font-semibold mb-1 text-neutral-900 dark:text-white">{t("landing.whatIsPlaybook.components.skills.title")}</h3>
-              <p className="text-xs text-amber-600 dark:text-amber-300 mb-2">{t("landing.whatIsPlaybook.components.skills.subtitle")}</p>
-              <p className="text-sm text-slate-600 dark:text-slate-400">{t("landing.whatIsPlaybook.components.skills.description")}</p>
+              <h3 className="text-xl font-semibold mb-1 text-neutral-900 dark:text-white">{t("landing.whatIsPlaybook.components.skills.title")}</h3>
+              <p className="text-sm text-amber-600 dark:text-amber-300 mb-2">{t("landing.whatIsPlaybook.components.skills.subtitle")}</p>
+              <p className="text-base text-slate-600 dark:text-slate-400">{t("landing.whatIsPlaybook.components.skills.description")}</p>
             </motion.div>
 
             {/* MCP Servers */}
@@ -256,9 +256,9 @@ export default function LandingPage() {
               <div className="w-12 h-12 rounded-xl dark:bg-purple-500/20 bg-purple-100 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                 <Server className="w-6 h-6 text-purple-500 dark:text-purple-400" />
               </div>
-              <h3 className="text-lg font-semibold mb-1 text-neutral-900 dark:text-white">{t("landing.whatIsPlaybook.components.mcp.title")}</h3>
-              <p className="text-xs text-purple-600 dark:text-purple-300 mb-2">{t("landing.whatIsPlaybook.components.mcp.subtitle")}</p>
-              <p className="text-sm text-slate-600 dark:text-slate-400">{t("landing.whatIsPlaybook.components.mcp.description")}</p>
+              <h3 className="text-xl font-semibold mb-1 text-neutral-900 dark:text-white">{t("landing.whatIsPlaybook.components.mcp.title")}</h3>
+              <p className="text-sm text-purple-600 dark:text-purple-300 mb-2">{t("landing.whatIsPlaybook.components.mcp.subtitle")}</p>
+              <p className="text-base text-slate-600 dark:text-slate-400">{t("landing.whatIsPlaybook.components.mcp.description")}</p>
             </motion.div>
 
             {/* Canvas - Coming Soon */}
@@ -275,9 +275,9 @@ export default function LandingPage() {
               <div className="w-12 h-12 rounded-xl dark:bg-green-500/20 bg-green-100 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                 <FileText className="w-6 h-6 text-green-500 dark:text-green-400" />
               </div>
-              <h3 className="text-lg font-semibold mb-1 text-neutral-900 dark:text-white">{t("landing.whatIsPlaybook.components.canvas.title")}</h3>
-              <p className="text-xs text-green-600 dark:text-green-300 mb-2">{t("landing.whatIsPlaybook.components.canvas.subtitle")}</p>
-              <p className="text-sm text-slate-600 dark:text-slate-400">{t("landing.whatIsPlaybook.components.canvas.description")}</p>
+              <h3 className="text-xl font-semibold mb-1 text-neutral-900 dark:text-white">{t("landing.whatIsPlaybook.components.canvas.title")}</h3>
+              <p className="text-sm text-green-600 dark:text-green-300 mb-2">{t("landing.whatIsPlaybook.components.canvas.subtitle")}</p>
+              <p className="text-base text-slate-600 dark:text-slate-400">{t("landing.whatIsPlaybook.components.canvas.description")}</p>
             </motion.div>
 
             {/* Memory */}
@@ -291,9 +291,9 @@ export default function LandingPage() {
               <div className="w-12 h-12 rounded-xl dark:bg-cyan-500/20 bg-cyan-100 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                 <Database className="w-6 h-6 text-cyan-500 dark:text-cyan-400" />
               </div>
-              <h3 className="text-lg font-semibold mb-1 text-neutral-900 dark:text-white">{t("landing.whatIsPlaybook.components.memory.title")}</h3>
-              <p className="text-xs text-cyan-600 dark:text-cyan-300 mb-2">{t("landing.whatIsPlaybook.components.memory.subtitle")}</p>
-              <p className="text-sm text-slate-600 dark:text-slate-400">{t("landing.whatIsPlaybook.components.memory.description")}</p>
+              <h3 className="text-xl font-semibold mb-1 text-neutral-900 dark:text-white">{t("landing.whatIsPlaybook.components.memory.title")}</h3>
+              <p className="text-sm text-cyan-600 dark:text-cyan-300 mb-2">{t("landing.whatIsPlaybook.components.memory.subtitle")}</p>
+              <p className="text-base text-slate-600 dark:text-slate-400">{t("landing.whatIsPlaybook.components.memory.description")}</p>
             </motion.div>
           </div>
 
