@@ -1,6 +1,3 @@
-import fs from "fs";
-import path from "path";
-
 export type BlogPost = {
     slug: string;
     title: string;
@@ -27,129 +24,82 @@ function parseFrontmatter(fileContent: string): { metadata: Record<string, strin
     frontmatterBlock.split("\n").forEach((line) => {
         const [key, ...valueParts] = line.split(":");
         if (key && valueParts.length > 0) {
-            metadata[key.trim()] = valueParts.join(":").trim().replace(/^['"](.*)['"]$/, "$1"); // Remove quotes if present
+            metadata[key.trim()] = valueParts.join(":").trim().replace(/^['"](.*)['"]+$/, "$1"); // Remove quotes if present
         }
     });
 
     return { metadata, content };
 }
 
-export async function getBlogPosts(locale: string = "en"): Promise<BlogPost[]> {
-    const blogDir = path.join(process.cwd(), "public", "blog");
-
-    if (!fs.existsSync(blogDir)) {
-        return [];
-    }
-
-    const files = await fs.promises.readdir(blogDir);
-    const postsMap = new Map<string, BlogPost>();
-
-    // Use a for...of loop to handle async operations sequentially or Promise.all for parallel
-    await Promise.all(
-        files
-            .filter((file) => file.endsWith(".md"))
-            .map(async (file) => {
-                // Filename format: slug.locale.md or slug.md (default en)
-                // We want to group by slug
-                let slug = file.replace(/\.md$/, "");
-                let fileLocale = "en";
-
-                // Check for localized patterns like hello-world.hu.md
-                const parts = slug.split(".");
-                if (parts.length > 1 && parts[parts.length - 1].length === 2) {
-                    fileLocale = parts.pop()!;
-                    slug = parts.join(".");
-                }
-
-                // Only process if it matches the requested locale or is a default fallback
-                // Current strategy: Load all, then filter/select best match.
-                // Actually, better strategy: Group all files by slug, then for each slug, pick best locale.
-
-                return { file, slug, fileLocale };
-            })
-    ).then(async (fileInfos) => {
-        // Group by slug
-        const slugGroups = new Map<string, { file: string; fileLocale: string }[]>();
-
-        fileInfos.forEach((info) => {
-            if (!slugGroups.has(info.slug)) {
-                slugGroups.set(info.slug, []);
-            }
-            slugGroups.get(info.slug)!.push(info);
-        });
-
-        // For each slug, pick the best file
-        for (const [slug, variants] of slugGroups.entries()) {
-            // 1. Exact match
-            let bestVariant = variants.find((v) => v.fileLocale === locale);
-
-            // 2. Fallback to English/defualt if requested locale not found
-            if (!bestVariant) {
-                bestVariant = variants.find((v) => v.fileLocale === "en");
-            }
-
-            // 3. Fallback to any if English not found (unlikely but safe)
-            if (!bestVariant && variants.length > 0) {
-                bestVariant = variants[0];
-            }
-
-            if (bestVariant) {
-                const post = await parseBlogPost(bestVariant.file, slug);
-                if (post) {
-                    postsMap.set(slug, post);
-                }
-            }
-        }
-    });
-
-    return Array.from(postsMap.values()).sort((a, b) =>
-        new Date(b.date).getTime() - new Date(a.date).getTime()
-    );
-}
-
+/**
+ * Client-side function to fetch a blog post by slug and locale.
+ * Works in Cloudflare Workers by fetching static files from /blog/
+ */
 export async function getBlogPost(slug: string, locale: string = "en"): Promise<BlogPost | null> {
-    const blogDir = path.join(process.cwd(), "public", "blog");
-
     // Try exact locale first: slug.locale.md
     let filename = `${slug}.${locale}.md`;
-    let filePath = path.join(blogDir, filename);
+    let response = await fetch(`/blog/${filename}`);
 
-    if (!fs.existsSync(filePath)) {
+    if (!response.ok) {
         // Try default: slug.md
         filename = `${slug}.md`;
-        filePath = path.join(blogDir, filename);
+        response = await fetch(`/blog/${filename}`);
     }
 
     // Handle case where default might be explicitly named slug.en.md
-    if (!fs.existsSync(filePath) && locale !== "en") {
+    if (!response.ok && locale !== "en") {
         filename = `${slug}.en.md`;
-        filePath = path.join(blogDir, filename);
+        response = await fetch(`/blog/${filename}`);
     }
 
-    if (!fs.existsSync(filePath)) {
+    if (!response.ok) {
         return null;
     }
 
-    return parseBlogPost(filename, slug);
+    const fileContent = await response.text();
+    const { metadata, content } = parseFrontmatter(fileContent);
+
+    return {
+        slug,
+        title: metadata.title || slug,
+        description: metadata.description || "",
+        date: metadata.date || new Date().toISOString(),
+        author: metadata.author,
+        content,
+    };
 }
 
-async function parseBlogPost(filename: string, slug: string): Promise<BlogPost | null> {
-    const filePath = path.join(process.cwd(), "public", "blog", filename);
+/**
+ * Client-side function to get all blog posts for a locale.
+ * Note: In Cloudflare environment, we need to know the list of files ahead of time
+ * since we can't read directories. This function fetches known posts.
+ */
+export async function getBlogPosts(locale: string = "en"): Promise<BlogPost[]> {
+    // Import auto-generated known slugs
+    const { knownBlogSlugs } = await import("./blog-slugs.generated");
 
-    try {
-        const fileContent = await fs.promises.readFile(filePath, "utf-8");
-        const { metadata, content } = parseFrontmatter(fileContent);
+    const posts: BlogPost[] = [];
 
-        return {
-            slug,
-            title: metadata.title || slug,
-            description: metadata.description || "",
-            date: metadata.date || new Date().toISOString(),
-            author: metadata.author,
-            content,
-        };
-    } catch (e) {
-        console.error(`Error parsing blog post ${filename}:`, e);
-        return null;
+    for (const slug of knownBlogSlugs) {
+        try {
+            const post = await getBlogPost(slug, locale);
+            if (post) {
+                posts.push(post);
+            }
+        } catch (error) {
+            console.error(`Error loading blog post ${slug}:`, error);
+        }
     }
+
+    // Sort by date descending
+    return posts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+}
+
+/**
+ * Get list of known blog post slugs.
+ * This is used for static generation at build time.
+ */
+export async function getKnownBlogSlugs(): Promise<string[]> {
+    const { knownBlogSlugs } = await import("./blog-slugs.generated");
+    return [...knownBlogSlugs];
 }

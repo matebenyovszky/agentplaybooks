@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { 
+import {
   Database,
   Trash2,
   Copy,
@@ -36,7 +36,7 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
   const [loading, setLoading] = useState(false);
 
   // Filter memories by search
-  const filteredMemories = memories.filter(m => 
+  const filteredMemories = memories.filter(m =>
     m.key.toLowerCase().includes(searchQuery.toLowerCase()) ||
     JSON.stringify(m.value).toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -92,14 +92,14 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
     setSaving(true);
     try {
       const parsedValue = JSON.parse(editValue);
-      
+
       const updated = await storage.updateMemory(editingMemory.id, {
         key: editKey,
-        value: parsedValue 
+        value: parsedValue
       });
 
       if (updated) {
-        onUpdate(memories.map(m => 
+        onUpdate(memories.map(m =>
           m.id === editingMemory.id ? updated : m
         ));
         setEditingMemory(null);
@@ -148,8 +148,8 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
             placeholder="Search memories..."
             className={cn(
               "w-full pl-10 pr-4 py-2 rounded-lg",
-              "bg-slate-900/70 border border-slate-700/50",
-              "text-slate-200 placeholder:text-slate-600",
+              "bg-neutral-50 dark:bg-slate-900/70 border border-neutral-200 dark:border-slate-700/50",
+              "text-neutral-900 dark:text-slate-200 placeholder:text-neutral-400 dark:placeholder:text-slate-600",
               "focus:outline-none focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/20"
             )}
           />
@@ -222,8 +222,8 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
                 exit={{ opacity: 0, y: -10 }}
                 className={cn(
                   "rounded-xl border transition-all duration-200",
-                  "bg-gradient-to-br from-slate-900/80 to-slate-800/80",
-                  "border-teal-900/30 hover:border-teal-700/50"
+                  "bg-white dark:bg-gradient-to-br dark:from-slate-900/80 dark:to-slate-800/80",
+                  "border-neutral-200 dark:border-teal-900/30 hover:border-teal-500 dark:hover:border-teal-700/50"
                 )}
               >
                 <div className="p-4">
@@ -254,25 +254,25 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
                           <Copy className="h-4 w-4" />
                         )}
                       </button>
-          <button
-            onClick={() => startEditing(memory)}
-            disabled={readOnly}
-            className="p-1.5 text-slate-400 hover:text-teal-400 hover:bg-teal-500/10 rounded-lg transition-colors"
-            title="Edit memory"
-          >
-            <Edit3 className="h-4 w-4" />
-          </button>
-          <button
-            onClick={() => handleDeleteMemory(memory)}
-            disabled={readOnly}
-            className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
-            title="Delete memory"
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
+                      <button
+                        onClick={() => startEditing(memory)}
+                        disabled={readOnly}
+                        className="p-1.5 text-slate-400 hover:text-teal-400 hover:bg-teal-500/10 rounded-lg transition-colors"
+                        title="Edit memory"
+                      >
+                        <Edit3 className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteMemory(memory)}
+                        disabled={readOnly}
+                        className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                        title="Delete memory"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
                     </div>
                   </div>
-                  
+
                   <pre className={cn(
                     "p-3 rounded-lg overflow-x-auto",
                     "bg-slate-900/70 border border-slate-700/50",
@@ -317,7 +317,7 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
             >
               <div className="p-6">
                 <h3 className="text-xl font-semibold text-white mb-4">Edit Memory</h3>
-                
+
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-400 mb-2">

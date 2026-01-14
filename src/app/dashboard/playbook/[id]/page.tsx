@@ -1656,11 +1656,11 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                 {/* Danger Zone */}
                 <div className={cn(
                   "p-5 rounded-xl",
-                  "bg-gradient-to-br from-red-950/30 to-red-900/20",
-                  "border border-red-900/30"
+                  "bg-red-50 dark:bg-gradient-to-br dark:from-red-950/30 dark:to-red-900/20",
+                  "border border-red-200 dark:border-red-900/30"
                 )}>
-                  <h3 className="font-medium text-red-400 mb-2">Danger Zone</h3>
-                  <p className="text-sm text-neutral-600 dark:text-slate-400 mb-4">
+                  <h3 className="font-medium text-red-600 dark:text-red-400 mb-2">Danger Zone</h3>
+                  <p className="text-sm text-red-700 dark:text-slate-400 mb-4">
                     Deleting this playbook will remove all associated personas, skills, MCP servers, memories, and API keys.
                   </p>
                   <button
@@ -1672,7 +1672,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                       await supabase.from("playbooks").delete().eq("id", playbook?.id || id);
                       window.location.href = "/dashboard";
                     }}
-                    className="px-4 py-2 bg-red-600/20 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-600/30 transition-colors"
+                    className="px-4 py-2 bg-red-100 dark:bg-red-600/20 text-red-700 dark:text-red-400 border border-red-300 dark:border-red-500/30 rounded-lg hover:bg-red-200 dark:hover:bg-red-600/30 transition-colors font-medium"
                   >
                     Delete Playbook
                   </button>

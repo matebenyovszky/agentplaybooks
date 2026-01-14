@@ -233,12 +233,12 @@ export function ApiKeyManager({ playbook_id, apiKeys, onUpdate }: ApiKeyManagerP
                 exit={{ opacity: 0, y: -10 }}
                 className={cn(
                   "p-4 rounded-xl border transition-all",
-                  "bg-gradient-to-br from-slate-900/80 to-slate-800/80",
+                  "bg-white dark:bg-gradient-to-br dark:from-slate-900/80 dark:to-slate-800/80",
                   hasExpired(apiKey)
-                    ? "border-red-900/30 opacity-60"
+                    ? "border-red-300 dark:border-red-900/30 opacity-60"
                     : apiKey.is_active
-                      ? "border-amber-900/30 hover:border-amber-700/50"
-                      : "border-slate-700/30 opacity-60"
+                      ? "border-neutral-200 dark:border-amber-900/30 hover:border-amber-500 dark:hover:border-amber-700/50"
+                      : "border-neutral-300 dark:border-slate-700/30 opacity-60"
                 )}
               >
                 <div className="flex items-center justify-between">

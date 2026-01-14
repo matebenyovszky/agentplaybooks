@@ -203,15 +203,28 @@ function MarkdownRenderer({ content }: { content: string }) {
 }
 
 function parseMarkdown(md: string): string {
-    // Basic Markdown parsing reused from DocsPageClient
-    // We recreate it here to avoid dependency issues if DocsPageClient changes
-    let html = md
-        // Code blocks
-        .replace(/```(\w+)?\n([\s\S]*?)```/g, (_, lang, code) => {
-            return `<pre class="bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg p-4 overflow-x-auto mb-6 text-sm"><code class="language-${lang || 'text'}">${escapeHtml(code.trim())}</code></pre>`;
-        })
-        // Inline code
-        .replace(/`([^`]+)`/g, '<code class="bg-neutral-100 dark:bg-neutral-800 text-indigo-600 dark:text-indigo-300 px-1.5 py-0.5 rounded text-sm font-mono">$1</code>')
+    // Step 1: Extract and preserve code blocks with placeholders
+    const codeBlocks: string[] = [];
+    const codeBlockPlaceholder = '___CODE_BLOCK_PLACEHOLDER___';
+
+    let textWithPlaceholders = md.replace(/```(\w+)?\n([\s\S]*?)```/g, (_, lang, code) => {
+        const codeHtml = `<pre class="bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg p-4 overflow-x-auto mb-6 text-sm text-neutral-800 dark:text-neutral-200"><code class="language-${lang || 'text'}">${escapeHtml(code.trim())}</code></pre>`;
+        codeBlocks.push(codeHtml);
+        return `${codeBlockPlaceholder}${codeBlocks.length - 1}${codeBlockPlaceholder}`;
+    });
+
+    // Step 2: Extract and preserve inline code
+    const inlineCodes: string[] = [];
+    const inlineCodePlaceholder = '___INLINE_CODE_PLACEHOLDER___';
+
+    textWithPlaceholders = textWithPlaceholders.replace(/`([^`]+)`/g, (_, code) => {
+        const inlineHtml = `<code class="bg-neutral-100 dark:bg-neutral-800 text-indigo-600 dark:text-indigo-300 px-1.5 py-0.5 rounded text-sm font-mono">${code}</code>`;
+        inlineCodes.push(inlineHtml);
+        return `${inlineCodePlaceholder}${inlineCodes.length - 1}${inlineCodePlaceholder}`;
+    });
+
+    // Step 3: Process all other markdown (now safe from code blocks)
+    let html = textWithPlaceholders
         // Headers
         .replace(/^#### (.*$)/gm, '<h4 id="$1" class="text-lg font-semibold mt-6 mb-2 text-neutral-900 dark:text-neutral-200">$1</h4>')
         .replace(/^### (.*$)/gm, '<h3 id="$1" class="text-xl font-semibold mt-8 mb-3 text-neutral-900 dark:text-white">$1</h3>')
@@ -239,6 +252,16 @@ function parseMarkdown(md: string): string {
     // Wrap lists
     html = html.replace(/(<li[^>]*>.*?<\/li>\n?)+/g, (match) => {
         return `<ul class="list-disc list-inside mb-4 space-y-2 text-neutral-700 dark:text-neutral-300">${match}</ul>`;
+    });
+
+    // Step 4: Restore inline code blocks
+    html = html.replace(new RegExp(`${inlineCodePlaceholder}(\\d+)${inlineCodePlaceholder}`, 'g'), (_, index) => {
+        return inlineCodes[parseInt(index)];
+    });
+
+    // Step 5: Restore code blocks
+    html = html.replace(new RegExp(`${codeBlockPlaceholder}(\\d+)${codeBlockPlaceholder}`, 'g'), (_, index) => {
+        return codeBlocks[parseInt(index)];
     });
 
     return html;

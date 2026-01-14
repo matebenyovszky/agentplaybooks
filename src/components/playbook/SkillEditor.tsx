@@ -213,8 +213,8 @@ export function SkillEditor({ skill, storage, onUpdate, onDelete, readOnly = fal
       exit={{ opacity: 0, y: -10 }}
       className={cn(
         "relative group rounded-xl border transition-all duration-200",
-        "bg-gradient-to-br from-slate-900/80 to-slate-800/80",
-        "border-purple-900/30 hover:border-purple-700/50",
+        "bg-white dark:bg-gradient-to-br dark:from-slate-900/80 dark:to-slate-800/80",
+        "border-neutral-200 dark:border-purple-900/30 hover:border-purple-500 dark:hover:border-purple-700/50",
         expanded && "ring-2 ring-purple-500/20"
       )}
     >
@@ -249,14 +249,14 @@ export function SkillEditor({ skill, storage, onUpdate, onDelete, readOnly = fal
               disabled={readOnly}
               className={cn(
                 "text-lg font-semibold bg-transparent border-none focus:outline-none",
-                "w-full text-slate-100 placeholder:text-slate-500",
-                "hover:bg-slate-800/50 focus:bg-slate-800/70 rounded px-2 py-1 -ml-2",
+                "w-full text-neutral-900 dark:text-slate-100 placeholder:text-neutral-400 dark:placeholder:text-slate-500",
+                "hover:bg-neutral-100 dark:hover:bg-slate-800/50 focus:bg-neutral-100 dark:focus:bg-slate-800/70 rounded px-2 py-1 -ml-2",
                 "font-mono",
                 readOnly && "cursor-default"
               )}
               placeholder="skill_name"
             />
-            <p className="text-sm text-slate-500 truncate px-2">
+            <p className="text-sm text-neutral-500 dark:text-slate-500 truncate px-2">
               {hasContent ? (
                 <>
                   <span className="text-emerald-400">Content Skill</span>
@@ -280,7 +280,7 @@ export function SkillEditor({ skill, storage, onUpdate, onDelete, readOnly = fal
               e.stopPropagation();
               copyToClipboard();
             }}
-            className="p-2 text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors"
+            className="p-2 text-neutral-500 dark:text-slate-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-slate-700/50 rounded-lg transition-colors"
             title="Copy skill data"
           >
             {copied ? <Check className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4" />}
@@ -292,14 +292,14 @@ export function SkillEditor({ skill, storage, onUpdate, onDelete, readOnly = fal
                 e.stopPropagation();
                 handleDelete();
               }}
-              className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+              className="p-2 text-neutral-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/10 rounded-lg transition-colors"
               title="Delete skill"
             >
               <Trash2 className="h-4 w-4" />
             </button>
           )}
 
-          <div className="text-slate-500">
+          <div className="text-neutral-500 dark:text-slate-500">
             {expanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
           </div>
         </div>
@@ -318,7 +318,7 @@ export function SkillEditor({ skill, storage, onUpdate, onDelete, readOnly = fal
             <div className="px-4 pb-4 space-y-4">
               {/* Description */}
               <div>
-                <label className="block text-sm font-medium text-slate-400 mb-2">
+                <label className="block text-sm font-medium text-neutral-600 dark:text-slate-400 mb-2">
                   Description
                 </label>
                 <textarea
@@ -327,8 +327,8 @@ export function SkillEditor({ skill, storage, onUpdate, onDelete, readOnly = fal
                   disabled={readOnly}
                   className={cn(
                     "w-full h-20 p-3 rounded-lg",
-                    "bg-slate-900/70 border border-slate-700/50",
-                    "text-slate-200 placeholder:text-slate-600",
+                    "bg-neutral-50 dark:bg-slate-900/70 border border-neutral-200 dark:border-slate-700/50",
+                    "text-neutral-900 dark:text-slate-200 placeholder:text-neutral-400 dark:placeholder:text-slate-600",
                     "focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20",
                     "text-sm resize-y",
                     readOnly && "cursor-default"
@@ -339,7 +339,7 @@ export function SkillEditor({ skill, storage, onUpdate, onDelete, readOnly = fal
 
               {/* Licence */}
               <div>
-                <label className="block text-sm font-medium text-slate-400 mb-2">
+                <label className="block text-sm font-medium text-neutral-600 dark:text-slate-400 mb-2">
                   Licence
                 </label>
                 <input
@@ -349,8 +349,8 @@ export function SkillEditor({ skill, storage, onUpdate, onDelete, readOnly = fal
                   disabled={readOnly}
                   className={cn(
                     "w-full p-3 rounded-lg",
-                    "bg-slate-900/70 border border-slate-700/50",
-                    "text-slate-200 placeholder:text-slate-600",
+                    "bg-neutral-50 dark:bg-slate-900/70 border border-neutral-200 dark:border-slate-700/50",
+                    "text-neutral-900 dark:text-slate-200 placeholder:text-neutral-400 dark:placeholder:text-slate-600",
                     "focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20",
                     "text-sm",
                     readOnly && "cursor-default"
@@ -361,7 +361,7 @@ export function SkillEditor({ skill, storage, onUpdate, onDelete, readOnly = fal
 
               {/* Skill Content */}
               <div>
-                <label className="block text-sm font-medium text-slate-400 mb-2">
+                <label className="block text-sm font-medium text-neutral-600 dark:text-slate-400 mb-2">
                   Skill Content (Markdown)
                 </label>
                 <textarea
@@ -370,15 +370,15 @@ export function SkillEditor({ skill, storage, onUpdate, onDelete, readOnly = fal
                   disabled={readOnly}
                   className={cn(
                     "w-full h-64 p-4 rounded-lg",
-                    "bg-slate-900/70 border border-slate-700/50",
-                    "text-slate-200 placeholder:text-slate-600",
+                    "bg-neutral-50 dark:bg-slate-900/70 border border-neutral-200 dark:border-slate-700/50",
+                    "text-neutral-900 dark:text-slate-200 placeholder:text-neutral-400 dark:placeholder:text-slate-600",
                     "focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20",
                     "font-mono text-sm resize-y",
                     readOnly && "cursor-default"
                   )}
                   placeholder="# Skill Name&#10;&#10;Instructions and content for the skill..."
                 />
-                <p className="text-xs text-slate-500 mt-2">
+                <p className="text-xs text-neutral-500 dark:text-slate-500 mt-2">
                   {content.length.toLocaleString()} characters • ~{Math.round(content.length / 4)} tokens
                 </p>
               </div>
@@ -386,7 +386,7 @@ export function SkillEditor({ skill, storage, onUpdate, onDelete, readOnly = fal
               {/* Attachments Section */}
               <div className="border-t border-slate-700/50 pt-4 mt-4">
                 <div className="flex items-center justify-between mb-3">
-                  <label className="text-sm font-medium text-slate-400 flex items-center gap-2">
+                  <label className="text-sm font-medium text-neutral-600 dark:text-slate-400 flex items-center gap-2">
                     <FileCode className="h-4 w-4" />
                     Related Files ({attachments.length}/{ATTACHMENT_LIMITS.MAX_FILES_PER_SKILL})
                   </label>

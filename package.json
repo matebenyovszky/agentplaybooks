@@ -6,6 +6,7 @@
   "author": "AgentPlaybooks",
   "scripts": {
     "dev": "next dev",
+    "prebuild": "tsx scripts/generate-blog-slugs.ts",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

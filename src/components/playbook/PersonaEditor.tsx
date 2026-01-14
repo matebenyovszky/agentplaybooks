@@ -3,10 +3,10 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { 
-  Brain, 
-  Trash2, 
-  ChevronDown, 
+import {
+  Brain,
+  Trash2,
+  ChevronDown,
   ChevronUp,
   Copy,
   Check,
@@ -52,8 +52,8 @@ export function PersonaEditor({ persona, storage, onUpdate, onDelete, readOnly =
 
   // Track changes
   useEffect(() => {
-    const changed = 
-      name !== persona.name || 
+    const changed =
+      name !== persona.name ||
       systemPrompt !== persona.system_prompt ||
       metadata !== JSON.stringify(persona.metadata || {}, null, 2);
     setHasChanges(changed);
@@ -67,7 +67,7 @@ export function PersonaEditor({ persona, storage, onUpdate, onDelete, readOnly =
   // Auto-save on debounced change
   useEffect(() => {
     if (!hasChanges) return;
-    
+
     const save = async () => {
       setSaving(true);
       try {
@@ -124,13 +124,13 @@ export function PersonaEditor({ persona, storage, onUpdate, onDelete, readOnly =
       exit={{ opacity: 0, y: -10 }}
       className={cn(
         "relative group rounded-xl border transition-all duration-200",
-        "bg-gradient-to-br from-slate-900/80 to-slate-800/80",
-        "border-blue-900/30 hover:border-blue-700/50",
+        "bg-white dark:bg-gradient-to-br dark:from-slate-900/80 dark:to-slate-800/80",
+        "border-neutral-200 dark:border-blue-900/30 hover:border-blue-500 dark:hover:border-blue-700/50",
         expanded && "ring-2 ring-blue-500/20"
       )}
     >
       {/* Header - Always visible */}
-      <div 
+      <div
         className="flex items-center gap-4 p-4 cursor-pointer"
         onClick={() => setExpanded(!expanded)}
       >
@@ -142,10 +142,10 @@ export function PersonaEditor({ persona, storage, onUpdate, onDelete, readOnly =
           )}>
             <Brain className="h-5 w-5 text-blue-400" />
           </div>
-          
+
           <div className="flex-1 min-w-0">
             {readOnly ? (
-              <h3 className="text-lg font-semibold text-slate-100 px-2 py-1 -ml-2">{name}</h3>
+              <h3 className="text-lg font-semibold text-neutral-900 dark:text-slate-100 px-2 py-1 -ml-2">{name}</h3>
             ) : (
               <input
                 type="text"
@@ -157,13 +157,13 @@ export function PersonaEditor({ persona, storage, onUpdate, onDelete, readOnly =
                 onClick={(e) => e.stopPropagation()}
                 className={cn(
                   "text-lg font-semibold bg-transparent border-none focus:outline-none",
-                  "w-full text-slate-100 placeholder:text-slate-500",
-                  "hover:bg-slate-800/50 focus:bg-slate-800/70 rounded px-2 py-1 -ml-2"
+                  "w-full text-neutral-900 dark:text-slate-100 placeholder:text-neutral-400 dark:placeholder:text-slate-500",
+                  "hover:bg-neutral-100 dark:hover:bg-slate-800/50 focus:bg-neutral-100 dark:focus:bg-slate-800/70 rounded px-2 py-1 -ml-2"
                 )}
                 placeholder="Persona Name"
               />
             )}
-            <p className="text-sm text-slate-500 truncate px-2">
+            <p className="text-sm text-neutral-500 dark:text-slate-500 truncate px-2">
               {systemPrompt.length} characters
               {!readOnly && hasChanges && <span className="ml-2 text-amber-400">• unsaved</span>}
               {!readOnly && saving && <span className="ml-2 text-blue-400">• saving...</span>}
@@ -177,26 +177,26 @@ export function PersonaEditor({ persona, storage, onUpdate, onDelete, readOnly =
               e.stopPropagation();
               copyToClipboard();
             }}
-            className="p-2 text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors"
+            className="p-2 text-neutral-500 dark:text-slate-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-slate-700/50 rounded-lg transition-colors"
             title="Copy system prompt"
           >
             {copied ? <Check className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4" />}
           </button>
-          
+
           {!readOnly && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 handleDelete();
               }}
-              className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+              className="p-2 text-neutral-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/10 rounded-lg transition-colors"
               title="Delete persona"
             >
               <Trash2 className="h-4 w-4" />
             </button>
           )}
 
-          <div className="text-slate-500">
+          <div className="text-neutral-500 dark:text-slate-500">
             {expanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
           </div>
         </div>
@@ -215,7 +215,7 @@ export function PersonaEditor({ persona, storage, onUpdate, onDelete, readOnly =
             <div className="px-4 pb-4 space-y-4">
               {/* System Prompt */}
               <div>
-                <label className="block text-sm font-medium text-slate-400 mb-2">
+                <label className="block text-sm font-medium text-neutral-600 dark:text-slate-400 mb-2">
                   System Prompt
                 </label>
                 <textarea
@@ -225,8 +225,8 @@ export function PersonaEditor({ persona, storage, onUpdate, onDelete, readOnly =
                   readOnly={readOnly}
                   className={cn(
                     "w-full min-h-[200px] p-4 rounded-lg",
-                    "bg-slate-900/70 border border-slate-700/50",
-                    "text-slate-200 placeholder:text-slate-600",
+                    "bg-neutral-50 dark:bg-slate-900/70 border border-neutral-200 dark:border-slate-700/50",
+                    "text-neutral-900 dark:text-slate-200 placeholder:text-neutral-400 dark:placeholder:text-slate-600",
                     "focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20",
                     "font-mono text-sm leading-relaxed resize-y",
                     readOnly && "cursor-default"
@@ -237,7 +237,7 @@ export function PersonaEditor({ persona, storage, onUpdate, onDelete, readOnly =
 
               {/* Metadata (JSON) */}
               <div>
-                <label className="block text-sm font-medium text-slate-400 mb-2">
+                <label className="block text-sm font-medium text-neutral-600 dark:text-slate-400 mb-2">
                   Metadata (JSON)
                 </label>
                 <textarea
@@ -246,8 +246,8 @@ export function PersonaEditor({ persona, storage, onUpdate, onDelete, readOnly =
                   readOnly={readOnly}
                   className={cn(
                     "w-full h-24 p-4 rounded-lg",
-                    "bg-slate-900/70 border border-slate-700/50",
-                    "text-slate-200 placeholder:text-slate-600",
+                    "bg-neutral-50 dark:bg-slate-900/70 border border-neutral-200 dark:border-slate-700/50",
+                    "text-neutral-900 dark:text-slate-200 placeholder:text-neutral-400 dark:placeholder:text-slate-600",
                     "focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20",
                     "font-mono text-sm resize-y",
                     readOnly && "cursor-default"

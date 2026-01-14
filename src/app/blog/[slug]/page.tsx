@@ -26,11 +26,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export async function generateStaticParams() {
-    // Generate params for default locale (en) at build time
-    // Dynamic locales will be server-rendered on demand
-    const posts = await getBlogPosts("en");
-    return posts.map((post) => ({
-        slug: post.slug,
+    // Use known slugs for static generation at build time
+    const { getKnownBlogSlugs } = await import("@/lib/blog-server");
+    const slugs = await getKnownBlogSlugs();
+    return slugs.map((slug) => ({
+        slug,
     }));
 }
 

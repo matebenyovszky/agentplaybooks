@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { 
+import {
   Server,
   Trash2,
   ChevronDown,
@@ -75,8 +75,8 @@ export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOn
 
   // Track changes
   useEffect(() => {
-    const changed = 
-      name !== mcpServer.name || 
+    const changed =
+      name !== mcpServer.name ||
       description !== (mcpServer.description || "") ||
       toolsJson !== JSON.stringify(mcpServer.tools || [], null, 2) ||
       resourcesJson !== JSON.stringify(mcpServer.resources || [], null, 2);
@@ -112,7 +112,7 @@ export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOn
   // Debounced auto-save
   useEffect(() => {
     if (!hasChanges || jsonError) return;
-    
+
     const timer = setTimeout(() => {
       handleSave();
     }, 2000);
@@ -141,7 +141,7 @@ export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOn
   // Add a new tool with auto-generated name
   const addTool = () => {
     const currentTools = JSON.parse(toolsJson);
-    
+
     // Generate unique tool name
     let toolNum = currentTools.length + 1;
     let toolName = `new_tool_${toolNum}`;
@@ -149,7 +149,7 @@ export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOn
       toolNum++;
       toolName = `new_tool_${toolNum}`;
     }
-    
+
     currentTools.push({
       name: toolName,
       description: "",
@@ -171,7 +171,7 @@ export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOn
   // Add a new resource with auto-generated name
   const addResource = () => {
     const currentResources = JSON.parse(resourcesJson);
-    
+
     // Generate unique resource name
     let resNum = currentResources.length + 1;
     let resourceName = `resource_${resNum}`;
@@ -179,7 +179,7 @@ export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOn
       resNum++;
       resourceName = `resource_${resNum}`;
     }
-    
+
     currentResources.push({
       uri: `file:///path/to/${resourceName}`,
       name: resourceName,
@@ -204,13 +204,13 @@ export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOn
       exit={{ opacity: 0, y: -10 }}
       className={cn(
         "relative group rounded-xl border transition-all duration-200",
-        "bg-gradient-to-br from-slate-900/80 to-slate-800/80",
-        "border-pink-900/30 hover:border-pink-700/50",
+        "bg-white dark:bg-gradient-to-br dark:from-slate-900/80 dark:to-slate-800/80",
+        "border-neutral-200 dark:border-pink-900/30 hover:border-pink-500 dark:hover:border-pink-700/50",
         expanded && "ring-2 ring-pink-500/20"
       )}
     >
       {/* Header */}
-      <div 
+      <div
         className="flex items-center gap-4 p-4 cursor-pointer"
         onClick={() => setExpanded(!expanded)}
       >
@@ -222,21 +222,21 @@ export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOn
           )}>
             <Server className="h-5 w-5 text-pink-400" />
           </div>
-          
+
           <div className="flex-1 min-w-0">
-              <input
-                type="text"
-                value={name}
-                readOnly={isReadOnly}
-                onChange={(e) => {
-                  e.stopPropagation();
-                  setName(e.target.value);
-                }}
-                onClick={(e) => e.stopPropagation()}
+            <input
+              type="text"
+              value={name}
+              readOnly={isReadOnly}
+              onChange={(e) => {
+                e.stopPropagation();
+                setName(e.target.value);
+              }}
+              onClick={(e) => e.stopPropagation()}
               className={cn(
                 "text-lg font-semibold bg-transparent border-none focus:outline-none",
-                "w-full text-slate-100 placeholder:text-slate-500",
-                "hover:bg-slate-800/50 focus:bg-slate-800/70 rounded px-2 py-1 -ml-2"
+                "w-full text-neutral-900 dark:text-slate-100 placeholder:text-neutral-400 dark:placeholder:text-slate-500",
+                "hover:bg-neutral-100 dark:hover:bg-slate-800/50 focus:bg-neutral-100 dark:focus:bg-slate-800/70 rounded px-2 py-1 -ml-2"
               )}
               placeholder="MCP Server Name"
             />
@@ -261,18 +261,18 @@ export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOn
               e.stopPropagation();
               copyToClipboard();
             }}
-            className="p-2 text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors"
+            className="p-2 text-neutral-500 dark:text-slate-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-slate-700/50 rounded-lg transition-colors"
             title="Copy MCP manifest"
           >
             {copied ? <Check className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4" />}
           </button>
-          
+
           <button
             onClick={(e) => {
               e.stopPropagation();
               handleDelete();
             }}
-            className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+            className="p-2 text-neutral-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/10 rounded-lg transition-colors"
             title="Delete MCP server"
             disabled={isReadOnly}
           >
@@ -298,7 +298,7 @@ export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOn
             <div className="px-4 pb-4 space-y-4">
               {/* Description */}
               <div>
-                <label className="block text-sm font-medium text-slate-400 mb-2">
+                <label className="block text-sm font-medium text-neutral-600 dark:text-slate-400 mb-2">
                   Description
                 </label>
                 <textarea
@@ -307,8 +307,8 @@ export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOn
                   onChange={(e) => setDescription(e.target.value)}
                   className={cn(
                     "w-full h-16 p-3 rounded-lg",
-                    "bg-slate-900/70 border border-slate-700/50",
-                    "text-slate-200 placeholder:text-slate-600",
+                    "bg-neutral-50 dark:bg-slate-900/70 border border-neutral-200 dark:border-slate-700/50",
+                    "text-neutral-900 dark:text-slate-200 placeholder:text-neutral-400 dark:placeholder:text-slate-600",
                     "focus:outline-none focus:border-pink-500/50 focus:ring-1 focus:ring-pink-500/20",
                     "text-sm resize-y"
                   )}
@@ -322,8 +322,8 @@ export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOn
                   onClick={() => setActiveSection("tools")}
                   className={cn(
                     "px-3 py-1.5 rounded-lg text-sm flex items-center gap-2 transition-colors",
-                    activeSection === "tools" 
-                      ? "bg-pink-500/20 text-pink-300 border border-pink-500/30" 
+                    activeSection === "tools"
+                      ? "bg-pink-500/20 text-pink-300 border border-pink-500/30"
                       : "text-slate-400 hover:text-slate-200"
                   )}
                 >
@@ -334,8 +334,8 @@ export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOn
                   onClick={() => setActiveSection("resources")}
                   className={cn(
                     "px-3 py-1.5 rounded-lg text-sm flex items-center gap-2 transition-colors",
-                    activeSection === "resources" 
-                      ? "bg-pink-500/20 text-pink-300 border border-pink-500/30" 
+                    activeSection === "resources"
+                      ? "bg-pink-500/20 text-pink-300 border border-pink-500/30"
                       : "text-slate-400 hover:text-slate-200"
                   )}
                 >
@@ -368,7 +368,7 @@ export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOn
                   ) : (
                     <div className="space-y-2">
                       {tools.map((tool, index) => (
-                        <div 
+                        <div
                           key={index}
                           className="p-3 bg-slate-900/50 rounded-lg border border-slate-700/50"
                         >
@@ -457,7 +457,7 @@ export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOn
                   ) : (
                     <div className="space-y-2">
                       {resources.map((resource, index) => (
-                        <div 
+                        <div
                           key={index}
                           className="p-3 bg-slate-900/50 rounded-lg border border-slate-700/50"
                         >
@@ -551,9 +551,9 @@ export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOn
                 <ExternalLink className="h-4 w-4 text-pink-400 mt-0.5 flex-shrink-0" />
                 <p className="text-sm text-pink-200/70">
                   Learn more about MCP at{" "}
-                  <a 
-                    href="https://modelcontextprotocol.io/" 
-                    target="_blank" 
+                  <a
+                    href="https://modelcontextprotocol.io/"
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="text-pink-400 hover:underline"
                   >

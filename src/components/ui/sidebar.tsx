@@ -89,7 +89,7 @@ export const DesktopSidebar = ({
   return (
     <motion.div
       className={cn(
-        "h-full px-4 py-4 hidden md:flex md:flex-col bg-[#070b14] shrink-0",
+        "h-full px-4 py-4 hidden md:flex md:flex-col bg-white dark:bg-[#070b14] border-r border-neutral-200 dark:border-blue-900/30 shrink-0",
         className
       )}
       animate={{
@@ -115,13 +115,13 @@ export const MobileSidebar = ({
     <>
       <div
         className={cn(
-          "h-10 px-4 py-4 flex flex-row md:hidden items-center justify-between bg-[#070b14] w-full"
+          "h-10 px-4 py-4 flex flex-row md:hidden items-center justify-between bg-white dark:bg-[#070b14] border-b border-neutral-200 dark:border-blue-900/30 w-full"
         )}
         {...props}
       >
         <div className="flex justify-end z-20 w-full">
           <Menu
-            className="text-slate-200 cursor-pointer"
+            className="text-neutral-900 dark:text-slate-200 cursor-pointer"
             onClick={() => setOpen(!open)}
           />
         </div>
@@ -136,12 +136,12 @@ export const MobileSidebar = ({
                 ease: "easeInOut",
               }}
               className={cn(
-                "fixed h-full w-full inset-0 bg-[#0a0f1a] p-10 z-[100] flex flex-col justify-between",
+                "fixed h-full w-full inset-0 bg-white dark:bg-[#0a0f1a] p-10 z-[100] flex flex-col justify-between",
                 className
               )}
             >
               <div
-                className="absolute right-10 top-10 z-50 text-slate-200 cursor-pointer"
+                className="absolute right-10 top-10 z-50 text-neutral-900 dark:text-slate-200 cursor-pointer"
                 onClick={() => setOpen(!open)}
               >
                 <X />
@@ -170,7 +170,7 @@ export const SidebarLink = ({
       href={link.href}
       className={cn(
         "flex items-center gap-3 group/sidebar py-2.5 px-2 rounded-lg",
-        "text-slate-300 hover:text-amber-400 hover:bg-blue-900/20",
+        "text-neutral-700 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-neutral-100 dark:hover:bg-blue-900/20",
         "transition-all duration-200",
         className
       )}
