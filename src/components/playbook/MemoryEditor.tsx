@@ -186,11 +186,11 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="p-8 text-center bg-slate-900/50 rounded-xl border border-dashed border-slate-700"
+          className="p-8 text-center bg-neutral-100 dark:bg-slate-900/50 rounded-xl border border-dashed border-neutral-300 dark:border-slate-700"
         >
-          <Database className="h-12 w-12 text-slate-700 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-slate-400 mb-2">No memories yet</h3>
-          <p className="text-sm text-slate-500 mb-4">
+          <Database className="h-12 w-12 text-neutral-400 dark:text-slate-700 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-neutral-600 dark:text-slate-400 mb-2">No memories yet</h3>
+          <p className="text-sm text-neutral-500 dark:text-slate-500 mb-4">
             AI agents can write memories via the API, or you can add them manually.
           </p>
           <button

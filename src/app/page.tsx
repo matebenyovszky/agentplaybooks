@@ -158,7 +158,7 @@ export default function LandingPage() {
             transition={{ duration: 0.5, delay: 0.6 }}
             className="mt-12 flex flex-wrap justify-center gap-3"
           >
-            {["Agent Rules", "AI Chores", "Skills Store", "Anthropic Skills", "skills.md", "MCP Protocol", "Agent Memory", "OpenAPI", "JSON Schema", "Cursor Rules"].map((tech) => (
+            {["Agent Rules", "AI Chores", "Skills Store", "Subagent", "Jack Is", "I Know Kungfu", "Skill Download", "Anthropic Skills", "skills.md", "MCP Protocol", "Agent Memory", "OpenAPI", "JSON Schema", "Cursor Rules"].map((tech) => (
               <span
                 key={tech}
                 className="px-3 py-1 text-sm bg-amber-100 dark:bg-amber-950/50 border border-amber-300 dark:border-amber-800/50 rounded-full text-amber-700 dark:text-amber-300"

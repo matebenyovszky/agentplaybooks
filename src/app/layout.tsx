@@ -24,7 +24,8 @@ export const metadata: Metadata = {
     "GPT actions", "ChatGPT custom GPT", "Claude projects", "Gemini gems",
     "cursor rules", "AI automation", "agent playbook", "AI personas",
     "robot skills", "AI toolkit", "agent configuration", "JSON schema",
-    "OpenAPI", "platform-independent AI", "AI vault", "agent marketplace"
+    "OpenAPI", "platform-independent AI", "AI vault", "agent marketplace",
+    "subagent", "jack is", "skill download", "i know kungfu"
   ],
   icons: {
     icon: [

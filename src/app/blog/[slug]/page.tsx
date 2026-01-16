@@ -1,5 +1,6 @@
 import { getBlogPost, getBlogPosts } from "@/lib/blog-server";
 import { getLocale } from "next-intl/server";
+import { headers } from "next/headers";
 import BlogPostClient from "../BlogPostClient";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
@@ -37,10 +38,14 @@ export async function generateStaticParams() {
 export default async function BlogPostPage({ params }: PageProps) {
     const resolvedParams = await params;
     const locale = await getLocale();
+    const headersList = await headers();
+    const host = headersList.get("host") || "localhost:3000";
+    const protocol = headersList.get("x-forwarded-proto") || "http";
+    const baseUrl = `${protocol}://${host}`;
 
     const [currentPost, posts] = await Promise.all([
-        getBlogPost(resolvedParams.slug, locale),
-        getBlogPosts(locale)
+        getBlogPost(resolvedParams.slug, locale, baseUrl),
+        getBlogPosts(locale, baseUrl)
     ]);
 
     if (!currentPost) {

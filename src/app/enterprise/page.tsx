@@ -187,7 +187,7 @@ export default function EnterprisePage() {
               transition={{ duration: 0.5, delay: 0.6 }}
               className="mt-12 flex flex-wrap justify-center gap-3"
             >
-              {["Anthropic Skills", "skills.md", "MCP Protocol", "OpenAPI", "JSON Schema", "Docker Ready"].map((tech) => (
+              {["Subagent", "Jack Is", "I Know Kungfu", "Skill Download", "Anthropic Skills", "skills.md", "MCP Protocol", "OpenAPI", "JSON Schema", "Docker Ready", "Self-Hosted", "Zero Lock-in"].map((tech) => (
                 <span
                   key={tech}
                   className="px-3 py-1 text-sm bg-amber-100 dark:bg-amber-950/50 border border-amber-300 dark:border-amber-800/50 rounded-full text-amber-700 dark:text-amber-300"

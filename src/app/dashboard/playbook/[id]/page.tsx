@@ -855,7 +855,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                   "px-3 py-2 rounded-lg flex items-center gap-2 text-sm transition-colors",
                   playbook.visibility === 'public'
                     ? "bg-green-500/10 text-green-400 border border-green-500/20 hover:bg-green-500/20"
-                    : "bg-slate-800/50 text-slate-400 border border-slate-700/50 hover:border-slate-600"
+                    : "bg-neutral-100 dark:bg-slate-800/50 text-neutral-700 dark:text-slate-400 border border-neutral-300 dark:border-slate-700/50 hover:border-neutral-400 dark:hover:border-slate-600"
                 )}
               >
                 {playbook.visibility === 'public' ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
@@ -866,7 +866,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                 "px-3 py-2 rounded-lg flex items-center gap-2 text-sm",
                 playbook.visibility === 'public'
                   ? "bg-green-500/10 text-green-400 border border-green-500/20"
-                  : "bg-slate-800/50 text-slate-400 border border-slate-700/50"
+                  : "bg-neutral-100 dark:bg-slate-800/50 text-neutral-700 dark:text-slate-400 border border-neutral-300 dark:border-slate-700/50"
               )}>
                 {playbook.visibility === 'public' ? <Globe className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
                 {playbook.visibility === 'public' ? "Public" : "Private"}
@@ -1333,7 +1333,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                           "flex-1 p-4 rounded-xl border flex items-center gap-3 transition-all",
                           playbook.visibility === 'private'
                             ? "border-blue-500/50 bg-blue-500/10"
-                            : "border-slate-700/50 bg-slate-900/50 hover:border-slate-600"
+                            : "border-neutral-300 dark:border-slate-700/50 bg-white dark:bg-slate-900/50 hover:border-neutral-400 dark:hover:border-slate-600"
                         )}
                       >
                         <Lock className="h-5 w-5" />
@@ -1348,7 +1348,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                           "flex-1 p-4 rounded-xl border flex items-center gap-3 transition-all",
                           playbook.visibility === 'public'
                             ? "border-green-500/50 bg-green-500/10"
-                            : "border-slate-700/50 bg-slate-900/50 hover:border-slate-600"
+                            : "border-neutral-300 dark:border-slate-700/50 bg-white dark:bg-slate-900/50 hover:border-neutral-400 dark:hover:border-slate-600"
                         )}
                       >
                         <Globe className="h-5 w-5" />
@@ -1363,7 +1363,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                           "flex-1 p-4 rounded-xl border flex items-center gap-3 transition-all",
                           playbook.visibility === 'unlisted'
                             ? "border-amber-500/50 bg-amber-500/10"
-                            : "border-slate-700/50 bg-slate-900/50 hover:border-slate-600"
+                            : "border-neutral-300 dark:border-slate-700/50 bg-white dark:bg-slate-900/50 hover:border-neutral-400 dark:hover:border-slate-600"
                         )}
                       >
                         <Eye className="h-5 w-5" />
