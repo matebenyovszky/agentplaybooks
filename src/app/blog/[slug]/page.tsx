@@ -1,6 +1,5 @@
 import { getBlogPost, getBlogPosts } from "@/lib/blog-server";
 import { getLocale } from "next-intl/server";
-import { headers } from "next/headers";
 import BlogPostClient from "../BlogPostClient";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
@@ -12,6 +11,7 @@ type PageProps = {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
     const resolvedParams = await params;
     const locale = await getLocale();
+    // At build time, fs module is used, no baseUrl needed
     const post = await getBlogPost(resolvedParams.slug, locale);
 
     if (!post) {
@@ -35,17 +35,16 @@ export async function generateStaticParams() {
     }));
 }
 
+// Force static generation for all blog posts
+export const dynamicParams = false;
+
 export default async function BlogPostPage({ params }: PageProps) {
     const resolvedParams = await params;
     const locale = await getLocale();
-    const headersList = await headers();
-    const host = headersList.get("host") || "localhost:3000";
-    const protocol = headersList.get("x-forwarded-proto") || "http";
-    const baseUrl = `${protocol}://${host}`;
-
+    // At build time, fs module is used, no baseUrl needed
     const [currentPost, posts] = await Promise.all([
-        getBlogPost(resolvedParams.slug, locale, baseUrl),
-        getBlogPosts(locale, baseUrl)
+        getBlogPost(resolvedParams.slug, locale),
+        getBlogPosts(locale)
     ]);
 
     if (!currentPost) {

@@ -7,15 +7,12 @@ export const metadata = {
     description: "Insights and updates from the world of autonomous agents.",
 };
 
-import { headers } from "next/headers";
+// Force static generation - content is loaded via fs at build time
+export const dynamic = 'force-static';
 
 export default async function BlogIndexPage() {
     const locale = await getLocale();
-    const headersList = await headers();
-    const host = headersList.get("host") || "localhost:3000";
-    const protocol = headersList.get("x-forwarded-proto") || "http";
-    const baseUrl = `${protocol}://${host}`;
-
-    const posts = await getBlogPosts(locale, baseUrl);
+    // No baseUrl needed - at build time we use fs, not fetch
+    const posts = await getBlogPosts(locale);
     return <BlogPostClient posts={posts} />;
 }
