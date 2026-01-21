@@ -41,11 +41,10 @@ export const metadata: Metadata = {
     title: "AgentPlaybooks - AI Agent Rules, Skills & Memory Store",
     description: "The universal skills store for AI agents. Store rules, chores, personas, MCP servers. Works with every major AI platform.",
     type: "website",
-    url: "https://agentplaybooks.ai",
     siteName: "AgentPlaybooks",
     images: [
       {
-        url: "/og-image.svg",
+        url: "/og-image.png",
         width: 1200,
         height: 630,
         alt: "AgentPlaybooks - AI Agent Skills Store",
@@ -56,7 +55,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "AgentPlaybooks - AI Agent Skills Store",
     description: "Store AI agent rules, skills, and memories. Platform-independent vault for ChatGPT, Claude, Gemini.",
-    images: ["/twitter-image.svg"],
+    images: ["/twitter-image.png"],
   },
   robots: {
     index: true,
