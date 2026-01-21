@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 
-export const runtime = 'edge';
+
 
 export async function GET() {
     try {
@@ -24,9 +24,13 @@ export async function GET() {
             const res = await fetch(fileUrl);
             fetchStatus = res.status;
             fetchResult = res.ok ? "Success (OK)" : `Failed (${res.status} ${res.statusText})`;
-        } catch (e: any) {
+        } catch (e) {
             fetchResult = "Error thrown";
-            fetchError = e.message;
+            if (e instanceof Error) {
+                fetchError = e.message;
+            } else {
+                fetchError = String(e);
+            }
         }
 
         return NextResponse.json({
@@ -45,10 +49,8 @@ export async function GET() {
             },
             headers: Object.fromEntries(headersList.entries())
         });
-    } catch (e: any) {
-        return NextResponse.json({ error: e.message }, { status: 500 });
+    } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        return NextResponse.json({ error: message }, { status: 500 });
     }
-}
-
-// Helper to handle the baseUrl var which isn't defined above but logic is same as page
-const props_baseUrl = ""; 
+} 
