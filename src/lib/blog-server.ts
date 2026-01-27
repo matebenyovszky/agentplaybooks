@@ -58,11 +58,21 @@ async function fetchBlogContent(filename: string, baseUrl: string = ""): Promise
     } else {
         // Runtime (Cloudflare Workers): Use fetch
         try {
-            // Ensure absolute URL if baseUrl is provided, otherwise fallback to relative (which might fail in workers but works in browser)
-            // In Workers, we need absolute URL.
-            const url = baseUrl
-                ? `${baseUrl}/blog/${filename}`
-                : (typeof window !== 'undefined' ? `/blog/${filename}` : `http://localhost:3000/blog/${filename}`);
+            const envBaseUrl =
+                (typeof process !== 'undefined' && (process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL || process.env.CF_PAGES_URL)) || "";
+            const runtimeBaseUrl = baseUrl || envBaseUrl;
+            const isBrowser = typeof window !== 'undefined';
+
+            // Ensure absolute URL in Workers by falling back to a configured site URL when possible.
+            const url = runtimeBaseUrl
+                ? `${runtimeBaseUrl}/blog/${filename}`
+                : (isBrowser ? `/blog/${filename}` : `http://localhost:3000/blog/${filename}`);
+
+            if (!runtimeBaseUrl && !isBrowser) {
+                console.warn(
+                    `[blog] Missing baseUrl for runtime fetch. Configure NEXT_PUBLIC_SITE_URL (or SITE_URL/CF_PAGES_URL) to avoid localhost fallback. Attempted: ${url}`
+                );
+            }
 
             console.log(`Fetching blog content from: ${url}`);
 
