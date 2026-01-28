@@ -346,6 +346,178 @@ If available:
 
 ---
 
+## Claude Coworker (Desktop AI Agent)
+
+Claude Coworker is Anthropic's autonomous AI agent that operates directly on macOS, with the ability to organize files, convert documents, and automate multi-step workflows.
+
+### Method 1: MCP Integration (Recommended)
+
+Configure Claude Coworker's MCP settings to connect to your playbook:
+
+```json
+{
+  "mcpServers": {
+    "my-playbook": {
+      "transport": "http",
+      "url": "https://agentplaybooks.ai/api/mcp/YOUR_GUID"
+    }
+  }
+}
+```
+
+Coworker will have access to:
+- **Tools** — All playbook skills as callable functions
+- **Resources** — Personas, memory, and skill definitions
+- **Persistent Memory** — Context that persists across sessions
+
+### Method 2: Skills Folder Export
+
+Export your playbook skills to a local folder:
+
+```bash
+curl -s "https://agentplaybooks.ai/api/playbooks/YOUR_GUID?format=anthropic" \
+  | jq '.tools' > ~/Documents/CoworkerSkills/my_skills.json
+```
+
+Point Claude Coworker to this folder in the app settings.
+
+### Method 3: System Prompt via Reference Document
+
+1. Export as markdown:
+   ```bash
+   curl -s "https://agentplaybooks.ai/api/playbooks/YOUR_GUID?format=markdown" > ~/Documents/playbook.md
+   ```
+
+2. Add `playbook.md` to your designated Coworker folders as a reference.
+
+### Sample Skills for Claude Coworker
+
+```json
+{
+  "name": "organize_files",
+  "description": "Organize files according to rules based on file type, date, and naming patterns",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "source_folder": {"type": "string", "description": "Folder containing files to organize"},
+      "rules": {"type": "string", "description": "Organization rules in natural language"}
+    },
+    "required": ["source_folder"]
+  }
+}
+```
+
+```json
+{
+  "name": "generate_report",
+  "description": "Generate structured reports from data files with charts and executive summary",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "data_sources": {"type": "array", "items": {"type": "string"}},
+      "report_type": {"type": "string", "enum": ["weekly", "monthly", "quarterly"]}
+    },
+    "required": ["data_sources", "report_type"]
+  }
+}
+```
+
+---
+
+## Clawdbot (Self-Hosted AI Assistant)
+
+Clawdbot is an open-source, self-hosted AI assistant that bridges WhatsApp, Telegram, and Discord with Claude/ChatGPT/Gemini APIs. It features full MCP support and runs on local hardware for privacy.
+
+### Step 1: Get Your MCP Endpoint
+
+Every public playbook provides an MCP endpoint:
+
+```
+https://agentplaybooks.ai/api/mcp/YOUR_GUID
+```
+
+### Step 2: Configure Clawdbot
+
+Add to your Clawdbot `config.yaml`:
+
+```yaml
+llm:
+  provider: anthropic
+  model: claude-sonnet-4-20250514
+
+mcp_servers:
+  - name: agent-playbook
+    transport: http
+    url: https://agentplaybooks.ai/api/mcp/YOUR_GUID
+    description: My custom AI playbook
+
+messaging:
+  whatsapp:
+    enabled: true
+    phone_number: "+1234567890"
+  telegram:
+    enabled: true
+    bot_token: "your_bot_token"
+```
+
+### Step 3: Enable Memory Write-back (Optional)
+
+For bidirectional memory sync, add authentication:
+
+```yaml
+mcp_servers:
+  - name: agent-playbook
+    transport: http
+    url: https://agentplaybooks.ai/api/mcp/YOUR_GUID
+    auth:
+      type: bearer
+      token: apb_live_xxx  # Your AgentPlaybooks API key
+    write_enabled: true
+```
+
+### Step 4: Verify Connection
+
+```bash
+clawdbot status
+
+# Output:
+# MCP Servers:
+#   ✓ agent-playbook (connected)
+#     - Tools: 5 available
+#     - Resources: 3 available
+```
+
+### What Clawdbot Inherits from Your Playbook
+
+| Playbook Component | Clawdbot Feature |
+|-------------------|------------------|
+| Skills | Callable MCP tools |
+| Personas | System prompt behavior |
+| Memory | Shared state across platforms |
+
+### Sample Clawdbot-Ready Playbook
+
+```json
+{
+  "name": "Clawdbot Personal Assistant",
+  "personas": [{
+    "name": "Assistant",
+    "system_prompt": "You are a helpful personal assistant. Be concise in messaging contexts."
+  }],
+  "skills": [
+    {"name": "quick_search", "description": "Search web and return brief summary"},
+    {"name": "set_reminder", "description": "Create reminder via current platform"},
+    {"name": "manage_task", "description": "Add, complete, or list tasks"}
+  ],
+  "memory": {
+    "preferred_language": "en",
+    "notification_hours": "09:00-22:00"
+  }
+}
+```
+
+---
+
 ## Comparison Table: Web Interfaces
 
 | Platform | Custom Instructions | Actions/Tools | Memory | Reasoning Mode |
@@ -354,6 +526,8 @@ If available:
 | Claude | ✅ Projects | ❌ No actions | 📥 Read-only | ✅ Extended thinking |
 | Gemini | ✅ Gems | ⚠️ Extensions only | 📥 Read-only | ✅ Thinking mode |
 | Grok | ✅ Projects | ⚠️ Limited | 📥 Read-only | ✅ Thinking mode |
+| Claude Coworker | ✅ Skills folder | ✅ MCP Tools | ✅ Via MCP | ✅ Built-in |
+| Clawdbot | ✅ MCP config | ✅ MCP Tools | ✅ Bidirectional | ✅ Via backend LLM |
 
 ---
 

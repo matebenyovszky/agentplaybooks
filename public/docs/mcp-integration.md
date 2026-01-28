@@ -248,3 +248,53 @@ These will be merged into your playbook's MCP manifest.
 4. **Use resources for data** - Resources are better than tools for read-only data access
 5. **Test with Claude Desktop** - Verify your MCP configuration works before deploying
 
+---
+
+## Clawdbot Integration
+
+[Clawdbot](https://github.com/steipete/clawdbot) is a popular open-source, self-hosted AI assistant that connects messaging platforms (WhatsApp, Telegram, Discord) with LLM APIs. It has full MCP support.
+
+### Connecting AgentPlaybooks to Clawdbot
+
+Add to Clawdbot's `config.yaml`:
+
+```yaml
+mcp_servers:
+  - name: agent-playbook
+    transport: http
+    url: https://agentplaybooks.ai/api/mcp/YOUR_GUID
+    description: My custom AI playbook with skills and memory
+
+messaging:
+  whatsapp:
+    enabled: true
+    phone_number: "+1234567890"
+  telegram:
+    enabled: true
+    bot_token: "your_bot_token"
+```
+
+### With Authentication (for Memory Write-back)
+
+```yaml
+mcp_servers:
+  - name: agent-playbook
+    transport: http
+    url: https://agentplaybooks.ai/api/mcp/YOUR_GUID
+    auth:
+      type: bearer
+      token: apb_live_xxx
+    write_enabled: true
+```
+
+### Benefits of Clawdbot + AgentPlaybooks
+
+| Feature | Description |
+|---------|-------------|
+| **Multi-platform** | Same playbook across WhatsApp, Telegram, Discord |
+| **Shared memory** | Updates sync across all platforms instantly |
+| **Self-hosted privacy** | Runs on your own hardware |
+| **Flexible backend** | Switch between Claude, ChatGPT, Gemini |
+
+See [Platform Integrations](./platform-integrations.md) for Claude Coworker and other integrations.
+

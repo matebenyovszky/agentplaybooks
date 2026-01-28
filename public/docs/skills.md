@@ -127,4 +127,114 @@ Browse community-contributed skills at [agentplaybooks.ai/explore](https://agent
 4. **Atomic skills** - Each skill should do one thing well
 5. **Version carefully** - Changing schemas may break existing integrations
 
+---
+
+## Claude Coworker Compatible Skills
+
+[Claude Coworker](https://claude.ai/cowork) is Anthropic's desktop AI agent that can organize files, convert documents, and automate workflows. Skills from AgentPlaybooks work directly with Coworker via MCP.
+
+### File Organization Skill
+
+```json
+{
+  "name": "organize_files",
+  "description": "Organize files in a folder according to rules based on file type, date, and naming patterns",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "source_folder": {
+        "type": "string",
+        "description": "Path to folder containing files to organize"
+      },
+      "rules": {
+        "type": "string",
+        "description": "Organization rules in natural language (e.g., 'PDFs to Documents/PDFs, images to Photos by month')"
+      },
+      "dry_run": {
+        "type": "boolean",
+        "description": "Preview changes without moving files",
+        "default": true
+      }
+    },
+    "required": ["source_folder"]
+  }
+}
+```
+
+### Document Formatting Skill
+
+```json
+{
+  "name": "format_document",
+  "description": "Convert raw notes or data into formatted documents following company templates",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "input_path": {
+        "type": "string",
+        "description": "Path to source document"
+      },
+      "template": {
+        "type": "string",
+        "enum": ["meeting_notes", "weekly_report", "project_brief", "custom"],
+        "description": "Template to apply"
+      },
+      "output_format": {
+        "type": "string",
+        "enum": ["markdown", "html", "pdf"],
+        "default": "markdown"
+      }
+    },
+    "required": ["input_path", "template"]
+  }
+}
+```
+
+### Report Generation Skill
+
+```json
+{
+  "name": "generate_report",
+  "description": "Generate structured reports from data files with optional charts and executive summary",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "data_sources": {
+        "type": "array",
+        "items": {"type": "string"},
+        "description": "Paths to data files (CSV, Excel, JSON)"
+      },
+      "report_type": {
+        "type": "string",
+        "enum": ["weekly", "monthly", "quarterly", "custom"]
+      },
+      "include_charts": {
+        "type": "boolean",
+        "description": "Include data visualizations",
+        "default": true
+      },
+      "executive_summary": {
+        "type": "boolean",
+        "description": "Generate executive summary section",
+        "default": true
+      }
+    },
+    "required": ["data_sources", "report_type"]
+  }
+}
+```
+
+### Using Skills with Coworker
+
+Export your playbook skills for Claude Coworker:
+
+```bash
+# Export skills in Anthropic format
+curl -s "https://agentplaybooks.ai/api/playbooks/YOUR_GUID?format=anthropic" \
+  | jq '.tools' > ~/Documents/CoworkerSkills/my_skills.json
+
+# Or connect via MCP (recommended)
+# Add to claude_desktop_config.json:
+# "mcpServers": {"playbook": {"transport": "http", "url": "https://agentplaybooks.ai/api/mcp/YOUR_GUID"}}
+```
 
