@@ -8,6 +8,20 @@ export type BlogPost = {
     locale?: string;
 };
 
+const isBlogDebugEnabled =
+    typeof process !== 'undefined' && process.env.BLOG_DEBUG?.toLowerCase() === "true";
+
+function blogDebugLog(message: string, meta?: Record<string, unknown>) {
+    if (!isBlogDebugEnabled) {
+        return;
+    }
+    if (meta) {
+        console.log(`[blog] ${message}`, meta);
+    } else {
+        console.log(`[blog] ${message}`);
+    }
+}
+
 // Helper to parse frontmatter without adding a heavy dependency
 function parseFrontmatter(fileContent: string): { metadata: Record<string, string>; content: string } {
     const frontmatterRegex = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/;
@@ -36,24 +50,23 @@ function parseFrontmatter(fileContent: string): { metadata: Record<string, strin
  * Uses fs during build time (SSG) and fetch during runtime (Cloudflare).
  */
 async function fetchBlogContent(filename: string, baseUrl: string = ""): Promise<string | null> {
-    // Check if we're in a Node.js environment (build time)
-    const isNodeEnv = typeof process !== 'undefined' && process.versions?.node;
+    const envBaseUrl =
+        (typeof process !== 'undefined' && (process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL || process.env.CF_PAGES_URL)) || "";
+    const runtimeBaseUrl = baseUrl || envBaseUrl;
+    const isBrowser = typeof window !== 'undefined';
 
-    if (isNodeEnv) {
-        // Build time: Use fs module
+    if (!isBrowser) {
         try {
             const fs = await import('fs');
             const path = await import('path');
             const filePath = path.join(process.cwd(), 'public', 'blog', filename);
 
-            if (!fs.existsSync(filePath)) {
-                return null;
+            if (fs.existsSync(filePath)) {
+                blogDebugLog("Loaded blog content from filesystem.", { filename, filePath });
+                return fs.readFileSync(filePath, 'utf-8');
             }
-
-            return fs.readFileSync(filePath, 'utf-8');
         } catch (error) {
-            console.error(`Error reading blog file ${filename}:`, error);
-            return null;
+            console.warn(`Blog fs access failed for ${filename}, falling back to fetch.`, error);
         }
     } else {
         // Runtime (Cloudflare Workers): Use fetch
@@ -86,6 +99,10 @@ async function fetchBlogContent(filename: string, baseUrl: string = ""): Promise
             console.error(`Error fetching blog file ${filename}:`, error);
             return null;
         }
+        return response.text();
+    } catch (error) {
+        console.error(`Error fetching blog file ${filename}:`, error);
+        return null;
     }
 }
 
@@ -96,6 +113,7 @@ async function fetchBlogContent(filename: string, baseUrl: string = ""): Promise
 export async function getBlogPost(slug: string, locale: string = "en", baseUrl: string = ""): Promise<BlogPost | null> {
     // Try exact locale first: slug.locale.md
     let filename = `${slug}.${locale}.md`;
+    blogDebugLog("Resolving blog post.", { slug, locale, filename, baseUrl });
     let content = await fetchBlogContent(filename, baseUrl);
 
     if (!content) {
