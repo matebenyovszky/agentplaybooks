@@ -111,6 +111,9 @@ export type CanvasRow = {
 export type CanvasInsert = Partial<CanvasRow>;
 export type CanvasUpdate = Partial<CanvasRow>;
 
+export type MemoryTier = 'working' | 'contextual' | 'longterm';
+export type RetentionPolicy = 'permanent' | 'session' | 'auto';
+
 export type MemoriesRow = {
   id: string;
   playbook_id: string;
@@ -119,6 +122,15 @@ export type MemoriesRow = {
   tags: string[];
   description: string | null;
   updated_at: string;
+  // RLM (Recursive Language Model) fields for hierarchical memory
+  tier: MemoryTier;                    // Memory hierarchy level
+  parent_key: string | null;           // For hierarchical organization
+  priority: number;                    // Importance (1-100)
+  access_count: number;                // Usage tracking
+  last_accessed_at: string | null;     // For working memory promotion
+  summary: string | null;              // Compressed representation
+  source_task_id: string | null;       // Link to originating sub-task
+  retention_policy: RetentionPolicy | null;
 };
 
 export type MemoriesInsert = Partial<MemoriesRow>;

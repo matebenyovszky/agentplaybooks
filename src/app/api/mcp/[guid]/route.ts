@@ -2,7 +2,7 @@ import { handle } from "hono/vercel";
 import { createApiApp } from "@/app/api/_shared/hono";
 import { validateApiKey } from "@/app/api/_shared/auth";
 import { getServiceSupabase, getSupabase } from "@/app/api/_shared/supabase";
-import type { McpResource, McpTool, Playbook } from "@/lib/supabase/types";
+import type { McpResource, McpTool, Playbook, MemoryTier } from "@/lib/supabase/types";
 
 type PersonaSource = Pick<Playbook, "id" | "persona_name" | "persona_system_prompt" | "persona_metadata">;
 
@@ -22,6 +22,7 @@ function playbookToPersona(playbook: PersonaSource) {
 
 // Built-in MCP tools for playbook access
 // Note: Persona is embedded in the MCP manifest under _playbook.persona
+// RLM-Enhanced: Includes hierarchical memory management tools
 const PLAYBOOK_TOOLS: McpTool[] = [
   {
     name: "list_skills",
@@ -41,7 +42,7 @@ const PLAYBOOK_TOOLS: McpTool[] = [
   },
   {
     name: "read_memory",
-    description: "Read a specific memory entry by key",
+    description: "Read a specific memory entry by key. Automatically increments access count.",
     inputSchema: {
       type: "object",
       properties: {
@@ -52,18 +53,20 @@ const PLAYBOOK_TOOLS: McpTool[] = [
   },
   {
     name: "search_memory",
-    description: "Search memories by text or tags",
+    description: "Search memories by text, tags, or tier. Returns summaries for large memories.",
     inputSchema: {
       type: "object",
       properties: {
         search: { type: "string", description: "Search in keys and descriptions" },
         tags: { type: "array", items: { type: "string" }, description: "Filter by tags (any match)" },
+        tier: { type: "string", enum: ["working", "contextual", "longterm"], description: "Filter by memory tier" },
+        include_children: { type: "boolean", description: "Include child memories in results", default: false },
       },
     },
   },
   {
     name: "write_memory",
-    description: "Write a memory entry (requires API key)",
+    description: "Write a memory entry with optional tier and priority (requires API key)",
     inputSchema: {
       type: "object",
       properties: {
@@ -71,6 +74,10 @@ const PLAYBOOK_TOOLS: McpTool[] = [
         value: { type: "object", description: "Value to store" },
         tags: { type: "array", items: { type: "string" }, description: "Tags for categorization" },
         description: { type: "string", description: "Human-readable description" },
+        tier: { type: "string", enum: ["working", "contextual", "longterm"], description: "Memory tier (default: contextual)" },
+        priority: { type: "number", description: "Priority 1-100 (default: 50)" },
+        parent_key: { type: "string", description: "Parent memory key for hierarchical organization" },
+        summary: { type: "string", description: "Compact summary for context views" },
       },
       required: ["key", "value"],
     },
@@ -84,6 +91,78 @@ const PLAYBOOK_TOOLS: McpTool[] = [
         key: { type: "string", description: "Memory key to delete" },
       },
       required: ["key"],
+    },
+  },
+  // ===== RLM-Enhanced Memory Tools =====
+  {
+    name: "consolidate_memories",
+    description: "Consolidate multiple related memories into a parent memory with summary. Reduces context size while preserving detail access via children.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        memory_keys: { type: "array", items: { type: "string" }, description: "Keys of memories to consolidate" },
+        parent_key: { type: "string", description: "New parent memory key" },
+        summary: { type: "string", description: "Summary of consolidated memories" },
+        parent_tags: { type: "array", items: { type: "string" }, description: "Tags for parent memory" },
+        archive_children: { type: "boolean", description: "Move children to longterm tier", default: true },
+      },
+      required: ["memory_keys", "parent_key", "summary"],
+    },
+  },
+  {
+    name: "promote_memory",
+    description: "Promote a memory to a higher tier or boost its priority for active use.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        key: { type: "string", description: "Memory key to promote" },
+        target_tier: { type: "string", enum: ["working", "contextual"], description: "Target tier (cannot demote with this tool)" },
+        priority_boost: { type: "number", description: "Amount to increase priority (0-50)", default: 10 },
+      },
+      required: ["key"],
+    },
+  },
+  {
+    name: "get_memory_context",
+    description: "Get a context-optimized view of memories. Returns full working memory, summaries for contextual, and keys only for longterm.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        include_tiers: {
+          type: "array",
+          items: { type: "string", enum: ["working", "contextual", "longterm"] },
+          description: "Tiers to include (default: working, contextual)"
+        },
+        max_items: { type: "number", description: "Maximum items per tier", default: 20 },
+        expand_keys: { type: "array", items: { type: "string" }, description: "Keys to show full content regardless of tier" },
+        tags_filter: { type: "array", items: { type: "string" }, description: "Only include memories with these tags" },
+      },
+    },
+  },
+  {
+    name: "archive_memories",
+    description: "Archive memories from working/contextual to longterm tier. Useful for cleaning up after completing tasks.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        keys: { type: "array", items: { type: "string" }, description: "Specific keys to archive" },
+        older_than_hours: { type: "number", description: "Archive memories older than X hours" },
+        from_tier: { type: "string", enum: ["working", "contextual"], description: "Only archive from this tier" },
+        tags: { type: "array", items: { type: "string" }, description: "Only archive memories with these tags" },
+        generate_summaries: { type: "boolean", description: "Auto-generate summaries if missing", default: false },
+      },
+    },
+  },
+  {
+    name: "get_memory_tree",
+    description: "Get hierarchical tree view of memories showing parent-child relationships.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        root_key: { type: "string", description: "Start from this key (omit for all roots)" },
+        max_depth: { type: "number", description: "Maximum tree depth", default: 3 },
+        include_values: { type: "boolean", description: "Include full values (false = summaries only)", default: false },
+      },
     },
   },
 ];
@@ -463,11 +542,22 @@ app.post("/", async (c) => {
             const key = args.key as string;
             const { data } = await serviceSupabase
               .from("memories")
-              .select("key, value, tags, description, updated_at")
+              .select("key, value, tags, description, tier, priority, parent_key, summary, access_count, updated_at")
               .eq("playbook_id", playbook.id)
               .eq("key", key)
               .single();
             if (!data) throw new Error("Memory not found");
+
+            // Increment access count and update last_accessed_at
+            await serviceSupabase
+              .from("memories")
+              .update({
+                access_count: (data.access_count || 0) + 1,
+                last_accessed_at: new Date().toISOString()
+              })
+              .eq("playbook_id", playbook.id)
+              .eq("key", key);
+
             result = data;
             break;
           }
@@ -475,21 +565,33 @@ app.post("/", async (c) => {
           case "search_memory": {
             const search = args.search as string | undefined;
             const tags = args.tags as string[] | undefined;
+            const tier = args.tier as MemoryTier | undefined;
+            const includeChildren = args.include_children as boolean | undefined;
 
             let query = serviceSupabase
               .from("memories")
-              .select("key, value, tags, description, updated_at")
+              .select("key, value, tags, description, tier, priority, parent_key, summary, updated_at")
               .eq("playbook_id", playbook.id);
 
             if (search) {
-              query = query.or(`key.ilike.%${search}%,description.ilike.%${search}%`);
+              query = query.or(`key.ilike.%${search}%,description.ilike.%${search}%,summary.ilike.%${search}%`);
             }
 
             if (tags && tags.length > 0) {
               query = query.overlaps("tags", tags);
             }
 
-            const { data } = await query.order("updated_at", { ascending: false });
+            if (tier) {
+              query = query.eq("tier", tier);
+            }
+
+            if (!includeChildren) {
+              query = query.is("parent_key", null);
+            }
+
+            const { data } = await query
+              .order("priority", { ascending: false })
+              .order("updated_at", { ascending: false });
             result = data || [];
             break;
           }
@@ -505,6 +607,10 @@ app.post("/", async (c) => {
             const value = args.value as Record<string, unknown>;
             const memTags = args.tags as string[] | undefined;
             const description = args.description as string | undefined;
+            const tier = args.tier as string | undefined;
+            const priority = args.priority as number | undefined;
+            const parentKey = args.parent_key as string | undefined;
+            const summary = args.summary as string | undefined;
 
             const upsertData: Record<string, unknown> = {
               playbook_id: playbook.id,
@@ -514,11 +620,15 @@ app.post("/", async (c) => {
             };
             if (memTags !== undefined) upsertData.tags = memTags;
             if (description !== undefined) upsertData.description = description;
+            if (tier !== undefined) upsertData.tier = tier;
+            if (priority !== undefined) upsertData.priority = Math.min(100, Math.max(1, priority));
+            if (parentKey !== undefined) upsertData.parent_key = parentKey;
+            if (summary !== undefined) upsertData.summary = summary;
 
             const { data, error } = await serviceSupabase
               .from("memories")
               .upsert(upsertData, { onConflict: "playbook_id,key" })
-              .select("key, value, tags, description, updated_at")
+              .select("key, value, tags, description, tier, priority, parent_key, summary, updated_at")
               .single();
 
             if (error) throw new Error(error.message);
@@ -542,6 +652,299 @@ app.post("/", async (c) => {
 
             if (error) throw new Error(error.message);
             result = { success: true };
+            break;
+          }
+
+          // ===== RLM-Enhanced Memory Tools =====
+
+          case "consolidate_memories": {
+            // Requires API key
+            const apiKeyData = await validateApiKey(c.req.raw, "memory:write");
+            if (!apiKeyData || apiKeyData.playbooks.id !== playbook.id) {
+              throw new Error("API key with memory:write permission required");
+            }
+
+            const memoryKeys = args.memory_keys as string[];
+            const parentKey = args.parent_key as string;
+            const summary = args.summary as string;
+            const parentTags = args.parent_tags as string[] | undefined;
+            const archiveChildren = args.archive_children !== false;
+
+            // Get existing memories to consolidate
+            const { data: existingMemories } = await serviceSupabase
+              .from("memories")
+              .select("key, value, tags, tier")
+              .eq("playbook_id", playbook.id)
+              .in("key", memoryKeys);
+
+            if (!existingMemories || existingMemories.length === 0) {
+              throw new Error("No memories found to consolidate");
+            }
+
+            // Create parent memory with consolidated value
+            const consolidatedValue = {
+              children_count: existingMemories.length,
+              children_keys: memoryKeys,
+              consolidated_at: new Date().toISOString(),
+            };
+
+            // Collect all unique tags from children
+            const allTags = new Set<string>(parentTags || []);
+            existingMemories.forEach(m => (m.tags || []).forEach((t: string) => allTags.add(t)));
+
+            const { data: parentData, error: parentError } = await serviceSupabase
+              .from("memories")
+              .upsert({
+                playbook_id: playbook.id,
+                key: parentKey,
+                value: consolidatedValue,
+                summary,
+                tags: Array.from(allTags),
+                tier: "contextual",
+                priority: 75, // Consolidated memories get higher priority
+                updated_at: new Date().toISOString(),
+              }, { onConflict: "playbook_id,key" })
+              .select()
+              .single();
+
+            if (parentError) throw new Error(parentError.message);
+
+            // Update children to reference parent and optionally archive
+            const childUpdates: Record<string, unknown> = {
+              parent_key: parentKey,
+              updated_at: new Date().toISOString(),
+            };
+            if (archiveChildren) {
+              childUpdates.tier = "longterm";
+            }
+
+            await serviceSupabase
+              .from("memories")
+              .update(childUpdates)
+              .eq("playbook_id", playbook.id)
+              .in("key", memoryKeys);
+
+            result = {
+              parent: parentData,
+              children_updated: memoryKeys.length,
+              archived: archiveChildren,
+            };
+            break;
+          }
+
+          case "promote_memory": {
+            // Requires API key
+            const apiKeyData = await validateApiKey(c.req.raw, "memory:write");
+            if (!apiKeyData || apiKeyData.playbooks.id !== playbook.id) {
+              throw new Error("API key with memory:write permission required");
+            }
+
+            const key = args.key as string;
+            const targetTier = args.target_tier as string | undefined;
+            const priorityBoost = Math.min(50, args.priority_boost as number || 10);
+
+            // Get current memory
+            const { data: current } = await serviceSupabase
+              .from("memories")
+              .select("tier, priority")
+              .eq("playbook_id", playbook.id)
+              .eq("key", key)
+              .single();
+
+            if (!current) throw new Error("Memory not found");
+
+            const updates: Record<string, unknown> = {
+              priority: Math.min(100, (current.priority || 50) + priorityBoost),
+              access_count: 0, // Reset on promotion
+              last_accessed_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            };
+
+            // Only allow promotion (not demotion)
+            if (targetTier) {
+              const tierOrder = { longterm: 0, contextual: 1, working: 2 };
+              const currentTierValue = tierOrder[current.tier as keyof typeof tierOrder] ?? 1;
+              const targetTierValue = tierOrder[targetTier as keyof typeof tierOrder] ?? 1;
+              if (targetTierValue >= currentTierValue) {
+                updates.tier = targetTier;
+              }
+            }
+
+            const { data, error } = await serviceSupabase
+              .from("memories")
+              .update(updates)
+              .eq("playbook_id", playbook.id)
+              .eq("key", key)
+              .select("key, tier, priority, updated_at")
+              .single();
+
+            if (error) throw new Error(error.message);
+            result = data;
+            break;
+          }
+
+          case "get_memory_context": {
+            const includeTiers = (args.include_tiers as MemoryTier[]) || ["working", "contextual"] as MemoryTier[];
+            const maxItems = (args.max_items as number) || 20;
+            const expandKeys = (args.expand_keys as string[]) || [];
+            const tagsFilter = args.tags_filter as string[] | undefined;
+
+            // Build context object per tier
+            const context: Record<string, unknown[]> = {};
+
+            for (const tier of includeTiers) {
+              let query = serviceSupabase
+                .from("memories")
+                .select("key, value, tags, description, summary, priority, parent_key")
+                .eq("playbook_id", playbook.id)
+                .eq("tier", tier)
+                .order("priority", { ascending: false })
+                .order("updated_at", { ascending: false })
+                .limit(maxItems);
+
+              if (tagsFilter && tagsFilter.length > 0) {
+                query = query.overlaps("tags", tagsFilter);
+              }
+
+              const { data } = await query;
+
+              if (data) {
+                context[tier] = data.map(m => {
+                  const shouldExpand = tier === "working" || expandKeys.includes(m.key);
+                  return {
+                    key: m.key,
+                    ...(shouldExpand ? { value: m.value } : { summary: m.summary || `[${m.key}]` }),
+                    tags: m.tags,
+                    priority: m.priority,
+                    ...(m.parent_key ? { parent_key: m.parent_key } : {}),
+                  };
+                });
+              }
+            }
+
+            result = {
+              tiers: context,
+              total_items: Object.values(context).flat().length,
+            };
+            break;
+          }
+
+          case "archive_memories": {
+            // Requires API key
+            const apiKeyData = await validateApiKey(c.req.raw, "memory:write");
+            if (!apiKeyData || apiKeyData.playbooks.id !== playbook.id) {
+              throw new Error("API key with memory:write permission required");
+            }
+
+            const keys = args.keys as string[] | undefined;
+            const olderThanHours = args.older_than_hours as number | undefined;
+            const fromTier = args.from_tier as MemoryTier | undefined;
+            const tags = args.tags as string[] | undefined;
+
+            let query = serviceSupabase
+              .from("memories")
+              .select("key")
+              .eq("playbook_id", playbook.id)
+              .neq("tier", "longterm") // Don't re-archive
+              .neq("retention_policy", "permanent"); // Respect retention policy
+
+            if (keys && keys.length > 0) {
+              query = query.in("key", keys);
+            }
+
+            if (olderThanHours) {
+              const cutoff = new Date(Date.now() - olderThanHours * 60 * 60 * 1000).toISOString();
+              query = query.lt("updated_at", cutoff);
+            }
+
+            if (fromTier) {
+              query = query.eq("tier", fromTier);
+            }
+
+            if (tags && tags.length > 0) {
+              query = query.overlaps("tags", tags);
+            }
+
+            const { data: toArchive } = await query;
+            const keysToArchive = (toArchive || []).map(m => m.key);
+
+            if (keysToArchive.length > 0) {
+              await serviceSupabase
+                .from("memories")
+                .update({
+                  tier: "longterm",
+                  updated_at: new Date().toISOString(),
+                })
+                .eq("playbook_id", playbook.id)
+                .in("key", keysToArchive);
+            }
+
+            result = {
+              archived_count: keysToArchive.length,
+              archived_keys: keysToArchive,
+            };
+            break;
+          }
+
+          case "get_memory_tree": {
+            const rootKey = args.root_key as string | undefined;
+            const maxDepth = (args.max_depth as number) || 3;
+            const includeValues = args.include_values as boolean || false;
+
+            // Helper to build tree recursively
+            type MemoryNode = {
+              key: string;
+              summary?: string;
+              value?: Record<string, unknown>;
+              tier: string;
+              priority: number;
+              children?: MemoryNode[];
+            };
+
+            const buildTree = async (parentKey: string | null, depth: number): Promise<MemoryNode[]> => {
+              if (depth > maxDepth) return [];
+
+              let query = serviceSupabase
+                .from("memories")
+                .select("key, value, summary, tier, priority")
+                .eq("playbook_id", playbook.id)
+                .order("priority", { ascending: false });
+
+              if (parentKey === null) {
+                query = query.is("parent_key", null);
+              } else {
+                query = query.eq("parent_key", parentKey);
+              }
+
+              const { data } = await query;
+              if (!data) return [];
+
+              const nodes: MemoryNode[] = [];
+              for (const m of data) {
+                const node: MemoryNode = {
+                  key: m.key,
+                  tier: m.tier,
+                  priority: m.priority,
+                  ...(includeValues ? { value: m.value } : { summary: m.summary || `[${m.key}]` }),
+                };
+
+                const children = await buildTree(m.key, depth + 1);
+                if (children.length > 0) {
+                  node.children = children;
+                }
+
+                nodes.push(node);
+              }
+
+              return nodes;
+            };
+
+            const tree = await buildTree(rootKey || null, 1);
+            result = {
+              root: rootKey || null,
+              tree,
+              total_nodes: tree.length,
+            };
             break;
           }
 

@@ -55,6 +55,7 @@ async function fetchBlogContent(filename: string, baseUrl: string = ""): Promise
     const runtimeBaseUrl = baseUrl || envBaseUrl;
     const isBrowser = typeof window !== 'undefined';
 
+    // Build time (Node.js): Try filesystem first
     if (!isBrowser) {
         try {
             const fs = await import('fs');
@@ -68,35 +69,26 @@ async function fetchBlogContent(filename: string, baseUrl: string = ""): Promise
         } catch (error) {
             console.warn(`Blog fs access failed for ${filename}, falling back to fetch.`, error);
         }
-    } else {
-        // Runtime (Cloudflare Workers): Use fetch
-        try {
-            const envBaseUrl =
-                (typeof process !== 'undefined' && (process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL || process.env.CF_PAGES_URL)) || "";
-            const runtimeBaseUrl = baseUrl || envBaseUrl;
-            const isBrowser = typeof window !== 'undefined';
+    }
 
-            // Ensure absolute URL in Workers by falling back to a configured site URL when possible.
-            const url = runtimeBaseUrl
-                ? `${runtimeBaseUrl}/blog/${filename}`
-                : (isBrowser ? `/blog/${filename}` : `http://localhost:3000/blog/${filename}`);
+    // Runtime (Cloudflare Workers) or fallback: Use fetch
+    try {
+        // Ensure absolute URL in Workers by falling back to a configured site URL when possible.
+        const url = runtimeBaseUrl
+            ? `${runtimeBaseUrl}/blog/${filename}`
+            : (isBrowser ? `/blog/${filename}` : `http://localhost:3000/blog/${filename}`);
 
-            if (!runtimeBaseUrl && !isBrowser) {
-                console.warn(
-                    `[blog] Missing baseUrl for runtime fetch. Configure NEXT_PUBLIC_SITE_URL (or SITE_URL/CF_PAGES_URL) to avoid localhost fallback. Attempted: ${url}`
-                );
-            }
+        if (!runtimeBaseUrl && !isBrowser) {
+            console.warn(
+                `[blog] Missing baseUrl for runtime fetch. Configure NEXT_PUBLIC_SITE_URL (or SITE_URL/CF_PAGES_URL) to avoid localhost fallback. Attempted: ${url}`
+            );
+        }
 
-            console.log(`Fetching blog content from: ${url}`);
+        blogDebugLog(`Fetching blog content from: ${url}`);
 
-            const response = await fetch(url);
-            if (!response.ok) {
-                console.error(`Failed to fetch ${url}: ${response.status} ${response.statusText}`);
-                return null;
-            }
-            return response.text();
-        } catch (error) {
-            console.error(`Error fetching blog file ${filename}:`, error);
+        const response = await fetch(url);
+        if (!response.ok) {
+            console.error(`Failed to fetch ${url}: ${response.status} ${response.statusText}`);
             return null;
         }
         return response.text();
