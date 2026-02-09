@@ -210,6 +210,7 @@ function MarkdownRenderer({ content }: { content: string }) {
     return (
         <div
             className="markdown-content"
+            suppressHydrationWarning
             dangerouslySetInnerHTML={{ __html: html }}
         />
     );
@@ -261,6 +262,12 @@ function parseMarkdown(md: string): string {
     if (!html.startsWith('<')) {
         html = `<p class="text-neutral-700 dark:text-neutral-300 leading-relaxed mb-4">${html}</p>`;
     }
+
+    // Fix header IDs (make them url-friendly)
+    html = html.replace(/id="([^"]+)"/g, (_, id) => {
+        const cleanId = id.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+        return `id="${cleanId}"`;
+    });
 
     // Wrap lists
     html = html.replace(/(<li[^>]*>.*?<\/li>\n?)+/g, (match) => {
