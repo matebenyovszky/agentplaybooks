@@ -12,6 +12,19 @@ type BlogPostClientProps = {
     currentPost?: BlogPost | null;
 };
 
+const dateFormatter = new Intl.DateTimeFormat("en-US", {
+    dateStyle: "medium",
+    timeZone: "UTC",
+});
+
+function formatPostDate(value: string) {
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+        return value;
+    }
+    return dateFormatter.format(parsed);
+}
+
 export default function BlogPostClient({ posts, currentPost }: BlogPostClientProps) {
     return (
         <div className="min-h-screen bg-background text-foreground">
@@ -52,7 +65,7 @@ function BlogIndexView({ posts }: { posts: BlogPost[] }) {
                         <div className="flex items-center gap-3 text-sm text-neutral-500 mb-4">
                             <span className="flex items-center gap-1">
                                 <Calendar className="h-3.5 w-3.5" />
-                                {new Date(post.date).toLocaleDateString()}
+                                {formatPostDate(post.date)}
                             </span>
                             {post.author && (
                                 <span className="flex items-center gap-1">
@@ -119,7 +132,7 @@ function SinglePostView({ post }: { post: BlogPost }) {
                 <div className="flex items-center gap-4 text-sm text-neutral-500 mb-4">
                     <time dateTime={post.date} className="flex items-center gap-1">
                         <Calendar className="h-3.5 w-3.5" />
-                        {new Date(post.date).toLocaleDateString()}
+                        {formatPostDate(post.date)}
                     </time>
                     {post.author && (
                         <span className="flex items-center gap-1">
