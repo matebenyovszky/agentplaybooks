@@ -1,101 +1,74 @@
 # Memory
 
-Memory is a persistent key-value storage system that AI agents can read from and write to. It enables agents to maintain context across sessions and share information between different AI platforms.
+Memory is a persistent, hierarchical storage system that AI agents can read from and write to. It enables agents to maintain context across sessions, manage complex task plans, and share information between AI platforms.
 
-## What is Memory?
+## Memory Tiers
 
-Memory in AgentPlaybooks is:
+Memory uses a 3-tier hierarchy inspired by human memory:
 
-- **Persistent** - Data survives across sessions
-- **Key-Value** - Simple, flexible storage model
-- **JSON** - Values are stored as structured JSON
-- **Scoped** - Each playbook has its own memory namespace
-- **Secure** - API key authentication for write operations
+| Tier | Purpose | Default Priority |
+|------|---------|-----------------|
+| **working** | Active scratch pad for current tasks | Highest |
+| **contextual** | Background context and recent information (default) | Medium |
+| **longterm** | Archived knowledge and completed work | Lowest |
+
+## Memory Types
+
+- **flat** (default) — Simple key-value pairs for facts, preferences, and state
+- **hierarchical** — Task graphs with parent-child relationships and status tracking
 
 ## Use Cases
 
-### Personal Information
+### Simple Memory (Flat)
 
-Store information about yourself that AI agents should know:
+Store facts, preferences, and context:
 
 ```json
+PUT /api/playbooks/:guid/memory/user_profile
 {
-  "user_profile": {
+  "value": {
     "name": "John Smith",
     "role": "Senior Developer",
-    "company": "TechCorp",
-    "preferences": {
-      "language": "TypeScript",
-      "framework": "React",
-      "style": "functional"
-    }
-  }
+    "preferences": { "language": "TypeScript" }
+  },
+  "tier": "contextual",
+  "tags": ["profile", "preferences"]
 }
 ```
 
-### Project Context
+### Task Graphs (Hierarchical)
 
-Share project details across AI platforms:
+Create multi-step task plans that agent swarms can work on in parallel:
 
 ```json
+// Via MCP tool: create_task_graph
 {
-  "current_project": {
-    "name": "E-commerce Platform",
-    "stack": ["Next.js", "Supabase", "Stripe"],
-    "conventions": {
-      "naming": "camelCase",
-      "testing": "Jest + React Testing Library",
-      "commits": "Conventional Commits"
-    }
-  }
+  "plan_key": "refactor-auth",
+  "plan_summary": "Refactor authentication to use JWT",
+  "tasks": [
+    { "key": "research", "description": "Research JWT best practices" },
+    { "key": "implement", "description": "Implement JWT middleware", "depends_on": ["research"] },
+    { "key": "test", "description": "Write integration tests", "depends_on": ["implement"] }
+  ]
 }
 ```
 
-### Conversation History
-
-Enable AI agents to remember previous interactions:
-
-```json
-{
-  "conversation_summary": {
-    "last_topic": "API authentication refactoring",
-    "decisions_made": [
-      "Use JWT with refresh tokens",
-      "Store tokens in httpOnly cookies"
-    ],
-    "pending_tasks": [
-      "Implement token rotation",
-      "Add rate limiting"
-    ]
-  }
-}
-```
+Each task gets its own memory node with status tracking (`pending` → `running` → `completed`). When all children complete, the parent auto-completes.
 
 ## Reading Memory
 
-### Via Web Interface
-
-Navigate to your playbook dashboard to view and edit memory entries.
-
-### Via API (Public Read)
+### Via API (All Memories)
 
 ```bash
 GET /api/playbooks/:guid/memory
-```
-
-Response:
-```json
-{
-  "user_profile": { "name": "John Smith", ... },
-  "current_project": { ... },
-  "conversation_summary": { ... }
-}
+GET /api/playbooks/:guid/memory?tier=working
+GET /api/playbooks/:guid/memory?memory_type=hierarchical
 ```
 
 ### Via API (Specific Key)
 
 ```bash
-GET /api/playbooks/:guid/memory/:key
+GET /api/playbooks/:guid/memory?key=user_profile
 ```
 
 ## Writing Memory
@@ -110,10 +83,15 @@ Authorization: Bearer apb_live_xxx
 Content-Type: application/json
 
 {
-  "value": {
-    "name": "Updated Name",
-    "role": "Lead Developer"
-  }
+  "value": { "name": "Updated Name" },
+  "tier": "working",
+  "priority": 80,
+  "tags": ["important"],
+  "summary": "Updated user profile",
+  "memory_type": "flat",
+  "status": null,
+  "parent_key": null,
+  "metadata": {}
 }
 ```
 
@@ -124,83 +102,48 @@ DELETE /api/playbooks/:guid/memory/:key
 Authorization: Bearer apb_live_xxx
 ```
 
-### Append to Array
+## MCP Memory Tools
 
-```bash
-POST /api/playbooks/:guid/memory/:key/append
-Authorization: Bearer apb_live_xxx
-Content-Type: application/json
+When using AgentPlaybooks via MCP, these tools are available:
 
-{
-  "item": "New task to add to pending_tasks array"
-}
-```
+| Tool | Description |
+|------|-------------|
+| `read_memory` | Read a specific memory by key |
+| `search_memory` | Search by text, tags, tier, type, status |
+| `write_memory` | Write a memory with tier, priority, parent_key, status |
+| `delete_memory` | Delete a memory entry |
+| `create_task_graph` | Create a full task plan with subtasks |
+| `update_task_status` | Update task status (auto-completes parent) |
+| `consolidate_memories` | Combine related memories into a parent |
+| `promote_memory` | Move to higher tier or boost priority |
+| `get_memory_context` | Context-optimized view across tiers |
+| `archive_memories` | Move memories to longterm tier |
+| `get_memory_tree` | Visualize hierarchical structure |
 
-## AI Agent Integration
+## Memory Fields
 
-### Claude (via System Prompt)
-
-```
-You have access to a memory system. At the start of each conversation:
-1. Fetch memory from https://agentplaybooks.ai/api/playbooks/YOUR_GUID/memory
-2. Use the context to personalize responses
-3. After important decisions, update memory via PUT request
-```
-
-### ChatGPT (via GPT Actions)
-
-Configure a GPT Action with the OpenAPI spec from:
-```
-https://agentplaybooks.ai/api/playbooks/YOUR_GUID?format=openapi
-```
-
-### Custom Agents
-
-```python
-import requests
-
-class AgentPlaybooksMemory:
-    def __init__(self, guid, api_key=None):
-        self.base_url = f"https://agentplaybooks.ai/api/playbooks/{guid}"
-        self.api_key = api_key
-    
-    def read(self, key=None):
-        url = f"{self.base_url}/memory"
-        if key:
-            url += f"/{key}"
-        return requests.get(url).json()
-    
-    def write(self, key, value):
-        if not self.api_key:
-            raise ValueError("API key required for write operations")
-        return requests.put(
-            f"{self.base_url}/memory/{key}",
-            headers={"Authorization": f"Bearer {self.api_key}"},
-            json={"value": value}
-        )
-
-# Usage
-memory = AgentPlaybooksMemory("your-guid", "apb_live_xxx")
-profile = memory.read("user_profile")
-memory.write("last_session", {"timestamp": "2026-01-02", "topic": "Memory docs"})
-```
-
-## Memory Limits
-
-| Plan | Keys per Playbook | Value Size | Total Storage |
-|------|-------------------|------------|---------------|
-| Free | 100 | 64 KB | 1 MB |
-| Pro | 1,000 | 256 KB | 10 MB |
-| Enterprise | Unlimited | 1 MB | 100 MB |
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `key` | string | required | Unique identifier |
+| `value` | JSON | required | Stored data |
+| `tags` | string[] | `[]` | Categorization tags |
+| `description` | string | null | Human-readable description |
+| `tier` | working/contextual/longterm | contextual | Memory hierarchy level |
+| `priority` | 1-100 | 50 | Importance ranking |
+| `parent_key` | string | null | Parent memory for hierarchy |
+| `summary` | string | null | Compact text summary |
+| `memory_type` | flat/hierarchical | flat | Memory structure type |
+| `status` | pending/running/completed/failed/blocked | null | Task status |
+| `metadata` | JSON | `{}` | Graph data: dependencies, progress |
 
 ## Best Practices
 
-1. **Structure your data** - Use nested objects for organization
-2. **Keep keys descriptive** - `user_profile` vs `data1`
-3. **Avoid sensitive data** - Don't store passwords or API keys
-4. **Version important data** - Include timestamps for history
-5. **Clean up regularly** - Delete outdated entries
-6. **Use arrays for lists** - Easier to append/manage
+1. **Use tiers intentionally** — `working` for active tasks, `longterm` for archives
+2. **Keep keys descriptive** — `user_profile` vs `data1`
+3. **Use tags for cross-cutting search** — `["auth", "security"]`
+4. **Consolidate when context grows** — Use `consolidate_memories` to merge
+5. **Set summaries** — Enables efficient `get_memory_context` views
+6. **Use task graphs for complex work** — `create_task_graph` manages the structure
 
 ## Security
 
@@ -209,5 +152,3 @@ memory.write("last_session", {"timestamp": "2026-01-02", "topic": "Memory docs"}
 - **Write operations always require API key**
 - API keys are hashed before storage
 - Keys can have granular permissions
-
-

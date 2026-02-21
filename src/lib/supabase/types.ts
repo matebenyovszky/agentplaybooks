@@ -96,12 +96,22 @@ export type MCPServersRow = {
 export type MCPServersInsert = Partial<MCPServersRow>;
 export type MCPServersUpdate = Partial<MCPServersRow>;
 
+export type CanvasSection = {
+  id: string;
+  heading: string;
+  level: number;
+  content: string;
+  locked_by: string | null;
+  locked_at: string | null;
+};
+
 export type CanvasRow = {
   id: string;
   playbook_id: string;
   name: string;
   slug: string;
   content: string;
+  sections: CanvasSection[];
   metadata: Record<string, unknown>;
   sort_order: number;
   created_at: string;
@@ -113,6 +123,8 @@ export type CanvasUpdate = Partial<CanvasRow>;
 
 export type MemoryTier = 'working' | 'contextual' | 'longterm';
 export type RetentionPolicy = 'permanent' | 'session' | 'auto';
+export type MemoryType = 'flat' | 'hierarchical';
+export type MemoryStatus = 'pending' | 'running' | 'completed' | 'failed' | 'blocked';
 
 export type MemoriesRow = {
   id: string;
@@ -131,6 +143,10 @@ export type MemoriesRow = {
   summary: string | null;              // Compressed representation
   source_task_id: string | null;       // Link to originating sub-task
   retention_policy: RetentionPolicy | null;
+  // Hierarchical graph memory fields
+  memory_type: MemoryType;              // flat (simple) or hierarchical (task graph)
+  status: MemoryStatus | null;          // Task status for hierarchical memories
+  metadata: Record<string, unknown>;    // Flexible graph data (dependencies, edges, progress)
 };
 
 export type MemoriesInsert = Partial<MemoriesRow>;

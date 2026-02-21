@@ -35,7 +35,7 @@ app.put("/", async (c) => {
   }
 
   const body = await c.req.json();
-  const { value, tags, description } = body;
+  const { value, tags, description, tier, priority, parent_key, summary, memory_type, status, metadata } = body;
 
   if (value === undefined) {
     return c.json({ error: "Value is required" }, 400);
@@ -64,20 +64,22 @@ app.put("/", async (c) => {
     updated_at: new Date().toISOString(),
   };
 
-  if (tags !== undefined) {
-    upsertData.tags = tags;
-  }
-
-  if (description !== undefined) {
-    upsertData.description = description;
-  }
+  if (tags !== undefined) upsertData.tags = tags;
+  if (description !== undefined) upsertData.description = description;
+  if (tier !== undefined) upsertData.tier = tier;
+  if (priority !== undefined) upsertData.priority = Math.min(100, Math.max(1, priority));
+  if (parent_key !== undefined) upsertData.parent_key = parent_key;
+  if (summary !== undefined) upsertData.summary = summary;
+  if (memory_type !== undefined) upsertData.memory_type = memory_type;
+  if (status !== undefined) upsertData.status = status;
+  if (metadata !== undefined) upsertData.metadata = metadata;
 
   const { data, error } = await supabase
     .from("memories")
     .upsert(upsertData, {
       onConflict: "playbook_id,key",
     })
-    .select("key, value, tags, description, updated_at")
+    .select("key, value, tags, description, tier, priority, parent_key, summary, memory_type, status, metadata, updated_at")
     .single();
 
   if (error) {

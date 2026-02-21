@@ -26,7 +26,7 @@ export function createSupabaseAdapter(playbookId: string): StorageAdapter {
       created_at: playbook.created_at,
     };
   }
-  
+
   return {
     // Playbook
     async getPlaybook(): Promise<Playbook | null> {
@@ -35,14 +35,14 @@ export function createSupabaseAdapter(playbookId: string): StorageAdapter {
         .select("*")
         .eq("id", playbookId)
         .single();
-      
+
       if (error) {
         console.error("Error fetching playbook:", error);
         return null;
       }
       return data as Playbook;
     },
-    
+
     async updatePlaybook(updates: Partial<Playbook>): Promise<Playbook | null> {
       const { data, error } = await supabase
         .from("playbooks")
@@ -50,14 +50,14 @@ export function createSupabaseAdapter(playbookId: string): StorageAdapter {
         .eq("id", playbookId)
         .select()
         .single();
-      
+
       if (error) {
         console.error("Error updating playbook:", error);
         return null;
       }
       return data as Playbook;
     },
-    
+
     // Personas
     async getPersonas(): Promise<Persona[]> {
       const { data: playbook, error } = await supabase
@@ -74,7 +74,7 @@ export function createSupabaseAdapter(playbookId: string): StorageAdapter {
 
       return [playbookToPersona(playbookData)];
     },
-    
+
     async addPersona(input: PersonaInput): Promise<Persona | null> {
       // 1 playbook = 1 persona: "add" is effectively "set/overwrite"
       const { data: playbook, error } = await supabase
@@ -96,7 +96,7 @@ export function createSupabaseAdapter(playbookId: string): StorageAdapter {
 
       return playbookToPersona(playbookData);
     },
-    
+
     async updatePersona(id: string, updates: Partial<PersonaInput>): Promise<Persona | null> {
       // We use playbookId as persona id (singleton persona per playbook)
       if (id !== playbookId) {
@@ -124,7 +124,7 @@ export function createSupabaseAdapter(playbookId: string): StorageAdapter {
 
       return playbookToPersona(playbookData);
     },
-    
+
     async deletePersona(id: string): Promise<boolean> {
       // Reset to default persona (still 1 persona per playbook)
       if (id !== playbookId) {
@@ -148,7 +148,7 @@ export function createSupabaseAdapter(playbookId: string): StorageAdapter {
 
       return true;
     },
-    
+
     // Skills
     async getSkills(): Promise<Skill[]> {
       const { data, error } = await supabase
@@ -156,14 +156,14 @@ export function createSupabaseAdapter(playbookId: string): StorageAdapter {
         .select("*")
         .eq("playbook_id", playbookId)
         .order("created_at");
-      
+
       if (error) {
         console.error("Error fetching skills:", error);
         return [];
       }
       return (data as Skill[]) || [];
     },
-    
+
     async addSkill(input: SkillInput): Promise<Skill | null> {
       const { data, error } = await supabase
         .from("skills")
@@ -173,14 +173,14 @@ export function createSupabaseAdapter(playbookId: string): StorageAdapter {
         })
         .select()
         .single();
-      
+
       if (error) {
         console.error("Error adding skill:", error);
         return null;
       }
       return data as Skill;
     },
-    
+
     async updateSkill(id: string, updates: Partial<SkillInput>): Promise<Skill | null> {
       const { data, error } = await supabase
         .from("skills")
@@ -188,27 +188,27 @@ export function createSupabaseAdapter(playbookId: string): StorageAdapter {
         .eq("id", id)
         .select()
         .single();
-      
+
       if (error) {
         console.error("Error updating skill:", error);
         return null;
       }
       return data as Skill;
     },
-    
+
     async deleteSkill(id: string): Promise<boolean> {
       const { error } = await supabase
         .from("skills")
         .delete()
         .eq("id", id);
-      
+
       if (error) {
         console.error("Error deleting skill:", error);
         return false;
       }
       return true;
     },
-    
+
     // MCP Servers
     async getMcpServers(): Promise<MCPServer[]> {
       const { data, error } = await supabase
@@ -216,14 +216,14 @@ export function createSupabaseAdapter(playbookId: string): StorageAdapter {
         .select("*")
         .eq("playbook_id", playbookId)
         .order("created_at");
-      
+
       if (error) {
         console.error("Error fetching MCP servers:", error);
         return [];
       }
       return (data as MCPServer[]) || [];
     },
-    
+
     async addMcpServer(input: MCPServerInput): Promise<MCPServer | null> {
       const { data, error } = await supabase
         .from("mcp_servers")
@@ -233,14 +233,14 @@ export function createSupabaseAdapter(playbookId: string): StorageAdapter {
         })
         .select()
         .single();
-      
+
       if (error) {
         console.error("Error adding MCP server:", error);
         return null;
       }
       return data as MCPServer;
     },
-    
+
     async updateMcpServer(id: string, updates: Partial<MCPServerInput>): Promise<MCPServer | null> {
       const { data, error } = await supabase
         .from("mcp_servers")
@@ -248,27 +248,27 @@ export function createSupabaseAdapter(playbookId: string): StorageAdapter {
         .eq("id", id)
         .select()
         .single();
-      
+
       if (error) {
         console.error("Error updating MCP server:", error);
         return null;
       }
       return data as MCPServer;
     },
-    
+
     async deleteMcpServer(id: string): Promise<boolean> {
       const { error } = await supabase
         .from("mcp_servers")
         .delete()
         .eq("id", id);
-      
+
       if (error) {
         console.error("Error deleting MCP server:", error);
         return false;
       }
       return true;
     },
-    
+
     // Memory
     async getMemories(): Promise<Memory[]> {
       const { data, error } = await supabase
@@ -276,52 +276,77 @@ export function createSupabaseAdapter(playbookId: string): StorageAdapter {
         .select("*")
         .eq("playbook_id", playbookId)
         .order("updated_at", { ascending: false });
-      
+
       if (error) {
         console.error("Error fetching memories:", error);
         return [];
       }
       return (data as Memory[]) || [];
     },
-    
+
     async addMemory(input: MemoryInput): Promise<Memory | null> {
+      const insertData: Record<string, unknown> = {
+        playbook_id: playbookId,
+        key: input.key,
+        value: input.value,
+      };
+      if (input.tags !== undefined) insertData.tags = input.tags;
+      if (input.description !== undefined) insertData.description = input.description;
+      if (input.tier !== undefined) insertData.tier = input.tier;
+      if (input.priority !== undefined) insertData.priority = input.priority;
+      if (input.parent_key !== undefined) insertData.parent_key = input.parent_key;
+      if (input.summary !== undefined) insertData.summary = input.summary;
+      if (input.memory_type !== undefined) insertData.memory_type = input.memory_type;
+      if (input.status !== undefined) insertData.status = input.status;
+      if (input.metadata !== undefined) insertData.metadata = input.metadata;
+
       const { data, error } = await supabase
         .from("memories")
-        .insert({
-          playbook_id: playbookId,
-          ...input,
-        })
+        .insert(insertData)
         .select()
         .single();
-      
+
       if (error) {
         console.error("Error adding memory:", error);
         return null;
       }
       return data as Memory;
     },
-    
+
     async updateMemory(id: string, updates: Partial<MemoryInput>): Promise<Memory | null> {
+      const updateData: Record<string, unknown> = {};
+      if (updates.key !== undefined) updateData.key = updates.key;
+      if (updates.value !== undefined) updateData.value = updates.value;
+      if (updates.tags !== undefined) updateData.tags = updates.tags;
+      if (updates.description !== undefined) updateData.description = updates.description;
+      if (updates.tier !== undefined) updateData.tier = updates.tier;
+      if (updates.priority !== undefined) updateData.priority = updates.priority;
+      if (updates.parent_key !== undefined) updateData.parent_key = updates.parent_key;
+      if (updates.summary !== undefined) updateData.summary = updates.summary;
+      if (updates.memory_type !== undefined) updateData.memory_type = updates.memory_type;
+      if (updates.status !== undefined) updateData.status = updates.status;
+      if (updates.metadata !== undefined) updateData.metadata = updates.metadata;
+
       const { data, error } = await supabase
         .from("memories")
-        .update(updates)
+        .update(updateData)
         .eq("id", id)
         .select()
         .single();
-      
+
       if (error) {
         console.error("Error updating memory:", error);
         return null;
       }
       return data as Memory;
     },
-    
+
     async deleteMemory(id: string): Promise<boolean> {
       const { error } = await supabase
         .from("memories")
         .delete()
         .eq("id", id);
-      
+
       if (error) {
         console.error("Error deleting memory:", error);
         return false;

@@ -3,6 +3,7 @@ import { createApiApp } from "@/app/api/_shared/hono";
 import { getServiceSupabase } from "@/app/api/_shared/supabase";
 import { getAuthenticatedUser } from "@/app/api/_shared/auth";
 import { getPlaybookByGuid } from "@/app/api/_shared/guards";
+import type { MemoryTier, MemoryType } from "@/lib/supabase/types";
 
 const app = createApiApp("/api/playbooks/:guid/memory");
 
@@ -26,7 +27,7 @@ app.get("/", async (c) => {
   if (key) {
     const { data, error } = await supabase
       .from("memories")
-      .select("key, value, tags, description, updated_at")
+      .select("key, value, tags, description, tier, priority, parent_key, summary, memory_type, status, metadata, updated_at")
       .eq("playbook_id", playbook.id)
       .eq("key", key)
       .single();
@@ -41,13 +42,16 @@ app.get("/", async (c) => {
     return c.json(data);
   }
 
+  const tier = c.req.query("tier");
+  const memoryType = c.req.query("memory_type");
+
   let query = supabase
     .from("memories")
-    .select("key, value, tags, description, updated_at")
+    .select("key, value, tags, description, tier, priority, parent_key, summary, memory_type, status, metadata, updated_at")
     .eq("playbook_id", playbook.id);
 
   if (search) {
-    query = query.or(`key.ilike.%${search}%,description.ilike.%${search}%`);
+    query = query.or(`key.ilike.%${search}%,description.ilike.%${search}%,summary.ilike.%${search}%`);
   }
 
   if (tagsParam) {
@@ -55,6 +59,14 @@ app.get("/", async (c) => {
     if (tags.length > 0) {
       query = query.overlaps("tags", tags);
     }
+  }
+
+  if (tier) {
+    query = query.eq("tier", tier as MemoryTier);
+  }
+
+  if (memoryType) {
+    query = query.eq("memory_type", memoryType as MemoryType);
   }
 
   const { data, error } = await query.order("updated_at", { ascending: false });

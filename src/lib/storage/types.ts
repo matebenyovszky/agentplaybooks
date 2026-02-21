@@ -5,44 +5,53 @@
  * the Supabase storage backend.
  */
 
-import type { Persona, Skill, MCPServer, Memory, Playbook } from "@/lib/supabase/types";
+import type { Persona, Skill, MCPServer, Memory, Playbook, MemoryTier, MemoryType, MemoryStatus } from "@/lib/supabase/types";
 
 // Partial types for creating new items (without id, timestamps)
 export type PersonaInput = Omit<Persona, "id" | "playbook_id" | "created_at" | "updated_at">;
 export type SkillInput = Omit<Skill, "id" | "playbook_id" | "created_at" | "updated_at">;
 export type MCPServerInput = Omit<MCPServer, "id" | "playbook_id" | "created_at" | "updated_at">;
-// Memory input - tags and description are optional (have defaults in DB)
+// Memory input - tags, description, and RLM fields are optional (have defaults in DB)
 export type MemoryInput = {
   key: string;
   value: Record<string, unknown>;
   tags?: string[];
   description?: string | null;
+  // RLM fields
+  tier?: MemoryTier;
+  priority?: number;
+  parent_key?: string | null;
+  summary?: string | null;
+  // Hierarchical graph memory fields
+  memory_type?: MemoryType;
+  status?: MemoryStatus | null;
+  metadata?: Record<string, unknown>;
 };
 
 export interface StorageAdapter {
-  
+
   // Playbook
   getPlaybook(): Promise<Playbook | null>;
   updatePlaybook(data: Partial<Playbook>): Promise<Playbook | null>;
-  
+
   // Personas
   getPersonas(): Promise<Persona[]>;
   addPersona(data: PersonaInput): Promise<Persona | null>;
   updatePersona(id: string, data: Partial<PersonaInput>): Promise<Persona | null>;
   deletePersona(id: string): Promise<boolean>;
-  
+
   // Skills
   getSkills(): Promise<Skill[]>;
   addSkill(data: SkillInput): Promise<Skill | null>;
   updateSkill(id: string, data: Partial<SkillInput>): Promise<Skill | null>;
   deleteSkill(id: string): Promise<boolean>;
-  
+
   // MCP Servers
   getMcpServers(): Promise<MCPServer[]>;
   addMcpServer(data: MCPServerInput): Promise<MCPServer | null>;
   updateMcpServer(id: string, data: Partial<MCPServerInput>): Promise<MCPServer | null>;
   deleteMcpServer(id: string): Promise<boolean>;
-  
+
   // Memory
   getMemories(): Promise<Memory[]>;
   addMemory(data: MemoryInput): Promise<Memory | null>;
