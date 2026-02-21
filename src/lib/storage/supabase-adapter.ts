@@ -307,7 +307,7 @@ export function createSupabaseAdapter(playbookId: string): StorageAdapter {
         .single();
 
       if (error) {
-        console.error("Error adding memory:", error);
+        console.error("Error adding memory:", error, error.message, error.details, error.hint);
         return null;
       }
       return data as Memory;
@@ -335,7 +335,7 @@ export function createSupabaseAdapter(playbookId: string): StorageAdapter {
         .single();
 
       if (error) {
-        console.error("Error updating memory:", error);
+        console.error("Error updating memory:", error, error.message, error.details, error.hint);
         return null;
       }
       return data as Memory;
@@ -348,7 +348,7 @@ export function createSupabaseAdapter(playbookId: string): StorageAdapter {
         .eq("id", id);
 
       if (error) {
-        console.error("Error deleting memory:", error);
+        console.error("Error deleting memory:", error, error.message, error.details, error.hint);
         return false;
       }
       return true;

@@ -331,12 +331,18 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
     }
 
     setSaving(true);
-    const data = await storage.addMemory({ key, value: {} });
-    if (data) {
-      onUpdate([...memories, data]);
-      startEditing(data);
+    try {
+      const data = await storage.addMemory({ key, value: {} });
+      if (data) {
+        onUpdate([...memories, data]);
+        startEditing(data);
+      }
+    } catch (e) {
+      console.error("Add memory error:", e);
+      alert("Failed to add memory: " + (e instanceof Error ? e.message : "Unknown error"));
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   const handleSaveMemory = async () => {
@@ -360,9 +366,12 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
       if (updated) {
         onUpdate(memories.map((m) => (m.id === editingMemory.id ? updated : m)));
         setEditingMemory(null);
+      } else {
+        alert("Failed to save memory. Please check your connection or permissions.");
       }
     } catch (e) {
       console.error("Save error:", e);
+      alert("Save error: " + (e instanceof Error ? e.message : "Unknown error"));
     } finally {
       setSaving(false);
     }
@@ -375,6 +384,8 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
     const success = await storage.deleteMemory(memory.id);
     if (success) {
       onUpdate(memories.filter((m) => m.id !== memory.id));
+    } else {
+      alert("Failed to delete memory. It might be already deleted or you don't have permission.");
     }
   };
 
