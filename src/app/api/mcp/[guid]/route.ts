@@ -165,6 +165,82 @@ const PLAYBOOK_TOOLS: McpTool[] = [
       },
     },
   },
+  // ===== Self-Modification / Evolution Tools =====
+  {
+    name: "create_skill",
+    description: "Create a new skill for this playbook. Use this to expand capabilities. Requires full or skill:write permission.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Name of the skill (e.g. data_analyzer)" },
+        description: { type: "string", description: "Brief description of what the skill does" },
+        content: { type: "string", description: "The instructions/prompt/code for the skill" },
+        priority: { type: "number", description: "Priority level (default 50)" },
+      },
+      required: ["name", "content"],
+    },
+  },
+  {
+    name: "update_skill",
+    description: "Update an existing skill in this playbook. Requires full or skill:write permission.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        skill_id: { type: "string", description: "ID or name of the skill to update" },
+        name: { type: "string", description: "New name" },
+        description: { type: "string", description: "New description" },
+        content: { type: "string", description: "New content/instructions" },
+        priority: { type: "number", description: "New priority level" },
+      },
+      required: ["skill_id"],
+    },
+  },
+  {
+    name: "delete_skill",
+    description: "Delete a skill from this playbook. Requires full or skill:write permission.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        skill_id: { type: "string", description: "ID or name of the skill to delete" },
+      },
+      required: ["skill_id"],
+    },
+  },
+  {
+    name: "list_skill_versions",
+    description: "List historical versions of a skill for auditing or rollback.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        skill_id: { type: "string", description: "ID or name of the skill" },
+        limit: { type: "number", description: "Max versions to return (default 10)" },
+      },
+      required: ["skill_id"],
+    },
+  },
+  {
+    name: "rollback_skill",
+    description: "Rollback a skill to a previous version. Requires full or skill:write permission.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        version_id: { type: "string", description: "The specific version ID from list_skill_versions to rollback to" },
+      },
+      required: ["version_id"],
+    },
+  },
+  {
+    name: "update_playbook",
+    description: "Update the persona/system prompt of this playbook. Handle with extreme care! Requires full or playbook:write permission.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        persona_name: { type: "string", description: "New persona name" },
+        persona_system_prompt: { type: "string", description: "New core system instructions" },
+        persona_metadata: { type: "object", description: "New metadata JSON" },
+      },
+    },
+  },
 ];
 
 const app = createApiApp("/api/mcp/:guid");
@@ -945,6 +1021,199 @@ app.post("/", async (c) => {
               tree,
               total_nodes: tree.length,
             };
+            break;
+          }
+
+          // ===== Self-Modification / Evolution Tools =====
+
+          case "create_skill": {
+            const apiKeyData = await validateApiKey(c.req.raw, "skill:write");
+            if (!apiKeyData || apiKeyData.playbooks.id !== playbook.id) {
+              throw new Error("API key with skill:write permission required");
+            }
+
+            const name = args.name as string;
+            const description = args.description as string | undefined;
+            const content = args.content as string;
+            const priority = (args.priority as number) || 50;
+
+            const { data, error } = await serviceSupabase
+              .from("skills")
+              .insert({
+                playbook_id: playbook.id,
+                name,
+                description,
+                content,
+                priority,
+              })
+              .select()
+              .single();
+
+            if (error) throw new Error(error.message);
+            result = data;
+            break;
+          }
+
+          case "update_skill": {
+            const apiKeyData = await validateApiKey(c.req.raw, "skill:write");
+            if (!apiKeyData || apiKeyData.playbooks.id !== playbook.id) {
+              throw new Error("API key with skill:write permission required");
+            }
+
+            const skillId = args.skill_id as string;
+            const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(skillId);
+
+            const updates: Record<string, unknown> = {};
+            if (args.name !== undefined) updates.name = args.name;
+            if (args.description !== undefined) updates.description = args.description;
+            if (args.content !== undefined) updates.content = args.content;
+            if (args.priority !== undefined) updates.priority = args.priority;
+
+            if (Object.keys(updates).length === 0) {
+              throw new Error("No fields to update");
+            }
+
+            let query = serviceSupabase
+              .from("skills")
+              .update(updates)
+              .eq("playbook_id", playbook.id);
+
+            if (isUuid) {
+              query = query.eq("id", skillId);
+            } else {
+              query = query.ilike("name", skillId.replace(/_/g, " "));
+            }
+
+            const { data, error } = await query.select().single();
+
+            if (error) throw new Error(error.message);
+            if (!data) throw new Error("Skill not found");
+            result = data;
+            break;
+          }
+
+          case "delete_skill": {
+            const apiKeyData = await validateApiKey(c.req.raw, "skill:write");
+            if (!apiKeyData || apiKeyData.playbooks.id !== playbook.id) {
+              throw new Error("API key with skill:write permission required");
+            }
+
+            const skillId = args.skill_id as string;
+            const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(skillId);
+
+            let query = serviceSupabase
+              .from("skills")
+              .delete()
+              .eq("playbook_id", playbook.id);
+
+            if (isUuid) {
+              query = query.eq("id", skillId);
+            } else {
+              query = query.ilike("name", skillId.replace(/_/g, " "));
+            }
+
+            const { error } = await query;
+            if (error) throw new Error(error.message);
+
+            result = { success: true, deleted: true };
+            break;
+          }
+
+          case "list_skill_versions": {
+            const skillId = args.skill_id as string;
+            const limit = (args.limit as number) || 10;
+            const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(skillId);
+
+            let actualSkillId = skillId;
+            if (!isUuid) {
+              // Fetch ID first by name
+              const { data: s } = await serviceSupabase
+                .from("skills")
+                .select("id")
+                .eq("playbook_id", playbook.id)
+                .ilike("name", skillId.replace(/_/g, " "))
+                .single();
+              if (s) actualSkillId = s.id;
+            }
+
+            const { data, error } = await serviceSupabase
+              .from("skill_versions")
+              .select("*")
+              .eq("playbook_id", playbook.id)
+              .eq("skill_id", actualSkillId)
+              .order("recorded_at", { ascending: false })
+              .limit(limit);
+
+            if (error) throw new Error(error.message);
+            result = data || [];
+            break;
+          }
+
+          case "rollback_skill": {
+            const apiKeyData = await validateApiKey(c.req.raw, "skill:write");
+            if (!apiKeyData || apiKeyData.playbooks.id !== playbook.id) {
+              throw new Error("API key with skill:write permission required");
+            }
+
+            const versionId = args.version_id as string;
+
+            // Fetch the old version
+            const { data: oldVersion, error: fetchErr } = await serviceSupabase
+              .from("skill_versions")
+              .select("*")
+              .eq("id", versionId)
+              .eq("playbook_id", playbook.id)
+              .single();
+
+            if (fetchErr || !oldVersion) throw new Error("Version not found or access denied");
+
+            // Restore it
+            const { data: restored, error: restoreErr } = await serviceSupabase
+              .from("skills")
+              .update({
+                name: oldVersion.name as string,
+                description: oldVersion.description as string | null,
+                content: oldVersion.content as string | null
+              })
+              .eq("id", oldVersion.skill_id as string)
+              .eq("playbook_id", playbook.id)
+              .select()
+              .single();
+
+            if (restoreErr) throw new Error(restoreErr.message);
+            result = { success: true, restored_skill: restored };
+            break;
+          }
+
+          case "update_playbook": {
+            const apiKeyData = await validateApiKey(c.req.raw, "playbook:write");
+            if (!apiKeyData || apiKeyData.playbooks.id !== playbook.id) {
+              // Also allow full permission
+              if (!apiKeyData?.permissions.includes("full")) {
+                throw new Error("API key with playbook:write permission required");
+              }
+            }
+
+            const updates: Record<string, unknown> = {};
+            if (args.persona_name !== undefined) updates.persona_name = args.persona_name;
+            if (args.persona_system_prompt !== undefined) updates.persona_system_prompt = args.persona_system_prompt;
+            if (args.persona_metadata !== undefined) updates.persona_metadata = args.persona_metadata;
+
+            if (Object.keys(updates).length === 0) {
+              throw new Error("No fields to update");
+            }
+
+            updates.updated_at = new Date().toISOString();
+
+            const { data, error } = await serviceSupabase
+              .from("playbooks")
+              .update(updates)
+              .eq("id", playbook.id)
+              .select("id, persona_name, persona_system_prompt, persona_metadata, updated_at")
+              .single();
+
+            if (error) throw new Error(error.message);
+            result = data;
             break;
           }
 
