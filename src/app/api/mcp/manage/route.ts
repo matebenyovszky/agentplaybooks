@@ -179,11 +179,8 @@ const MCP_TOOLS = [
         playbook_id: { type: "string", description: "UUID of the playbook" },
         name: { type: "string", description: "Skill name (use snake_case, e.g., 'code_review')" },
         description: { type: "string", description: "Description of what the skill does" },
-        definition: {
-          type: "object",
-          description: "Skill definition with parameters schema. Example: { parameters: { type: 'object', properties: { code: { type: 'string' } }, required: ['code'] } }",
-        },
-        examples: { type: "array", description: "Example usages of the skill" },
+        content: { type: "string", description: "Full markdown content (SKILL.md body)" },
+        licence: { type: "string", description: "License information (e.g., MIT, Apache 2.0)" },
       },
       required: ["playbook_id", "name"],
     },
@@ -198,8 +195,8 @@ const MCP_TOOLS = [
         skill_id: { type: "string", description: "UUID of the skill" },
         name: { type: "string", description: "New name" },
         description: { type: "string", description: "New description" },
-        definition: { type: "object", description: "New definition" },
-        examples: { type: "array", description: "New examples" },
+        content: { type: "string", description: "New markdown content" },
+        licence: { type: "string", description: "New license" },
       },
       required: ["playbook_id", "skill_id"],
     },
@@ -699,12 +696,12 @@ async function executeManagementTool(
         throw new Error("Permission denied: skills:write required");
       }
 
-      const { playbook_id, name, description, definition, examples } = args as {
+      const { playbook_id, name, description, content, licence } = args as {
         playbook_id: string;
         name: string;
         description?: string;
-        definition?: Record<string, unknown>;
-        examples?: Record<string, unknown>[];
+        content?: string;
+        licence?: string;
       };
 
       if (!playbook_id) throw new Error("playbook_id is required");
@@ -726,8 +723,8 @@ async function executeManagementTool(
           playbook_id,
           name,
           description: description || null,
-          definition: definition || {},
-          examples: examples || [],
+          content: content || null,
+          licence: licence || null,
         })
         .select()
         .single();
@@ -746,8 +743,8 @@ async function executeManagementTool(
         skill_id: string;
         name?: string;
         description?: string;
-        definition?: Record<string, unknown>;
-        examples?: Record<string, unknown>[];
+        content?: string;
+        licence?: string;
       };
 
       if (!playbook_id || !skill_id) {
@@ -830,7 +827,7 @@ async function executeManagementTool(
 
       const { data, error } = await supabase
         .from("skills")
-        .select("id, name, description, definition, examples, priority")
+        .select("id, name, description, content, licence, priority")
         .eq("playbook_id", playbook_id)
         .order("priority", { ascending: false });
 
