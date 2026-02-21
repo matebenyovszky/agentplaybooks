@@ -12,6 +12,7 @@ import {
 } from "@/lib/attachment-validator";
 import { hashApiKey, generateApiKey, generateGuid, getKeyPrefix } from "@/lib/utils";
 import { cookies } from "next/headers";
+import { PLAYBOOK_TOOLS } from "@/app/api/mcp/[guid]/route";
 
 // User API Key with user_id
 type UserApiKeyData = UserApiKeysRow & { user_id: string };
@@ -2777,6 +2778,27 @@ function formatAsOpenAPI(playbook: PlaybookWithExports) {
               schema: { type: "string" },
               description: "Filter by tags (comma-separated)",
             },
+            {
+              name: "tier",
+              in: "query",
+              required: false,
+              schema: { type: "string", enum: ["core", "working_memory", "episodic", "archival"] },
+              description: "Filter by RLM memory tier",
+            },
+            {
+              name: "memory_type",
+              in: "query",
+              required: false,
+              schema: { type: "string", enum: ["fact", "preference", "task", "observation", "summary"] },
+              description: "Filter by memory type",
+            },
+            {
+              name: "status",
+              in: "query",
+              required: false,
+              schema: { type: "string", enum: ["active", "completed", "archived", "failed"] },
+              description: "Filter by memory/task status",
+            },
           ],
           responses: {
             "200": {
@@ -2910,6 +2932,136 @@ function formatAsOpenAPI(playbook: PlaybookWithExports) {
           security: [{ apiKey: [] }],
         },
       },
+      // Canvas: List documents
+      [`/playbooks/${playbook.guid}/canvas`]: {
+        get: {
+          summary: "List canvas documents",
+          description: "Get all collaborative canvas documents for this playbook",
+          operationId: "listCanvasDocuments",
+          responses: {
+            "200": {
+              description: "List of canvas documents",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "array",
+                    items: { $ref: "#/components/schemas/CanvasDocument" },
+                  },
+                },
+              },
+            },
+          },
+        },
+        post: {
+          summary: "Create canvas document",
+          description: "Create a new collaborative canvas document",
+          operationId: "createCanvasDocument",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/CanvasWrite" },
+              },
+            },
+          },
+          responses: {
+            "200": {
+              description: "Canvas document created",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/CanvasDocument" },
+                },
+              },
+            },
+          },
+          security: [{ apiKey: [] }],
+        },
+      },
+      // Canvas: Read/Update document
+      [`/playbooks/${playbook.guid}/canvas/{slug}`]: {
+        get: {
+          summary: "Read canvas document",
+          description: "Read a specific canvas document by its slug",
+          operationId: "readCanvasDocument",
+          parameters: [
+            {
+              name: "slug",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+              description: "Canvas document slug",
+            },
+          ],
+          responses: {
+            "200": {
+              description: "Canvas document",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/CanvasDocument" },
+                },
+              },
+            },
+          },
+        },
+        put: {
+          summary: "Update canvas document",
+          description: "Update a canvas document content and metadata",
+          operationId: "updateCanvasDocument",
+          parameters: [
+            {
+              name: "slug",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+              description: "Canvas document slug",
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/CanvasWrite" },
+              },
+            },
+          },
+          responses: {
+            "200": {
+              description: "Canvas document updated",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/CanvasDocument" },
+                },
+              },
+            },
+          },
+          security: [{ apiKey: [] }],
+        },
+        delete: {
+          summary: "Delete canvas document",
+          description: "Delete a canvas document",
+          operationId: "deleteCanvasDocument",
+          parameters: [
+            {
+              name: "slug",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+              description: "Canvas document slug",
+            },
+          ],
+          responses: {
+            "200": {
+              description: "Document deleted",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/Success" },
+                },
+              },
+            },
+          },
+          security: [{ apiKey: [] }],
+        },
+      },
       // Skills: List all
       [`/playbooks/${playbook.guid}/skills`]: {
         get: {
@@ -3002,6 +3154,13 @@ function formatAsOpenAPI(playbook: PlaybookWithExports) {
               description: "Tags for categorization and search"
             },
             description: { type: "string", description: "Human-readable description" },
+            tier: { type: "string", description: "RLM memory tier (core, working_memory, episodic, archival)" },
+            priority: { type: "integer", description: "Priority level 1-100" },
+            parent_key: { type: "string", description: "Parent memory key for hierarchical storage/tasks" },
+            summary: { type: "string", description: "LLM-generated summary for large memories" },
+            memory_type: { type: "string", description: "Type of memory (fact, preference, task, observation, summary)" },
+            status: { type: "string", description: "Status for task memories (active, completed, archived, failed)" },
+            metadata: { type: "object", description: "Additional custom metadata" },
             updated_at: { type: "string", format: "date-time", description: "Last update timestamp" },
           },
         },
@@ -3016,8 +3175,58 @@ function formatAsOpenAPI(playbook: PlaybookWithExports) {
               description: "Optional tags for categorization"
             },
             description: { type: "string", description: "Optional description" },
+            tier: { type: "string", description: "Optional RLM memory tier" },
+            priority: { type: "integer", description: "Optional priority level 1-100" },
+            parent_key: { type: "string", description: "Optional parent memory key" },
+            summary: { type: "string", description: "Optional summary" },
+            memory_type: { type: "string", description: "Optional type of memory" },
+            status: { type: "string", description: "Optional status" },
+            metadata: { type: "object", description: "Optional additional metadata" },
           },
           required: ["value"],
+        },
+        CanvasSection: {
+          type: "object",
+          description: "A section within a collaborative canvas document",
+          properties: {
+            id: { type: "string", description: "Section ID" },
+            heading: { type: "string", description: "Section heading text" },
+            level: { type: "integer", description: "Markdown heading level (1-6)" },
+            content: { type: "string", description: "Section content" },
+            locked_by: { type: "string", nullable: true, description: "Agent ID holding the lock" },
+            locked_at: { type: "string", format: "date-time", nullable: true, description: "When the lock was acquired" },
+          },
+        },
+        CanvasDocument: {
+          type: "object",
+          description: "A collaborative canvas document",
+          properties: {
+            id: { type: "string", format: "uuid" },
+            slug: { type: "string", description: "URL-friendly unique identifier" },
+            name: { type: "string", description: "Document name" },
+            content: { type: "string", description: "Full markdown content" },
+            sections: {
+              type: "array",
+              items: { $ref: "#/components/schemas/CanvasSection" },
+              description: "Parsed document sections for parallel editing"
+            },
+            metadata: { type: "object", description: "Additional metadata" },
+            sort_order: { type: "integer", description: "Display order" },
+            created_at: { type: "string", format: "date-time" },
+            updated_at: { type: "string", format: "date-time" },
+          },
+        },
+        CanvasWrite: {
+          type: "object",
+          description: "Data for creating/updating a canvas document",
+          properties: {
+            name: { type: "string", description: "Document name" },
+            slug: { type: "string", description: "Document slug" },
+            content: { type: "string", description: "Full markdown content" },
+            metadata: { type: "object", description: "Optional metadata" },
+            sort_order: { type: "integer", description: "Optional display order" },
+          },
+          required: ["name", "slug", "content"],
         },
         Skill: {
           type: "object",
@@ -3090,11 +3299,21 @@ function formatAsOpenAPI(playbook: PlaybookWithExports) {
 
 function formatAsMCP(playbook: PlaybookWithExports) {
   const persona = playbook.persona || (Array.isArray(playbook.personas) ? playbook.personas[0] : null);
-  const tools = playbook.skills.map((skill) => ({
-    name: skill.name.toLowerCase().replace(/\s+/g, "_"),
-    description: skill.description || skill.name,
-    inputSchema: { type: "object", properties: {} },
-  }));
+  const tools = [
+    ...PLAYBOOK_TOOLS.map((tool) => ({
+      name: tool.name,
+      description: tool.description || tool.name,
+      inputSchema: {
+        type: (tool.inputSchema?.type as string) || "object",
+        properties: (tool.inputSchema?.properties as Record<string, unknown>) || {},
+      },
+    })),
+    ...playbook.skills.map((skill) => ({
+      name: skill.name.toLowerCase().replace(/\s+/g, "_"),
+      description: skill.description || skill.name,
+      inputSchema: { type: "object", properties: {} },
+    }))
+  ];
 
   const resources = [
     {
@@ -3105,9 +3324,21 @@ function formatAsMCP(playbook: PlaybookWithExports) {
     },
     {
       uri: `playbook://${playbook.guid}/memory`,
-      name: "Memory",
-      description: "Persistent memory storage",
+      name: "Memory (RLM)",
+      description: "Persistent hierarchical memory storage (tiers: core, working, episodic, archival)",
       mimeType: "application/json",
+    },
+    {
+      uri: `playbook://${playbook.guid}/canvas`,
+      name: "Collaborative Canvas",
+      description: "List of all canvas documents available for parallel editing",
+      mimeType: "application/json",
+    },
+    {
+      uri: `playbook://${playbook.guid}/guide`,
+      name: "Usage Guide",
+      description: "Comprehensive guide on memory management, canvas editing, and best practices",
+      mimeType: "text/markdown",
     },
   ];
 
@@ -3158,11 +3389,21 @@ function formatAsMCP(playbook: PlaybookWithExports) {
 function formatAsAnthropic(playbook: PlaybookWithExports) {
   const persona = playbook.persona || (Array.isArray(playbook.personas) ? playbook.personas[0] : null);
   // Anthropic tool format
-  const tools = playbook.skills.map((skill) => ({
-    name: skill.name.toLowerCase().replace(/\s+/g, "_"),
-    description: skill.description || skill.name,
-    input_schema: { type: "object", properties: {} },
-  }));
+  const tools = [
+    ...PLAYBOOK_TOOLS.map((tool) => ({
+      name: tool.name,
+      description: tool.description || tool.name,
+      input_schema: {
+        type: (tool.inputSchema?.type as string) || "object",
+        properties: (tool.inputSchema?.properties as Record<string, unknown>) || {},
+      },
+    })),
+    ...playbook.skills.map((skill) => ({
+      name: skill.name.toLowerCase().replace(/\s+/g, "_"),
+      description: skill.description || skill.name,
+      input_schema: { type: "object", properties: {} },
+    }))
+  ];
 
   return {
     playbook: {
@@ -3226,13 +3467,31 @@ function formatAsMarkdown(playbook: PlaybookWithExports): string {
     }
   }
 
+  md += `## Features\n\n`;
+  md += `### Hierarchical Memory (RLM)\n`;
+  md += `This playbook supports Recursive Language Model (RLM) memory with four tiers:\n`;
+  md += `- **core:** Identity, fundamental rules\n`;
+  md += `- **working_memory:** Active tasks, immediate context\n`;
+  md += `- **episodic:** Recent events, observations\n`;
+  md += `- **archival:** Long-term storage, summaries\n\n`;
+  md += `It also supports task graphs via \`parent_key\` and \`status\` tracking.\n\n`;
+
+  md += `### Collaborative Canvas\n`;
+  md += `Features section-level locking for parallel multi-agent editing. Use the \`playbook://${playbook.guid}/canvas\` resource to list available documents.\n\n`;
+
+  md += `### Usage Guide\n`;
+  md += `Agents should read \`playbook://${playbook.guid}/guide\` for instructions on memory architecture and canvas mechanics.\n\n`;
+
   md += `---\n\n`;
   md += `## API Endpoints\n\n`;
   md += `- **JSON:** \`GET /api/playbooks/${playbook.guid}\`\n`;
   md += `- **OpenAPI:** \`GET /api/playbooks/${playbook.guid}?format=openapi\`\n`;
-  md += `- **MCP:** \`GET /api/playbooks/${playbook.guid}?format=mcp\`\n`;
+  md += `- **MCP Manifesto:** \`GET /api/playbooks/${playbook.guid}?format=mcp\`\n`;
+  md += `- **MCP Server (Live):** \`GET /api/mcp/${playbook.guid}\`\n`;
   md += `- **Anthropic:** \`GET /api/playbooks/${playbook.guid}?format=anthropic\`\n`;
   md += `- **Markdown:** \`GET /api/playbooks/${playbook.guid}?format=markdown\`\n`;
+  md += `- **Canvas List:** \`GET /api/playbooks/${playbook.guid}/canvas\`\n`;
+  md += `- **Memory API:** \`GET /api/playbooks/${playbook.guid}/memory\`\n`;
 
   return md;
 }

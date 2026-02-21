@@ -221,7 +221,7 @@ function MemoryTreeNode({
           {memory.tags && memory.tags.length > 0 && (
             <div className="flex gap-1.5 mt-2 ml-7 flex-wrap">
               {memory.tags.map((tag, i) => (
-                <span key={i} className="px-2 py-0.5 text-xs rounded-full bg-slate-700/50 text-slate-400 border border-slate-600/30">
+                <span key={i} className="px-2 py-0.5 text-xs rounded-full bg-slate-200 dark:bg-slate-700/50 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-600/30">
                   {tag}
                 </span>
               ))}
@@ -265,6 +265,7 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
   const [editParentKey, setEditParentKey] = useState("");
   const [editMemoryType, setEditMemoryType] = useState<MemoryType>("flat");
   const [editStatus, setEditStatus] = useState<MemoryStatus | "">("");
+  const [editTags, setEditTags] = useState("");
   const [jsonError, setJsonError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -353,6 +354,7 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
         parent_key: editParentKey || null,
         memory_type: editMemoryType,
         status: editStatus || null,
+        tags: editTags.split(",").map((t) => t.trim()).filter(Boolean),
       });
 
       if (updated) {
@@ -393,6 +395,7 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
     setEditParentKey(memory.parent_key || "");
     setEditMemoryType(memory.memory_type || "flat");
     setEditStatus(memory.status || "");
+    setEditTags((memory.tags || []).join(", "));
     setJsonError(null);
   };
 
@@ -405,8 +408,18 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
     return { working, contextual, longterm, hierarchical, total: memories.length };
   }, [memories]);
 
+  const allParentKeys = useMemo(() => Array.from(new Set(memories.map((m) => m.key))), [memories]);
+  const allTags = useMemo(() => Array.from(new Set(memories.flatMap((m) => m.tags || []))), [memories]);
+
   return (
     <div className="space-y-4">
+      <datalist id="parent-keys">
+        {allParentKeys.map((k) => <option key={k} value={k} />)}
+      </datalist>
+      <datalist id="all-tags">
+        {allTags.map((t) => <option key={t} value={t} />)}
+      </datalist>
+
       {/* Stats Bar */}
       {memories.length > 0 && (
         <div className="flex items-center gap-3 text-xs text-slate-500">
@@ -657,6 +670,24 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
                     </div>
                   </div>
 
+                  {/* Tags */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-400 mb-2">Tags (comma-separated)</label>
+                    <input
+                      type="text"
+                      list="all-tags"
+                      value={editTags}
+                      onChange={(e) => setEditTags(e.target.value)}
+                      placeholder="e.g. priority, user_preference"
+                      className={cn(
+                        "w-full p-3 rounded-lg",
+                        "bg-slate-900/70 border border-slate-700/50",
+                        "text-slate-200 text-sm",
+                        "focus:outline-none focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/20"
+                      )}
+                    />
+                  </div>
+
                   {/* Status + Parent Key row */}
                   <div className="grid grid-cols-2 gap-3">
                     <div>
@@ -683,6 +714,7 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
                       <label className="block text-sm font-medium text-slate-400 mb-2">Parent Key</label>
                       <input
                         type="text"
+                        list="parent-keys"
                         value={editParentKey}
                         onChange={(e) => setEditParentKey(e.target.value)}
                         placeholder="(no parent)"

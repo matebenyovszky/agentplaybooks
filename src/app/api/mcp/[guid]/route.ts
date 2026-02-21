@@ -87,7 +87,7 @@ function parseMarkdownSections(content: string): CanvasSection[] {
 // Built-in MCP tools for playbook access
 // Note: Persona is embedded in the MCP manifest under _playbook.persona
 // RLM-Enhanced: Includes hierarchical memory management tools
-const PLAYBOOK_TOOLS: McpTool[] = [
+export const PLAYBOOK_TOOLS: McpTool[] = [
   {
     name: "list_skills",
     description: "List all skills (capabilities/rules) in this playbook",
