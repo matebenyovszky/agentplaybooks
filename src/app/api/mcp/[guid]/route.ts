@@ -447,11 +447,21 @@ app.get("/", async (c) => {
   }
   const supabase = getSupabase();
 
+  // Check if it's a UUID or GUID
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(guid);
+
   // Get playbook with all related data
-  const { data: playbook, error } = await supabase
+  let query = supabase
     .from("playbooks")
-    .select("*")
-    .eq("guid", guid)
+    .select("*");
+
+  if (isUuid) {
+    query = query.eq("id", guid);
+  } else {
+    query = query.eq("guid", guid);
+  }
+
+  const { data: playbook, error } = await query
     .eq("visibility", "public")
     .single();
 
@@ -556,11 +566,21 @@ app.post("/", async (c) => {
 
   const supabase = getSupabase();
 
+  // Check if it's a UUID or GUID
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(guid);
+
   // Get playbook
-  const { data: playbook } = await supabase
+  let query = supabase
     .from("playbooks")
-    .select("id, persona_name, persona_system_prompt, persona_metadata")
-    .eq("guid", guid)
+    .select("id, persona_name, persona_system_prompt, persona_metadata");
+
+  if (isUuid) {
+    query = query.eq("id", guid);
+  } else {
+    query = query.eq("guid", guid);
+  }
+
+  const { data: playbook } = await query
     .eq("visibility", "public")
     .single();
 

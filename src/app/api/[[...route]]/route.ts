@@ -229,221 +229,40 @@ async function getUserFromAuthOrApiKey(c: AppContext, requiredPermission: string
 // AUTHENTICATED PLAYBOOK CRUD (requires login)
 // ============================================
 
-// GET /api/playbooks - List user's playbooks
-app.get("/playbooks", async (c) => {
-  const user = await requireAuth(c);
-  if (!user) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
-
-  const supabase = getServiceSupabase();
-
-  const { data, error } = await supabase
-    .from("playbooks")
-    .select(`
-      *,
-      skills:skills(count),
-      mcp_servers:mcp_servers(count)
-    `)
-    .eq("user_id", user.id)
-    .order("updated_at", { ascending: false });
-
-  if (error) {
-    return c.json({ error: error.message }, 500);
-  }
-
-  // Transform count objects to numbers
-  const playbookRows = (data as unknown as PlaybookWithCounts[] | null) ?? [];
-  const playbooks = playbookRows.map((p) => ({
-    ...p,
-    persona_count: p.persona_name ? 1 : 0,
-    skill_count: p.skills?.[0]?.count || 0,
-    mcp_server_count: p.mcp_servers?.[0]?.count || 0,
-    personas: undefined,
-    skills: undefined,
-    mcp_servers: undefined,
-  }));
-
-  return c.json(playbooks);
-});
+// ------------------------------------------
+// NOTE: /api/playbooks routes are now handled
+// in src/app/api/playbooks/route.ts
+// ------------------------------------------
 
 // POST /api/playbooks - Create new playbook
-app.post("/playbooks", async (c) => {
-  const user = await requireAuth(c);
-  if (!user) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
 
-  const body = await c.req.json();
-  const { name, description, is_public, visibility, config } = body;
-
-  if (!name) {
-    return c.json({ error: "Name is required" }, 400);
-  }
-
-  const supabase = getServiceSupabase();
-  const guid = generateGuid();
-
-  // Determine visibility
-  let visibilityValue = visibility;
-  if (!visibilityValue && is_public !== undefined) {
-    visibilityValue = is_public ? 'public' : 'private';
-  }
-  if (!visibilityValue) visibilityValue = 'private';
-
-  const { data, error } = await supabase
-    .from("playbooks")
-    .insert({
-      user_id: user.id,
-      guid,
-      name,
-      description: description || null,
-      visibility: visibilityValue,
-      config: config || {},
-    })
-    .select()
-    .single();
-
-  if (error) {
-    return c.json({ error: error.message }, 500);
-  }
-
-  return c.json(data, 201);
-});
+// ------------------------------------------
+// NOTE: POST /api/playbooks is now handled
+// in src/app/api/playbooks/route.ts
+// ------------------------------------------
 
 // GET /api/playbooks/:guid - Get playbook (public or owned)
-app.get("/playbooks/:guid", async (c) => {
-  const guid = c.req.param("guid");
-  const format = c.req.query("format") || "json";
-  const supabase = getServiceSupabase();
 
-  // Try to get user (optional auth)
-  const user = await getAuthenticatedUser(c);
-
-  // First try to find by guid
-  const query = supabase
-    .from("playbooks")
-    .select("*")
-    .eq("guid", guid);
-
-  // If not authenticated, only show public
-  // If authenticated, show public OR owned
-  const { data: playbook, error } = await query.single();
-
-  if (error || !playbook) {
-    return c.json({ error: "Playbook not found" }, 404);
-  }
-
-  // Check access: Public/Unlisted OR Owner
-  const isOwner = user && playbook.user_id === user.id;
-  const isPublicOrUnlisted = playbook.visibility === 'public' || playbook.visibility === 'unlisted';
-
-  if (!isPublicOrUnlisted && !isOwner) {
-    return c.json({ error: "Playbook not found" }, 404);
-  }
-
-  // Get related data
-  const [skills, mcpServers] = await Promise.all([
-    supabase.from("skills").select("*").eq("playbook_id", playbook.id),
-    supabase.from("mcp_servers").select("*").eq("playbook_id", playbook.id),
-  ]);
-
-  const persona = playbookToPersona(playbook);
-
-  const fullPlaybook = {
-    ...playbook,
-    // New: singular persona for clarity
-    persona,
-    // Backward-compatible: personas array shape
-    personas: [persona],
-    skills: skills.data || [],
-    mcp_servers: mcpServers.data || [],
-  };
-
-  // Format output
-  switch (format) {
-    case "openapi":
-      return c.json(formatAsOpenAPI(fullPlaybook));
-    case "mcp":
-      return c.json(formatAsMCP(fullPlaybook));
-    case "anthropic":
-      return c.json(formatAsAnthropic(fullPlaybook));
-    case "markdown":
-      return c.text(formatAsMarkdown(fullPlaybook));
-    default:
-      return c.json(fullPlaybook);
-  }
-});
+// ------------------------------------------
+// NOTE: /api/playbooks/:guid is now handled
+// in src/app/api/playbooks/[guid]/route.ts
+// ------------------------------------------
 
 // PUT /api/playbooks/:id - Update playbook
-app.put("/playbooks/:id", async (c) => {
-  const user = await requireAuth(c);
-  if (!user) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
 
-  const playbookId = c.req.param("id");
-
-  // Check ownership
-  if (!(await checkPlaybookOwnership(user.id, playbookId))) {
-    return c.json({ error: "Forbidden" }, 403);
-  }
-
-  const body = await c.req.json();
-  const { name, description, is_public, visibility, config } = body;
-
-  const supabase = getServiceSupabase();
-
-  const updateData: Record<string, unknown> = {};
-  if (name !== undefined) updateData.name = name;
-  if (description !== undefined) updateData.description = description;
-  if (visibility !== undefined) {
-    updateData.visibility = visibility;
-  } else if (is_public !== undefined) {
-    updateData.visibility = is_public ? 'public' : 'private';
-  }
-  if (config !== undefined) updateData.config = config;
-
-  const { data, error } = await supabase
-    .from("playbooks")
-    .update(updateData)
-    .eq("id", playbookId)
-    .select()
-    .single();
-
-  if (error) {
-    return c.json({ error: error.message }, 500);
-  }
-
-  return c.json(data);
-});
+// ------------------------------------------
+// NOTE: PUT /api/playbooks/:id is now handled
+// in src/app/api/playbooks/[guid]/route.ts
+// ------------------------------------------
 
 // DELETE /api/playbooks/:id - Delete playbook
-app.delete("/playbooks/:id", async (c) => {
-  const user = await requireAuth(c);
-  if (!user) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
 
-  const playbookId = c.req.param("id");
+// ------------------------------------------
+// NOTE: DELETE /api/playbooks/:id is now handled
+// in src/app/api/playbooks/[guid]/route.ts
+// ------------------------------------------
 
-  if (!(await checkPlaybookOwnership(user.id, playbookId))) {
-    return c.json({ error: "Forbidden" }, 403);
-  }
-
-  const supabase = getServiceSupabase();
-
-  const { error } = await supabase
-    .from("playbooks")
-    .delete()
-    .eq("id", playbookId);
-
-  if (error) {
-    return c.json({ error: error.message }, 500);
-  }
-
-  return c.json({ success: true });
-});
+// ============================================
 
 // ============================================
 // PERSONAS CRUD (authenticated)
