@@ -71,17 +71,30 @@ async function fetchBlogContent(filename: string, baseUrl: string = ""): Promise
         }
     }
 
-    // Runtime (Cloudflare Workers) or fallback: Use fetch
     try {
-        // Ensure absolute URL in Workers by falling back to a configured site URL when possible.
-        const url = runtimeBaseUrl
-            ? `${runtimeBaseUrl}/blog/${filename}`
-            : (isBrowser ? `/blog/${filename}` : `http://localhost:3000/blog/${filename}`);
-
-        if (!runtimeBaseUrl && !isBrowser) {
-            console.warn(
-                `[blog] Missing baseUrl for runtime fetch. Configure NEXT_PUBLIC_SITE_URL (or SITE_URL/CF_PAGES_URL) to avoid localhost fallback. Attempted: ${url}`
-            );
+        // Ensure absolute URL in Workers by falling back to request headers or configured site URL.
+        let url = "";
+        if (isBrowser) {
+            url = `/blog/${filename}`;
+        } else if (runtimeBaseUrl) {
+            url = `${runtimeBaseUrl}/blog/${filename}`;
+        } else {
+            url = `http://localhost:3000/blog/${filename}`;
+            // In Cloudflare Workers (SSR), we need an absolute URL. Try to get it from headers.
+            try {
+                // Dynamic import to avoid breaking static generation where headers() isn't available
+                const { headers } = await import("next/headers");
+                const headersList = await headers();
+                const host = headersList.get("host");
+                const proto = headersList.get("x-forwarded-proto") || "https";
+                if (host) {
+                    url = `${proto}://${host}/blog/${filename}`;
+                }
+            } catch (error) {
+                console.warn(
+                    `[blog] Could not resolve host from headers for ${filename}. Ensure NEXT_PUBLIC_SITE_URL is set.`
+                );
+            }
         }
 
         blogDebugLog(`Fetching blog content from: ${url}`);

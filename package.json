@@ -12,7 +12,7 @@
     "start": "next start",
     "lint": "eslint",
     "sync-sitemap": "tsx scripts/sync-sitemap-docs.ts",
-    "build:worker": "npm run prebuild && opennextjs-cloudflare build",
+    "build:worker": "npm run prebuild && opennextjs-cloudflare build && npm run postbuild:worker",
     "dev:worker": "opennextjs-cloudflare dev",
     "preview": "opennextjs-cloudflare preview",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv",

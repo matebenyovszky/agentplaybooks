@@ -70,8 +70,12 @@ export default function SettingsPage() {
   const loadApiKeys = async () => {
     setLoading(true);
     try {
+      const supabase = createBrowserClient();
+      const { data: { session } } = await supabase.auth.getSession();
       const response = await fetch("/api/user/api-keys", {
-        credentials: "include",
+        headers: {
+          "Authorization": `Bearer ${session?.access_token}`,
+        },
       });
       if (response.ok) {
         const data = await response.json();
@@ -88,10 +92,14 @@ export default function SettingsPage() {
     setError(null);
 
     try {
+      const supabase = createBrowserClient();
+      const { data: { session } } = await supabase.auth.getSession();
       const response = await fetch("/api/user/api-keys", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session?.access_token}`,
+        },
         body: JSON.stringify({
           name: newKeyName || null,
           permissions: selectedPermissions,
@@ -116,9 +124,13 @@ export default function SettingsPage() {
     if (!confirm("Are you sure you want to delete this API key? This cannot be undone.")) return;
 
     try {
-      const response = await fetch(`/api/user/api-keys?id=${keyId}`, {
+      const supabase = createBrowserClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await fetch(`/api/user/api-keys/${keyId}`, {
         method: "DELETE",
-        credentials: "include",
+        headers: {
+          "Authorization": `Bearer ${session?.access_token}`,
+        },
       });
 
       if (response.ok) {
