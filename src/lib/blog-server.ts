@@ -47,14 +47,14 @@ function parseFrontmatter(fileContent: string): { metadata: Record<string, strin
 
 import fs from "fs";
 import path from "path";
-import { knownBlogSlugs } from "./blog-slugs.generated";
+import { generatedBlogIndex, knownBlogSlugs } from "./blog-slugs.generated";
 
 /**
  * Fetch blog post content.
  * Matches the mechanism in docs-server.ts to correctly use the OpenNext file system 
  * interception for static assets on Cloudflare.
  */
-async function fetchBlogContent(filename: string): Promise<string | null> {
+async function fetchBlogContent(filename: string, baseUrl: string = ""): Promise<string | null> {
     const isBrowser = typeof window !== 'undefined';
 
     // In Browser, use fetch relative
@@ -83,7 +83,34 @@ async function fetchBlogContent(filename: string): Promise<string | null> {
         console.error(`Blog fs access failed for ${filename}:`, error);
     }
 
-    return null;
+    const fallbackBaseUrl =
+        baseUrl ||
+        process.env.NEXT_PUBLIC_SITE_URL ||
+        process.env.SITE_URL ||
+        process.env.CF_PAGES_URL ||
+        "";
+
+    if (!fallbackBaseUrl) {
+        return null;
+    }
+
+    try {
+        const url = new URL(`/blog/${filename}`, fallbackBaseUrl).toString();
+        const response = await fetch(url, { cache: "no-store" });
+        if (!response.ok) {
+            blogDebugLog("Blog content fetch fallback returned non-OK response.", {
+                filename,
+                url,
+                status: response.status,
+            });
+            return null;
+        }
+        blogDebugLog("Loaded blog content from fetch fallback.", { filename, url });
+        return await response.text();
+    } catch (error) {
+        console.error(`Blog fetch fallback failed for ${filename}:`, error);
+        return null;
+    }
 }
 
 /**
@@ -94,18 +121,18 @@ export async function getBlogPost(slug: string, locale: string = "en", baseUrl: 
     // Try exact locale first: slug.locale.md
     let filename = `${slug}.${locale}.md`;
     blogDebugLog("Resolving blog post.", { slug, locale, filename, baseUrl });
-    let content = await fetchBlogContent(filename);
+    let content = await fetchBlogContent(filename, baseUrl);
 
     if (!content) {
         // Try default: slug.md
         filename = `${slug}.md`;
-        content = await fetchBlogContent(filename);
+        content = await fetchBlogContent(filename, baseUrl);
     }
 
     // Handle case where default might be explicitly named slug.en.md
     if (!content && locale !== "en") {
         filename = `${slug}.en.md`;
-        content = await fetchBlogContent(filename);
+        content = await fetchBlogContent(filename, baseUrl);
     }
 
     if (!content) {
@@ -129,18 +156,21 @@ export async function getBlogPost(slug: string, locale: string = "en", baseUrl: 
  * Works in both build time (SSG) and runtime (Cloudflare Workers).
  */
 export async function getBlogPosts(locale: string = "en", baseUrl: string = ""): Promise<BlogPost[]> {
-    const posts: BlogPost[] = [];
-
-    for (const slug of knownBlogSlugs) {
-        try {
-            const post = await getBlogPost(slug, locale, baseUrl);
-            if (post) {
-                posts.push(post);
-            }
-        } catch (error) {
-            console.error(`Error loading blog post ${slug}:`, error);
-        }
-    }
+    void locale;
+    void baseUrl;
+    // Build listing from compile-time metadata so index rendering does not depend on
+    // runtime filesystem availability in Cloudflare Workers.
+    const posts: BlogPost[] = knownBlogSlugs.map((slug) => {
+        const metadata = generatedBlogIndex[slug];
+        return {
+            slug,
+            title: metadata?.title || slug,
+            description: metadata?.description || "",
+            date: metadata?.date || new Date().toISOString(),
+            author: metadata?.author,
+            content: "",
+        };
+    });
 
     // Sort by date descending
     return posts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
