@@ -45,70 +45,44 @@ function parseFrontmatter(fileContent: string): { metadata: Record<string, strin
     return { metadata, content };
 }
 
+import fs from "fs";
+import path from "path";
+
 /**
  * Fetch blog post content.
- * Uses fs during build time (SSG) and fetch during runtime (Cloudflare).
+ * Matches the mechanism in docs-server.ts to correctly use the OpenNext file system 
+ * interception for static assets on Cloudflare.
  */
-async function fetchBlogContent(filename: string, baseUrl: string = ""): Promise<string | null> {
-    const envBaseUrl =
-        (typeof process !== 'undefined' && (process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL || process.env.CF_PAGES_URL)) || "";
-    const runtimeBaseUrl = baseUrl || envBaseUrl;
+async function fetchBlogContent(filename: string): Promise<string | null> {
     const isBrowser = typeof window !== 'undefined';
 
-    // Build time (Node.js): Try filesystem first
-    if (!isBrowser) {
+    // In Browser, use fetch relative
+    if (isBrowser) {
         try {
-            const fs = await import('fs');
-            const path = await import('path');
-            const filePath = path.join(process.cwd(), 'public', 'blog', filename);
-
-            if (fs.existsSync(filePath)) {
-                blogDebugLog("Loaded blog content from filesystem.", { filename, filePath });
-                return fs.readFileSync(filePath, 'utf-8');
+            const url = `/blog/${filename}`;
+            const response = await fetch(url);
+            if (!response.ok) {
+                return null;
             }
+            return await response.text();
         } catch (error) {
-            console.warn(`Blog fs access failed for ${filename}, falling back to fetch.`, error);
-        }
-    }
-
-    try {
-        // Ensure absolute URL in Workers by falling back to request headers or configured site URL.
-        let url = "";
-        if (isBrowser) {
-            url = `/blog/${filename}`;
-        } else if (runtimeBaseUrl) {
-            url = `${runtimeBaseUrl}/blog/${filename}`;
-        } else {
-            url = `http://localhost:3000/blog/${filename}`;
-            // In Cloudflare Workers (SSR), we need an absolute URL. Try to get it from headers.
-            try {
-                // Dynamic import to avoid breaking static generation where headers() isn't available
-                const { headers } = await import("next/headers");
-                const headersList = await headers();
-                const host = headersList.get("host");
-                const proto = headersList.get("x-forwarded-proto") || "https";
-                if (host) {
-                    url = `${proto}://${host}/blog/${filename}`;
-                }
-            } catch {
-                console.warn(
-                    `[blog] Could not resolve host from headers for ${filename}. Ensure NEXT_PUBLIC_SITE_URL is set.`
-                );
-            }
-        }
-
-        blogDebugLog(`Fetching blog content from: ${url}`);
-
-        const response = await fetch(url);
-        if (!response.ok) {
-            console.error(`Failed to fetch ${url}: ${response.status} ${response.statusText}`);
+            console.error(`Error fetching blog file ${filename} in browser:`, error);
             return null;
         }
-        return response.text();
-    } catch (error) {
-        console.error(`Error fetching blog file ${filename}:`, error);
-        return null;
     }
+
+    // In Server (Node.js or OpenNext Worker), use fs
+    try {
+        const filePath = path.join(process.cwd(), 'public', 'blog', filename);
+        if (fs.existsSync(filePath)) {
+            blogDebugLog("Loaded blog content from filesystem.", { filename, filePath });
+            return await fs.promises.readFile(filePath, 'utf-8');
+        }
+    } catch (error) {
+        console.error(`Blog fs access failed for ${filename}:`, error);
+    }
+
+    return null;
 }
 
 /**
@@ -119,18 +93,18 @@ export async function getBlogPost(slug: string, locale: string = "en", baseUrl: 
     // Try exact locale first: slug.locale.md
     let filename = `${slug}.${locale}.md`;
     blogDebugLog("Resolving blog post.", { slug, locale, filename, baseUrl });
-    let content = await fetchBlogContent(filename, baseUrl);
+    let content = await fetchBlogContent(filename);
 
     if (!content) {
         // Try default: slug.md
         filename = `${slug}.md`;
-        content = await fetchBlogContent(filename, baseUrl);
+        content = await fetchBlogContent(filename);
     }
 
     // Handle case where default might be explicitly named slug.en.md
     if (!content && locale !== "en") {
         filename = `${slug}.en.md`;
-        content = await fetchBlogContent(filename, baseUrl);
+        content = await fetchBlogContent(filename);
     }
 
     if (!content) {
