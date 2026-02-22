@@ -47,7 +47,13 @@ function parseFrontmatter(fileContent: string): { metadata: Record<string, strin
 
 import fs from "fs";
 import path from "path";
-import { generatedBlogIndex, knownBlogSlugs } from "./blog-slugs.generated";
+import {
+    generatedBlogContentIndex,
+    generatedBlogIndex,
+    generatedLocalizedBlogContentIndex,
+    generatedLocalizedBlogIndex,
+    knownBlogSlugs,
+} from "./blog-slugs.generated";
 
 /**
  * Fetch blog post content.
@@ -113,6 +119,15 @@ async function fetchBlogContent(filename: string, baseUrl: string = ""): Promise
     }
 }
 
+function getGeneratedBlogContent(slug: string, locale: string): string | null {
+    const localizedContent = generatedLocalizedBlogContentIndex[locale]?.[slug];
+    if (localizedContent) {
+        return localizedContent;
+    }
+
+    return generatedBlogContentIndex[slug] || null;
+}
+
 /**
  * Get a blog post by slug and locale.
  * Works in both build time (SSG) and runtime (Cloudflare Workers).
@@ -136,7 +151,10 @@ export async function getBlogPost(slug: string, locale: string = "en", baseUrl: 
     }
 
     if (!content) {
-        return null;
+        content = getGeneratedBlogContent(slug, locale);
+        if (!content) {
+            return null;
+        }
     }
 
     const { metadata, content: postContent } = parseFrontmatter(content);
@@ -156,12 +174,12 @@ export async function getBlogPost(slug: string, locale: string = "en", baseUrl: 
  * Works in both build time (SSG) and runtime (Cloudflare Workers).
  */
 export async function getBlogPosts(locale: string = "en", baseUrl: string = ""): Promise<BlogPost[]> {
-    void locale;
     void baseUrl;
     // Build listing from compile-time metadata so index rendering does not depend on
     // runtime filesystem availability in Cloudflare Workers.
+    const localeIndex = generatedLocalizedBlogIndex[locale] || {};
     const posts: BlogPost[] = knownBlogSlugs.map((slug) => {
-        const metadata = generatedBlogIndex[slug];
+        const metadata = localeIndex[slug] || generatedBlogIndex[slug];
         return {
             slug,
             title: metadata?.title || slug,
