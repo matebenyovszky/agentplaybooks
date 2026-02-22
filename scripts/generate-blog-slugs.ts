@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 /**
- * Generates a list of known blog slugs from the public/blog directory.
- * This runs at build time to avoid manual maintenance of the slug list.
+ * Generates known blog slugs and lightweight blog metadata index from public/blog.
+ * This runs at build time to avoid runtime filesystem dependency for listing posts.
  */
 
 import fs from 'fs';
@@ -15,36 +15,126 @@ const __dirname = path.dirname(__filename);
 const blogDir = path.join(__dirname, '..', 'public', 'blog');
 const outputFile = path.join(__dirname, '..', 'src', 'lib', 'blog-slugs.generated.ts');
 
-function generateBlogSlugs() {
-    if (!fs.existsSync(blogDir)) {
-        console.warn('Blog directory not found, creating empty slug list');
-        return [];
+type BlogMeta = {
+  title: string;
+  description: string;
+  date: string;
+  author?: string;
+};
+
+type BlogContentIndex = Record<string, string>;
+
+const localePattern = /^[a-z]{2}$/;
+
+function parseFrontmatter(fileContent: string): { metadata: Record<string, string> } {
+  const frontmatterRegex = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/;
+  const match = fileContent.match(frontmatterRegex);
+
+  if (!match) {
+    return { metadata: {} };
+  }
+
+  const frontmatterBlock = match[1];
+  const metadata: Record<string, string> = {};
+
+  frontmatterBlock.split('\n').forEach((line) => {
+    const [key, ...valueParts] = line.split(':');
+    if (key && valueParts.length > 0) {
+      metadata[key.trim()] = valueParts.join(':').trim().replace(/^['\"](.*)['\"]+$/, '$1');
     }
+  });
 
-    const files = fs.readdirSync(blogDir);
-    const slugSet = new Set<string>();
-
-    files.forEach((file) => {
-        if (!file.endsWith('.md')) return;
-
-        // Extract slug: filename.md or filename.locale.md
-        let slug = file.replace(/\.md$/, '');
-
-        // Remove locale suffix if present (e.g., welcome.hu.md -> welcome)
-        const parts = slug.split('.');
-        if (parts.length > 1 && parts[parts.length - 1].length === 2) {
-            parts.pop(); // Remove locale
-            slug = parts.join('.');
-        }
-
-        slugSet.add(slug);
-    });
-
-    return Array.from(slugSet).sort();
+  return { metadata };
 }
 
-function writeSlugFile(slugs: string[]) {
-    const content = `// Auto-generated file - do not edit manually
+function slugFromFile(file: string): string {
+  let slug = file.replace(/\.md$/, '');
+  const parts = slug.split('.');
+  if (parts.length > 1 && parts[parts.length - 1].length === 2) {
+    parts.pop();
+    slug = parts.join('.');
+  }
+  return slug;
+}
+
+function localeFromFile(file: string): string | null {
+  const basename = file.replace(/\.md$/, '');
+  const parts = basename.split('.');
+  const possibleLocale = parts[parts.length - 1];
+  return localePattern.test(possibleLocale) ? possibleLocale : null;
+}
+
+function generateBlogData() {
+  if (!fs.existsSync(blogDir)) {
+    console.warn('Blog directory not found, creating empty slug list');
+    return { slugs: [] as string[], index: {} as Record<string, BlogMeta> };
+  }
+
+  const files = fs.readdirSync(blogDir);
+  const slugSet = new Set<string>();
+  const index: Record<string, BlogMeta> = {};
+  const localizedIndex: Record<string, Record<string, BlogMeta>> = {};
+  const contentIndex: BlogContentIndex = {};
+  const localizedContentIndex: Record<string, BlogContentIndex> = {};
+
+  files.forEach((file) => {
+    if (!file.endsWith('.md')) return;
+    const slug = slugFromFile(file);
+    slugSet.add(slug);
+
+    const filePath = path.join(blogDir, file);
+    const content = fs.readFileSync(filePath, 'utf-8');
+    const { metadata } = parseFrontmatter(content);
+
+    const meta: BlogMeta = {
+      title: metadata.title || slug,
+      description: metadata.description || '',
+      date: metadata.date || new Date().toISOString(),
+      author: metadata.author,
+    };
+
+    const locale = localeFromFile(file);
+    if (locale) {
+      if (!localizedIndex[locale]) {
+        localizedIndex[locale] = {};
+      }
+      localizedIndex[locale][slug] = meta;
+      if (!localizedContentIndex[locale]) {
+        localizedContentIndex[locale] = {};
+      }
+      localizedContentIndex[locale][slug] = content;
+      return;
+    }
+
+    // Canonical default markdown (slug.md) is the fallback metadata.
+    index[slug] = meta;
+    contentIndex[slug] = content;
+  });
+
+  const slugs = Array.from(slugSet).sort();
+
+  // Backfill metadata for slugs that only have localized files.
+  slugs.forEach((slug) => {
+    if (!index[slug]) {
+      index[slug] = {
+        title: slug,
+        description: '',
+        date: new Date().toISOString(),
+      };
+    }
+  });
+
+  return { slugs, index, localizedIndex, contentIndex, localizedContentIndex };
+}
+
+function writeSlugFile(
+  slugs: string[],
+  index: Record<string, BlogMeta>,
+  localizedIndex: Record<string, Record<string, BlogMeta>>,
+  contentIndex: BlogContentIndex,
+  localizedContentIndex: Record<string, BlogContentIndex>
+) {
+  const content = `// Auto-generated file - do not edit manually
 // Generated by scripts/generate-blog-slugs.ts
 
 /**
@@ -53,25 +143,51 @@ function writeSlugFile(slugs: string[]) {
  */
 export const knownBlogSlugs = ${JSON.stringify(slugs, null, 2)} as const;
 
+export type GeneratedBlogMeta = {
+  title: string;
+  description: string;
+  date: string;
+  author?: string;
+};
+
+/**
+ * Build-time metadata index for blog listing.
+ */
+export const generatedBlogIndex: Record<string, GeneratedBlogMeta> = ${JSON.stringify(index, null, 2)};
+
+/**
+ * Build-time metadata index for locale-specific blog listing.
+ */
+export const generatedLocalizedBlogIndex: Record<string, Record<string, GeneratedBlogMeta>> = ${JSON.stringify(localizedIndex, null, 2)};
+
+/**
+ * Build-time content fallback for canonical blog posts.
+ */
+export const generatedBlogContentIndex: Record<string, string> = ${JSON.stringify(contentIndex, null, 2)};
+
+/**
+ * Build-time content fallback for locale-specific blog posts.
+ */
+export const generatedLocalizedBlogContentIndex: Record<string, Record<string, string>> = ${JSON.stringify(localizedContentIndex, null, 2)};
+
 export function getKnownBlogSlugs(): string[] {
-    return [...knownBlogSlugs];
+  return [...knownBlogSlugs];
 }
 `;
 
-    fs.writeFileSync(outputFile, content, 'utf-8');
+  fs.writeFileSync(outputFile, content, 'utf-8');
 }
 
-// Main execution
 try {
-    console.log('🔍 Scanning blog directory...');
-    const slugs = generateBlogSlugs();
+  console.log('🔍 Scanning blog directory...');
+  const { slugs, index, localizedIndex, contentIndex, localizedContentIndex } = generateBlogData();
 
-    console.log(`📝 Found ${slugs.length} blog post(s):`);
-    slugs.forEach(slug => console.log(`   - ${slug}`));
+  console.log(`📝 Found ${slugs.length} blog post(s):`);
+  slugs.forEach((slug) => console.log(`   - ${slug}`));
 
-    writeSlugFile(slugs);
-    console.log(`✅ Generated: ${path.relative(process.cwd(), outputFile)}`);
+  writeSlugFile(slugs, index, localizedIndex, contentIndex, localizedContentIndex);
+  console.log(`✅ Generated: ${path.relative(process.cwd(), outputFile)}`);
 } catch (error) {
-    console.error('❌ Error generating blog slugs:', error);
-    process.exit(1);
+  console.error('❌ Error generating blog slugs:', error);
+  process.exit(1);
 }
