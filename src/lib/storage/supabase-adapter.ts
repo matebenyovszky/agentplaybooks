@@ -345,10 +345,18 @@ export function createSupabaseAdapter(playbookId: string): StorageAdapter {
       const { error } = await supabase
         .from("memories")
         .delete()
-        .eq("id", id);
+        .eq("id", id)
+        .eq("playbook_id", playbookId);
 
       if (error) {
-        console.error("Error deleting memory:", error, error.message, error.details, error.hint);
+        console.error("Error deleting memory:", {
+          id,
+          playbookId,
+          error: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
         return false;
       }
       return true;
