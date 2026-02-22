@@ -14,7 +14,7 @@ function playbookToPersona(playbook: {
     id: string;
     persona_name: string | null;
     persona_system_prompt: string | null;
-    persona_metadata: any | null;
+    persona_metadata: Record<string, unknown> | null;
     created_at: string;
 }) {
     return {
@@ -29,9 +29,9 @@ function playbookToPersona(playbook: {
 
 export async function GET(
     request: NextRequest,
-    { params }: { params: { guid: string } }
+    { params }: { params: Promise<{ guid: string }> }
 ) {
-    const { guid: idOrGuid } = params;
+    const { guid: idOrGuid } = await params;
     const searchParams = request.nextUrl.searchParams;
     const format = searchParams.get("format") || "json";
     const supabase = getServiceSupabase();
@@ -102,14 +102,14 @@ export async function GET(
 
 export async function PUT(
     request: NextRequest,
-    { params }: { params: { guid: string } }
+    { params }: { params: Promise<{ guid: string }> }
 ) {
     const user = await getAuthenticatedUser(request);
     if (!user) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { guid: idOrGuid } = params;
+    const { guid: idOrGuid } = await params;
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrGuid);
     const supabase = getServiceSupabase();
 
@@ -160,14 +160,14 @@ export async function PUT(
 
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { guid: string } }
+    { params }: { params: Promise<{ guid: string }> }
 ) {
     const user = await getAuthenticatedUser(request);
     if (!user) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { guid: idOrGuid } = params;
+    const { guid: idOrGuid } = await params;
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrGuid);
     const supabase = getServiceSupabase();
 

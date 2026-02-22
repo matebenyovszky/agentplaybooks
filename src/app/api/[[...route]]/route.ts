@@ -12,7 +12,6 @@ import {
 } from "@/lib/attachment-validator";
 import { hashApiKey, generateApiKey, generateGuid, getKeyPrefix } from "@/lib/utils";
 import { cookies } from "next/headers";
-import { PLAYBOOK_TOOLS } from "@/app/api/mcp/[guid]/route";
 
 // User API Key with user_id
 type UserApiKeyData = UserApiKeysRow & { user_id: string };
@@ -54,13 +53,6 @@ type SkillWithPlaybook = Skill & {
 
 type MCPServerWithPlaybook = MCPServer & {
   playbook?: { id?: string; guid?: string; name?: string; visibility?: 'public' | 'private' | 'unlisted'; user_id?: string };
-};
-
-type PlaybookWithExports = Playbook & {
-  persona?: Persona | null;
-  personas?: Persona[];
-  skills: Skill[];
-  mcp_servers: MCPServer[];
 };
 
 type StarredPlaybookRow = { playbooks?: Playbook | null };
