@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "../_shared/supabase";
 import { requireAuth } from "../_shared/auth";
 import { generateGuid } from "@/lib/utils";
+import type { Playbook } from "@/lib/supabase/types";
 
 export async function GET(request: NextRequest) {
     const user = await requireAuth(request);
@@ -26,14 +27,20 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform count objects to numbers
-    const playbooks = (data || []).map((p: any) => ({
-        ...p,
-        persona_count: p.persona_name ? 1 : 0,
-        skill_count: p.skills?.[0]?.count || 0,
-        mcp_server_count: p.mcp_servers?.[0]?.count || 0,
-        skills: undefined,
-        mcp_servers: undefined,
-    }));
+    const playbooks = (data || []).map((p) => {
+        const playbook = p as unknown as Playbook & {
+            skills: { count: number }[];
+            mcp_servers: { count: number }[];
+        };
+        return {
+            ...playbook,
+            persona_count: playbook.persona_name ? 1 : 0,
+            skill_count: playbook.skills?.[0]?.count || 0,
+            mcp_server_count: playbook.mcp_servers?.[0]?.count || 0,
+            skills: undefined,
+            mcp_servers: undefined,
+        };
+    });
 
     return NextResponse.json(playbooks);
 }

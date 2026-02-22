@@ -90,7 +90,7 @@ async function fetchBlogContent(filename: string, baseUrl: string = ""): Promise
                 if (host) {
                     url = `${proto}://${host}/blog/${filename}`;
                 }
-            } catch (error) {
+            } catch {
                 console.warn(
                     `[blog] Could not resolve host from headers for ${filename}. Ensure NEXT_PUBLIC_SITE_URL is set.`
                 );

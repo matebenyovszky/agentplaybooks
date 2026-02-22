@@ -10,7 +10,13 @@ import {
 } from "../../_shared/formatters";
 
 // Helper: Convert playbook to persona shape
-function playbookToPersona(playbook: any) {
+function playbookToPersona(playbook: {
+    id: string;
+    persona_name: string | null;
+    persona_system_prompt: string | null;
+    persona_metadata: any | null;
+    created_at: string;
+}) {
     return {
         id: playbook.id,
         playbook_id: playbook.id,
@@ -92,17 +98,6 @@ export async function GET(
         default:
             return NextResponse.json(fullPlaybook);
     }
-}
-
-async function checkPlaybookOwnership(userId: string, playbookId: string): Promise<boolean> {
-    const supabase = getServiceSupabase();
-    const { data } = await supabase
-        .from("playbooks")
-        .select("id")
-        .eq("id", playbookId)
-        .eq("user_id", userId)
-        .single();
-    return !!data;
 }
 
 export async function PUT(
