@@ -47,6 +47,7 @@ function parseFrontmatter(fileContent: string): { metadata: Record<string, strin
 
 import fs from "fs";
 import path from "path";
+import { knownBlogSlugs } from "./blog-slugs.generated";
 
 /**
  * Fetch blog post content.
@@ -128,9 +129,6 @@ export async function getBlogPost(slug: string, locale: string = "en", baseUrl: 
  * Works in both build time (SSG) and runtime (Cloudflare Workers).
  */
 export async function getBlogPosts(locale: string = "en", baseUrl: string = ""): Promise<BlogPost[]> {
-    // Import auto-generated known slugs
-    const { knownBlogSlugs } = await import("./blog-slugs.generated");
-
     const posts: BlogPost[] = [];
 
     for (const slug of knownBlogSlugs) {
@@ -153,6 +151,5 @@ export async function getBlogPosts(locale: string = "en", baseUrl: string = ""):
  * This is used for static generation at build time.
  */
 export async function getKnownBlogSlugs(): Promise<string[]> {
-    const { knownBlogSlugs } = await import("./blog-slugs.generated");
     return [...knownBlogSlugs];
 }
