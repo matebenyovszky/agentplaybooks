@@ -24,6 +24,14 @@ type BlogMeta = {
 
 type BlogContentIndex = Record<string, string>;
 
+type GeneratedBlogData = {
+  slugs: string[];
+  index: Record<string, BlogMeta>;
+  localizedIndex: Record<string, Record<string, BlogMeta>>;
+  contentIndex: BlogContentIndex;
+  localizedContentIndex: Record<string, BlogContentIndex>;
+};
+
 const localePattern = /^[a-z]{2}$/;
 
 function parseFrontmatter(fileContent: string): { metadata: Record<string, string> } {
@@ -64,10 +72,16 @@ function localeFromFile(file: string): string | null {
   return localePattern.test(possibleLocale) ? possibleLocale : null;
 }
 
-function generateBlogData() {
+function generateBlogData(): GeneratedBlogData {
   if (!fs.existsSync(blogDir)) {
     console.warn('Blog directory not found, creating empty slug list');
-    return { slugs: [] as string[], index: {} as Record<string, BlogMeta> };
+    return {
+      slugs: [],
+      index: {},
+      localizedIndex: {},
+      contentIndex: {},
+      localizedContentIndex: {},
+    };
   }
 
   const files = fs.readdirSync(blogDir);
