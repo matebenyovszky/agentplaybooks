@@ -197,6 +197,10 @@ export function createSupabaseAdapter(playbookId: string): StorageAdapter {
     },
 
     async deleteSkill(id: string): Promise<boolean> {
+      // Clean up dependencies first to avoid foreign key constraint violations
+      await supabase.from("skill_versions").delete().eq("skill_id", id);
+      await supabase.from("skill_attachments").delete().eq("skill_id", id);
+
       const { error } = await supabase
         .from("skills")
         .delete()
