@@ -569,7 +569,7 @@ app.post("/", async (c) => {
   // Check if it's a UUID or GUID
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(guid);
 
-  // Get playbook
+  // Get playbook - try public first, then fallback to API key auth for private playbooks
   let query = supabase
     .from("playbooks")
     .select("id, persona_name, persona_system_prompt, persona_metadata");
@@ -580,9 +580,33 @@ app.post("/", async (c) => {
     query = query.eq("guid", guid);
   }
 
-  const { data: playbook } = await query
+  let { data: playbook } = await query
     .eq("visibility", "public")
     .single();
+
+  // If not found as public, try API key auth for private playbooks
+  if (!playbook) {
+    const apiKeyData = await validateApiKey(c.req.raw, "memory:read");
+    if (apiKeyData) {
+      const serviceSupabase = getServiceSupabase();
+      let privateQuery = serviceSupabase
+        .from("playbooks")
+        .select("id, persona_name, persona_system_prompt, persona_metadata");
+
+      if (isUuid) {
+        privateQuery = privateQuery.eq("id", guid);
+      } else {
+        privateQuery = privateQuery.eq("guid", guid);
+      }
+
+      // Verify the API key belongs to this playbook
+      const { data: privatePlaybook } = await privateQuery
+        .eq("id", apiKeyData.playbooks.id)
+        .single();
+
+      playbook = privatePlaybook;
+    }
+  }
 
   if (!playbook) {
     return c.json({
