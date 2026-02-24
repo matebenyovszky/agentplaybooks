@@ -362,7 +362,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   // ===== Self-Modification / Evolution Tools =====
   {
     name: "create_skill",
-    description: "Create a new skill for this playbook. Use this to expand capabilities. Requires full or skill:write permission.",
+    description: "Create a new skill for this playbook. Use this to expand capabilities. Requires full or skills:write permission.",
     inputSchema: {
       type: "object",
       properties: {
@@ -376,7 +376,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   },
   {
     name: "update_skill",
-    description: "Update an existing skill in this playbook. Requires full or skill:write permission.",
+    description: "Update an existing skill in this playbook. Requires full or skills:write permission.",
     inputSchema: {
       type: "object",
       properties: {
@@ -391,7 +391,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   },
   {
     name: "delete_skill",
-    description: "Delete a skill from this playbook. Requires full or skill:write permission.",
+    description: "Delete a skill from this playbook. Requires full or skills:write permission.",
     inputSchema: {
       type: "object",
       properties: {
@@ -414,7 +414,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   },
   {
     name: "rollback_skill",
-    description: "Rollback a skill to a previous version. Requires full or skill:write permission.",
+    description: "Rollback a skill to a previous version. Requires full or skills:write permission.",
     inputSchema: {
       type: "object",
       properties: {
@@ -425,7 +425,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   },
   {
     name: "update_playbook",
-    description: "Update the persona/system prompt of this playbook. Handle with extreme care! Requires full or playbook:write permission.",
+    description: "Update the persona/system prompt of this playbook. Handle with extreme care! Requires full or playbooks:write permission.",
     inputSchema: {
       type: "object",
       properties: {
@@ -461,11 +461,35 @@ app.get("/", async (c) => {
     query = query.eq("guid", guid);
   }
 
-  const { data: playbook, error } = await query
+  let { data: playbook } = await query
     .eq("visibility", "public")
     .single();
 
-  if (error || !playbook) {
+  // If not found as public, try API key auth for private playbooks
+  if (!playbook) {
+    const apiKeyData = await validateApiKey(c.req.raw, "memory:read");
+    if (apiKeyData) {
+      const serviceSupabase = getServiceSupabase();
+      let privateQuery = serviceSupabase
+        .from("playbooks")
+        .select("*");
+
+      if (isUuid) {
+        privateQuery = privateQuery.eq("id", guid);
+      } else {
+        privateQuery = privateQuery.eq("guid", guid);
+      }
+
+      // Verify the API key belongs to this playbook
+      const { data: privatePlaybook } = await privateQuery
+        .eq("id", apiKeyData.playbooks.id)
+        .single();
+
+      playbook = privatePlaybook;
+    }
+  }
+
+  if (!playbook) {
     return c.json({ error: "Playbook not found" }, 404);
   }
 
@@ -630,7 +654,8 @@ app.post("/", async (c) => {
       });
 
     case "tools/list": {
-      const { data: skills } = await supabase
+      const serviceSupabase = getServiceSupabase();
+      const { data: skills } = await serviceSupabase
         .from("skills")
         .select("*")
         .eq("playbook_id", playbook.id);
@@ -655,7 +680,8 @@ app.post("/", async (c) => {
 
     case "resources/list": {
       // Get skills to list their attachments
-      const { data: skills } = await supabase
+      const serviceSupabase = getServiceSupabase();
+      const { data: skills } = await serviceSupabase
         .from("skills")
         .select("id, name")
         .eq("playbook_id", playbook.id);
@@ -856,7 +882,7 @@ Skills define capabilities, rules, and instructions.
 
       // Skills resource
       if (uri?.match(/\/skills$/)) {
-        const { data: skills } = await supabase
+        const { data: skills } = await serviceSupabase
           .from("skills")
           .select("id, name, description, definition, examples, priority")
           .eq("playbook_id", playbook.id)
@@ -1007,10 +1033,15 @@ Skills define capabilities, rules, and instructions.
             if (isUuid) {
               query = query.eq("id", skillId);
             } else {
-              query = query.ilike("name", skillId.replace(/_/g, " "));
+              query = query.ilike("name", skillId);
             }
 
-            const { data } = await query.single();
+            const { data, error } = await query
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+
+            if (error) throw new Error(error.message);
             if (!data) throw new Error("Skill not found");
             result = data;
             break;
@@ -1054,7 +1085,11 @@ Skills define capabilities, rules, and instructions.
               .eq("playbook_id", playbook.id);
 
             if (search) {
-              query = query.or(`key.ilike.%${search}%,description.ilike.%${search}%,summary.ilike.%${search}%`);
+              // Sanitize search to prevent PostgREST filter injection
+              const sanitized = search.replace(/[,().]/g, " ").trim();
+              if (sanitized) {
+                query = query.or(`key.ilike.%${sanitized}%,description.ilike.%${sanitized}%,summary.ilike.%${sanitized}%`);
+              }
             }
 
             if (tags && tags.length > 0) {
@@ -1846,9 +1881,9 @@ Skills define capabilities, rules, and instructions.
           // ===== Self-Modification / Evolution Tools =====
 
           case "create_skill": {
-            const apiKeyData = await validateApiKey(c.req.raw, "skill:write");
+            const apiKeyData = await validateApiKey(c.req.raw, "skills:write");
             if (!apiKeyData || apiKeyData.playbooks.id !== playbook.id) {
-              throw new Error("API key with skill:write permission required");
+              throw new Error("API key with skills:write permission required");
             }
 
             const name = args.name as string;
@@ -1874,9 +1909,9 @@ Skills define capabilities, rules, and instructions.
           }
 
           case "update_skill": {
-            const apiKeyData = await validateApiKey(c.req.raw, "skill:write");
+            const apiKeyData = await validateApiKey(c.req.raw, "skills:write");
             if (!apiKeyData || apiKeyData.playbooks.id !== playbook.id) {
-              throw new Error("API key with skill:write permission required");
+              throw new Error("API key with skills:write permission required");
             }
 
             const skillId = args.skill_id as string;
@@ -1894,45 +1929,74 @@ Skills define capabilities, rules, and instructions.
 
             let query = serviceSupabase
               .from("skills")
-              .update(updates)
+              .select("id")
               .eq("playbook_id", playbook.id);
 
             if (isUuid) {
               query = query.eq("id", skillId);
             } else {
-              query = query.ilike("name", skillId.replace(/_/g, " "));
+              query = query.ilike("name", skillId);
             }
 
-            const { data, error } = await query.select().single();
+            // Fetch the skill first to get its ID if we only have a name
+            const { data: targetSkill } = await query
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+
+            if (!targetSkill) {
+              throw new Error("Skill not found");
+            }
+
+            const { data, error } = await serviceSupabase
+              .from("skills")
+              .update(updates)
+              .eq("id", targetSkill.id)
+              .select()
+              .single();
 
             if (error) throw new Error(error.message);
-            if (!data) throw new Error("Skill not found");
             result = data;
             break;
           }
 
           case "delete_skill": {
-            const apiKeyData = await validateApiKey(c.req.raw, "skill:write");
+            const apiKeyData = await validateApiKey(c.req.raw, "skills:write");
             if (!apiKeyData || apiKeyData.playbooks.id !== playbook.id) {
-              throw new Error("API key with skill:write permission required");
+              throw new Error("API key with skills:write permission required");
             }
 
             const skillId = args.skill_id as string;
             const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(skillId);
 
-            let query = serviceSupabase
-              .from("skills")
-              .delete()
-              .eq("playbook_id", playbook.id);
-
             if (isUuid) {
               query = query.eq("id", skillId);
             } else {
-              query = query.ilike("name", skillId.replace(/_/g, " "));
+              query = query.ilike("name", skillId);
             }
 
-            const { error } = await query;
-            if (error) throw new Error(error.message);
+            // Fetch the skill first to get its ID if we only have a name
+            const { data: skillToDelete } = await query
+              .select("id")
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+
+            if (skillToDelete) {
+              // Delete versions first to avoid foreign key violations with the track_skill_version trigger
+              await serviceSupabase
+                .from("skill_versions")
+                .delete()
+                .eq("skill_id", skillToDelete.id);
+
+              const { error } = await serviceSupabase
+                .from("skills")
+                .delete()
+                .eq("id", skillToDelete.id)
+                .eq("playbook_id", playbook.id);
+
+              if (error) throw new Error(error.message);
+            }
 
             result = { success: true, deleted: true };
             break;
@@ -1950,8 +2014,10 @@ Skills define capabilities, rules, and instructions.
                 .from("skills")
                 .select("id")
                 .eq("playbook_id", playbook.id)
-                .ilike("name", skillId.replace(/_/g, " "))
-                .single();
+                .ilike("name", skillId)
+                .order("created_at", { ascending: false })
+                .limit(1)
+                .maybeSingle();
               if (s) actualSkillId = s.id;
             }
 
@@ -1969,9 +2035,9 @@ Skills define capabilities, rules, and instructions.
           }
 
           case "rollback_skill": {
-            const apiKeyData = await validateApiKey(c.req.raw, "skill:write");
+            const apiKeyData = await validateApiKey(c.req.raw, "skills:write");
             if (!apiKeyData || apiKeyData.playbooks.id !== playbook.id) {
-              throw new Error("API key with skill:write permission required");
+              throw new Error("API key with skills:write permission required");
             }
 
             const versionId = args.version_id as string;
@@ -2005,12 +2071,9 @@ Skills define capabilities, rules, and instructions.
           }
 
           case "update_playbook": {
-            const apiKeyData = await validateApiKey(c.req.raw, "playbook:write");
+            const apiKeyData = await validateApiKey(c.req.raw, "playbooks:write");
             if (!apiKeyData || apiKeyData.playbooks.id !== playbook.id) {
-              // Also allow full permission
-              if (!apiKeyData?.permissions.includes("full")) {
-                throw new Error("API key with playbook:write permission required");
-              }
+              throw new Error("API key with playbooks:write or full permission required for this playbook");
             }
 
             const updates: Record<string, unknown> = {};
