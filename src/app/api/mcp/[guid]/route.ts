@@ -1983,11 +1983,6 @@ Skills define capabilities, rules, and instructions.
               .maybeSingle();
 
             if (skillToDelete) {
-              // Delete versions first to avoid foreign key violations with the track_skill_version trigger
-              await serviceSupabase
-                .from("skill_versions")
-                .delete()
-                .eq("skill_id", skillToDelete.id);
 
               const { error } = await serviceSupabase
                 .from("skills")
