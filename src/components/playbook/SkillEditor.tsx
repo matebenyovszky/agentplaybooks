@@ -49,6 +49,7 @@ export function SkillEditor({ skill, storage, onUpdate, onDelete, readOnly = fal
   // Attachments state
   const [attachments, setAttachments] = useState<SkillAttachment[]>([]);
   const [attachmentsLoading, setAttachmentsLoading] = useState(false);
+  const [attachmentsLoaded, setAttachmentsLoaded] = useState(false);
   const [showAddAttachment, setShowAddAttachment] = useState(false);
   const [newAttachment, setNewAttachment] = useState({
     filename: "",
@@ -63,23 +64,30 @@ export function SkillEditor({ skill, storage, onUpdate, onDelete, readOnly = fal
   const loadAttachments = useCallback(async () => {
     setAttachmentsLoading(true);
     try {
-      const response = await fetch(`/api/manage/skills/${skill.id}/attachments`);
-      if (response.ok) {
-        const data = await response.json();
-        setAttachments(data);
+      const { createBrowserClient } = await import("@/lib/supabase/client");
+      const supabase = createBrowserClient();
+      const { data, error } = await supabase
+        .from("skill_attachments")
+        .select("*")
+        .eq("skill_id", skill.id)
+        .order("created_at", { ascending: true });
+
+      if (!error && data) {
+        setAttachments(data as SkillAttachment[]);
       }
     } catch (e) {
       console.error("Failed to load attachments:", e);
     } finally {
       setAttachmentsLoading(false);
+      setAttachmentsLoaded(true);
     }
   }, [skill.id]);
 
   // Load attachments when expanded
   useEffect(() => {
-    if (!expanded || attachments.length > 0 || attachmentsLoading) return;
+    if (!expanded || attachmentsLoaded || attachmentsLoading) return;
     loadAttachments();
-  }, [expanded, attachments.length, attachmentsLoading, loadAttachments]);
+  }, [expanded, attachmentsLoaded, attachmentsLoading, loadAttachments]);
 
   const handleAddAttachment = async () => {
     if (!newAttachment.filename || !newAttachment.content) {
@@ -98,20 +106,28 @@ export function SkillEditor({ skill, storage, onUpdate, onDelete, readOnly = fal
     setAttachmentError(null);
 
     try {
-      const response = await fetch(`/api/manage/skills/${skill.id}/attachments`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newAttachment)
-      });
+      const { createBrowserClient } = await import("@/lib/supabase/client");
+      const supabase = createBrowserClient();
+      const { data, error } = await supabase
+        .from("skill_attachments")
+        .insert({
+          skill_id: skill.id,
+          filename: newAttachment.filename,
+          content: newAttachment.content,
+          description: newAttachment.description || null,
+          file_type: newAttachment.file_type,
+          language: newAttachment.file_type,
+          size_bytes: sizeBytes,
+        })
+        .select()
+        .single();
 
-      if (response.ok) {
-        const data = await response.json();
-        setAttachments([...attachments, data]);
+      if (!error && data) {
+        setAttachments([...attachments, data as SkillAttachment]);
         setNewAttachment({ filename: "", content: "", description: "", file_type: "text" });
         setShowAddAttachment(false);
       } else {
-        const error = await response.json();
-        setAttachmentError(error.error || "Failed to add attachment");
+        setAttachmentError(error?.message || "Failed to add attachment");
       }
     } catch {
       setAttachmentError("Failed to add attachment");
@@ -124,11 +140,14 @@ export function SkillEditor({ skill, storage, onUpdate, onDelete, readOnly = fal
     if (!confirm("Delete this attachment?")) return;
 
     try {
-      const response = await fetch(`/api/manage/skills/${skill.id}/attachments/${attachmentId}`, {
-        method: "DELETE"
-      });
+      const { createBrowserClient } = await import("@/lib/supabase/client");
+      const supabase = createBrowserClient();
+      const { error } = await supabase
+        .from("skill_attachments")
+        .delete()
+        .eq("id", attachmentId);
 
-      if (response.ok) {
+      if (!error) {
         setAttachments(attachments.filter(a => a.id !== attachmentId));
       }
     } catch (error) {
