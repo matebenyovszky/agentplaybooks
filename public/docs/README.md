@@ -8,7 +8,7 @@ Welcome to the AgentPlaybooks documentation.
 - [What is a Playbook?](./playbooks.md) - Understanding the core concept
 - [Getting Started](./getting-started.md) - First steps with AgentPlaybooks
 - [Platform Integrations](./platform-integrations.md) - Connect to ChatGPT, Claude, Gemini, Grok & more
-- [Roadmap](./roadmap.md) - Development roadmap and future plans
+- [Roadmap](./ROADMAP.md) - Development roadmap and future plans
 
 ### Core Concepts
 - [Playbooks](./playbooks.md) - Complete agent operating environment

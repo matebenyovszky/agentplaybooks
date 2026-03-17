@@ -73,6 +73,28 @@ const memory = await client.readResource({
 });
 ```
 
+## Agent Usage Pattern (Recommended)
+
+To match AgentPlaybooks goals (portable, up-to-date, self-improving agents), run MCP in this loop:
+
+1. **Initialize and inspect once**
+   - `initialize`
+   - `tools/list`
+   - `resources/list`
+2. **Read the guide first**
+   - `resources/read` for `playbook://YOUR_GUID/guide`
+3. **Fetch only what you need**
+   - `read_memory` for known keys
+   - `search_memory` for discovery
+   - `read_canvas` / `get_canvas_toc` for longer docs and plans
+4. **Execute work with tools**
+   - Use built-in playbook tools and skill tools
+5. **Write back outcomes**
+   - `write_memory` for compact facts/state
+   - `write_canvas` / `patch_canvas_section` for detailed runbooks, postmortems, or long plans
+
+This keeps context fresh, avoids token waste, and prevents repeating the same mistakes across sessions.
+
 ## MCP Server Manifest
 
 When you access the MCP endpoint, it returns a server manifest:
@@ -246,7 +268,10 @@ These will be merged into your playbook's MCP manifest.
 2. **Write clear descriptions** - MCP clients use these to understand capabilities
 3. **Define schemas carefully** - Well-defined input schemas help AI use tools correctly
 4. **Use resources for data** - Resources are better than tools for read-only data access
-5. **Test with Claude Desktop** - Verify your MCP configuration works before deploying
+5. **Start with the guide resource** - Read `playbook://GUID/guide` before complex tasks
+6. **Fetch minimally** - Read targeted resources/keys first, not full dumps by default
+7. **Close the loop** - Save discovered constraints/workarounds to memory or canvas
+8. **Test with Claude Desktop** - Verify your MCP configuration works before deploying
 
 ---
 

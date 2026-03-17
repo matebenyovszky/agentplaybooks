@@ -10,6 +10,17 @@ https://agentplaybooks.ai/api
 
 For self-hosted instances, replace with your domain.
 
+## Agent Reliability Loop
+
+For production agent workflows, use this loop:
+
+1. **Read fresh context** at task start (`GET /playbooks/:guid` in your preferred format, or MCP resources/tools).
+2. **Execute with minimal context** (target specific skills/memory keys instead of loading everything).
+3. **Write back durable learnings** (`PUT /playbooks/:guid/memory/:key`) with tags and description.
+4. **Store long-form notes in canvas** (`/api/playbooks/:guid/canvas*`) and keep memory compact.
+
+This mirrors the same reliability principle used in modern context systems: fresh docs + persistent learnings.
+
 ---
 
 ## Authentication

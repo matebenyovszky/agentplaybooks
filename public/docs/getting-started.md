@@ -107,6 +107,27 @@ curl https://agentplaybooks.ai/api/playbooks/YOUR_GUID?format=openapi
 curl https://agentplaybooks.ai/api/playbooks/YOUR_GUID?format=mcp
 ```
 
+### Reliability Loop (Recommended for all agents)
+
+Use this start-of-session pattern so the agent stays accurate over time:
+
+1. **Fetch fresh context** from your playbook (`markdown`, `anthropic`, or MCP).
+2. **Do the task** using only relevant skills/resources (avoid loading everything blindly).
+3. **Write back learnings** to memory (`PUT /memory/:key`) so the next session starts smarter.
+4. **Store larger notes/plans** in Canvas when memory values become too big.
+
+Minimal example:
+
+```text
+Session start:
+- GET https://agentplaybooks.ai/api/playbooks/YOUR_GUID?format=markdown
+
+After task:
+- PUT https://agentplaybooks.ai/api/playbooks/YOUR_GUID/memory/last_task_summary
+  Authorization: Bearer YOUR_API_KEY
+  Body: {"value": {"result": "...", "gotchas": ["..."]}, "tags": ["session", "learned"]}
+```
+
 ## Step 7: Enable AI Write-Back (Optional)
 
 Let your AI store information in the playbook's memory:
