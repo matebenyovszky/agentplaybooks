@@ -4,6 +4,7 @@
  * Implements StorageAdapter using server-side API routes for all operations.
  */
 
+import { authFetch } from "@/lib/auth-fetch";
 import type { Persona, Skill, MCPServer, Memory, Playbook, SecretMetadata, SecretCategory } from "@/lib/supabase/types";
 import type { StorageAdapter, PersonaInput, SkillInput, MCPServerInput, MemoryInput, SecretInput } from "./types";
 
@@ -20,10 +21,9 @@ export function createSupabaseAdapter(playbookId: string, playbookGuid?: string)
     };
 
     try {
-      const res = await fetch(url, {
+      const res = await authFetch(url, {
         ...init,
         headers,
-        credentials: "same-origin",
       });
 
       if (!res.ok) {
@@ -168,7 +168,7 @@ export function createSupabaseAdapter(playbookId: string, playbookGuid?: string)
 
     // Memory
     async getMemories(): Promise<Memory[]> {
-      const memories = await requestJson<Memory[]>(`/api/manage/playbooks/${playbookId}/memory`, { credentials: "same-origin" });
+      const memories = await requestJson<Memory[]>(`/api/manage/playbooks/${playbookId}/memory`);
       return memories || [];
     },
 
@@ -196,7 +196,7 @@ export function createSupabaseAdapter(playbookId: string, playbookGuid?: string)
     },
 
     async updateMemory(id: string, updates: Partial<MemoryInput>): Promise<Memory | null> {
-      const memories = await requestJson<Memory[]>(`/api/manage/playbooks/${playbookId}/memory`, { credentials: "same-origin" });
+      const memories = await requestJson<Memory[]>(`/api/manage/playbooks/${playbookId}/memory`);
       if (!Array.isArray(memories)) {
         return null;
       }
@@ -214,7 +214,7 @@ export function createSupabaseAdapter(playbookId: string, playbookGuid?: string)
     },
 
     async deleteMemory(id: string): Promise<boolean> {
-      const memories = await requestJson<Memory[]>(`/api/manage/playbooks/${playbookId}/memory`, { credentials: "same-origin" });
+      const memories = await requestJson<Memory[]>(`/api/manage/playbooks/${playbookId}/memory`);
       if (!Array.isArray(memories)) {
         return false;
       }
@@ -235,7 +235,7 @@ export function createSupabaseAdapter(playbookId: string, playbookGuid?: string)
       const guid = playbookGuid || playbookId;
       const url = `/api/playbooks/${guid}/secrets` + (category ? `?category=${category}` : "");
       try {
-        const res = await fetch(url, { credentials: "same-origin" });
+        const res = await authFetch(url);
         if (!res.ok) {
           console.error("Error fetching secrets:", await res.text());
           return [];
@@ -250,10 +250,9 @@ export function createSupabaseAdapter(playbookId: string, playbookGuid?: string)
     async addSecret(input: SecretInput): Promise<SecretMetadata | null> {
       const guid = playbookGuid || playbookId;
       try {
-        const res = await fetch(`/api/playbooks/${guid}/secrets`, {
+        const res = await authFetch(`/api/playbooks/${guid}/secrets`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          credentials: "same-origin",
           body: JSON.stringify(input),
         });
         if (!res.ok) {
@@ -285,10 +284,9 @@ export function createSupabaseAdapter(playbookId: string, playbookGuid?: string)
     async updateSecret(name: string, data: Partial<SecretInput>): Promise<SecretMetadata | null> {
       const guid = playbookGuid || playbookId;
       try {
-        const res = await fetch(`/api/playbooks/${guid}/secrets/${encodeURIComponent(name)}`, {
+        const res = await authFetch(`/api/playbooks/${guid}/secrets/${encodeURIComponent(name)}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          credentials: "same-origin",
           body: JSON.stringify(data),
         });
         if (!res.ok) {
@@ -306,9 +304,8 @@ export function createSupabaseAdapter(playbookId: string, playbookGuid?: string)
     async deleteSecret(name: string): Promise<boolean> {
       const guid = playbookGuid || playbookId;
       try {
-        const res = await fetch(`/api/playbooks/${guid}/secrets/${encodeURIComponent(name)}`, {
+        const res = await authFetch(`/api/playbooks/${guid}/secrets/${encodeURIComponent(name)}`, {
           method: "DELETE",
-          credentials: "same-origin",
         });
         if (!res.ok) {
           console.error("Error deleting secret:", await res.text());
@@ -324,9 +321,7 @@ export function createSupabaseAdapter(playbookId: string, playbookGuid?: string)
     async revealSecret(name: string): Promise<string | null> {
       const guid = playbookGuid || playbookId;
       try {
-        const res = await fetch(`/api/playbooks/${guid}/secrets/reveal/${encodeURIComponent(name)}`, {
-          credentials: "same-origin",
-        });
+        const res = await authFetch(`/api/playbooks/${guid}/secrets/reveal/${encodeURIComponent(name)}`);
         if (!res.ok) {
           console.error("Error revealing secret:", await res.text());
           return null;

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import JSZip from "jszip";
 import { createBrowserClient } from "@/lib/supabase/client";
+import { authFetch } from "@/lib/auth-fetch";
 import { cn } from "@/lib/utils";
 import { createSupabaseAdapter } from "@/lib/storage";
 import {
@@ -121,9 +122,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
     const userId = user?.id || null;
     setCurrentUserId(userId);
 
-    const playbookResponse = await fetch(`/api/playbooks/${id}`, {
-      credentials: "same-origin",
-    });
+    const playbookResponse = await authFetch(`/api/playbooks/${id}`);
 
     if (!playbookResponse.ok) {
       setLoading(false);
@@ -140,9 +139,9 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
 
     // Now fetch related data using the actual playbook ID
     const [playbookResData, memoryData, keyData] = await Promise.all([
-      fetch(`/api/manage/playbooks/${playbookId}`, { credentials: "same-origin" }),
-      fetch(`/api/manage/playbooks/${playbookId}/memory`, { credentials: "same-origin" }),
-      fetch(`/api/playbooks/${playbookId}/api-keys`, { credentials: "same-origin" }),
+      authFetch(`/api/manage/playbooks/${playbookId}`),
+      authFetch(`/api/manage/playbooks/${playbookId}/memory`),
+      authFetch(`/api/playbooks/${playbookId}/api-keys`),
     ]);
 
     const playbookData = await playbookResData.json().catch(() => null);
@@ -175,9 +174,8 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
     const save = async () => {
       setSaving(true);
       const playbookIdForSave = debouncedPlaybook?.id || id;
-      const response = await fetch(`/api/manage/playbooks/${playbookIdForSave}`, {
+      const response = await authFetch(`/api/manage/playbooks/${playbookIdForSave}`, {
         method: "PUT",
-        credentials: "same-origin",
         headers: {
           "Content-Type": "application/json",
         },
@@ -205,9 +203,8 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
     if (!playbook) return;
     setSaving(true);
 
-    const response = await fetch(`/api/manage/playbooks/${playbook.id}`, {
+    const response = await authFetch(`/api/manage/playbooks/${playbook.id}`, {
       method: "PUT",
-      credentials: "same-origin",
       headers: {
         "Content-Type": "application/json",
       },
@@ -270,9 +267,8 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
   // Import handlers for public skills/MCP servers
   const handleImportSkill = async (publicSkill: Skill) => {
     if (!playbook?.id) return;
-    const response = await fetch(`/api/manage/playbooks/${playbook.id}/skills`, {
+    const response = await authFetch(`/api/manage/playbooks/${playbook.id}/skills`, {
       method: "POST",
-      credentials: "same-origin",
       headers: {
         "Content-Type": "application/json",
       },
@@ -294,9 +290,8 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
 
   const handleImportMCP = async (publicMCP: MCPServer) => {
     if (!playbook?.id) return;
-    const response = await fetch(`/api/manage/playbooks/${playbook.id}/mcp-servers`, {
+    const response = await authFetch(`/api/manage/playbooks/${playbook.id}/mcp-servers`, {
       method: "POST",
-      credentials: "same-origin",
       headers: {
         "Content-Type": "application/json",
       },
@@ -320,7 +315,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
   // Load public skills for browsing
   const loadPublicSkills = async () => {
     setBrowseLoading(true);
-    const res = await fetch("/api/public/skills");
+    const res = await authFetch("/api/public/skills");
     const data = await res.json().catch(() => null);
     setPublicSkills(Array.isArray(data) ? data as Skill[] : []);
     setBrowseLoading(false);
@@ -329,7 +324,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
   // Load public MCP servers for browsing
   const loadPublicMCPs = async () => {
     setBrowseLoading(true);
-    const res = await fetch("/api/public/mcp");
+    const res = await authFetch("/api/public/mcp");
     const data = await res.json().catch(() => null);
     setPublicMCPs(Array.isArray(data) ? data as MCPServer[] : []);
     setBrowseLoading(false);
@@ -366,9 +361,8 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
     setForking(true);
 
     try {
-      const response = await fetch("/api/manage/playbooks", {
+      const response = await authFetch("/api/manage/playbooks", {
         method: "POST",
-        credentials: "same-origin",
         headers: {
           "Content-Type": "application/json",
         },
@@ -393,9 +387,8 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
       if (skills.length > 0) {
         await Promise.all(
           skills.map(async (s) => {
-            const skillResponse = await fetch(`/api/manage/playbooks/${newPlaybook.id}/skills`, {
+            const skillResponse = await authFetch(`/api/manage/playbooks/${newPlaybook.id}/skills`, {
               method: "POST",
-              credentials: "same-origin",
               headers: {
                 "Content-Type": "application/json",
               },
@@ -419,9 +412,8 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
       if (mcpServers.length > 0) {
         await Promise.all(
           mcpServers.map(async (m) => {
-            const mcpResponse = await fetch(`/api/manage/playbooks/${newPlaybook.id}/mcp-servers`, {
+            const mcpResponse = await authFetch(`/api/manage/playbooks/${newPlaybook.id}/mcp-servers`, {
               method: "POST",
-              credentials: "same-origin",
               headers: {
                 "Content-Type": "application/json",
               },
@@ -686,10 +678,10 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
       }
 
       const [openapiRes, anthropicRes, mcpRes, markdownRes] = await Promise.all([
-        fetch(`${baseUrl}/api/playbooks/${playbook.guid}?format=openapi`, { credentials: "include" }),
-        fetch(`${baseUrl}/api/playbooks/${playbook.guid}?format=anthropic`, { credentials: "include" }),
-        fetch(`${baseUrl}/api/playbooks/${playbook.guid}?format=mcp`, { credentials: "include" }),
-        fetch(`${baseUrl}${markdownPath}`, { credentials: "include" }),
+        authFetch(`${baseUrl}/api/playbooks/${playbook.guid}?format=openapi`),
+        authFetch(`${baseUrl}/api/playbooks/${playbook.guid}?format=anthropic`),
+        authFetch(`${baseUrl}/api/playbooks/${playbook.guid}?format=mcp`),
+        authFetch(`${baseUrl}${markdownPath}`),
       ]);
 
       if (openapiRes.ok) {
@@ -1734,9 +1726,8 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                       if (!confirm("Are you SURE you want to delete this entire playbook? This cannot be undone!")) return;
                       if (!confirm("Really? This will delete ALL data in this playbook.")) return;
 
-                      const response = await fetch(`/api/manage/playbooks/${playbook?.id || id}`, {
+                      const response = await authFetch(`/api/manage/playbooks/${playbook?.id || id}`, {
                         method: "DELETE",
-                        credentials: "same-origin",
                       });
                       if (!response.ok) {
                         return;
@@ -1955,7 +1946,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
           <McpRegistrySearch
             onAdd={async (server) => {
               // Call the instantiate API
-              const response = await fetch("/api/mcp-registry/instantiate", {
+              const response = await authFetch("/api/mcp-registry/instantiate", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({

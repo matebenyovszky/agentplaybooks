@@ -14,6 +14,7 @@ import {
   Globe
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { authFetch } from "@/lib/auth-fetch";
 import type { User } from "@supabase/supabase-js";
 import type { PublicPlaybook } from "@/lib/supabase/types";
 
@@ -42,9 +43,7 @@ export default function FavoritesPage() {
   }, []);
 
   const loadFavorites = async () => {
-    const response = await fetch("/api/user/starred", {
-      credentials: "same-origin",
-    });
+    const response = await authFetch("/api/user/starred");
 
     if (!response.ok) {
       if (response.status === 401) {
@@ -77,9 +76,8 @@ export default function FavoritesPage() {
   const handleUnstar = async (playbookId: string) => {
     if (!user) return;
 
-    const response = await fetch(`/api/playbooks/${playbookId}/star`, {
+    const response = await authFetch(`/api/playbooks/${playbookId}/star`, {
       method: "POST",
-      credentials: "same-origin",
     });
     if (!response.ok) {
       return;

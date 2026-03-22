@@ -26,8 +26,9 @@ export async function getAuthenticatedUser(request?: Request): Promise<{ id: str
         return { id: user.id };
       }
     }
-  } catch (error) {
-    console.log("Cookie auth failed, trying header...", error);
+  } catch {
+    // Cookie parsing may fail in some environments (e.g. Cloudflare)
+    // Fall through to header-based auth
   }
 
   if (request) {

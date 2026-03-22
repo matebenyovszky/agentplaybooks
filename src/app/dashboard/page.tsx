@@ -14,6 +14,7 @@ import {
   Eye
 } from "lucide-react";
 import type { Playbook } from "@/lib/supabase/types";
+import { authFetch } from "@/lib/auth-fetch";
 
 export default function DashboardPage() {
   const t = useTranslations();
@@ -26,9 +27,7 @@ export default function DashboardPage() {
 
     let active = true;
     const loadPlaybooks = async () => {
-      const res = await fetch("/api/manage/playbooks", {
-        credentials: "same-origin",
-      });
+      const res = await authFetch("/api/manage/playbooks");
       const data = await res.json().catch(() => null);
 
       if (!active) return;
@@ -47,9 +46,8 @@ export default function DashboardPage() {
     const name = prompt("Enter playbook name:");
     if (!name || !user) return;
 
-    const res = await fetch("/api/manage/playbooks", {
+    const res = await authFetch("/api/manage/playbooks", {
       method: "POST",
-      credentials: "same-origin",
       headers: {
         "Content-Type": "application/json",
       },

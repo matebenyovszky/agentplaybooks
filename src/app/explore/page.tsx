@@ -6,6 +6,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { FloatingNav } from "@/components/ui/floating-navbar";
 import { createBrowserClient } from "@/lib/supabase/client";
+import { authFetch } from "@/lib/auth-fetch";
 import { cn } from "@/lib/utils";
 import {
   Search,
@@ -83,9 +84,7 @@ export default function ExplorePage() {
   const [mcpSearch, setMcpSearch] = useState("");
 
   const loadUserStars = useCallback(async () => {
-    const response = await fetch("/api/user/starred", {
-      credentials: "same-origin",
-    });
+    const response = await authFetch("/api/user/starred");
 
     if (!response.ok) {
       setStarredIds(new Set());
@@ -116,7 +115,7 @@ export default function ExplorePage() {
       if (selectedTags.length) params.set("tags", selectedTags.join(","));
       params.set("sort", sortBy);
 
-      const res = await fetch(`/api/public/playbooks?${params}`);
+      const res = await authFetch(`/api/public/playbooks?${params}`);
       const data = await res.json();
 
       setPlaybooks(Array.isArray(data) ? data : []);
@@ -131,7 +130,7 @@ export default function ExplorePage() {
   const loadSkills = useCallback(async () => {
     setSkillsLoading(true);
     try {
-      const res = await fetch("/api/public/skills");
+      const res = await authFetch("/api/public/skills");
       const data = await res.json();
       setSkills(Array.isArray(data) ? data : []);
     } catch (e) {
@@ -144,7 +143,7 @@ export default function ExplorePage() {
   const loadMCPServers = useCallback(async () => {
     setMcpLoading(true);
     try {
-      const res = await fetch("/api/public/mcp");
+      const res = await authFetch("/api/public/mcp");
       const data = await res.json();
       setMcpServers(Array.isArray(data) ? data : []);
     } catch (e) {
@@ -177,9 +176,8 @@ export default function ExplorePage() {
     const isStarred = starredIds.has(playbookId);
 
     if (isStarred) {
-      const response = await fetch(`/api/playbooks/${playbookId}/star`, {
+      const response = await authFetch(`/api/playbooks/${playbookId}/star`, {
         method: "POST",
-        credentials: "same-origin",
       });
 
       if (!response.ok) {
@@ -196,9 +194,8 @@ export default function ExplorePage() {
         p.id === playbookId ? { ...p, star_count: Math.max(0, p.star_count - 1) } : p
       ));
     } else {
-      const response = await fetch(`/api/playbooks/${playbookId}/star`, {
+      const response = await authFetch(`/api/playbooks/${playbookId}/star`, {
         method: "POST",
-        credentials: "same-origin",
       });
 
       if (!response.ok) {

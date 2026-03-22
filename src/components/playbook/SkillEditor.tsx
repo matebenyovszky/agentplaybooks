@@ -1,5 +1,6 @@
 "use client";
 
+import { authFetch } from "@/lib/auth-fetch";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -64,8 +65,7 @@ export function SkillEditor({ skill, storage, onUpdate, onDelete, readOnly = fal
   const loadAttachments = useCallback(async () => {
     setAttachmentsLoading(true);
     try {
-      const response = await fetch(`/api/manage/skills/${skill.id}/attachments`, {
-        credentials: "same-origin",
+      const response = await authFetch(`/api/manage/skills/${skill.id}/attachments`, {
         headers: {
           "Content-Type": "application/json",
         },
@@ -117,9 +117,8 @@ export function SkillEditor({ skill, storage, onUpdate, onDelete, readOnly = fal
     setAttachmentError(null);
 
     try {
-      const response = await fetch(`/api/manage/skills/${skill.id}/attachments`, {
+      const response = await authFetch(`/api/manage/skills/${skill.id}/attachments`, {
         method: "POST",
-        credentials: "same-origin",
         headers: {
           "Content-Type": "application/json",
         },
@@ -161,9 +160,8 @@ export function SkillEditor({ skill, storage, onUpdate, onDelete, readOnly = fal
     if (!confirm("Delete this attachment?")) return;
 
     try {
-      const response = await fetch(`/api/manage/skills/${skill.id}/attachments/${attachmentId}`, {
+      const response = await authFetch(`/api/manage/skills/${skill.id}/attachments/${attachmentId}`, {
         method: "DELETE",
-        credentials: "same-origin",
       });
 
       const data = await response.json().catch(() => null);

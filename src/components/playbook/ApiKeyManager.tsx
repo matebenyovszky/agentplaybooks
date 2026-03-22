@@ -1,5 +1,6 @@
 "use client";
 
+import { authFetch } from "@/lib/auth-fetch";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -52,9 +53,8 @@ export function ApiKeyManager({ playbook_id, apiKeys, onUpdate }: ApiKeyManagerP
 
     setCreating(true);
     try {
-      const response = await fetch(`/api/playbooks/${playbook_id}/api-keys`, {
+      const response = await authFetch(`/api/playbooks/${playbook_id}/api-keys`, {
         method: "POST",
-        credentials: "same-origin",
         headers: {
           "Content-Type": "application/json",
         },
@@ -90,9 +90,8 @@ export function ApiKeyManager({ playbook_id, apiKeys, onUpdate }: ApiKeyManagerP
   const handleRevokeKey = async (keyId: string) => {
     if (!confirm("Are you sure you want to revoke this API key? This cannot be undone.")) return;
 
-    const response = await fetch(`/api/playbooks/${playbook_id}/api-keys/${keyId}`, {
+    const response = await authFetch(`/api/playbooks/${playbook_id}/api-keys/${keyId}`, {
       method: "DELETE",
-      credentials: "same-origin",
     });
 
     if (response.ok) {
