@@ -64,19 +64,30 @@ export function SkillEditor({ skill, storage, onUpdate, onDelete, readOnly = fal
   const loadAttachments = useCallback(async () => {
     setAttachmentsLoading(true);
     try {
-      const { createBrowserClient } = await import("@/lib/supabase/client");
-      const supabase = createBrowserClient();
-      const { data, error } = await supabase
-        .from("skill_attachments")
-        .select("*")
-        .eq("skill_id", skill.id)
-        .order("created_at", { ascending: true });
+      const response = await fetch(`/api/manage/skills/${skill.id}/attachments`, {
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
 
-      if (!error && data) {
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        setAttachmentError(
+          typeof data?.error === "string"
+            ? data.error
+            : "Failed to load attachments"
+        );
+        return;
+      }
+
+      if (data) {
         setAttachments(data as SkillAttachment[]);
+        setAttachmentError(null);
       }
     } catch (e) {
       console.error("Failed to load attachments:", e);
+      setAttachmentError("Failed to load attachments");
     } finally {
       setAttachmentsLoading(false);
       setAttachmentsLoaded(true);
@@ -106,30 +117,40 @@ export function SkillEditor({ skill, storage, onUpdate, onDelete, readOnly = fal
     setAttachmentError(null);
 
     try {
-      const { createBrowserClient } = await import("@/lib/supabase/client");
-      const supabase = createBrowserClient();
-      const { data, error } = await supabase
-        .from("skill_attachments")
-        .insert({
-          skill_id: skill.id,
+      const response = await fetch(`/api/manage/skills/${skill.id}/attachments`, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
           filename: newAttachment.filename,
           content: newAttachment.content,
-          description: newAttachment.description || null,
           file_type: newAttachment.file_type,
           language: newAttachment.file_type,
-          size_bytes: sizeBytes,
-        })
-        .select()
-        .single();
+          description: newAttachment.description || null,
+        }),
+      });
 
-      if (!error && data) {
-        setAttachments([...attachments, data as SkillAttachment]);
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        setAttachmentError(
+          typeof data?.error === "string"
+            ? data.error
+            : "Failed to add attachment"
+        );
+        return;
+      }
+
+      if (data) {
+        setAttachments((previous) => [...previous, data as SkillAttachment]);
         setNewAttachment({ filename: "", content: "", description: "", file_type: "text" });
         setShowAddAttachment(false);
       } else {
-        setAttachmentError(error?.message || "Failed to add attachment");
+        setAttachmentError("Failed to add attachment");
       }
-    } catch {
+    } catch (error) {
+      console.error("Failed to add attachment:", error);
       setAttachmentError("Failed to add attachment");
     } finally {
       setUploadingAttachment(false);
@@ -140,16 +161,18 @@ export function SkillEditor({ skill, storage, onUpdate, onDelete, readOnly = fal
     if (!confirm("Delete this attachment?")) return;
 
     try {
-      const { createBrowserClient } = await import("@/lib/supabase/client");
-      const supabase = createBrowserClient();
-      const { error } = await supabase
-        .from("skill_attachments")
-        .delete()
-        .eq("id", attachmentId);
+      const response = await fetch(`/api/manage/skills/${skill.id}/attachments/${attachmentId}`, {
+        method: "DELETE",
+        credentials: "same-origin",
+      });
 
-      if (!error) {
-        setAttachments(attachments.filter(a => a.id !== attachmentId));
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        console.error("Failed to delete attachment:", data?.error || "Request failed");
+        return;
       }
+
+      setAttachments((previous) => previous.filter((a) => a.id !== attachmentId));
     } catch (error) {
       console.error("Failed to delete attachment:", error);
     }

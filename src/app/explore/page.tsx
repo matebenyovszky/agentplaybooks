@@ -82,15 +82,19 @@ export default function ExplorePage() {
   const [skillSearch, setSkillSearch] = useState("");
   const [mcpSearch, setMcpSearch] = useState("");
 
-  const loadUserStars = useCallback(async (uid: string) => {
-    const supabase = createBrowserClient();
-    const { data } = await supabase
-      .from("playbook_stars")
-      .select("playbook_id")
-      .eq("user_id", uid);
+  const loadUserStars = useCallback(async () => {
+    const response = await fetch("/api/user/starred", {
+      credentials: "same-origin",
+    });
 
-    if (data) {
-      setStarredIds(new Set(data.map(s => s.playbook_id)));
+    if (!response.ok) {
+      setStarredIds(new Set());
+      return;
+    }
+
+    const data = await response.json().catch(() => null);
+    if (Array.isArray(data)) {
+      setStarredIds(new Set((data as PublicPlaybook[]).map((playbook) => playbook.id)));
     }
   }, []);
 
@@ -99,7 +103,7 @@ export default function ExplorePage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       setUserId(user.id);
-      loadUserStars(user.id);
+      loadUserStars();
     }
   }, [loadUserStars]);
 
@@ -170,15 +174,17 @@ export default function ExplorePage() {
       return;
     }
 
-    const supabase = createBrowserClient();
     const isStarred = starredIds.has(playbookId);
 
     if (isStarred) {
-      await supabase
-        .from("playbook_stars")
-        .delete()
-        .eq("playbook_id", playbookId)
-        .eq("user_id", userId);
+      const response = await fetch(`/api/playbooks/${playbookId}/star`, {
+        method: "POST",
+        credentials: "same-origin",
+      });
+
+      if (!response.ok) {
+        return;
+      }
 
       setStarredIds(prev => {
         const next = new Set(prev);
@@ -190,9 +196,14 @@ export default function ExplorePage() {
         p.id === playbookId ? { ...p, star_count: Math.max(0, p.star_count - 1) } : p
       ));
     } else {
-      await supabase
-        .from("playbook_stars")
-        .insert({ playbook_id: playbookId, user_id: userId });
+      const response = await fetch(`/api/playbooks/${playbookId}/star`, {
+        method: "POST",
+        credentials: "same-origin",
+      });
+
+      if (!response.ok) {
+        return;
+      }
 
       setStarredIds(prev => new Set(prev).add(playbookId));
 

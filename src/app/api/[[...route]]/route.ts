@@ -60,11 +60,35 @@ type StarredPlaybookRow = { playbooks?: Playbook | null };
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>().basePath("/api");
 
 // CORS middleware
+const ALLOWED_ORIGINS = [
+  process.env.NEXT_PUBLIC_APP_URL || "https://agentplaybooks.ai",
+  "https://agentplaybooks.ai",
+  "https://www.agentplaybooks.ai",
+  "https://apbks.com",
+  "https://www.apbks.com",
+  "https://apbks.online",
+  "https://www.apbks.online",
+].filter(Boolean);
+
 app.use("*", cors({
-  origin: "*",
+  origin: (origin) => {
+    if (!origin) return ALLOWED_ORIGINS[0];
+    if (ALLOWED_ORIGINS.includes(origin)) return origin;
+    if (process.env.NODE_ENV === "development" && origin.startsWith("http://localhost")) return origin;
+    return null as unknown as string;
+  },
   allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowHeaders: ["Content-Type", "Authorization"],
+  credentials: true,
+  maxAge: 86400,
 }));
+
+// Security headers
+app.use("*", async (c, next) => {
+  await next();
+  c.header("X-Content-Type-Options", "nosniff");
+  c.header("X-Frame-Options", "DENY");
+});
 
 // Helper: Get Supabase client
 function getSupabase() {
@@ -736,13 +760,30 @@ app.put("/user/profile", async (c) => {
   const body = await c.req.json();
   const { display_name, avatar_svg, website_url, description } = body;
 
-  // Validate avatar_svg if provided (basic SVG check)
+  // Validate and sanitize avatar_svg if provided
+  let sanitizedSvg = avatar_svg;
   if (avatar_svg && typeof avatar_svg === "string") {
     if (avatar_svg.length > 10000) {
       return c.json({ error: "Avatar SVG too large (max 10KB)" }, 400);
     }
-    if (!avatar_svg.trim().startsWith("<svg") && !avatar_svg.startsWith("http")) {
+    const trimmed = avatar_svg.trim();
+    if (!trimmed.startsWith("<svg") && !trimmed.startsWith("http")) {
       return c.json({ error: "Avatar must be SVG content or URL" }, 400);
+    }
+    if (trimmed.startsWith("<svg")) {
+      // Strip dangerous elements/attributes from SVG
+      const dangerous = /<script[\s>]/i.test(trimmed)
+        || /\bon\w+\s*=/i.test(trimmed)
+        || /<iframe/i.test(trimmed)
+        || /<object/i.test(trimmed)
+        || /<embed/i.test(trimmed)
+        || /<foreignObject/i.test(trimmed)
+        || /javascript:/i.test(trimmed)
+        || /data:\s*text\/html/i.test(trimmed);
+      if (dangerous) {
+        return c.json({ error: "SVG contains disallowed content (scripts, event handlers, or embedded objects)" }, 400);
+      }
+      sanitizedSvg = trimmed;
     }
   }
 
@@ -764,7 +805,7 @@ app.put("/user/profile", async (c) => {
       id: user.id,
       auth_user_id: user.id,
       display_name: display_name || "User",
-      avatar_svg: avatar_svg || null,
+      avatar_svg: sanitizedSvg || null,
       website_url: website_url || null,
       description: description || null,
       is_verified: false,
@@ -975,7 +1016,17 @@ app.post("/manage/playbooks", async (c) => {
   }
 
   const body = await c.req.json();
-  const { name, description, is_public, visibility, config } = body;
+  const {
+    name,
+    description,
+    is_public,
+    visibility,
+    config,
+    tags,
+    persona_name,
+    persona_system_prompt,
+    persona_metadata,
+  } = body;
 
   if (!name) {
     return c.json({ error: "Name is required" }, 400);
@@ -1000,6 +1051,10 @@ app.post("/manage/playbooks", async (c) => {
       description: description || null,
       visibility: visibilityValue,
       config: config || {},
+      tags: tags || null,
+      persona_name,
+      persona_system_prompt,
+      persona_metadata: persona_metadata || {},
     })
     .select()
     .single();
@@ -1293,9 +1348,20 @@ app.put("/manage/playbooks/:id/skills/:sid", async (c) => {
   const body = await c.req.json();
   const supabase = getServiceSupabase();
 
+  // Whitelist allowed fields to prevent mass-assignment
+  const updateData: Record<string, unknown> = {};
+  if (body.name !== undefined) updateData.name = body.name;
+  if (body.description !== undefined) updateData.description = body.description;
+  if (body.content !== undefined) updateData.content = body.content;
+  if (body.licence !== undefined) updateData.licence = body.licence;
+
+  if (Object.keys(updateData).length === 0) {
+    return c.json({ error: "No valid fields to update" }, 400);
+  }
+
   const { data, error } = await supabase
     .from("skills")
-    .update(body)
+    .update(updateData)
     .eq("id", skillId)
     .eq("playbook_id", playbookId)
     .select()
@@ -1328,6 +1394,143 @@ app.delete("/manage/playbooks/:id/skills/:sid", async (c) => {
     .from("skills")
     .delete()
     .eq("id", skillId)
+    .eq("playbook_id", playbookId);
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json({ success: true });
+});
+
+// MCP servers management (User API key supported)
+// GET /api/manage/playbooks/:id/mcp-servers - List MCP servers for a playbook
+app.get("/manage/playbooks/:id/mcp-servers", async (c) => {
+  const user = await getUserFromAuthOrApiKey(c, "playbooks:write");
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const playbookId = c.req.param("id");
+  if (!(await checkPlaybookOwnership(user.id, playbookId))) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+
+  const supabase = getServiceSupabase();
+  const { data, error } = await supabase
+    .from("mcp_servers")
+    .select("*")
+    .eq("playbook_id", playbookId)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json(data || []);
+});
+
+// POST /api/manage/playbooks/:id/mcp-servers - Add MCP server to playbook
+app.post("/manage/playbooks/:id/mcp-servers", async (c) => {
+  const user = await getUserFromAuthOrApiKey(c, "playbooks:write");
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const playbookId = c.req.param("id");
+  if (!(await checkPlaybookOwnership(user.id, playbookId))) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+
+  const body = await c.req.json().catch(() => ({}));
+  const { name, description, tools, resources } = body;
+  const supabase = getServiceSupabase();
+
+  if (!name) {
+    return c.json({ error: "Name is required" }, 400);
+  }
+
+  const insertData = {
+    playbook_id: playbookId,
+    name,
+    description: description || null,
+    tools: tools || [],
+    resources: resources || [],
+  };
+
+  const { data, error } = await supabase
+    .from("mcp_servers")
+    .insert(insertData)
+    .select()
+    .single();
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json(data, 201);
+});
+
+// PUT /api/manage/playbooks/:id/mcp-servers/:mid - Update MCP server
+app.put("/manage/playbooks/:id/mcp-servers/:mid", async (c) => {
+  const user = await getUserFromAuthOrApiKey(c, "playbooks:write");
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const playbookId = c.req.param("id");
+  const mcpId = c.req.param("mid");
+  if (!(await checkPlaybookOwnership(user.id, playbookId))) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+
+  const body = await c.req.json().catch(() => ({}));
+  const supabase = getServiceSupabase();
+
+  // Whitelist allowed fields to prevent mass-assignment
+  const updateData: Record<string, unknown> = {};
+  if (body.name !== undefined) updateData.name = body.name;
+  if (body.description !== undefined) updateData.description = body.description;
+  if (body.tools !== undefined) updateData.tools = body.tools;
+  if (body.resources !== undefined) updateData.resources = body.resources;
+
+  if (Object.keys(updateData).length === 0) {
+    return c.json({ error: "No valid fields to update" }, 400);
+  }
+
+  const { data, error } = await supabase
+    .from("mcp_servers")
+    .update(updateData)
+    .eq("id", mcpId)
+    .eq("playbook_id", playbookId)
+    .select()
+    .single();
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json(data);
+});
+
+// DELETE /api/manage/playbooks/:id/mcp-servers/:mid - Delete MCP server
+app.delete("/manage/playbooks/:id/mcp-servers/:mid", async (c) => {
+  const user = await getUserFromAuthOrApiKey(c, "playbooks:write");
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const playbookId = c.req.param("id");
+  const mcpId = c.req.param("mid");
+  if (!(await checkPlaybookOwnership(user.id, playbookId))) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+
+  const supabase = getServiceSupabase();
+  const { error } = await supabase
+    .from("mcp_servers")
+    .delete()
+    .eq("id", mcpId)
     .eq("playbook_id", playbookId);
 
   if (error) {
@@ -1370,7 +1573,7 @@ app.get("/manage/skills/:skillId/attachments", async (c) => {
 
   const { data: attachmentData, error: attachmentError } = await supabase
     .from("skill_attachments")
-    .select("id, filename, file_type, language, description, size_bytes, created_at, updated_at")
+    .select("id, filename, file_type, language, description, content, size_bytes, created_at, updated_at")
     .eq("skill_id", skillId)
     .order("created_at", { ascending: true });
 
@@ -1646,7 +1849,7 @@ app.get("/manage/playbooks/:id/memory", async (c) => {
   // Build query with optional filters
   let query = supabase
     .from("memories")
-    .select("key, value, tags, description, updated_at")
+    .select("*")
     .eq("playbook_id", playbookId);
 
   if (search) {
@@ -1693,8 +1896,8 @@ app.get("/manage/playbooks/:id/memory/:key", async (c) => {
   }
 
   const { data, error } = await supabase
-    .from("memories")
-    .select("key, value, tags, description, updated_at")
+        .from("memories")
+        .select("*")
     .eq("playbook_id", playbookId)
     .eq("key", key)
     .single();
@@ -1733,10 +1936,40 @@ app.put("/manage/playbooks/:id/memory/:key", async (c) => {
   }
 
   const body = await c.req.json();
-  const { value, tags, description } = body;
+  const {
+    value,
+    tags,
+    description,
+    tier,
+    parent_key,
+    priority,
+    access_count,
+    last_accessed_at,
+    summary,
+    source_task_id,
+    retention_policy,
+    memory_type,
+    status,
+    metadata,
+  } = body;
 
-  if (value === undefined) {
-    return c.json({ error: "Value is required" }, 400);
+  if (
+    value === undefined &&
+    tags === undefined &&
+    description === undefined &&
+    tier === undefined &&
+    parent_key === undefined &&
+    priority === undefined &&
+    access_count === undefined &&
+    last_accessed_at === undefined &&
+    summary === undefined &&
+    source_task_id === undefined &&
+    retention_policy === undefined &&
+    memory_type === undefined &&
+    status === undefined &&
+    metadata === undefined
+  ) {
+    return c.json({ error: "No memory fields provided" }, 400);
   }
 
   if (tags !== undefined && !Array.isArray(tags)) {
@@ -1745,10 +1978,14 @@ app.put("/manage/playbooks/:id/memory/:key", async (c) => {
 
   const upsertData: Record<string, unknown> = {
     playbook_id: playbookId,
-    key,
     value,
     updated_at: new Date().toISOString(),
+    key,
   };
+
+  if (value === undefined) {
+    delete upsertData.value;
+  }
 
   if (tags !== undefined) {
     upsertData.tags = tags;
@@ -1757,11 +1994,44 @@ app.put("/manage/playbooks/:id/memory/:key", async (c) => {
   if (description !== undefined) {
     upsertData.description = description;
   }
+  if (tier !== undefined) {
+    upsertData.tier = tier;
+  }
+  if (parent_key !== undefined) {
+    upsertData.parent_key = parent_key;
+  }
+  if (priority !== undefined) {
+    upsertData.priority = priority;
+  }
+  if (access_count !== undefined) {
+    upsertData.access_count = access_count;
+  }
+  if (last_accessed_at !== undefined) {
+    upsertData.last_accessed_at = last_accessed_at;
+  }
+  if (summary !== undefined) {
+    upsertData.summary = summary;
+  }
+  if (source_task_id !== undefined) {
+    upsertData.source_task_id = source_task_id;
+  }
+  if (retention_policy !== undefined) {
+    upsertData.retention_policy = retention_policy;
+  }
+  if (memory_type !== undefined) {
+    upsertData.memory_type = memory_type;
+  }
+  if (status !== undefined) {
+    upsertData.status = status;
+  }
+  if (metadata !== undefined) {
+    upsertData.metadata = metadata;
+  }
 
   const { data, error } = await supabase
     .from("memories")
     .upsert(upsertData, { onConflict: "playbook_id,key" })
-    .select("key, value, tags, description, updated_at")
+    .select("*")
     .single();
 
   if (error) {

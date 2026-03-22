@@ -32,7 +32,7 @@ import {
   X,
   Tag
 } from "lucide-react";
-import type { Playbook, Persona, Skill, MCPServer, Memory, ApiKey, SecretMetadata } from "@/lib/supabase/types";
+import type { Playbook, Persona, Skill, MCPServer, Memory, ApiKey } from "@/lib/supabase/types";
 import { ChatGPTIcon, ClaudeIcon, MarkdownIcon } from "@/components/ui/ai-icons";
 
 // Import editor components
@@ -121,32 +121,35 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
     const userId = user?.id || null;
     setCurrentUserId(userId);
 
-    // Try to determine if `id` is a UUID or a GUID (slug)
-    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    const playbookResponse = await fetch(`/api/playbooks/${id}`, {
+      credentials: "same-origin",
+    });
 
-    // First, get the playbook (by id or guid)
-    let playbookRes;
-    if (isUUID) {
-      playbookRes = await supabase.from("playbooks").select("*").eq("id", id).single();
-    } else {
-      playbookRes = await supabase.from("playbooks").select("*").eq("guid", id).single();
-    }
-
-    if (!playbookRes.data) {
+    if (!playbookResponse.ok) {
       setLoading(false);
       return;
     }
 
-    const pb = playbookRes.data as Playbook;
-    const playbookId = pb.id; // Use the actual UUID for related queries
+    const pb = (await playbookResponse.json().catch(() => null)) as Playbook | null;
+    if (!pb) {
+      setLoading(false);
+      return;
+    }
+
+    const playbookId = pb.id;
 
     // Now fetch related data using the actual playbook ID
-    const [skillsRes, mcpRes, memoriesRes, keysRes] = await Promise.all([
-      supabase.from("skills").select("*").eq("playbook_id", playbookId).order("created_at"),
-      supabase.from("mcp_servers").select("*").eq("playbook_id", playbookId).order("created_at"),
-      supabase.from("memories").select("*").eq("playbook_id", playbookId).order("updated_at", { ascending: false }),
-      supabase.from("api_keys").select("*").eq("playbook_id", playbookId).order("created_at", { ascending: false }),
+    const [playbookResData, memoryData, keyData] = await Promise.all([
+      fetch(`/api/manage/playbooks/${playbookId}`, { credentials: "same-origin" }),
+      fetch(`/api/manage/playbooks/${playbookId}/memory`, { credentials: "same-origin" }),
+      fetch(`/api/playbooks/${playbookId}/api-keys`, { credentials: "same-origin" }),
     ]);
+
+    const playbookData = await playbookResData.json().catch(() => null);
+    const memoriesData = await memoryData.json().catch(() => null);
+    const apiKeysData = await keyData.json().catch(() => null);
+    const skillsFromApi = (playbookData?.skills as Skill[]) || (pb as { skills?: Skill[] })?.skills || [];
+    const mcpFromApi = (playbookData?.mcp_servers as MCPServer[]) || (pb as { mcp_servers?: MCPServer[] })?.mcp_servers || [];
 
     setPlaybook(pb);
     // Check if current user is the owner
@@ -154,10 +157,10 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
     // 1 Playbook = 1 Persona (stored on playbook)
     setPersonas([buildPersonaFromPlaybook(pb)]);
 
-    setSkills((skillsRes.data as Skill[]) || []);
-    setMcpServers((mcpRes.data as MCPServer[]) || []);
-    setMemories((memoriesRes.data as Memory[]) || []);
-    setApiKeys((keysRes.data as ApiKey[]) || []);
+    setSkills(skillsFromApi);
+    setMcpServers(mcpFromApi);
+    setMemories(Array.isArray(memoriesData) ? memoriesData as Memory[] : []);
+    setApiKeys(Array.isArray(apiKeysData) ? apiKeysData as ApiKey[] : []);
     setLoading(false);
   }, [id, buildPersonaFromPlaybook]);
 
@@ -171,20 +174,28 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
 
     const save = async () => {
       setSaving(true);
-      const supabase = createBrowserClient();
       const playbookIdForSave = debouncedPlaybook?.id || id;
-      // Use playbook.id (actual UUID) for updates, not the URL id param
-      await supabase
-        .from("playbooks")
-        .update({
+      const response = await fetch(`/api/manage/playbooks/${playbookIdForSave}`, {
+        method: "PUT",
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
           name: debouncedPlaybook.name,
           description: debouncedPlaybook.description,
           visibility: debouncedPlaybook.visibility,
-        })
-        .eq("id", playbookIdForSave);
+        }),
+      });
+
+      if (response.ok) {
+        setHasChanges(false);
+      } else {
+        const data = await response.json().catch(() => null);
+        console.error("Failed to autosave playbook:", data?.error || "Request failed");
+      }
 
       setSaving(false);
-      setHasChanges(false);
     };
 
     save();
@@ -194,19 +205,27 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
     if (!playbook) return;
     setSaving(true);
 
-    const supabase = createBrowserClient();
-    // Use playbook.id (actual UUID) for updates
-    await supabase
-      .from("playbooks")
-      .update({
+    const response = await fetch(`/api/manage/playbooks/${playbook.id}`, {
+      method: "PUT",
+      credentials: "same-origin",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
         name: playbook.name,
         description: playbook.description,
         visibility: playbook.visibility,
-      })
-      .eq("id", playbook.id);
+      }),
+    });
+
+    if (response.ok) {
+      setHasChanges(false);
+    } else {
+      const data = await response.json().catch(() => null);
+      console.error("Failed to save playbook:", data?.error || "Request failed");
+    }
 
     setSaving(false);
-    setHasChanges(false);
   };
 
   const updatePlaybook = useCallback((updates: Partial<Playbook>) => {
@@ -250,42 +269,50 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
 
   // Import handlers for public skills/MCP servers
   const handleImportSkill = async (publicSkill: Skill) => {
-    const supabase = createBrowserClient();
-
-    const { data, error } = await supabase
-      .from("skills")
-      .insert({
-        playbook_id: id,
+    if (!playbook?.id) return;
+    const response = await fetch(`/api/manage/playbooks/${playbook.id}/skills`, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
         name: publicSkill.name,
         description: publicSkill.description,
         content: publicSkill.content,
         licence: publicSkill.licence,
-      })
-      .select()
-      .single();
+      }),
+    });
 
-    if (!error && data) {
-      setSkills([...skills, data as Skill]);
+    if (response.ok) {
+      const data = await response.json().catch(() => null);
+      if (data) {
+        setSkills([...skills, data as Skill]);
+      }
     }
   };
 
   const handleImportMCP = async (publicMCP: MCPServer) => {
-    const supabase = createBrowserClient();
-
-    const { data, error } = await supabase
-      .from("mcp_servers")
-      .insert({
-        playbook_id: id,
+    if (!playbook?.id) return;
+    const response = await fetch(`/api/manage/playbooks/${playbook.id}/mcp-servers`, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
         name: publicMCP.name,
         description: publicMCP.description,
         tools: publicMCP.tools,
         resources: publicMCP.resources,
-      })
-      .select()
-      .single();
+      }),
+    });
 
-    if (!error && data) {
-      setMcpServers([...mcpServers, data as MCPServer]);
+    if (response.ok) {
+      const data = await response.json().catch(() => null);
+      if (data) {
+        setMcpServers([...mcpServers, data as MCPServer]);
+      }
       setShowBrowseMCP(false);
     }
   };
@@ -293,36 +320,18 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
   // Load public skills for browsing
   const loadPublicSkills = async () => {
     setBrowseLoading(true);
-    const supabase = createBrowserClient();
-
-    const { data } = await supabase
-      .from("skills")
-      .select(`
-        *,
-        playbooks!inner(is_public)
-      `)
-      .eq("playbooks.is_public", true)
-      .order("name");
-
-    setPublicSkills((data as Skill[]) || []);
+    const res = await fetch("/api/public/skills");
+    const data = await res.json().catch(() => null);
+    setPublicSkills(Array.isArray(data) ? data as Skill[] : []);
     setBrowseLoading(false);
   };
 
   // Load public MCP servers for browsing
   const loadPublicMCPs = async () => {
     setBrowseLoading(true);
-    const supabase = createBrowserClient();
-
-    const { data } = await supabase
-      .from("mcp_servers")
-      .select(`
-        *,
-        playbooks!inner(is_public)
-      `)
-      .eq("playbooks.is_public", true)
-      .order("name");
-
-    setPublicMCPs((data as MCPServer[]) || []);
+    const res = await fetch("/api/public/mcp");
+    const data = await res.json().catch(() => null);
+    setPublicMCPs(Array.isArray(data) ? data as MCPServer[] : []);
     setBrowseLoading(false);
   };
 
@@ -355,57 +364,80 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
     if (!playbook || !currentUserId) return;
 
     setForking(true);
-    const supabase = createBrowserClient();
 
     try {
-      // Create new playbook with same data
-      const newGuid = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
-
-      const { data: newPlaybook, error: playbookError } = await supabase
-        .from("playbooks")
-        .insert({
-          user_id: currentUserId,
-          guid: newGuid,
+      const response = await fetch("/api/manage/playbooks", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
           name: `${playbook.name} (Copy)`,
           description: playbook.description,
+          visibility: "private",
           config: playbook.config,
-          visibility: 'private', // Start as private
           tags: playbook.tags,
-          // Copy singleton persona
           persona_name: playbook.persona_name,
           persona_system_prompt: playbook.persona_system_prompt,
           persona_metadata: playbook.persona_metadata,
-        })
-        .select()
-        .single();
+        }),
+      });
 
-      if (playbookError || !newPlaybook) {
-        throw playbookError;
+      const newPlaybook = await response.json().catch(() => null);
+      if (!response.ok || !newPlaybook?.id) {
+        throw new Error(newPlaybook?.error || "Failed to fork playbook");
       }
 
       // Copy all skills
       if (skills.length > 0) {
-        await supabase.from("skills").insert(
-          skills.map(s => ({
-            playbook_id: newPlaybook.id,
-            name: s.name,
-            description: s.description,
-            content: s.content,
-            licence: s.licence,
-          }))
+        await Promise.all(
+          skills.map(async (s) => {
+            const skillResponse = await fetch(`/api/manage/playbooks/${newPlaybook.id}/skills`, {
+              method: "POST",
+              credentials: "same-origin",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                  name: s.name,
+                  description: s.description,
+                  content: s.content,
+                  licence: s.licence,
+                }),
+            });
+
+            if (!skillResponse.ok) {
+              const data = await skillResponse.json().catch(() => null);
+              throw new Error(data?.error || "Failed to copy skills");
+            }
+          })
         );
       }
 
       // Copy all MCP servers
       if (mcpServers.length > 0) {
-        await supabase.from("mcp_servers").insert(
-          mcpServers.map(m => ({
-            playbook_id: newPlaybook.id,
-            name: m.name,
-            description: m.description,
-            tools: m.tools,
-            resources: m.resources,
-          }))
+        await Promise.all(
+          mcpServers.map(async (m) => {
+            const mcpResponse = await fetch(`/api/manage/playbooks/${newPlaybook.id}/mcp-servers`, {
+              method: "POST",
+              credentials: "same-origin",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                name: m.name,
+                description: m.description,
+                tools: m.tools,
+                resources: m.resources,
+              }),
+            });
+
+            if (!mcpResponse.ok) {
+              const mcpData = await mcpResponse.json().catch(() => null);
+              throw new Error(mcpData?.error || "Failed to copy MCP servers");
+            }
+          })
         );
       }
 
@@ -1702,8 +1734,13 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                       if (!confirm("Are you SURE you want to delete this entire playbook? This cannot be undone!")) return;
                       if (!confirm("Really? This will delete ALL data in this playbook.")) return;
 
-                      const supabase = createBrowserClient();
-                      await supabase.from("playbooks").delete().eq("id", playbook?.id || id);
+                      const response = await fetch(`/api/manage/playbooks/${playbook?.id || id}`, {
+                        method: "DELETE",
+                        credentials: "same-origin",
+                      });
+                      if (!response.ok) {
+                        return;
+                      }
                       window.location.href = "/dashboard";
                     }}
                     className="px-4 py-2 bg-red-100 dark:bg-red-600/20 text-red-700 dark:text-red-400 border border-red-300 dark:border-red-500/30 rounded-lg hover:bg-red-200 dark:hover:bg-red-600/30 transition-colors font-medium"

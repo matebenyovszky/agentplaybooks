@@ -17,7 +17,7 @@ import type { Playbook } from "@/lib/supabase/types";
 
 export default function DashboardPage() {
   const t = useTranslations();
-  const { supabase, user } = useDashboardAuth();
+  const { user } = useDashboardAuth();
   const [playbooks, setPlaybooks] = useState<Playbook[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -26,13 +26,13 @@ export default function DashboardPage() {
 
     let active = true;
     const loadPlaybooks = async () => {
-      const { data } = await supabase
-        .from("playbooks")
-        .select("*")
-        .order("created_at", { ascending: false });
+      const res = await fetch("/api/manage/playbooks", {
+        credentials: "same-origin",
+      });
+      const data = await res.json().catch(() => null);
 
       if (!active) return;
-      setPlaybooks((data as Playbook[]) || []);
+      setPlaybooks(Array.isArray(data) ? data as Playbook[] : []);
       setLoading(false);
     };
 
@@ -41,29 +41,29 @@ export default function DashboardPage() {
     return () => {
       active = false;
     };
-  }, [supabase, user]);
+  }, [user]);
 
   const handleCreatePlaybook = async () => {
     const name = prompt("Enter playbook name:");
     if (!name || !user) return;
 
-    const guid = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
-
-    const { data, error } = await supabase
-      .from("playbooks")
-      .insert({
-        user_id: user.id,
-        guid,
+    const res = await fetch("/api/manage/playbooks", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
         name,
         description: "",
         config: {},
-        visibility: 'private',
-      })
-      .select()
-      .single();
+        visibility: "private",
+      }),
+    });
 
-    if (error) {
-      alert("Error creating playbook: " + error.message);
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data) {
+      alert("Error creating playbook");
       return;
     }
 

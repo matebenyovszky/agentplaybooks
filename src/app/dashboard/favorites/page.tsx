@@ -34,42 +34,34 @@ export default function FavoritesPage() {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
         setUser(user);
-        loadFavorites(user.id);
+        loadFavorites();
       } else {
         setLoading(false);
       }
     });
   }, []);
 
-  const loadFavorites = async (userId: string) => {
-    const supabase = createBrowserClient();
+  const loadFavorites = async () => {
+    const response = await fetch("/api/user/starred", {
+      credentials: "same-origin",
+    });
 
-    // Get starred playbook IDs
-    const { data: stars } = await supabase
-      .from("playbook_stars")
-      .select("playbook_id")
-      .eq("user_id", userId);
+    if (!response.ok) {
+      if (response.status === 401) {
+        setFavorites([]);
+      }
+      setLoading(false);
+      return;
+    }
 
-    if (!stars || stars.length === 0) {
+    const data = await response.json().catch(() => null);
+    if (!Array.isArray(data)) {
       setFavorites([]);
       setLoading(false);
       return;
     }
 
-    const playbookIds = stars.map(s => s.playbook_id);
-
-    // Get playbook details
-    const { data: playbooks } = await supabase
-      .from("playbooks")
-      .select(`
-        id, guid, name, description, visibility, star_count, tags, created_at, user_id,
-        persona_name,
-        skills:skills(count),
-        mcp_servers:mcp_servers(count)
-      `)
-      .in("id", playbookIds);
-
-    const playbookRows = (playbooks as unknown as PlaybookWithCounts[] | null) ?? [];
+    const playbookRows = (data as unknown as PlaybookWithCounts[]) ?? [];
     const formattedPlaybooks = playbookRows.map((p) => ({
       ...p,
       personas_count: p.persona_name ? 1 : 0,
@@ -85,12 +77,13 @@ export default function FavoritesPage() {
   const handleUnstar = async (playbookId: string) => {
     if (!user) return;
 
-    const supabase = createBrowserClient();
-    await supabase
-      .from("playbook_stars")
-      .delete()
-      .eq("playbook_id", playbookId)
-      .eq("user_id", user.id);
+    const response = await fetch(`/api/playbooks/${playbookId}/star`, {
+      method: "POST",
+      credentials: "same-origin",
+    });
+    if (!response.ok) {
+      return;
+    }
 
     setFavorites(prev => prev.filter(p => p.id !== playbookId));
   };

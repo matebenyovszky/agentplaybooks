@@ -2,9 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { createBrowserClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
-import { generateApiKey, hashApiKey, getKeyPrefix } from "@/lib/utils";
 import {
   Key,
   Trash2,
@@ -54,33 +52,34 @@ export function ApiKeyManager({ playbook_id, apiKeys, onUpdate }: ApiKeyManagerP
 
     setCreating(true);
     try {
-      const key = generateApiKey();
-      const keyHash = await hashApiKey(key);
-      const prefix = getKeyPrefix(key);
-
-      const supabase = createBrowserClient();
-      const { data, error } = await supabase
-        .from("api_keys")
-        .insert({
-          playbook_id,
-          key_hash: keyHash,
-          key_prefix: prefix,
+      const response = await fetch(`/api/playbooks/${playbook_id}/api-keys`, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
           name: keyName || null,
-          role: selectedRole,
           permissions: ROLE_PERMISSIONS[selectedRole],
-          is_active: true,
-        })
-        .select()
-        .single();
+          role: selectedRole,
+        }),
+      });
 
-      if (!error && data) {
-        onUpdate([...apiKeys, data as ApiKey]);
-        setNewApiKey(key);
-        setShowCreateModal(false);
-        // Reset form
-        setKeyName("");
-        setSelectedRole("viewer");
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(typeof data?.error === "string" ? data.error : "Failed to create API key");
       }
+
+      onUpdate([...apiKeys, data as ApiKey]);
+      const plainKey = data?.key;
+      if (plainKey) {
+        setNewApiKey(plainKey);
+      }
+      setShowCreateModal(false);
+      // Reset form
+      setKeyName("");
+      setSelectedRole("viewer");
     } catch (e) {
       console.error("Create key error:", e);
     } finally {
@@ -91,13 +90,12 @@ export function ApiKeyManager({ playbook_id, apiKeys, onUpdate }: ApiKeyManagerP
   const handleRevokeKey = async (keyId: string) => {
     if (!confirm("Are you sure you want to revoke this API key? This cannot be undone.")) return;
 
-    const supabase = createBrowserClient();
-    const { error } = await supabase
-      .from("api_keys")
-      .delete()
-      .eq("id", keyId);
+    const response = await fetch(`/api/playbooks/${playbook_id}/api-keys/${keyId}`, {
+      method: "DELETE",
+      credentials: "same-origin",
+    });
 
-    if (!error) {
+    if (response.ok) {
       onUpdate(apiKeys.filter(k => k.id !== keyId));
     }
   };
