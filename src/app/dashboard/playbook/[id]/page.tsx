@@ -15,6 +15,7 @@ import {
   Server,
   Database,
   Key,
+  Shield,
   Settings,
   Save,
   Globe,
@@ -31,7 +32,7 @@ import {
   X,
   Tag
 } from "lucide-react";
-import type { Playbook, Persona, Skill, MCPServer, Memory, ApiKey } from "@/lib/supabase/types";
+import type { Playbook, Persona, Skill, MCPServer, Memory, ApiKey, SecretMetadata } from "@/lib/supabase/types";
 import { ChatGPTIcon, ClaudeIcon, MarkdownIcon } from "@/components/ui/ai-icons";
 
 // Import editor components
@@ -40,9 +41,10 @@ import { SkillEditor } from "@/components/playbook/SkillEditor";
 import { McpServerEditor } from "@/components/playbook/McpServerEditor";
 import { MemoryEditor } from "@/components/playbook/MemoryEditor";
 import { ApiKeyManager } from "@/components/playbook/ApiKeyManager";
+import { SecretManager } from "@/components/playbook/SecretManager";
 import { McpRegistrySearch } from "@/components/playbook/McpRegistrySearch";
 
-type TabType = "details" | "skills" | "mcp" | "memory" | "apiKeys";
+type TabType = "details" | "skills" | "mcp" | "memory" | "secrets" | "apiKeys";
 
 // Debounce hook
 function useDebounce<T>(value: T, delay: number): T {
@@ -68,7 +70,8 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
 
   // Create storage adapter using the actual playbook ID (UUID), not the URL id param
   // This is important when the URL uses a GUID slug instead of UUID
-  const storage = useMemo(() => createSupabaseAdapter(playbook?.id || id), [playbook?.id, id]);
+  // Pass the GUID for API routes that use GUID-based URLs (e.g. secrets)
+  const storage = useMemo(() => createSupabaseAdapter(playbook?.id || id, playbook?.guid), [playbook?.id, playbook?.guid, id]);
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
   const [mcpServers, setMcpServers] = useState<MCPServer[]>([]);
@@ -711,6 +714,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
     { id: "skills" as TabType, label: t("editor.tabs.skills"), icon: Zap, count: skills.length, color: "purple" },
     { id: "mcp" as TabType, label: t("editor.tabs.mcp"), icon: Server, count: mcpServers.length, color: "pink" },
     { id: "memory" as TabType, label: t("editor.tabs.memory"), icon: Database, count: memories.length, color: "teal" },
+    { id: "secrets" as TabType, label: t("editor.tabs.secrets") || "Secrets", icon: Shield, count: 0, color: "emerald" },
     { id: "apiKeys" as TabType, label: t("editor.tabs.apiKeys"), icon: Key, count: apiKeys.length, color: "amber" },
   ];
 
@@ -913,8 +917,9 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                       : tab.color === "purple" ? "#a855f7"
                         : tab.color === "pink" ? "#ec4899"
                           : tab.color === "teal" ? "#14b8a6"
-                            : tab.color === "amber" ? "#f59e0b"
-                              : "#64748b"
+                            : tab.color === "emerald" ? "#10b981"
+                              : tab.color === "amber" ? "#f59e0b"
+                                : "#64748b"
                     : "transparent"
                 }}
               >
@@ -1095,6 +1100,35 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                 onUpdate={setMemories}
                 readOnly={!isOwner}
               />
+            </motion.div>
+          )}
+
+          {/* Secrets Tab - only visible to owner */}
+          {activeTab === "secrets" && isOwner && (
+            <motion.div
+              key="secrets"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+            >
+              <SecretManager
+                storage={storage}
+                readOnly={!isOwner}
+              />
+            </motion.div>
+          )}
+
+          {/* Secrets Tab - not owner message */}
+          {activeTab === "secrets" && !isOwner && (
+            <motion.div
+              key="secrets-readonly"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="text-center py-16"
+            >
+              <Lock className="h-12 w-12 mx-auto text-neutral-400 dark:text-slate-600 mb-4" />
+              <p className="text-neutral-600 dark:text-slate-400">Secrets are only visible to the playbook owner</p>
             </motion.div>
           )}
 
@@ -1928,6 +1962,7 @@ function EmptyState({
     purple: "text-purple-700",
     pink: "text-pink-700",
     teal: "text-teal-700",
+    emerald: "text-emerald-700",
     amber: "text-amber-700",
     slate: "text-slate-700"
   };

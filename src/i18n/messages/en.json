@@ -187,6 +187,7 @@
       "canvas": "Canvas",
       "memory": "Memory",
       "apiKeys": "API Keys",
+      "secrets": "Secrets",
       "settings": "Settings",
       "details": "Details"
     },

@@ -5,7 +5,7 @@
  * the Supabase storage backend.
  */
 
-import type { Persona, Skill, MCPServer, Memory, Playbook, MemoryTier, MemoryType, MemoryStatus } from "@/lib/supabase/types";
+import type { Persona, Skill, MCPServer, Memory, Playbook, MemoryTier, MemoryType, MemoryStatus, SecretMetadata, SecretCategory } from "@/lib/supabase/types";
 
 // Partial types for creating new items (without id, timestamps)
 export type PersonaInput = Omit<Persona, "id" | "playbook_id" | "created_at" | "updated_at">;
@@ -26,6 +26,14 @@ export type MemoryInput = {
   memory_type?: MemoryType;
   status?: MemoryStatus | null;
   metadata?: Record<string, unknown>;
+};
+
+export type SecretInput = {
+  name: string;
+  value: string;
+  description?: string | null;
+  category?: SecretCategory;
+  expires_at?: string | null;
 };
 
 export interface StorageAdapter {
@@ -57,6 +65,13 @@ export interface StorageAdapter {
   addMemory(data: MemoryInput): Promise<Memory | null>;
   updateMemory(id: string, data: Partial<MemoryInput>): Promise<Memory | null>;
   deleteMemory(id: string): Promise<boolean>;
+
+  // Secrets
+  getSecrets(category?: SecretCategory): Promise<SecretMetadata[]>;
+  addSecret(data: SecretInput): Promise<SecretMetadata | null>;
+  updateSecret(name: string, data: Partial<SecretInput>): Promise<SecretMetadata | null>;
+  deleteSecret(name: string): Promise<boolean>;
+  revealSecret(name: string): Promise<string | null>;
 }
 
 // Context type for editor components

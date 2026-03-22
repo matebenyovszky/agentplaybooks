@@ -1,5 +1,5 @@
 import type { Playbook, Skill, MCPServer, Persona } from "@/lib/supabase/types";
-import { PLAYBOOK_TOOLS } from "@/app/api/mcp/[guid]/route";
+import { PLAYBOOK_TOOLS } from "@/app/api/_shared/playbook-tools";
 
 export type PlaybookWithExports = Playbook & {
     persona?: Persona | null;

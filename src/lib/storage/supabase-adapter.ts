@@ -5,15 +5,15 @@
  */
 
 import { createBrowserClient } from "@/lib/supabase/client";
-import type { Persona, Skill, MCPServer, Memory, Playbook } from "@/lib/supabase/types";
-import type { StorageAdapter, PersonaInput, SkillInput, MCPServerInput, MemoryInput } from "./types";
+import type { Persona, Skill, MCPServer, Memory, Playbook, SecretMetadata, SecretCategory } from "@/lib/supabase/types";
+import type { StorageAdapter, PersonaInput, SkillInput, MCPServerInput, MemoryInput, SecretInput } from "./types";
 
 type PersonaSource = Pick<
   Playbook,
   "id" | "created_at" | "persona_name" | "persona_system_prompt" | "persona_metadata"
 >;
 
-export function createSupabaseAdapter(playbookId: string): StorageAdapter {
+export function createSupabaseAdapter(playbookId: string, playbookGuid?: string): StorageAdapter {
   const supabase = createBrowserClient();
 
   function playbookToPersona(playbook: PersonaSource): Persona {
@@ -360,6 +360,101 @@ export function createSupabaseAdapter(playbookId: string): StorageAdapter {
         return false;
       }
       return true;
+    },
+
+    // Secrets - these go through the API route (crypto is server-side)
+    async getSecrets(category?: SecretCategory): Promise<SecretMetadata[]> {
+      const guid = playbookGuid || playbookId;
+      const url = `/api/playbooks/${guid}/secrets` + (category ? `?category=${category}` : "");
+      try {
+        const res = await fetch(url, { credentials: "include" });
+        if (!res.ok) {
+          console.error("Error fetching secrets:", await res.text());
+          return [];
+        }
+        return await res.json();
+      } catch (err) {
+        console.error("Error fetching secrets:", err);
+        return [];
+      }
+    },
+
+    async addSecret(input: SecretInput): Promise<SecretMetadata | null> {
+      const guid = playbookGuid || playbookId;
+      try {
+        const res = await fetch(`/api/playbooks/${guid}/secrets`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(input),
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          console.error("Error adding secret:", err);
+          return null;
+        }
+        return await res.json();
+      } catch (err) {
+        console.error("Error adding secret:", err);
+        return null;
+      }
+    },
+
+    async updateSecret(name: string, data: Partial<SecretInput>): Promise<SecretMetadata | null> {
+      const guid = playbookGuid || playbookId;
+      try {
+        const res = await fetch(`/api/playbooks/${guid}/secrets/${encodeURIComponent(name)}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(data),
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          console.error("Error updating secret:", err);
+          return null;
+        }
+        return await res.json();
+      } catch (err) {
+        console.error("Error updating secret:", err);
+        return null;
+      }
+    },
+
+    async deleteSecret(name: string): Promise<boolean> {
+      const guid = playbookGuid || playbookId;
+      try {
+        const res = await fetch(`/api/playbooks/${guid}/secrets/${encodeURIComponent(name)}`, {
+          method: "DELETE",
+          credentials: "include",
+        });
+        if (!res.ok) {
+          console.error("Error deleting secret:", await res.text());
+          return false;
+        }
+        return true;
+      } catch (err) {
+        console.error("Error deleting secret:", err);
+        return false;
+      }
+    },
+
+    async revealSecret(name: string): Promise<string | null> {
+      const guid = playbookGuid || playbookId;
+      try {
+        const res = await fetch(`/api/playbooks/${guid}/secrets/reveal/${encodeURIComponent(name)}`, {
+          credentials: "include",
+        });
+        if (!res.ok) {
+          console.error("Error revealing secret:", await res.text());
+          return null;
+        }
+        const data = await res.json();
+        return data.value;
+      } catch (err) {
+        console.error("Error revealing secret:", err);
+        return null;
+      }
     },
   };
 }

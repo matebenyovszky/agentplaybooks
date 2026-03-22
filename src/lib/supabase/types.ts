@@ -277,6 +277,61 @@ export type ProfilesRow = {
 export type ProfilesInsert = Omit<ProfilesRow, 'created_at'>;
 export type ProfilesUpdate = Partial<Omit<ProfilesRow, 'id' | 'auth_user_id' | 'created_at'>>;
 
+// ===================
+// SECRETS (Encrypted credential store)
+// ===================
+
+export const SECRET_CATEGORIES = [
+  'api_key',
+  'password',
+  'token',
+  'certificate',
+  'connection_string',
+  'general',
+] as const;
+
+export type SecretCategory = typeof SECRET_CATEGORIES[number];
+
+export type SecretsRow = {
+  id: string;
+  playbook_id: string;
+  name: string;
+  description: string | null;
+  encrypted_value: string;
+  iv: string;
+  auth_tag: string;
+  category: SecretCategory;
+  rotated_at: string | null;
+  expires_at: string | null;
+  last_used_at: string | null;
+  use_count: number;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SecretsInsert = Omit<SecretsRow, 'id' | 'use_count' | 'created_at' | 'updated_at' | 'rotated_at' | 'last_used_at'> & {
+  rotated_at?: string | null;
+  last_used_at?: string | null;
+};
+export type SecretsUpdate = Partial<Omit<SecretsRow, 'id' | 'playbook_id' | 'created_at'>>;
+
+// What the API returns (never includes raw encrypted data)
+export type SecretMetadata = {
+  id: string;
+  playbook_id: string;
+  name: string;
+  description: string | null;
+  category: SecretCategory;
+  rotated_at: string | null;
+  expires_at: string | null;
+  last_used_at: string | null;
+  use_count: number;
+  created_at: string;
+  updated_at: string;
+};
+
 // Known publisher IDs
 export const PUBLISHER_IDS = {
   AGENT_PLAYBOOKS: '00000000-0000-0000-0000-000000000001',
@@ -346,6 +401,12 @@ export interface Database {
         Update: ProfilesUpdate;
         Relationships: [];
       };
+      secrets: {
+        Row: SecretsRow;
+        Insert: SecretsInsert;
+        Update: SecretsUpdate;
+        Relationships: [];
+      };
     };
     Views: Record<string, { Row: Record<string, unknown>; Relationships: [] }>;
     Functions: Record<string, { Args: Record<string, unknown> | never; Returns: unknown }>;
@@ -364,6 +425,7 @@ export type Memory = Database["public"]["Tables"]["memories"]["Row"];
 export type ApiKey = Database["public"]["Tables"]["api_keys"]["Row"];
 export type UserApiKey = Database["public"]["Tables"]["user_api_keys"]["Row"];
 export type SkillAttachment = Database["public"]["Tables"]["skill_attachments"]["Row"];
+export type Secret = Database["public"]["Tables"]["secrets"]["Row"];
 
 // Legacy: PublicSkill and PublicMCPServer types removed
 // Use Skill and MCPServer types - public items come from public playbooks

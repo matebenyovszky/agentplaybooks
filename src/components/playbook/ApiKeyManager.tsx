@@ -33,8 +33,8 @@ const ROLES = [
 ];
 
 const ROLE_PERMISSIONS: Record<string, string[]> = {
-  viewer: ["memory:read", "skills:read", "personas:read"],
-  coworker: ["memory:read", "memory:write", "skills:read", "skills:write", "personas:read", "personas:write"],
+  viewer: ["memory:read", "skills:read", "personas:read", "secrets:read"],
+  coworker: ["memory:read", "memory:write", "skills:read", "skills:write", "personas:read", "personas:write", "secrets:read", "secrets:write"],
   admin: ["full"],
 };
 

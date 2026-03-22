@@ -2,7 +2,9 @@ import { handle } from "hono/vercel";
 import { createApiApp } from "@/app/api/_shared/hono";
 import { validateApiKey } from "@/app/api/_shared/auth";
 import { getServiceSupabase, getSupabase } from "@/app/api/_shared/supabase";
-import type { McpResource, McpTool, Playbook, MemoryTier, MemoryType, MemoryStatus, CanvasSection } from "@/lib/supabase/types";
+import type { McpResource, McpTool, Playbook, MemoryTier, MemoryType, MemoryStatus, CanvasSection, SecretCategory } from "@/lib/supabase/types";
+import { encryptSecret, decryptSecret } from "@/lib/crypto";
+import { PLAYBOOK_TOOLS } from "@/app/api/_shared/playbook-tools";
 
 type PersonaSource = Pick<Playbook, "id" | "persona_name" | "persona_system_prompt" | "persona_metadata">;
 
@@ -83,359 +85,6 @@ function parseMarkdownSections(content: string): CanvasSection[] {
 
   return sections;
 }
-
-// Built-in MCP tools for playbook access
-// Note: Persona is embedded in the MCP manifest under _playbook.persona
-// RLM-Enhanced: Includes hierarchical memory management tools
-export const PLAYBOOK_TOOLS: McpTool[] = [
-  {
-    name: "list_skills",
-    description: "List all skills (capabilities/rules) in this playbook",
-    inputSchema: { type: "object", properties: {} },
-  },
-  {
-    name: "get_skill",
-    description: "Get detailed information about a specific skill",
-    inputSchema: {
-      type: "object",
-      properties: {
-        skill_id: { type: "string", description: "Skill ID or name" },
-      },
-      required: ["skill_id"],
-    },
-  },
-  {
-    name: "read_memory",
-    description: "Read a specific memory entry by key. Automatically increments access count. Memory supports 3 tiers: 'working' (active scratch pad), 'contextual' (recent context), 'longterm' (archived). Use 'hierarchical' memory_type for complex task graphs with parallel threads.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        key: { type: "string", description: "Memory key to read" },
-      },
-      required: ["key"],
-    },
-  },
-  {
-    name: "search_memory",
-    description: "Search memories by text, tags, tier, or type. Returns summaries for large memories. Use tags for categorical search; use tier to focus on active vs archived data; use memory_type to find task graphs.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        search: { type: "string", description: "Search in keys, descriptions, and summaries" },
-        tags: { type: "array", items: { type: "string" }, description: "Filter by tags (any match)" },
-        tier: { type: "string", enum: ["working", "contextual", "longterm"], description: "Filter by memory tier" },
-        memory_type: { type: "string", enum: ["flat", "hierarchical"], description: "Filter by memory type" },
-        status: { type: "string", enum: ["pending", "running", "completed", "failed", "blocked"], description: "Filter by task status (hierarchical only)" },
-        include_children: { type: "boolean", description: "Include child memories in results", default: false },
-      },
-    },
-  },
-  {
-    name: "write_memory",
-    description: "Write a memory entry. Use tier='working' for active tasks, 'contextual' for background context, 'longterm' for completed work. Set memory_type='hierarchical' and parent_key to build task graphs. Use status to track task progress in parallel workflows.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        key: { type: "string", description: "Memory key" },
-        value: { type: "object", description: "Value to store" },
-        tags: { type: "array", items: { type: "string" }, description: "Tags for categorization" },
-        description: { type: "string", description: "Human-readable description" },
-        tier: { type: "string", enum: ["working", "contextual", "longterm"], description: "Memory tier (default: contextual)" },
-        priority: { type: "number", description: "Priority 1-100 (default: 50)" },
-        parent_key: { type: "string", description: "Parent memory key for hierarchical organization" },
-        summary: { type: "string", description: "Compact summary for context views" },
-        memory_type: { type: "string", enum: ["flat", "hierarchical"], description: "flat (default) or hierarchical for task graphs" },
-        status: { type: "string", enum: ["pending", "running", "completed", "failed", "blocked"], description: "Task status (for hierarchical task tracking)" },
-        metadata: { type: "object", description: "Graph metadata: dependencies, thread assignment, progress, etc." },
-      },
-      required: ["key", "value"],
-    },
-  },
-  {
-    name: "delete_memory",
-    description: "Delete a memory entry (requires API key)",
-    inputSchema: {
-      type: "object",
-      properties: {
-        key: { type: "string", description: "Memory key to delete" },
-      },
-      required: ["key"],
-    },
-  },
-  // ===== RLM-Enhanced Memory Tools =====
-  {
-    name: "consolidate_memories",
-    description: "Consolidate multiple related memories into a parent memory with summary. Reduces context size while preserving detail access via children.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        memory_keys: { type: "array", items: { type: "string" }, description: "Keys of memories to consolidate" },
-        parent_key: { type: "string", description: "New parent memory key" },
-        summary: { type: "string", description: "Summary of consolidated memories" },
-        parent_tags: { type: "array", items: { type: "string" }, description: "Tags for parent memory" },
-        archive_children: { type: "boolean", description: "Move children to longterm tier", default: true },
-      },
-      required: ["memory_keys", "parent_key", "summary"],
-    },
-  },
-  {
-    name: "promote_memory",
-    description: "Promote a memory to a higher tier or boost its priority for active use.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        key: { type: "string", description: "Memory key to promote" },
-        target_tier: { type: "string", enum: ["working", "contextual"], description: "Target tier (cannot demote with this tool)" },
-        priority_boost: { type: "number", description: "Amount to increase priority (0-50)", default: 10 },
-      },
-      required: ["key"],
-    },
-  },
-  {
-    name: "get_memory_context",
-    description: "Get a context-optimized view of memories. Returns full working memory, summaries for contextual, and keys only for longterm.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        include_tiers: {
-          type: "array",
-          items: { type: "string", enum: ["working", "contextual", "longterm"] },
-          description: "Tiers to include (default: working, contextual)"
-        },
-        max_items: { type: "number", description: "Maximum items per tier", default: 20 },
-        expand_keys: { type: "array", items: { type: "string" }, description: "Keys to show full content regardless of tier" },
-        tags_filter: { type: "array", items: { type: "string" }, description: "Only include memories with these tags" },
-      },
-    },
-  },
-  {
-    name: "archive_memories",
-    description: "Archive memories from working/contextual to longterm tier. Useful for cleaning up after completing tasks.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        keys: { type: "array", items: { type: "string" }, description: "Specific keys to archive" },
-        older_than_hours: { type: "number", description: "Archive memories older than X hours" },
-        from_tier: { type: "string", enum: ["working", "contextual"], description: "Only archive from this tier" },
-        tags: { type: "array", items: { type: "string" }, description: "Only archive memories with these tags" },
-        generate_summaries: { type: "boolean", description: "Auto-generate summaries if missing", default: false },
-      },
-    },
-  },
-  {
-    name: "get_memory_tree",
-    description: "Get hierarchical tree view of memories showing parent-child relationships. Use this to visualize task graphs and track parallel operations. Includes status for each node.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        root_key: { type: "string", description: "Start from this key (omit for all roots)" },
-        max_depth: { type: "number", description: "Maximum tree depth", default: 3 },
-        include_values: { type: "boolean", description: "Include full values (false = summaries only)", default: false },
-      },
-    },
-  },
-  // ===== Hierarchical Task Graph Tools =====
-  {
-    name: "create_task_graph",
-    description: "Create a hierarchical task plan in one call. Creates a parent 'plan' memory with children for each subtask. Use this for complex multi-threaded work that agent swarms can coordinate on. Each subtask gets its own memory node with status tracking.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        plan_key: { type: "string", description: "Key for the root plan memory" },
-        plan_summary: { type: "string", description: "High-level summary of the entire plan" },
-        tasks: {
-          type: "array",
-          items: {
-            type: "object",
-            properties: {
-              key: { type: "string", description: "Task key (will be prefixed with plan_key/)" },
-              description: { type: "string", description: "What this task does" },
-              value: { type: "object", description: "Task data (instructions, params, etc.)" },
-              depends_on: { type: "array", items: { type: "string" }, description: "Keys of tasks this depends on" },
-              tags: { type: "array", items: { type: "string" }, description: "Task tags" },
-            },
-            required: ["key", "description"],
-          },
-          description: "List of subtasks to create",
-        },
-        tags: { type: "array", items: { type: "string" }, description: "Tags for the plan" },
-      },
-      required: ["plan_key", "plan_summary", "tasks"],
-    },
-  },
-  {
-    name: "update_task_status",
-    description: "Update the status of a task node in a hierarchical plan. When all children of a parent are 'completed', the parent is auto-updated. Returns the current subtree state.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        key: { type: "string", description: "Task memory key to update" },
-        status: { type: "string", enum: ["pending", "running", "completed", "failed", "blocked"], description: "New status" },
-        result: { type: "object", description: "Task result data to store in value" },
-        summary: { type: "string", description: "Updated summary with results" },
-      },
-      required: ["key", "status"],
-    },
-  },
-  // ===== Canvas Tools =====
-  {
-    name: "list_canvas",
-    description: "List all canvas documents in this playbook. Canvas documents are collaborative markdown files that multiple agents can edit in parallel.",
-    inputSchema: { type: "object", properties: {} },
-  },
-  {
-    name: "read_canvas",
-    description: "Read a canvas document. Returns full content, sections structure, and metadata. Optionally read a specific section by ID.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        slug: { type: "string", description: "Document slug" },
-        section_id: { type: "string", description: "Optional: read only this section" },
-      },
-      required: ["slug"],
-    },
-  },
-  {
-    name: "write_canvas",
-    description: "Create or fully replace a canvas document. Markdown headings are auto-parsed into sections for parallel editing. Use patch_canvas_section for partial updates.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        slug: { type: "string", description: "URL-friendly document identifier" },
-        name: { type: "string", description: "Document title" },
-        content: { type: "string", description: "Full markdown content" },
-        metadata: { type: "object", description: "Custom document metadata" },
-      },
-      required: ["slug", "name", "content"],
-    },
-  },
-  {
-    name: "patch_canvas_section",
-    description: "Edit a specific section of a canvas document. Parallel-safe: only updates the targeted section. Lock the section first for safety in multi-agent scenarios.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        slug: { type: "string", description: "Document slug" },
-        section_id: { type: "string", description: "Section ID from get_canvas_toc" },
-        content: { type: "string", description: "New section content (markdown)" },
-        heading: { type: "string", description: "Optional: new heading text" },
-      },
-      required: ["slug", "section_id", "content"],
-    },
-  },
-  {
-    name: "get_canvas_toc",
-    description: "Get the table of contents for a canvas document. Returns section IDs, headings, and levels for navigation and patch_canvas_section.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        slug: { type: "string", description: "Document slug" },
-      },
-      required: ["slug"],
-    },
-  },
-  {
-    name: "lock_canvas_section",
-    description: "Lock a section for exclusive editing. Prevents other agents from modifying it. Remember to unlock when done.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        slug: { type: "string", description: "Document slug" },
-        section_id: { type: "string", description: "Section ID to lock" },
-        locked_by: { type: "string", description: "Agent identifier" },
-      },
-      required: ["slug", "section_id", "locked_by"],
-    },
-  },
-  {
-    name: "unlock_canvas_section",
-    description: "Unlock a previously locked section so other agents can edit it.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        slug: { type: "string", description: "Document slug" },
-        section_id: { type: "string", description: "Section ID to unlock" },
-      },
-      required: ["slug", "section_id"],
-    },
-  },
-  // ===== Self-Modification / Evolution Tools =====
-  {
-    name: "create_skill",
-    description: "Create a new skill for this playbook. Use this to expand capabilities. Requires full or skills:write permission.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        name: { type: "string", description: "Name of the skill (e.g. data_analyzer)" },
-        description: { type: "string", description: "Brief description of what the skill does" },
-        content: { type: "string", description: "The instructions/prompt/code for the skill" },
-        priority: { type: "number", description: "Priority level (default 50)" },
-      },
-      required: ["name", "content"],
-    },
-  },
-  {
-    name: "update_skill",
-    description: "Update an existing skill in this playbook. Requires full or skills:write permission.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        skill_id: { type: "string", description: "ID or name of the skill to update" },
-        name: { type: "string", description: "New name" },
-        description: { type: "string", description: "New description" },
-        content: { type: "string", description: "New content/instructions" },
-        priority: { type: "number", description: "New priority level" },
-      },
-      required: ["skill_id"],
-    },
-  },
-  {
-    name: "delete_skill",
-    description: "Delete a skill from this playbook. Requires full or skills:write permission.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        skill_id: { type: "string", description: "ID or name of the skill to delete" },
-      },
-      required: ["skill_id"],
-    },
-  },
-  {
-    name: "list_skill_versions",
-    description: "List historical versions of a skill for auditing or rollback.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        skill_id: { type: "string", description: "ID or name of the skill" },
-        limit: { type: "number", description: "Max versions to return (default 10)" },
-      },
-      required: ["skill_id"],
-    },
-  },
-  {
-    name: "rollback_skill",
-    description: "Rollback a skill to a previous version. Requires full or skills:write permission.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        version_id: { type: "string", description: "The specific version ID from list_skill_versions to rollback to" },
-      },
-      required: ["version_id"],
-    },
-  },
-  {
-    name: "update_playbook",
-    description: "Update the persona/system prompt of this playbook. Handle with extreme care! Requires full or playbooks:write permission.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        persona_name: { type: "string", description: "New persona name" },
-        persona_system_prompt: { type: "string", description: "New core system instructions" },
-        persona_metadata: { type: "object", description: "New metadata JSON" },
-      },
-    },
-  },
-];
 
 const app = createApiApp("/api/mcp/:guid");
 
@@ -596,7 +245,7 @@ app.post("/", async (c) => {
   // Get playbook - try public first, then fallback to API key auth for private playbooks
   let query = supabase
     .from("playbooks")
-    .select("id, persona_name, persona_system_prompt, persona_metadata");
+    .select("id, user_id, persona_name, persona_system_prompt, persona_metadata");
 
   if (isUuid) {
     query = query.eq("id", guid);
@@ -615,7 +264,7 @@ app.post("/", async (c) => {
       const serviceSupabase = getServiceSupabase();
       let privateQuery = serviceSupabase
         .from("playbooks")
-        .select("id, persona_name, persona_system_prompt, persona_metadata");
+        .select("id, user_id, persona_name, persona_system_prompt, persona_metadata");
 
       if (isUuid) {
         privateQuery = privateQuery.eq("id", guid);
@@ -818,9 +467,52 @@ Skills define capabilities, rules, and instructions.
 - Use \`get_skill\` to read a skill's full content
 - Skills with API key can be created/updated/deleted via \`create_skill\`, \`update_skill\`, \`delete_skill\`
 
+## Secrets Vault
+
+Secrets are encrypted credentials (API keys, passwords, tokens) stored with AES-256-GCM encryption using per-user derived keys.
+
+**Security model:** Secret values are NEVER exposed to agents. You reference secrets by name, and the server injects them into HTTP requests on your behalf.
+
+### Key Secrets Tools
+| Tool | Use When |
+|------|----------|
+| \`list_secrets\` | See available secret names and metadata (never values) |
+| \`use_secret\` | Make an HTTP request with a secret injected as a header |
+| \`store_secret\` | Save a new encrypted secret |
+| \`rotate_secret\` | Replace an existing secret with a new value |
+| \`delete_secret\` | Permanently remove a secret |
+
+### use_secret Examples
+\`\`\`
+// Call OpenAI API with stored key
+use_secret({
+  secret_name: "OPENAI_API_KEY",
+  url: "https://api.openai.com/v1/models"
+})
+
+// POST to an API with custom headers
+use_secret({
+  secret_name: "WEBHOOK_TOKEN",
+  url: "https://api.example.com/data",
+  method: "POST",
+  header_name: "X-API-Key",
+  header_prefix: "",
+  body: {"query": "hello"},
+  extra_headers: {"Content-Type": "application/json"}
+})
+\`\`\`
+
+### Secrets Best Practices
+- Use descriptive names: \`OPENAI_API_KEY\`, \`SUPABASE_URL\`, \`DB_PASSWORD\`
+- Set expiration dates for rotating credentials
+- Use categories to organize: api_key, password, token, certificate, connection_string
+- Secret values are NEVER returned to the agent context
+- Secrets are NEVER included in public playbook exports
+
 ## Authentication
 - **Read operations**: No API key needed for public playbooks
 - **Write operations**: Require API key in Authorization header: \`Bearer apb_xxx\`
+- **Secrets operations**: Require API key with \`secrets:read\` or \`secrets:write\` permission
 - Generate API keys in the playbook dashboard under "API Keys" tab
 `;
 
@@ -2094,6 +1786,242 @@ Skills define capabilities, rules, and instructions.
             break;
           }
 
+          // ===== Secrets Tools =====
+          case "list_secrets": {
+            const secretsApiKey = await validateApiKey(c.req.raw, "secrets:read");
+            if (!secretsApiKey || secretsApiKey.playbooks.id !== playbook.id) {
+              throw new Error("API key with secrets:read or full permission required");
+            }
+
+            let secretsQuery = serviceSupabase
+              .from("secrets")
+              .select("id, name, description, category, rotated_at, expires_at, last_used_at, use_count, created_at, updated_at")
+              .eq("playbook_id", playbook.id);
+
+            if (args.category) {
+              secretsQuery = secretsQuery.eq("category", args.category as SecretCategory);
+            }
+
+            const { data: secretsList, error: secretsError } = await secretsQuery.order("name");
+            if (secretsError) throw new Error(secretsError.message);
+            result = secretsList || [];
+            break;
+          }
+
+          case "use_secret": {
+            // Proxy pattern: decrypt secret server-side, inject into HTTP request,
+            // return only the response. The agent NEVER sees the secret value.
+            const useSecretApiKey = await validateApiKey(c.req.raw, "secrets:read");
+            if (!useSecretApiKey || useSecretApiKey.playbooks.id !== playbook.id) {
+              throw new Error("API key with secrets:read or full permission required");
+            }
+
+            const useSecretName = args.secret_name as string;
+            const useUrl = args.url as string;
+            if (!useSecretName || !useUrl) throw new Error("secret_name and url are required");
+
+            // Validate URL to prevent SSRF
+            try {
+              const parsed = new URL(useUrl);
+              if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+                throw new Error("Only http and https URLs are allowed");
+              }
+              // Block private/internal IPs
+              const hostname = parsed.hostname.toLowerCase();
+              if (hostname === "localhost" || hostname === "127.0.0.1" || hostname === "0.0.0.0" ||
+                  hostname.startsWith("10.") || hostname.startsWith("192.168.") ||
+                  hostname.startsWith("172.") || hostname.endsWith(".internal") ||
+                  hostname.endsWith(".local")) {
+                throw new Error("Requests to private/internal addresses are not allowed");
+              }
+            } catch (e) {
+              if (e instanceof Error && e.message.includes("not allowed")) throw e;
+              throw new Error(`Invalid URL: ${useUrl}`);
+            }
+
+            // Fetch and decrypt the secret
+            const { data: useSecretData, error: useSecretError } = await serviceSupabase
+              .from("secrets")
+              .select("*")
+              .eq("playbook_id", playbook.id)
+              .eq("name", useSecretName)
+              .single();
+
+            if (useSecretError || !useSecretData) {
+              throw new Error(`Secret '${useSecretName}' not found`);
+            }
+
+            const secretValue = await decryptSecret({
+              encrypted_value: useSecretData.encrypted_value,
+              iv: useSecretData.iv,
+              auth_tag: useSecretData.auth_tag,
+            }, playbook.user_id);
+
+            // Build the outgoing request
+            const method = (args.method as string || "GET").toUpperCase();
+            const headerName = (args.header_name as string) || "Authorization";
+            const headerPrefix = args.header_prefix !== undefined ? (args.header_prefix as string) : "Bearer ";
+            const timeoutMs = Math.min((args.timeout_ms as number) || 30000, 60000);
+
+            const outHeaders: Record<string, string> = {
+              [headerName]: `${headerPrefix}${secretValue}`,
+            };
+
+            // Add extra headers
+            if (args.extra_headers && typeof args.extra_headers === "object") {
+              for (const [k, v] of Object.entries(args.extra_headers as Record<string, string>)) {
+                outHeaders[k] = v;
+              }
+            }
+
+            // Default Content-Type for requests with body
+            if (args.body && !outHeaders["Content-Type"]) {
+              outHeaders["Content-Type"] = "application/json";
+            }
+
+            const fetchOptions: RequestInit = {
+              method,
+              headers: outHeaders,
+              signal: AbortSignal.timeout(timeoutMs),
+            };
+
+            if (args.body && ["POST", "PUT", "PATCH"].includes(method)) {
+              fetchOptions.body = JSON.stringify(args.body);
+            }
+
+            try {
+              const proxyRes = await fetch(useUrl, fetchOptions);
+              const contentType = proxyRes.headers.get("content-type") || "";
+              let responseBody: unknown;
+
+              if (contentType.includes("application/json")) {
+                responseBody = await proxyRes.json();
+              } else {
+                const text = await proxyRes.text();
+                // Truncate very large responses
+                responseBody = text.length > 10000 ? text.slice(0, 10000) + "\n... (truncated)" : text;
+              }
+
+              // Update usage stats
+              await serviceSupabase
+                .from("secrets")
+                .update({
+                  last_used_at: new Date().toISOString(),
+                  use_count: (useSecretData.use_count || 0) + 1,
+                })
+                .eq("id", useSecretData.id);
+
+              result = {
+                status: proxyRes.status,
+                status_text: proxyRes.statusText,
+                body: responseBody,
+                note: `Request made with secret '${useSecretName}' injected as ${headerName} header. Secret value was NOT exposed to the agent.`,
+              };
+            } catch (fetchErr) {
+              const msg = fetchErr instanceof Error ? fetchErr.message : "Request failed";
+              throw new Error(`HTTP request to ${useUrl} failed: ${msg}`);
+            }
+            break;
+          }
+
+          case "store_secret": {
+            const storeSecretApiKey = await validateApiKey(c.req.raw, "secrets:write");
+            if (!storeSecretApiKey || storeSecretApiKey.playbooks.id !== playbook.id) {
+              throw new Error("API key with secrets:write or full permission required");
+            }
+
+            const storeName = args.name as string;
+            const storeValue = args.value as string;
+            if (!storeName || !storeValue) throw new Error("name and value are required");
+
+            const encrypted = await encryptSecret(storeValue, playbook.user_id);
+
+            const { data: storedSecret, error: storeError } = await serviceSupabase
+              .from("secrets")
+              .insert({
+                playbook_id: playbook.id,
+                name: storeName.trim(),
+                description: (args.description as string) || null,
+                category: (args.category as SecretCategory) || "general",
+                expires_at: (args.expires_at as string) || null,
+                encrypted_value: encrypted.encrypted_value,
+                iv: encrypted.iv,
+                auth_tag: encrypted.auth_tag,
+                created_by: storeSecretApiKey.key_prefix,
+                updated_by: storeSecretApiKey.key_prefix,
+              })
+              .select("id, name, description, category, created_at")
+              .single();
+
+            if (storeError) {
+              if (storeError.code === "23505") {
+                throw new Error(`Secret '${storeName}' already exists. Use rotate_secret to update.`);
+              }
+              throw new Error(storeError.message);
+            }
+            result = storedSecret;
+            break;
+          }
+
+          case "rotate_secret": {
+            const rotateApiKey = await validateApiKey(c.req.raw, "secrets:write");
+            if (!rotateApiKey || rotateApiKey.playbooks.id !== playbook.id) {
+              throw new Error("API key with secrets:write or full permission required");
+            }
+
+            const rotateName = args.name as string;
+            const rotateValue = args.value as string;
+            if (!rotateName || !rotateValue) throw new Error("name and value are required");
+
+            const { data: existingSecret } = await serviceSupabase
+              .from("secrets")
+              .select("id")
+              .eq("playbook_id", playbook.id)
+              .eq("name", rotateName)
+              .single();
+
+            if (!existingSecret) throw new Error(`Secret '${rotateName}' not found`);
+
+            const rotateEncrypted = await encryptSecret(rotateValue, playbook.user_id);
+
+            const { data: rotatedSecret, error: rotateError } = await serviceSupabase
+              .from("secrets")
+              .update({
+                encrypted_value: rotateEncrypted.encrypted_value,
+                iv: rotateEncrypted.iv,
+                auth_tag: rotateEncrypted.auth_tag,
+                rotated_at: new Date().toISOString(),
+                updated_by: rotateApiKey.key_prefix,
+              })
+              .eq("id", existingSecret.id)
+              .select("id, name, rotated_at, updated_at")
+              .single();
+
+            if (rotateError) throw new Error(rotateError.message);
+            result = rotatedSecret;
+            break;
+          }
+
+          case "delete_secret": {
+            const deleteSecretApiKey = await validateApiKey(c.req.raw, "secrets:write");
+            if (!deleteSecretApiKey || deleteSecretApiKey.playbooks.id !== playbook.id) {
+              throw new Error("API key with secrets:write or full permission required");
+            }
+
+            const deleteSecretName = args.name as string;
+            if (!deleteSecretName) throw new Error("name is required");
+
+            const { error: deleteSecretError } = await serviceSupabase
+              .from("secrets")
+              .delete()
+              .eq("playbook_id", playbook.id)
+              .eq("name", deleteSecretName);
+
+            if (deleteSecretError) throw new Error(deleteSecretError.message);
+            result = { success: true, deleted: deleteSecretName };
+            break;
+          }
+
           default:
             // Check if it's a skill-based tool call
             if (toolName.startsWith("skill_")) {
@@ -2141,3 +2069,4 @@ Skills define capabilities, rules, and instructions.
 
 export const GET = handle(app);
 export const POST = handle(app);
+

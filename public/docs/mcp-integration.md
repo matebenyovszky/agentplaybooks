@@ -262,6 +262,68 @@ These will be merged into your playbook's MCP manifest.
 }
 ```
 
+## Secrets Vault
+
+AgentPlaybooks includes a built-in secrets vault for encrypted credential storage. Secrets are encrypted with AES-256-GCM using per-user derived keys.
+
+### Security Design
+
+Secret values are **never exposed to AI agents**. Instead of reading secret values directly, agents use the `use_secret` tool which acts as a server-side proxy:
+
+1. Agent calls `use_secret` with a secret name and target URL
+2. Server decrypts the secret internally
+3. Server makes the HTTP request with the secret injected as a header
+4. Only the HTTP response is returned to the agent
+
+This ensures credentials never appear in agent context, logs, or conversation history.
+
+### Available MCP Tools
+
+| Tool | Description |
+|------|-------------|
+| `list_secrets` | List secret names and metadata (never values) |
+| `use_secret` | Make HTTP request with secret injected server-side |
+| `store_secret` | Store a new encrypted secret |
+| `rotate_secret` | Replace a secret's value |
+| `delete_secret` | Permanently remove a secret |
+
+### Example: Using a Secret
+
+```json
+{
+  "method": "tools/call",
+  "params": {
+    "name": "use_secret",
+    "arguments": {
+      "secret_name": "OPENAI_API_KEY",
+      "url": "https://api.openai.com/v1/models",
+      "method": "GET",
+      "header_name": "Authorization",
+      "header_prefix": "Bearer "
+    }
+  }
+}
+```
+
+The agent receives only the API response — the secret value stays on the server.
+
+### Example: Storing a Secret
+
+```json
+{
+  "method": "tools/call",
+  "params": {
+    "name": "store_secret",
+    "arguments": {
+      "name": "OPENAI_API_KEY",
+      "value": "sk-...",
+      "description": "OpenAI API key for GPT-4",
+      "category": "api_key"
+    }
+  }
+}
+```
+
 ## Best Practices
 
 1. **Keep tools focused** - Each tool should do one thing well

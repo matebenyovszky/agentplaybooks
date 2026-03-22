@@ -187,6 +187,7 @@
       "canvas": "Canvas",
       "memory": "Memória",
       "apiKeys": "API Kulcsok",
+      "secrets": "Titkok",
       "settings": "Beállítások",
       "details": "Részletek"
     },

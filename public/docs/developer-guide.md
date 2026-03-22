@@ -161,6 +161,16 @@ A playbook is a container for:
 - **MCP Servers** - Model Context Protocol configurations
 - **Memory** - Key-value storage for context
 - **API Keys** - For write-back authentication
+- **Secrets Vault** - Encrypted credentials for agents (see [Secrets Vault](#secrets-vault))
+
+### Secrets Vault
+
+Store encrypted API keys and credentials at the playbook level. Uses AES-256-GCM encryption with per-user derived keys. Agents can use secrets through the `use_secret` proxy tool without ever seeing plaintext values.
+
+- Secret categories: api_key, password, token, certificate, connection_string, general
+- Automatic usage tracking and rotation support
+- SSRF protection on the proxy endpoint
+- Dashboard UI for managing and revealing secrets
 
 ### Multi-Format Export
 

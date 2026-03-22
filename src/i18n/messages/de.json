@@ -117,6 +117,7 @@
       "mcp": "MCP-Server",
       "memory": "Speicher",
       "apiKeys": "API-Schlüssel",
+      "secrets": "Geheimnisse",
       "settings": "Einstellungen",
       "details": "Details"
     },

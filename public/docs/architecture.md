@@ -171,6 +171,14 @@ CREATE POLICY "Owner access memories" ON memories
 - Optional expiration dates
 - Granular permissions (`memory:write`, `skills:write`, etc.)
 
+### Secrets Encryption
+
+- Master key stored as `SECRETS_ENCRYPTION_KEY` environment variable
+- Per-user encryption keys derived via HKDF (HMAC-based Key Derivation Function)
+- AES-256-GCM with random IVs — ciphertext, IV, and auth tag stored separately
+- Proxy pattern: agents call `use_secret` → server decrypts → injects into HTTP request → returns only the response
+- RLS policies restrict secret access to playbook owner and service role
+
 ## Deployment
 
 ```

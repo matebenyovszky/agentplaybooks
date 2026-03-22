@@ -695,6 +695,102 @@ DELETE /api/playbooks/:id/api-keys/:kid
 
 ---
 
+## Secrets
+
+Encrypted credential storage for playbook tools and integrations. Values are AES-256-GCM encrypted with per-user derived keys.
+
+**Security model:** Secret values are never exposed to AI agents. Agents reference secrets by name and use the `use_secret` MCP tool or `/proxy` REST endpoint to inject secrets into HTTP requests server-side.
+
+### List Secrets
+
+```http
+GET /api/playbooks/:guid/secrets
+GET /api/playbooks/:guid/secrets?category=api_key
+Authorization: Bearer <jwt_or_api_key>
+```
+
+Returns metadata only (names, categories, usage stats). Never returns secret values.
+
+### Store Secret
+
+```http
+POST /api/playbooks/:guid/secrets
+Authorization: Bearer <jwt_or_api_key>
+Content-Type: application/json
+
+{
+  "name": "OPENAI_API_KEY",
+  "value": "sk-...",
+  "description": "OpenAI API key for GPT-4",
+  "category": "api_key",
+  "expires_at": "2027-01-01T00:00:00Z"
+}
+```
+
+The `value` is encrypted immediately and never stored in plaintext.
+
+### Reveal Secret (Dashboard Only)
+
+```http
+GET /api/playbooks/:guid/secrets/reveal/:name
+Authorization: Bearer <jwt>
+```
+
+Returns the decrypted value. **For human dashboard use only** — agents should use `use_secret` instead.
+
+### Use Secret (Proxy)
+
+```http
+POST /api/playbooks/:guid/secrets/proxy
+Authorization: Bearer <api_key>
+Content-Type: application/json
+
+{
+  "secret_name": "OPENAI_API_KEY",
+  "url": "https://api.openai.com/v1/models",
+  "method": "GET",
+  "header_name": "Authorization",
+  "header_prefix": "Bearer "
+}
+```
+
+Makes an HTTP request with the secret injected as a header. The secret value never leaves the server. Returns only the HTTP response.
+
+### Rotate Secret
+
+```http
+PUT /api/playbooks/:guid/secrets/:name
+Authorization: Bearer <jwt_or_api_key>
+Content-Type: application/json
+
+{
+  "value": "sk-new-key-...",
+  "description": "Updated key"
+}
+```
+
+### Delete Secret
+
+```http
+DELETE /api/playbooks/:guid/secrets/:name
+Authorization: Bearer <jwt>
+```
+
+Owner only. Permanently deletes the secret.
+
+### Secret Categories
+
+| Category | Description |
+|----------|-------------|
+| `api_key` | API keys (OpenAI, Anthropic, etc.) |
+| `password` | Database or service passwords |
+| `token` | OAuth tokens, webhook tokens |
+| `certificate` | TLS/SSL certificates |
+| `connection_string` | Database connection strings |
+| `general` | Other credentials |
+
+---
+
 ## User API Keys (Account-level)
 
 User API Keys provide access to ALL your playbooks, enabling AI agents to create and manage playbooks programmatically. Manage these at [Dashboard Settings](https://agentplaybooks.ai/dashboard/settings).
