@@ -1934,13 +1934,28 @@ use_secret({
             const storeValue = args.value as string;
             if (!storeName || !storeValue) throw new Error("name and value are required");
 
+            const normalizedStoreName = storeName.trim();
+            if (!/^[A-Za-z0-9_-]+$/.test(normalizedStoreName)) {
+              throw new Error("name can only contain letters, numbers, underscores, and hyphens");
+            }
+            const { data: existingSecret } = await serviceSupabase
+              .from("secrets")
+              .select("id")
+              .eq("playbook_id", playbook.id)
+              .eq("name", normalizedStoreName)
+              .single();
+
+            if (existingSecret) {
+              throw new Error(`Secret '${storeName}' already exists. Use rotate_secret to update.`);
+            }
+
             const encrypted = await encryptSecret(storeValue, playbook.user_id);
 
             const { data: storedSecret, error: storeError } = await serviceSupabase
               .from("secrets")
               .insert({
                 playbook_id: playbook.id,
-                name: storeName.trim(),
+                name: normalizedStoreName,
                 description: (args.description as string) || null,
                 category: (args.category as SecretCategory) || "general",
                 expires_at: (args.expires_at as string) || null,

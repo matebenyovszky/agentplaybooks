@@ -95,20 +95,30 @@ export function SecretManager({ storage, readOnly = false }: SecretManagerProps)
     setCreating(true);
     setCreateError("");
 
-    const result = await storage.addSecret({
-      name: newName.trim(),
-      value: newValue,
-      description: newDescription || undefined,
-      category: newCategory,
-      expires_at: newExpiresAt || undefined,
-    });
+    try {
+      const result = await storage.addSecret({
+        name: newName.trim(),
+        value: newValue,
+        description: newDescription || undefined,
+        category: newCategory,
+        expires_at: newExpiresAt || undefined,
+      });
 
-    if (result) {
-      setSecrets([...secrets, result]);
-      setShowCreateModal(false);
-      resetCreateForm();
-    } else {
-      setCreateError("Failed to create secret. Name might already exist.");
+      if (result) {
+        setSecrets([...secrets, result]);
+        setShowCreateModal(false);
+        resetCreateForm();
+      }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to create secret. Please check the server response in logs.";
+      setCreateError(
+        errorMessage.includes("already exists")
+          ? `${errorMessage} Use rotate to update the existing secret instead.`
+          : errorMessage
+      );
     }
     setCreating(false);
   };

@@ -257,14 +257,28 @@ export function createSupabaseAdapter(playbookId: string, playbookGuid?: string)
           body: JSON.stringify(input),
         });
         if (!res.ok) {
-          const err = await res.json();
-          console.error("Error adding secret:", err);
-          return null;
+          const errorText = await res.text();
+          let errorMessage = `Failed to create secret (${res.status})`;
+          try {
+            const parsed = JSON.parse(errorText) as { error?: unknown };
+            if (typeof parsed.error === "string" && parsed.error.length > 0) {
+              errorMessage = parsed.error;
+            }
+          } catch {
+            if (errorText.length > 0) {
+              errorMessage = errorText;
+            }
+          }
+          console.error("Error adding secret:", errorMessage);
+          throw new Error(errorMessage);
         }
         return await res.json();
       } catch (err) {
         console.error("Error adding secret:", err);
-        return null;
+        if (err instanceof Error) {
+          throw err;
+        }
+        throw new Error("Unknown error while adding secret");
       }
     },
 

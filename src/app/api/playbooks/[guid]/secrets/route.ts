@@ -89,6 +89,29 @@ app.post("/", async (c) => {
     return c.json({ error: "value is required (the secret to encrypt)" }, 400);
   }
 
+  const normalizedNamePattern = /^[A-Za-z0-9_-]+$/;
+  if (!normalizedNamePattern.test(name.trim())) {
+    return c.json({ error: "name can only contain letters, numbers, underscores, and hyphens" }, 400);
+  }
+
+  const normalizedName = name.trim();
+
+  // Check duplicate name first so we can provide a clear, actionable error
+  const { data: existingSecret, error: duplicateCheckError } = await getServiceSupabase()
+    .from("secrets")
+    .select("id, name")
+    .eq("playbook_id", playbook.id)
+    .eq("name", normalizedName)
+    .maybeSingle();
+
+  if (duplicateCheckError) {
+    return c.json({ error: `Failed to verify secret uniqueness: ${duplicateCheckError.message}` }, 500);
+  }
+
+  if (existingSecret) {
+    return c.json({ error: `Secret '${normalizedName}' already exists in this playbook. Use rotate_secret to update it.` }, 409);
+  }
+
   // Encrypt with per-user derived key (playbook owner's user_id)
   const encrypted = await encryptSecret(value, playbook.user_id);
 
@@ -97,7 +120,7 @@ app.post("/", async (c) => {
     .from("secrets")
     .insert({
       playbook_id: playbook.id,
-      name: name.trim(),
+      name: normalizedName,
       description: description || null,
       category: category || "general",
       expires_at: expires_at || null,
