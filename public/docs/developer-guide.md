@@ -386,3 +386,18 @@ npx wrangler pages deploy .open-next
 - [Aceternity UI Components](https://ui.aceternity.com/components)
 - [Anthropic Tool Use](https://docs.anthropic.com/en/docs/agents-and-tools/tool-use)
 - [MCP Specification](https://modelcontextprotocol.io/)
+
+## Documentation Freshness Checklist
+
+Use this checklist when changing APIs or MCP behavior:
+
+1. Update `README.md` endpoint summaries.
+2. Update `public/docs/api-reference.md` with request/response shape changes.
+3. Update `public/docs/mcp-integration.md` when tools/resources or MCP flows change.
+4. Add at least one concrete example for the new behavior.
+5. Validate examples against real route handlers before merging.
+
+For agent quality, prefer docs that are:
+- **Current** (match shipped behavior)
+- **Targeted** (short task-oriented examples)
+- **Self-improving** (encourage write-back of discovered constraints to memory/canvas)
