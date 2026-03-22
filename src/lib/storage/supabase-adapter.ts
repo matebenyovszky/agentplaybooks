@@ -233,9 +233,13 @@ export function createSupabaseAdapter(playbookId: string, playbookGuid?: string)
     // Secrets - these go through the API route (crypto is server-side)
     async getSecrets(category?: SecretCategory): Promise<SecretMetadata[]> {
       const guid = playbookGuid || playbookId;
-      const url = `/api/playbooks/${guid}/secrets` + (category ? `?category=${category}` : "");
+      const query = new URLSearchParams();
+      if (category) query.set("category", category);
+      // Cache-buster protects against stale CDN/browser GET caching.
+      query.set("_ts", String(Date.now()));
+      const url = `/api/playbooks/${guid}/secrets?${query.toString()}`;
       try {
-        const res = await authFetch(url);
+        const res = await authFetch(url, { cache: "no-store" });
         if (!res.ok) {
           console.error("Error fetching secrets:", await res.text());
           return [];
@@ -290,14 +294,28 @@ export function createSupabaseAdapter(playbookId: string, playbookGuid?: string)
           body: JSON.stringify(data),
         });
         if (!res.ok) {
-          const err = await res.json();
-          console.error("Error updating secret:", err);
-          return null;
+          const errorText = await res.text();
+          let errorMessage = `Failed to rotate secret (${res.status})`;
+          try {
+            const parsed = JSON.parse(errorText) as { error?: unknown };
+            if (typeof parsed.error === "string" && parsed.error.length > 0) {
+              errorMessage = parsed.error;
+            }
+          } catch {
+            if (errorText.length > 0) {
+              errorMessage = errorText;
+            }
+          }
+          console.error("Error updating secret:", errorMessage);
+          throw new Error(errorMessage);
         }
         return await res.json();
       } catch (err) {
         console.error("Error updating secret:", err);
-        return null;
+        if (err instanceof Error) {
+          throw err;
+        }
+        throw new Error("Unknown error while rotating secret");
       }
     },
 
@@ -308,13 +326,17 @@ export function createSupabaseAdapter(playbookId: string, playbookGuid?: string)
           method: "DELETE",
         });
         if (!res.ok) {
-          console.error("Error deleting secret:", await res.text());
-          return false;
+          const errorText = await res.text();
+          console.error("Error deleting secret:", errorText);
+          throw new Error(errorText || `Failed to delete secret (${res.status})`);
         }
         return true;
       } catch (err) {
         console.error("Error deleting secret:", err);
-        return false;
+        if (err instanceof Error) {
+          throw err;
+        }
+        throw new Error("Unknown error while deleting secret");
       }
     },
 
@@ -323,14 +345,18 @@ export function createSupabaseAdapter(playbookId: string, playbookGuid?: string)
       try {
         const res = await authFetch(`/api/playbooks/${guid}/secrets/reveal/${encodeURIComponent(name)}`);
         if (!res.ok) {
-          console.error("Error revealing secret:", await res.text());
-          return null;
+          const errorText = await res.text();
+          console.error("Error revealing secret:", errorText);
+          throw new Error(errorText || `Failed to reveal secret (${res.status})`);
         }
         const data = await res.json();
         return data.value;
       } catch (err) {
         console.error("Error revealing secret:", err);
-        return null;
+        if (err instanceof Error) {
+          throw err;
+        }
+        throw new Error("Unknown error while revealing secret");
       }
     },
   };

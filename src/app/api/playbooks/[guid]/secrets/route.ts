@@ -8,6 +8,14 @@ import type { SecretCategory, SecretMetadata } from "@/lib/supabase/types";
 
 const app = createApiApp("/api/playbooks/:guid/secrets");
 
+// Secrets responses must never be cached by browsers/CDNs.
+app.use("*", async (c, next) => {
+  await next();
+  c.header("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  c.header("Pragma", "no-cache");
+  c.header("Expires", "0");
+});
+
 // Strip encrypted fields - never leak crypto material to clients
 function toMetadata(row: Record<string, unknown>): SecretMetadata {
   return {
@@ -113,7 +121,16 @@ app.post("/", async (c) => {
   }
 
   // Encrypt with per-user derived key (playbook owner's user_id)
-  const encrypted = await encryptSecret(value, playbook.user_id);
+  let encrypted: Awaited<ReturnType<typeof encryptSecret>>;
+  try {
+    encrypted = await encryptSecret(value, playbook.user_id);
+  } catch (err) {
+    console.error("Secrets encryption failed during create:", err);
+    return c.json(
+      { error: "Secrets vault is not configured correctly on the server (missing or invalid encryption key)." },
+      500
+    );
+  }
 
   const supabase = getServiceSupabase();
   const { data, error } = await supabase
@@ -245,7 +262,16 @@ app.put("/:name", async (c) => {
 
   // If a new value is provided, re-encrypt with per-user key (rotation)
   if (value && typeof value === "string") {
-    const encrypted = await encryptSecret(value, playbook.user_id);
+    let encrypted: Awaited<ReturnType<typeof encryptSecret>>;
+    try {
+      encrypted = await encryptSecret(value, playbook.user_id);
+    } catch (err) {
+      console.error("Secrets encryption failed during rotate:", err);
+      return c.json(
+        { error: "Secrets vault is not configured correctly on the server (missing or invalid encryption key)." },
+        500
+      );
+    }
     updateData.encrypted_value = encrypted.encrypted_value;
     updateData.iv = encrypted.iv;
     updateData.auth_tag = encrypted.auth_tag;

@@ -8,6 +8,8 @@ Create a `.env.local` file in the project root with these variables:
 # Supabase Configuration
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+# Server-only key for Secrets Vault encryption (64-char hex, 32 bytes)
+SECRETS_ENCRYPTION_KEY=your-64-char-hex-key
 # Application URL (for production)
 NEXT_PUBLIC_APP_URL=https://agentplaybooks.ai
 ```
@@ -75,6 +77,7 @@ When deploying to Cloudflare Pages, set these environment variables:
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SECRETS_ENCRYPTION_KEY=your-64-char-hex-key
 NEXT_PUBLIC_APP_URL=https://agentplaybooks.ai
 ```
 
@@ -91,5 +94,17 @@ NEXT_PUBLIC_APP_URL=https://agentplaybooks.ai
 **Cause**: GitHub/Google OAuth callback URL is incorrect.
 
 **Fix**: Ensure callback URL is `https://<YOUR-PROJECT>.supabase.co/auth/v1/callback` (NOT your app domain).
+
+### Secrets creation fails with "Internal Server Error"
+
+**Cause**: `SECRETS_ENCRYPTION_KEY` is missing or invalid in your runtime environment.
+
+**Fix**:
+1. Generate a key:
+   ```bash
+   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+   ```
+2. Set it as `SECRETS_ENCRYPTION_KEY` in your deployment environment.
+3. Redeploy/restart the app.
 
 

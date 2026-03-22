@@ -66,6 +66,7 @@ export function SecretManager({ storage, readOnly = false }: SecretManagerProps)
   const [newExpiresAt, setNewExpiresAt] = useState("");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState("");
+  const [actionError, setActionError] = useState("");
 
   // Rotate form state
   const [rotateValue, setRotateValue] = useState("");
@@ -94,6 +95,7 @@ export function SecretManager({ storage, readOnly = false }: SecretManagerProps)
 
     setCreating(true);
     setCreateError("");
+    setActionError("");
 
     try {
       const result = await storage.addSecret({
@@ -133,6 +135,7 @@ export function SecretManager({ storage, readOnly = false }: SecretManagerProps)
   };
 
   const handleReveal = async (name: string) => {
+    setActionError("");
     if (revealedSecrets[name]) {
       // Toggle off
       setRevealedSecrets((prev) => {
@@ -144,17 +147,22 @@ export function SecretManager({ storage, readOnly = false }: SecretManagerProps)
     }
 
     setRevealingSecret(name);
-    const value = await storage.revealSecret(name);
-    if (value !== null) {
-      setRevealedSecrets((prev) => ({ ...prev, [name]: value }));
-      // Auto-hide after 30 seconds
-      setTimeout(() => {
-        setRevealedSecrets((prev) => {
-          const next = { ...prev };
-          delete next[name];
-          return next;
-        });
-      }, 30000);
+    try {
+      const value = await storage.revealSecret(name);
+      if (value !== null) {
+        setRevealedSecrets((prev) => ({ ...prev, [name]: value }));
+        // Auto-hide after 30 seconds
+        setTimeout(() => {
+          setRevealedSecrets((prev) => {
+            const next = { ...prev };
+            delete next[name];
+            return next;
+          });
+        }, 30000);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to reveal secret";
+      setActionError(`Reveal failed: ${message}`);
     }
     setRevealingSecret(null);
   };
@@ -162,18 +170,24 @@ export function SecretManager({ storage, readOnly = false }: SecretManagerProps)
   const handleRotate = async (name: string) => {
     if (!rotateValue.trim()) return;
 
+    setActionError("");
     setRotating(true);
-    const result = await storage.updateSecret(name, { value: rotateValue });
-    if (result) {
-      setSecrets(secrets.map((s) => (s.name === name ? result : s)));
-      setShowRotateModal(null);
-      setRotateValue("");
-      // Clear revealed value if it was showing
-      setRevealedSecrets((prev) => {
-        const next = { ...prev };
-        delete next[name];
-        return next;
-      });
+    try {
+      const result = await storage.updateSecret(name, { value: rotateValue });
+      if (result) {
+        setSecrets(secrets.map((s) => (s.name === name ? result : s)));
+        setShowRotateModal(null);
+        setRotateValue("");
+        // Clear revealed value if it was showing
+        setRevealedSecrets((prev) => {
+          const next = { ...prev };
+          delete next[name];
+          return next;
+        });
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to rotate secret";
+      setActionError(`Rotate failed: ${message}`);
     }
     setRotating(false);
   };
@@ -181,14 +195,20 @@ export function SecretManager({ storage, readOnly = false }: SecretManagerProps)
   const handleDelete = async (name: string) => {
     if (!confirm(`Are you sure you want to delete the secret "${name}"? This cannot be undone.`)) return;
 
-    const success = await storage.deleteSecret(name);
-    if (success) {
-      setSecrets(secrets.filter((s) => s.name !== name));
-      setRevealedSecrets((prev) => {
-        const next = { ...prev };
-        delete next[name];
-        return next;
-      });
+    setActionError("");
+    try {
+      const success = await storage.deleteSecret(name);
+      if (success) {
+        setSecrets(secrets.filter((s) => s.name !== name));
+        setRevealedSecrets((prev) => {
+          const next = { ...prev };
+          delete next[name];
+          return next;
+        });
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to delete secret";
+      setActionError(`Delete failed: ${message}`);
     }
   };
 
@@ -254,6 +274,11 @@ export function SecretManager({ storage, readOnly = false }: SecretManagerProps)
           </button>
         )}
       </div>
+      {actionError && (
+        <div className="mb-4 p-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-lg text-red-700 dark:text-red-400 text-sm">
+          {actionError}
+        </div>
+      )}
 
       {/* Search and Filter */}
       {secrets.length > 0 && (
