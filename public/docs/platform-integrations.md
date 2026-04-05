@@ -537,6 +537,83 @@ These are instructions for developers integrating playbooks into their applicati
 
 ---
 
+## Cursor IDE
+
+Cursor is an AI-powered code editor with native MCP support. Connecting an AgentPlaybooks playbook gives Cursor's AI agent access to your playbook's tools, resources, and memory.
+
+### Step 1: Get Your MCP Endpoint
+
+Your playbook's MCP endpoint:
+
+```
+https://agentplaybooks.ai/api/mcp/YOUR_GUID
+```
+
+> **Tip:** Go to the **Integrations** tab in your playbook's dashboard for a ready-to-copy config with the correct GUID.
+
+### Step 2: Add MCP Configuration
+
+Create or edit `.cursor/mcp.json` in your project root (for project-level) or `~/.cursor/mcp.json` (for global):
+
+```json
+{
+  "mcpServers": {
+    "my-playbook": {
+      "url": "https://agentplaybooks.ai/api/mcp/YOUR_GUID"
+    }
+  }
+}
+```
+
+For **private playbooks**, add authentication headers:
+
+```json
+{
+  "mcpServers": {
+    "my-playbook": {
+      "url": "https://agentplaybooks.ai/api/mcp/YOUR_GUID",
+      "headers": {
+        "Authorization": "Bearer apb_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      }
+    }
+  }
+}
+```
+
+### Step 3: Restart Cursor
+
+After saving the configuration, restart Cursor or reload the window. The playbook's MCP tools will appear in Cursor's tools panel.
+
+### Step 4: Verify Connection
+
+You should see your playbook's tools listed when Cursor shows available MCP tools. Each skill in your playbook becomes a callable tool, plus built-in tools like `read_memory`, `write_memory`, `search_memory`, `read_canvas`, etc.
+
+### What Cursor Gets from Your Playbook
+
+| Playbook Component | Cursor Integration |
+|---|---|
+| Skills | Callable MCP tools |
+| Personas | System prompt context via resources |
+| Memory | Persistent key-value storage (read/write) |
+| Canvas | Structured document workspace |
+| Secrets | Server-side credential proxy |
+
+### Authentication Notes
+
+- **Public playbooks**: No API key needed for read access
+- **Private playbooks**: Require a Playbook API Key in the `Authorization` header
+- **Write operations** (memory, canvas): Always require an API key with appropriate permissions
+- Generate API keys from the **Integrations** tab in your playbook's dashboard
+
+### Troubleshooting
+
+- Ensure `.cursor/mcp.json` is valid JSON (no trailing commas, correct quoting)
+- Check that the GUID matches your playbook
+- For private playbooks, verify the API key starts with `apb_live_` and has not been revoked
+- Test the endpoint: `curl -s https://agentplaybooks.ai/api/mcp/YOUR_GUID | head -c 200`
+
+---
+
 ## Claude Code (CLI Agent)
 
 Claude Code is Anthropic's agentic CLI tool for coding tasks.
@@ -1046,6 +1123,7 @@ agent.write_memory("last_session", {"task": "code review", "completed": True})
 
 | Platform | SDK/API | Tools Support | Thinking/Reasoning | Best Format |
 |----------|---------|---------------|-------------------|-------------|
+| Cursor IDE | MCP | ✅ MCP Tools | ✅ Built-in | `mcp` |
 | OpenAI Responses | `openai` | ✅ Functions | ✅ reasoning.effort | `anthropic` |
 | Anthropic Claude | `anthropic` | ✅ Tools | ✅ thinking.budget | `anthropic` |
 | Google Gemini | `google-generativeai` | ✅ Functions | ✅ thinking models | `anthropic` |

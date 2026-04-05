@@ -31,7 +31,8 @@ import {
   Search,
   Download,
   X,
-  Tag
+  Tag,
+  Puzzle
 } from "lucide-react";
 import type { Playbook, Persona, Skill, MCPServer, Memory, ApiKey } from "@/lib/supabase/types";
 import { ChatGPTIcon, ClaudeIcon, MarkdownIcon } from "@/components/ui/ai-icons";
@@ -739,7 +740,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
     { id: "mcp" as TabType, label: t("editor.tabs.mcp"), icon: Server, count: mcpServers.length, color: "pink" },
     { id: "memory" as TabType, label: t("editor.tabs.memory"), icon: Database, count: memories.length, color: "teal" },
     { id: "secrets" as TabType, label: t("editor.tabs.secrets") || "Secrets", icon: Shield, count: 0, color: "emerald" },
-    { id: "apiKeys" as TabType, label: t("editor.tabs.apiKeys"), icon: Key, count: apiKeys.length, color: "amber" },
+    { id: "apiKeys" as TabType, label: t("editor.tabs.apiKeys"), icon: Puzzle, count: apiKeys.length, color: "amber" },
   ];
 
   if (loading) {
@@ -1156,33 +1157,448 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
             </motion.div>
           )}
 
-          {/* API Keys Tab - only visible to owner */}
-          {activeTab === "apiKeys" && isOwner && (
+          {/* Integrations Tab */}
+          {activeTab === "apiKeys" && (
             <motion.div
               key="apiKeys"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
+              className="max-w-3xl"
             >
-              <ApiKeyManager
-                playbook_id={id}
-                apiKeys={apiKeys}
-                onUpdate={setApiKeys}
-              />
-            </motion.div>
-          )}
+              <h2 className="text-xl font-semibold mb-6 flex items-center gap-2 text-neutral-900 dark:text-white">
+                <Puzzle className="h-5 w-5 text-amber-500 dark:text-amber-400" />
+                Integrations
+              </h2>
 
-          {/* API Keys Tab - not owner message */}
-          {activeTab === "apiKeys" && !isOwner && (
-            <motion.div
-              key="apiKeys-readonly"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="text-center py-16"
-            >
-              <Lock className="h-12 w-12 mx-auto text-neutral-400 dark:text-slate-600 mb-4" />
-              <p className="text-neutral-600 dark:text-slate-400">{t("editor.apiKeysPrivate") || "API Keys are only visible to the playbook owner"}</p>
+              <div className="space-y-6">
+                {/* Connect as MCP Server */}
+                <div className={cn(
+                  "p-5 rounded-xl",
+                  "bg-white dark:bg-gradient-to-br dark:from-slate-900/80 dark:to-slate-800/80",
+                  "border border-neutral-200 dark:border-slate-700/50"
+                )}>
+                  <h3 className="font-medium mb-2 flex items-center gap-2 text-neutral-900 dark:text-white">
+                    <Server className="h-4 w-4 text-pink-500 dark:text-pink-400" />
+                    Connect as MCP Server
+                  </h3>
+                  <p className="text-sm text-neutral-600 dark:text-slate-400 mb-4">
+                    Add this playbook as an MCP (Model Context Protocol) server in your IDE or AI client. Copy the JSON config below and paste it into your settings.
+                  </p>
+
+                  {playbook?.visibility === "public" ? (
+                    <div className="mb-3 px-3 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/30 rounded-lg">
+                      <p className="text-sm text-green-700 dark:text-green-400">
+                        <strong>Public playbook</strong> — no authentication required for read access. Add an API key for write-back (memory, canvas).
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="mb-3 px-3 py-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/30 rounded-lg">
+                      <p className="text-sm text-amber-700 dark:text-amber-400">
+                        <strong>Private playbook</strong> — an API key is required. Create one in the API Keys section below, then replace <code className="text-xs bg-amber-100 dark:bg-amber-900/40 px-1 rounded">YOUR_API_KEY</code> in the config.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Cursor IDE */}
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-neutral-700 dark:text-slate-300">Cursor IDE</span>
+                      <button
+                        onClick={() => copyToClipboard(
+                          JSON.stringify({
+                            mcpServers: {
+                              [`agentplaybooks-${playbook?.name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 30) || "playbook"}`]: {
+                                url: `${getBaseUrl()}/api/mcp/${playbook?.guid}`,
+                                ...(playbook?.visibility !== "public" ? { headers: { Authorization: "Bearer YOUR_API_KEY" } } : {}),
+                              }
+                            }
+                          }, null, 2),
+                          "mcp-cursor"
+                        )}
+                        className="text-xs text-amber-400 hover:text-amber-300 flex items-center gap-1"
+                      >
+                        {copied === "mcp-cursor" ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                        Copy
+                      </button>
+                    </div>
+                    <pre className="p-3 bg-neutral-100 dark:bg-slate-900/70 rounded-lg border border-neutral-200 dark:border-slate-700/50 text-xs font-mono text-neutral-800 dark:text-slate-300 overflow-x-auto">
+{JSON.stringify({
+  mcpServers: {
+    [`agentplaybooks-${playbook?.name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 30) || "playbook"}`]: {
+      url: `${getBaseUrl()}/api/mcp/${playbook?.guid}`,
+      ...(playbook?.visibility !== "public" ? { headers: { Authorization: "Bearer YOUR_API_KEY" } } : {}),
+    }
+  }
+}, null, 2)}
+                    </pre>
+                    <p className="text-xs text-neutral-500 dark:text-slate-500 mt-1">
+                      Add to <code className="bg-neutral-100 dark:bg-slate-800 px-1 rounded">.cursor/mcp.json</code> (project) or <code className="bg-neutral-100 dark:bg-slate-800 px-1 rounded">~/.cursor/mcp.json</code> (global)
+                    </p>
+                  </div>
+
+                  {/* Claude Desktop */}
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-neutral-700 dark:text-slate-300">Claude Desktop</span>
+                      <button
+                        onClick={() => copyToClipboard(
+                          JSON.stringify({
+                            mcpServers: {
+                              [`agentplaybooks-${playbook?.name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 30) || "playbook"}`]: {
+                                transport: "http",
+                                url: `${getBaseUrl()}/api/mcp/${playbook?.guid}`,
+                                ...(playbook?.visibility !== "public" ? { headers: { Authorization: "Bearer YOUR_API_KEY" } } : {}),
+                              }
+                            }
+                          }, null, 2),
+                          "mcp-claude"
+                        )}
+                        className="text-xs text-amber-400 hover:text-amber-300 flex items-center gap-1"
+                      >
+                        {copied === "mcp-claude" ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                        Copy
+                      </button>
+                    </div>
+                    <pre className="p-3 bg-neutral-100 dark:bg-slate-900/70 rounded-lg border border-neutral-200 dark:border-slate-700/50 text-xs font-mono text-neutral-800 dark:text-slate-300 overflow-x-auto">
+{JSON.stringify({
+  mcpServers: {
+    [`agentplaybooks-${playbook?.name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 30) || "playbook"}`]: {
+      transport: "http",
+      url: `${getBaseUrl()}/api/mcp/${playbook?.guid}`,
+      ...(playbook?.visibility !== "public" ? { headers: { Authorization: "Bearer YOUR_API_KEY" } } : {}),
+    }
+  }
+}, null, 2)}
+                    </pre>
+                    <p className="text-xs text-neutral-500 dark:text-slate-500 mt-1">
+                      Add to <code className="bg-neutral-100 dark:bg-slate-800 px-1 rounded">claude_desktop_config.json</code>
+                    </p>
+                  </div>
+
+                  {/* Claude Code */}
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-neutral-700 dark:text-slate-300">Claude Code (CLI)</span>
+                      <button
+                        onClick={() => copyToClipboard(
+                          `claude mcp add agentplaybooks-${playbook?.name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 30) || "playbook"} ${getBaseUrl()}/api/mcp/${playbook?.guid} --transport http`,
+                          "mcp-claude-code"
+                        )}
+                        className="text-xs text-amber-400 hover:text-amber-300 flex items-center gap-1"
+                      >
+                        {copied === "mcp-claude-code" ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                        Copy
+                      </button>
+                    </div>
+                    <pre className="p-3 bg-neutral-100 dark:bg-slate-900/70 rounded-lg border border-neutral-200 dark:border-slate-700/50 text-xs font-mono text-neutral-800 dark:text-slate-300 overflow-x-auto">
+{`claude mcp add agentplaybooks-${playbook?.name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 30) || "playbook"} ${getBaseUrl()}/api/mcp/${playbook?.guid} --transport http`}
+                    </pre>
+                  </div>
+
+                  {/* Test connection */}
+                  <div className="mb-2">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-neutral-700 dark:text-slate-300">Test connection</span>
+                      <button
+                        onClick={() => copyToClipboard(
+                          `curl -s ${getBaseUrl()}/api/mcp/${playbook?.guid} | head -c 200`,
+                          "mcp-test"
+                        )}
+                        className="text-xs text-amber-400 hover:text-amber-300 flex items-center gap-1"
+                      >
+                        {copied === "mcp-test" ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                        Copy
+                      </button>
+                    </div>
+                    <pre className="p-3 bg-neutral-100 dark:bg-slate-900/70 rounded-lg border border-neutral-200 dark:border-slate-700/50 text-xs font-mono text-neutral-800 dark:text-slate-300 overflow-x-auto">
+{`curl -s ${getBaseUrl()}/api/mcp/${playbook?.guid} | head -c 200`}
+                    </pre>
+                  </div>
+
+                  <div className="mt-4 pt-3 border-t border-neutral-200 dark:border-slate-700/50">
+                    <Link
+                      href="/docs/mcp-integration"
+                      target="_blank"
+                      className="inline-flex items-center gap-2 text-sm text-amber-500 dark:text-amber-400 hover:text-amber-400 dark:hover:text-amber-300 transition-colors"
+                    >
+                      <span>View full MCP integration guide</span>
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Use with AI Platforms */}
+                <div className={cn(
+                  "p-5 rounded-xl",
+                  "bg-white dark:bg-gradient-to-br dark:from-slate-900/80 dark:to-slate-800/80",
+                  "border border-neutral-200 dark:border-slate-700/50"
+                )}>
+                  <h3 className="font-medium mb-3 flex items-center gap-2 text-neutral-900 dark:text-white">
+                    <Zap className="h-4 w-4 text-amber-500 dark:text-amber-400" />
+                    Use with AI Platforms
+                  </h3>
+                  <p className="text-sm text-neutral-600 dark:text-slate-400 mb-4">
+                    Open in a chat UI or use the endpoints below to integrate this playbook.
+                  </p>
+
+                  <div className="mb-4 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={handleViewMarkdown}
+                      disabled={!playbook}
+                      className={cn(
+                        "inline-flex items-center gap-2 rounded-lg border border-neutral-300 dark:border-slate-700/50 bg-neutral-50 dark:bg-slate-900/70 text-neutral-700 dark:text-slate-200 transition-colors hover:bg-neutral-100 dark:hover:bg-slate-800/70",
+                        "disabled:opacity-60 disabled:cursor-not-allowed",
+                        "px-3 py-2 text-sm"
+                      )}
+                    >
+                      <MarkdownIcon className="h-4 w-4" />
+                      <span className="font-medium">View Markdown</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleOpenInClaude}
+                      disabled={!playbook}
+                      className={cn(
+                        "inline-flex items-center gap-2 rounded-lg border border-neutral-300 dark:border-slate-700/50 bg-neutral-50 dark:bg-slate-900/70 text-neutral-700 dark:text-slate-200 transition-colors hover:bg-neutral-100 dark:hover:bg-slate-800/70",
+                        "disabled:opacity-60 disabled:cursor-not-allowed",
+                        "px-3 py-2 text-sm"
+                      )}
+                    >
+                      <ClaudeIcon className="h-4 w-4" />
+                      <span className="font-medium">Open in Claude</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleOpenInChatGPT}
+                      disabled={!playbook}
+                      className={cn(
+                        "inline-flex items-center gap-2 rounded-lg border border-neutral-300 dark:border-slate-700/50 bg-neutral-50 dark:bg-slate-900/70 text-neutral-700 dark:text-slate-200 transition-colors hover:bg-neutral-100 dark:hover:bg-slate-800/70",
+                        "disabled:opacity-60 disabled:cursor-not-allowed",
+                        "px-3 py-2 text-sm"
+                      )}
+                    >
+                      <ChatGPTIcon className="h-4 w-4" />
+                      <span className="font-medium">Open in ChatGPT</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleExportZip}
+                      disabled={!playbook || exporting}
+                      className={cn(
+                        "inline-flex items-center gap-2 rounded-lg border border-neutral-300 dark:border-slate-700/50 bg-neutral-50 dark:bg-slate-900/70 text-neutral-700 dark:text-slate-200 transition-colors hover:bg-neutral-100 dark:hover:bg-slate-800/70",
+                        "disabled:opacity-60 disabled:cursor-not-allowed",
+                        "px-3 py-2 text-sm"
+                      )}
+                    >
+                      <Download className="h-4 w-4" />
+                      <span className="font-medium">
+                        {exporting ? "Preparing ZIP..." : "Download ZIP"}
+                      </span>
+                    </button>
+                  </div>
+
+                  <div className="mb-6 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(buildPromptForChatGPT(), "prompt-chatgpt")}
+                      disabled={!playbook}
+                      className={cn(
+                        "inline-flex items-center gap-2 rounded-lg border border-neutral-300 dark:border-slate-700/50 bg-neutral-50 dark:bg-slate-900/70 text-neutral-700 dark:text-slate-200 transition-colors hover:bg-neutral-100 dark:hover:bg-slate-800/70",
+                        "disabled:opacity-60 disabled:cursor-not-allowed",
+                        "px-3 py-2 text-sm"
+                      )}
+                    >
+                      {copied === "prompt-chatgpt" ? (
+                        <Check className="h-4 w-4 text-green-400" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                      <span className="font-medium">Copy prompt for ChatGPT</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(buildPromptForClaude(), "prompt-claude")}
+                      disabled={!playbook}
+                      className={cn(
+                        "inline-flex items-center gap-2 rounded-lg border border-neutral-300 dark:border-slate-700/50 bg-neutral-50 dark:bg-slate-900/70 text-neutral-700 dark:text-slate-200 transition-colors hover:bg-neutral-100 dark:hover:bg-slate-800/70",
+                        "disabled:opacity-60 disabled:cursor-not-allowed",
+                        "px-3 py-2 text-sm"
+                      )}
+                    >
+                      {copied === "prompt-claude" ? (
+                        <Check className="h-4 w-4 text-green-400" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                      <span className="font-medium">Copy prompt for Claude</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(buildPromptForGemini(), "prompt-gemini")}
+                      disabled={!playbook}
+                      className={cn(
+                        "inline-flex items-center gap-2 rounded-lg border border-neutral-300 dark:border-slate-700/50 bg-neutral-50 dark:bg-slate-900/70 text-neutral-700 dark:text-slate-200 transition-colors hover:bg-neutral-100 dark:hover:bg-slate-800/70",
+                        "disabled:opacity-60 disabled:cursor-not-allowed",
+                        "px-3 py-2 text-sm"
+                      )}
+                    >
+                      {copied === "prompt-gemini" ? (
+                        <Check className="h-4 w-4 text-green-400" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                      <span className="font-medium">Copy prompt for Gemini Gems</span>
+                    </button>
+                  </div>
+
+                  {/* API Endpoints */}
+                  <div className="space-y-2 mb-6">
+                    {[
+                      { method: "GET", path: `/api/playbooks/${playbook?.guid}`, desc: "JSON format" },
+                      { method: "GET", path: `/api/playbooks/${playbook?.guid}?format=openapi`, desc: "OpenAPI for GPT actions" },
+                      { method: "GET", path: `/api/playbooks/${playbook?.guid}?format=mcp`, desc: "MCP manifest (static export)" },
+                      { method: "GET", path: `/api/playbooks/${playbook?.guid}?format=markdown`, desc: "Markdown for Claude/Gemini/Grok" },
+                      { method: "GET", path: `/api/mcp/${playbook?.guid}`, desc: "MCP server (live endpoint)" },
+                    ].map(({ method, path, desc }) => (
+                      <div
+                        key={path}
+                        className="flex items-center gap-3 p-3 bg-neutral-50 dark:bg-slate-900/70 rounded-lg border border-neutral-200 dark:border-slate-700/50 group"
+                      >
+                        <span className={cn(
+                          "text-xs font-mono px-2.5 py-1 rounded",
+                          method === "GET" ? "bg-green-500/20 text-green-600 dark:text-green-400" : "bg-blue-500/20 text-blue-600 dark:text-blue-400"
+                        )}>
+                          {method}
+                        </span>
+                        <code className="flex-1 text-xs text-neutral-900 dark:text-slate-200 font-mono truncate">
+                          {path}
+                        </code>
+                        <span className="text-xs text-neutral-600 dark:text-slate-400 hidden sm:block">
+                          {desc}
+                        </span>
+                        <button
+                          onClick={() => copyToClipboard(`${getBaseUrl()}${path}`, path)}
+                          className="p-1.5 text-neutral-500 dark:text-slate-400 hover:text-neutral-900 dark:hover:text-white opacity-0 group-hover:opacity-100 transition-all"
+                        >
+                          {copied === path ? (
+                            <Check className="h-4 w-4 text-green-400" />
+                          ) : (
+                            <Copy className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Platform Cards */}
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+                    {[
+                      {
+                        name: "Cursor",
+                        icon: "🖥️",
+                        color: "from-sky-600/20 to-blue-600/20",
+                        borderColor: "border-sky-500/30",
+                        desc: "MCP Server Integration",
+                        anchor: "#cursor-ide"
+                      },
+                      {
+                        name: "ChatGPT",
+                        icon: "🤖",
+                        color: "from-emerald-600/20 to-teal-600/20",
+                        borderColor: "border-emerald-500/30",
+                        desc: "Custom GPTs with Actions",
+                        anchor: "#openai-chatgpt-custom-gpts"
+                      },
+                      {
+                        name: "Claude",
+                        icon: "🧠",
+                        color: "from-orange-600/20 to-amber-600/20",
+                        borderColor: "border-orange-500/30",
+                        desc: "Projects & Instructions",
+                        anchor: "#anthropic-claude-claude-ai"
+                      },
+                      {
+                        name: "Gemini",
+                        icon: "💎",
+                        color: "from-blue-600/20 to-cyan-600/20",
+                        borderColor: "border-blue-500/30",
+                        desc: "Gems Configuration",
+                        anchor: "#google-gemini"
+                      },
+                      {
+                        name: "Claude Code",
+                        icon: "💻",
+                        color: "from-violet-600/20 to-purple-600/20",
+                        borderColor: "border-violet-500/30",
+                        desc: "MCP Integration",
+                        anchor: "#claude-code-cli-agent"
+                      },
+                      {
+                        name: "Any API",
+                        icon: "🔌",
+                        color: "from-pink-600/20 to-rose-600/20",
+                        borderColor: "border-pink-500/30",
+                        desc: "Generic Integration",
+                        anchor: "#generic-integration-template"
+                      },
+                    ].map((platform) => (
+                      <Link
+                        key={platform.name}
+                        href={`/docs/platform-integrations${platform.anchor}`}
+                        target="_blank"
+                        className={cn(
+                          "p-3 rounded-lg border transition-all group",
+                          `bg-gradient-to-br ${platform.color}`,
+                          platform.borderColor,
+                          "hover:scale-[1.02] hover:shadow-lg"
+                        )}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-lg">{platform.icon}</span>
+                          <span className="font-medium text-sm text-neutral-900 dark:text-white">{platform.name}</span>
+                          <ExternalLink className="h-3 w-3 text-neutral-500 dark:text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity ml-auto" />
+                        </div>
+                        <p className="text-xs text-neutral-600 dark:text-slate-400">{platform.desc}</p>
+                      </Link>
+                    ))}
+                  </div>
+
+                  <div className="mt-4 pt-3 border-t border-neutral-200 dark:border-slate-700/50">
+                    <Link
+                      href="/docs/platform-integrations"
+                      target="_blank"
+                      className="inline-flex items-center gap-2 text-sm text-amber-500 dark:text-amber-400 hover:text-amber-400 dark:hover:text-amber-300 transition-colors"
+                    >
+                      <span>View complete integration guide</span>
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Authentication / API Keys */}
+                {isOwner && (
+                  <div className={cn(
+                    "p-5 rounded-xl",
+                    "bg-white dark:bg-gradient-to-br dark:from-slate-900/80 dark:to-slate-800/80",
+                    "border border-neutral-200 dark:border-slate-700/50"
+                  )}>
+                    <ApiKeyManager
+                      playbook_id={id}
+                      apiKeys={apiKeys}
+                      onUpdate={setApiKeys}
+                    />
+                  </div>
+                )}
+
+                {!isOwner && (
+                  <div className="text-center py-8">
+                    <Lock className="h-12 w-12 mx-auto text-neutral-400 dark:text-slate-600 mb-4" />
+                    <p className="text-neutral-600 dark:text-slate-400">{t("editor.apiKeysPrivate") || "API Keys are only visible to the playbook owner"}</p>
+                  </div>
+                )}
+              </div>
             </motion.div>
           )}
 
@@ -1461,255 +1877,6 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                     </div>
                   </div>
                 )}
-
-                {/* Use with AI Platforms (API Endpoints) */}
-                <div className={cn(
-                  "p-5 rounded-xl",
-                  "bg-white dark:bg-gradient-to-br dark:from-slate-900/80 dark:to-slate-800/80",
-                  "border border-neutral-200 dark:border-slate-700/50"
-                )}>
-                  <h3 className="font-medium mb-3 flex items-center gap-2 text-neutral-900 dark:text-white">
-                    <Zap className="h-4 w-4 text-amber-500 dark:text-amber-400" />
-                    Use with AI Platforms (API Endpoints)
-                  </h3>
-                  <p className="text-base text-neutral-600 dark:text-slate-400 mb-4">
-                    Open in a chat UI or use the endpoints below to integrate this playbook.
-                  </p>
-
-                  <div className="mb-4 flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={handleViewMarkdown}
-                      disabled={!playbook}
-                      className={cn(
-                        "inline-flex items-center gap-2 rounded-lg border border-slate-700/50 bg-slate-900/70 text-slate-200 transition-colors hover:bg-slate-800/70",
-                        "disabled:opacity-60 disabled:cursor-not-allowed",
-                        "px-3 py-2 text-base"
-                      )}
-                    >
-                      <MarkdownIcon className="h-4 w-4" />
-                      <span className="font-medium">View Markdown</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleOpenInClaude}
-                      disabled={!playbook}
-                      className={cn(
-                        "inline-flex items-center gap-2 rounded-lg border border-slate-700/50 bg-slate-900/70 text-slate-200 transition-colors hover:bg-slate-800/70",
-                        "disabled:opacity-60 disabled:cursor-not-allowed",
-                        "px-3 py-2 text-base"
-                      )}
-                    >
-                      <ClaudeIcon className="h-4 w-4" />
-                      <span className="font-medium">Open in Claude</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleOpenInChatGPT}
-                      disabled={!playbook}
-                      className={cn(
-                        "inline-flex items-center gap-2 rounded-lg border border-slate-700/50 bg-slate-900/70 text-slate-200 transition-colors hover:bg-slate-800/70",
-                        "disabled:opacity-60 disabled:cursor-not-allowed",
-                        "px-3 py-2 text-base"
-                      )}
-                    >
-                      <ChatGPTIcon className="h-4 w-4" />
-                      <span className="font-medium">Open in ChatGPT</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleExportZip}
-                      disabled={!playbook || exporting}
-                      className={cn(
-                        "inline-flex items-center gap-2 rounded-lg border border-slate-700/50 bg-slate-900/70 text-slate-200 transition-colors hover:bg-slate-800/70",
-                        "disabled:opacity-60 disabled:cursor-not-allowed",
-                        "px-3 py-2 text-base"
-                      )}
-                    >
-                      <Download className="h-4 w-4" />
-                      <span className="font-medium">
-                        {exporting ? "Preparing ZIP..." : "Download ZIP"}
-                      </span>
-                    </button>
-                  </div>
-
-                  <div className="mb-6 flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => copyToClipboard(buildPromptForChatGPT(), "prompt-chatgpt")}
-                      disabled={!playbook}
-                      className={cn(
-                        "inline-flex items-center gap-2 rounded-lg border border-slate-700/50 bg-slate-900/70 text-slate-200 transition-colors hover:bg-slate-800/70",
-                        "disabled:opacity-60 disabled:cursor-not-allowed",
-                        "px-3 py-2 text-base"
-                      )}
-                    >
-                      {copied === "prompt-chatgpt" ? (
-                        <Check className="h-4 w-4 text-green-400" />
-                      ) : (
-                        <Copy className="h-4 w-4" />
-                      )}
-                      <span className="font-medium">Copy prompt for ChatGPT</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => copyToClipboard(buildPromptForClaude(), "prompt-claude")}
-                      disabled={!playbook}
-                      className={cn(
-                        "inline-flex items-center gap-2 rounded-lg border border-slate-700/50 bg-slate-900/70 text-slate-200 transition-colors hover:bg-slate-800/70",
-                        "disabled:opacity-60 disabled:cursor-not-allowed",
-                        "px-3 py-2 text-base"
-                      )}
-                    >
-                      {copied === "prompt-claude" ? (
-                        <Check className="h-4 w-4 text-green-400" />
-                      ) : (
-                        <Copy className="h-4 w-4" />
-                      )}
-                      <span className="font-medium">Copy prompt for Claude</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => copyToClipboard(buildPromptForGemini(), "prompt-gemini")}
-                      disabled={!playbook}
-                      className={cn(
-                        "inline-flex items-center gap-2 rounded-lg border border-slate-700/50 bg-slate-900/70 text-slate-200 transition-colors hover:bg-slate-800/70",
-                        "disabled:opacity-60 disabled:cursor-not-allowed",
-                        "px-3 py-2 text-base"
-                      )}
-                    >
-                      {copied === "prompt-gemini" ? (
-                        <Check className="h-4 w-4 text-green-400" />
-                      ) : (
-                        <Copy className="h-4 w-4" />
-                      )}
-                      <span className="font-medium">Copy prompt for Gemini Gems</span>
-                    </button>
-                  </div>
-
-                  <div className="space-y-2 mb-6">
-                    {[
-                      { method: "GET", path: `/api/playbooks/${playbook.guid}`, desc: "JSON format" },
-                      { method: "GET", path: `/api/playbooks/${playbook.guid}?format=openapi`, desc: "OpenAPI for GPT actions" },
-                      { method: "GET", path: `/api/playbooks/${playbook.guid}?format=mcp`, desc: "MCP manifest (static export)" },
-                      { method: "GET", path: `/api/playbooks/${playbook.guid}?format=markdown`, desc: "Markdown for Claude/Gemini/Grok" },
-                      { method: "GET", path: `/api/mcp/${playbook.guid}`, desc: "MCP server (live endpoint)" },
-                    ].map(({ method, path, desc }) => (
-                      <div
-                        key={path}
-                        className="flex items-center gap-3 p-3 bg-neutral-50 dark:bg-slate-900/70 rounded-lg border border-neutral-200 dark:border-slate-700/50 group"
-                      >
-                        <span className={cn(
-                          "text-base font-mono px-2.5 py-1 rounded",
-                          method === "GET" ? "bg-green-500/20 text-green-400" : "bg-blue-500/20 text-blue-400"
-                        )}>
-                          {method}
-                        </span>
-                        <code className="flex-1 text-base text-neutral-900 dark:text-slate-200 font-mono truncate">
-                          {path}
-                        </code>
-                        <span className="text-base text-neutral-600 dark:text-slate-400 hidden sm:block">
-                          {desc}
-                        </span>
-                        <button
-                          onClick={() => copyToClipboard(`${getBaseUrl()}${path}`, path)}
-                          className="p-1.5 text-neutral-500 dark:text-slate-400 hover:text-neutral-900 dark:hover:text-white opacity-0 group-hover:opacity-100 transition-all"
-                        >
-                          {copied === path ? (
-                            <Check className="h-4 w-4 text-green-400" />
-                          ) : (
-                            <Copy className="h-4 w-4" />
-                          )}
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
-                    {[
-                      {
-                        name: "ChatGPT",
-                        icon: "🤖",
-                        color: "from-emerald-600/20 to-teal-600/20",
-                        borderColor: "border-emerald-500/30",
-                        desc: "Custom GPTs with Actions",
-                        anchor: "#openai-chatgpt-custom-gpts"
-                      },
-                      {
-                        name: "Claude",
-                        icon: "🧠",
-                        color: "from-orange-600/20 to-amber-600/20",
-                        borderColor: "border-orange-500/30",
-                        desc: "Projects & Instructions",
-                        anchor: "#anthropic-claude-claude-ai"
-                      },
-                      {
-                        name: "Gemini",
-                        icon: "💎",
-                        color: "from-blue-600/20 to-cyan-600/20",
-                        borderColor: "border-blue-500/30",
-                        desc: "Gems Configuration",
-                        anchor: "#google-gemini"
-                      },
-                      {
-                        name: "Grok",
-                        icon: "⚡",
-                        color: "from-slate-600/20 to-zinc-600/20",
-                        borderColor: "border-slate-500/30",
-                        desc: "Projects & System Prompts",
-                        anchor: "#xai-grok"
-                      },
-                      {
-                        name: "Claude Code",
-                        icon: "💻",
-                        color: "from-violet-600/20 to-purple-600/20",
-                        borderColor: "border-violet-500/30",
-                        desc: "MCP Integration",
-                        anchor: "#claude-code-cli-agent"
-                      },
-                      {
-                        name: "Any API",
-                        icon: "🔌",
-                        color: "from-pink-600/20 to-rose-600/20",
-                        borderColor: "border-pink-500/30",
-                        desc: "Generic Integration",
-                        anchor: "#generic-integration-template"
-                      },
-                    ].map((platform) => (
-                      <Link
-                        key={platform.name}
-                        href={`/docs/platform-integrations${platform.anchor}`}
-                        target="_blank"
-                        className={cn(
-                          "p-3 rounded-lg border transition-all group",
-                          `bg-gradient-to-br ${platform.color}`,
-                          platform.borderColor,
-                          "hover:scale-[1.02] hover:shadow-lg"
-                        )}
-                      >
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-lg">{platform.icon}</span>
-                          <span className="font-medium text-base text-neutral-900 dark:text-white">{platform.name}</span>
-                          <ExternalLink className="h-3 w-3 text-neutral-500 dark:text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity ml-auto" />
-                        </div>
-                        <p className="text-base text-neutral-600 dark:text-slate-400">{platform.desc}</p>
-                      </Link>
-                    ))}
-                  </div>
-
-                  {/* Full docs link */}
-                  <div className="mt-4 pt-3 border-t border-slate-700/50">
-                    <Link
-                      href="/docs/platform-integrations"
-                      target="_blank"
-                      className="inline-flex items-center gap-2 text-base text-amber-400 hover:text-amber-300 transition-colors"
-                    >
-                      <span>📖</span>
-                      <span>View complete integration guide</span>
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </Link>
-                  </div>
-                </div>
 
                 {/* Danger Zone */}
                 <div className={cn(

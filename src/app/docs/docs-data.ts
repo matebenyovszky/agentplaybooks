@@ -57,6 +57,12 @@ export const docsEntries: DocEntry[] = [
     section: "reference",
   },
   {
+    slug: "management-api",
+    title: "Management API",
+    description: "Programmatic playbook management via REST & MCP",
+    section: "reference",
+  },
+  {
     slug: "developer-guide",
     title: "Developer Guide",
     description: "Contributing and development",

@@ -20,22 +20,42 @@ https://agentplaybooks.ai/api/mcp/YOUR_GUID
 
 ### 2. Configure Your MCP Client
 
-#### Claude Desktop
+#### Cursor IDE
 
-Add to your `claude_desktop_config.json`:
+Add to your project's `.cursor/mcp.json` or global `~/.cursor/mcp.json`:
 
 ```json
 {
   "mcpServers": {
     "my-playbook": {
-      "command": "curl",
-      "args": ["-s", "https://agentplaybooks.ai/api/mcp/YOUR_GUID"]
+      "url": "https://agentplaybooks.ai/api/mcp/YOUR_GUID"
     }
   }
 }
 ```
 
-Or use an MCP HTTP transport:
+For **private playbooks**, include your API key in the headers:
+
+```json
+{
+  "mcpServers": {
+    "my-playbook": {
+      "url": "https://agentplaybooks.ai/api/mcp/YOUR_GUID",
+      "headers": {
+        "Authorization": "Bearer YOUR_API_KEY"
+      }
+    }
+  }
+}
+```
+
+After saving, restart Cursor or reload the window. Your playbook's tools and resources will appear in the MCP tools panel.
+
+> **Tip:** You can find the ready-to-copy config in the **Integrations** tab of your playbook's dashboard.
+
+#### Claude Desktop
+
+Add to your `claude_desktop_config.json`:
 
 ```json
 {
@@ -46,6 +66,34 @@ Or use an MCP HTTP transport:
     }
   }
 }
+```
+
+For **private playbooks**, add authentication:
+
+```json
+{
+  "mcpServers": {
+    "my-playbook": {
+      "transport": "http",
+      "url": "https://agentplaybooks.ai/api/mcp/YOUR_GUID",
+      "headers": {
+        "Authorization": "Bearer YOUR_API_KEY"
+      }
+    }
+  }
+}
+```
+
+#### Claude Code (CLI)
+
+```bash
+claude mcp add my-playbook https://agentplaybooks.ai/api/mcp/YOUR_GUID --transport http
+```
+
+Verify the connection:
+
+```bash
+claude mcp list
 ```
 
 #### Custom MCP Client
@@ -324,6 +372,31 @@ The agent receives only the API response — the secret value stays on the serve
 }
 ```
 
+## Authentication
+
+**Public playbooks** require no authentication for read access. Anyone can connect to the MCP endpoint and use the playbook's tools and resources.
+
+**Private playbooks** require a Playbook API Key. Generate one from the **Integrations** tab in your playbook's dashboard.
+
+Include the key in the `Authorization` header:
+
+```
+Authorization: Bearer apb_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+**Write-back operations** (writing memory, canvas, etc.) always require an API key, even for public playbooks. The key must have the appropriate permissions (e.g. `memory:write`).
+
+| Access Level | Public Playbook | Private Playbook |
+|---|---|---|
+| Read tools/resources | No auth needed | API key required |
+| Write memory/canvas | API key required | API key required |
+| Manage playbook | User API key | User API key |
+
+API keys come in three roles:
+- **Viewer** — Read-only access
+- **Coworker** — Read and write access
+- **Admin** — Full access to modify playbook structure
+
 ## Best Practices
 
 1. **Keep tools focused** - Each tool should do one thing well
@@ -333,7 +406,38 @@ The agent receives only the API response — the secret value stays on the serve
 5. **Start with the guide resource** - Read `playbook://GUID/guide` before complex tasks
 6. **Fetch minimally** - Read targeted resources/keys first, not full dumps by default
 7. **Close the loop** - Save discovered constraints/workarounds to memory or canvas
-8. **Test with Claude Desktop** - Verify your MCP configuration works before deploying
+8. **Test with Claude Desktop or Cursor** - Verify your MCP configuration works before deploying
+
+## Troubleshooting
+
+### Connection Issues
+
+**"Playbook not found" (404)**
+- Ensure the playbook is set to **Public**, or include a valid API key for private playbooks
+- Verify the GUID in the URL is correct (check the Integrations tab)
+
+**Authentication failures (401/403)**
+- Verify your API key starts with `apb_live_`
+- Ensure the key has not been revoked
+- Check the `Authorization: Bearer` header format
+
+### Cursor-Specific Issues
+
+**MCP server not appearing**
+- Ensure the JSON in `.cursor/mcp.json` is valid (no trailing commas)
+- Restart Cursor after saving configuration changes
+- Check Cursor's MCP logs for connection errors
+
+**Tools not loading**
+- Verify the playbook has skills defined (skills become MCP tools)
+- Test the endpoint directly: `curl -s https://agentplaybooks.ai/api/mcp/YOUR_GUID | head -c 200`
+
+### Claude Desktop Issues
+
+**Server not connecting**
+- Ensure `transport: "http"` is set in the config
+- Restart Claude Desktop after configuration changes
+- Check that the endpoint URL is reachable from your network
 
 ---
 
