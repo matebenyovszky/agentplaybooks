@@ -13,7 +13,8 @@ import {
   Shield,
   Clock,
   AlertTriangle,
-  X
+  X,
+  RotateCw
 } from "lucide-react";
 import type { ApiKey } from "@/lib/supabase/types";
 
@@ -41,6 +42,7 @@ export function ApiKeyManager({ playbook_id, apiKeys, onUpdate }: ApiKeyManagerP
   const [newApiKey, setNewApiKey] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [rotatingKeyId, setRotatingKeyId] = useState<string | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   // Create form state
@@ -96,6 +98,35 @@ export function ApiKeyManager({ playbook_id, apiKeys, onUpdate }: ApiKeyManagerP
 
     if (response.ok) {
       onUpdate(apiKeys.filter(k => k.id !== keyId));
+    }
+  };
+
+  const handleRotateKey = async (keyId: string) => {
+    if (!confirm("Rotate this API key? The current key will stop working immediately and you'll get a new key. Make sure to update your clients.")) return;
+
+    setRotatingKeyId(keyId);
+    try {
+      const response = await authFetch(`/api/playbooks/${playbook_id}/api-keys/${keyId}/rotate`, {
+        method: "PUT",
+      });
+
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(typeof data?.error === "string" ? data.error : "Failed to rotate API key");
+      }
+
+      const rotatedKey = data as ApiKey & { key: string };
+      const plainKey = rotatedKey.key;
+      setNewApiKey(plainKey);
+
+      // Update the list with the new rotated key data
+      onUpdate(apiKeys.map(k => k.id === keyId ? { ...k, key_prefix: rotatedKey.key_prefix, rotated_at: rotatedKey.rotated_at } : k));
+    } catch (e) {
+      console.error("Rotate key error:", e);
+      alert("Failed to rotate key: " + (e instanceof Error ? e.message : "Unknown error"));
+    } finally {
+      setRotatingKeyId(null);
     }
   };
 
@@ -286,6 +317,25 @@ export function ApiKeyManager({ playbook_id, apiKeys, onUpdate }: ApiKeyManagerP
                         Last used {new Date(apiKey.last_used_at).toLocaleDateString()}
                       </span>
                     )}
+                    {apiKey.rotated_at && (
+                      <span className="flex items-center gap-1 text-xs text-slate-500">
+                        <RotateCw className="h-3 w-3" />
+                        Rotated {new Date(apiKey.rotated_at).toLocaleDateString()}
+                      </span>
+                    )}
+                    <button
+                      onClick={() => handleRotateKey(apiKey.id)}
+                      disabled={rotatingKeyId === apiKey.id}
+                      className={cn(
+                        "px-3 py-1.5 rounded-lg text-sm flex items-center gap-1.5",
+                        "text-amber-400 hover:text-amber-300",
+                        "hover:bg-amber-500/10 transition-colors",
+                        "disabled:opacity-50 disabled:cursor-not-allowed"
+                      )}
+                    >
+                      <RotateCw className={cn("h-4 w-4", rotatingKeyId === apiKey.id && "animate-spin")} />
+                      {rotatingKeyId === apiKey.id ? "Rotating..." : "Rotate"}
+                    </button>
                     <button
                       onClick={() => handleRevokeKey(apiKey.id)}
                       className={cn(

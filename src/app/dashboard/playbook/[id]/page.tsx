@@ -1175,10 +1175,120 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
             >
               <h2 className="text-xl font-semibold mb-6 flex items-center gap-2 text-neutral-900 dark:text-white">
                 <Puzzle className="h-5 w-5 text-amber-500 dark:text-amber-400" />
-                Integrations
+                {t("editor.tabs.apiKeys")}
               </h2>
 
               <div className="space-y-6">
+                {/* Visibility - first block */}
+                {isOwner ? (
+                  <div className={cn(
+                    "p-5 rounded-xl",
+                    "bg-white dark:bg-gradient-to-br dark:from-slate-900/80 dark:to-slate-800/80",
+                    "border border-neutral-200 dark:border-slate-700/50"
+                  )}>
+                    <label className="block text-sm font-medium text-neutral-600 dark:text-slate-400 mb-4">
+                      Visibility
+                    </label>
+                    <div className="flex gap-4">
+                      <button
+                        onClick={() => updatePlaybook({ visibility: 'private' })}
+                        className={cn(
+                          "flex-1 p-4 rounded-xl border flex items-center gap-3 transition-all",
+                          playbook.visibility === 'private'
+                            ? "border-blue-500/50 bg-blue-500/10"
+                            : "border-neutral-300 dark:border-slate-700/50 bg-white dark:bg-slate-900/50 hover:border-neutral-400 dark:hover:border-slate-600"
+                        )}
+                      >
+                        <Lock className="h-5 w-5" />
+                        <div className="text-left">
+                          <p className="font-medium text-neutral-900 dark:text-white">Private</p>
+                          <p className="text-sm text-neutral-600 dark:text-slate-400">Only you can access</p>
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => updatePlaybook({ visibility: 'public' })}
+                        className={cn(
+                          "flex-1 p-4 rounded-xl border flex items-center gap-3 transition-all",
+                          playbook.visibility === 'public'
+                            ? "border-green-500/50 bg-green-500/10"
+                            : "border-neutral-300 dark:border-slate-700/50 bg-white dark:bg-slate-900/50 hover:border-neutral-400 dark:hover:border-slate-600"
+                        )}
+                      >
+                        <Globe className="h-5 w-5" />
+                        <div className="text-left">
+                          <p className="font-medium text-neutral-900 dark:text-white">Public</p>
+                          <p className="text-sm text-neutral-600 dark:text-slate-400">Anyone with the link</p>
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => updatePlaybook({ visibility: 'unlisted' })}
+                        className={cn(
+                          "flex-1 p-4 rounded-xl border flex items-center gap-3 transition-all",
+                          playbook.visibility === 'unlisted'
+                            ? "border-amber-500/50 bg-amber-500/10"
+                            : "border-neutral-300 dark:border-slate-700/50 bg-white dark:bg-slate-900/50 hover:border-neutral-400 dark:hover:border-slate-600"
+                        )}
+                      >
+                        <Eye className="h-5 w-5" />
+                        <div className="text-left">
+                          <p className="font-medium text-neutral-900 dark:text-white">Unlisted</p>
+                          <p className="text-sm text-neutral-600 dark:text-slate-400">Anyone with the link (not searchable)</p>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className={cn(
+                    "p-5 rounded-xl",
+                    "bg-white dark:bg-gradient-to-br dark:from-slate-900/80 dark:to-slate-800/80",
+                    "border border-neutral-200 dark:border-slate-700/50"
+                  )}>
+                    <label className="block text-sm font-medium text-neutral-600 dark:text-slate-400 mb-4">
+                      Visibility
+                    </label>
+                    <div className={cn(
+                      "p-4 rounded-xl border flex items-center gap-3",
+                      playbook.visibility === 'public'
+                        ? "border-green-500/50 bg-green-500/10"
+                        : playbook.visibility === 'unlisted'
+                          ? "border-amber-500/50 bg-amber-500/10"
+                          : "border-blue-500/50 bg-blue-500/10"
+                    )}>
+                      {playbook.visibility === 'public' ? <Globe className="h-5 w-5" /> : playbook.visibility === 'unlisted' ? <Eye className="h-5 w-5" /> : <Lock className="h-5 w-5" />}
+                      <div className="text-left">
+                        <p className="font-medium text-neutral-900 dark:text-white">
+                          {playbook.visibility === 'public' ? "Public" : playbook.visibility === 'unlisted' ? "Unlisted" : "Private"}
+                        </p>
+                        <p className="text-sm text-neutral-600 dark:text-slate-400">
+                          {playbook.visibility === 'public' ? "Anyone with the link can view" : playbook.visibility === 'unlisted' ? "Anyone with the link can view (not searchable)" : "Only the owner can access"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* API Keys - second block */}
+                {isOwner && (
+                  <div className={cn(
+                    "p-5 rounded-xl",
+                    "bg-white dark:bg-gradient-to-br dark:from-slate-900/80 dark:to-slate-800/80",
+                    "border border-neutral-200 dark:border-slate-700/50"
+                  )}>
+                    <ApiKeyManager
+                      playbook_id={id}
+                      apiKeys={apiKeys}
+                      onUpdate={setApiKeys}
+                    />
+                  </div>
+                )}
+
+                {!isOwner && (
+                  <div className="text-center py-8">
+                    <Lock className="h-12 w-12 mx-auto text-neutral-400 dark:text-slate-600 mb-4" />
+                    <p className="text-neutral-600 dark:text-slate-400">{t("editor.apiKeysPrivate") || "API Keys are only visible to the playbook owner"}</p>
+                  </div>
+                )}
+
                 {/* Connect as MCP Server */}
                 <div className={cn(
                   "p-5 rounded-xl",
@@ -1591,28 +1701,6 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                     </Link>
                   </div>
                 </div>
-
-                {/* Authentication / API Keys */}
-                {isOwner && (
-                  <div className={cn(
-                    "p-5 rounded-xl",
-                    "bg-white dark:bg-gradient-to-br dark:from-slate-900/80 dark:to-slate-800/80",
-                    "border border-neutral-200 dark:border-slate-700/50"
-                  )}>
-                    <ApiKeyManager
-                      playbook_id={id}
-                      apiKeys={apiKeys}
-                      onUpdate={setApiKeys}
-                    />
-                  </div>
-                )}
-
-                {!isOwner && (
-                  <div className="text-center py-8">
-                    <Lock className="h-12 w-12 mx-auto text-neutral-400 dark:text-slate-600 mb-4" />
-                    <p className="text-neutral-600 dark:text-slate-400">{t("editor.apiKeysPrivate") || "API Keys are only visible to the playbook owner"}</p>
-                  </div>
-                )}
               </div>
             </motion.div>
           )}
@@ -1803,94 +1891,6 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                     </>
                   )}
                 </div>
-
-                {/* Visibility - only changeable by owner */}
-                {isOwner ? (
-                  <div className={cn(
-                    "p-5 rounded-xl",
-                    "bg-white dark:bg-gradient-to-br dark:from-slate-900/80 dark:to-slate-800/80",
-                    "border border-neutral-200 dark:border-slate-700/50"
-                  )}>
-                    <label className="block text-sm font-medium text-neutral-600 dark:text-slate-400 mb-4">
-                      Visibility
-                    </label>
-                    <div className="flex gap-4">
-                      <button
-                        onClick={() => updatePlaybook({ visibility: 'private' })}
-                        className={cn(
-                          "flex-1 p-4 rounded-xl border flex items-center gap-3 transition-all",
-                          playbook.visibility === 'private'
-                            ? "border-blue-500/50 bg-blue-500/10"
-                            : "border-neutral-300 dark:border-slate-700/50 bg-white dark:bg-slate-900/50 hover:border-neutral-400 dark:hover:border-slate-600"
-                        )}
-                      >
-                        <Lock className="h-5 w-5" />
-                        <div className="text-left">
-                          <p className="font-medium text-neutral-900 dark:text-white">Private</p>
-                          <p className="text-sm text-neutral-600 dark:text-slate-400">Only you can access</p>
-                        </div>
-                      </button>
-                      <button
-                        onClick={() => updatePlaybook({ visibility: 'public' })}
-                        className={cn(
-                          "flex-1 p-4 rounded-xl border flex items-center gap-3 transition-all",
-                          playbook.visibility === 'public'
-                            ? "border-green-500/50 bg-green-500/10"
-                            : "border-neutral-300 dark:border-slate-700/50 bg-white dark:bg-slate-900/50 hover:border-neutral-400 dark:hover:border-slate-600"
-                        )}
-                      >
-                        <Globe className="h-5 w-5" />
-                        <div className="text-left">
-                          <p className="font-medium text-neutral-900 dark:text-white">Public</p>
-                          <p className="text-sm text-neutral-600 dark:text-slate-400">Anyone with the link</p>
-                        </div>
-                      </button>
-                      <button
-                        onClick={() => updatePlaybook({ visibility: 'unlisted' })}
-                        className={cn(
-                          "flex-1 p-4 rounded-xl border flex items-center gap-3 transition-all",
-                          playbook.visibility === 'unlisted'
-                            ? "border-amber-500/50 bg-amber-500/10"
-                            : "border-neutral-300 dark:border-slate-700/50 bg-white dark:bg-slate-900/50 hover:border-neutral-400 dark:hover:border-slate-600"
-                        )}
-                      >
-                        <Eye className="h-5 w-5" />
-                        <div className="text-left">
-                          <p className="font-medium text-neutral-900 dark:text-white">Unlisted</p>
-                          <p className="text-sm text-neutral-600 dark:text-slate-400">Anyone with the link (not searchable)</p>
-                        </div>
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className={cn(
-                    "p-5 rounded-xl",
-                    "bg-white dark:bg-gradient-to-br dark:from-slate-900/80 dark:to-slate-800/80",
-                    "border border-neutral-200 dark:border-slate-700/50"
-                  )}>
-                    <label className="block text-sm font-medium text-neutral-600 dark:text-slate-400 mb-4">
-                      Visibility
-                    </label>
-                    <div className={cn(
-                      "p-4 rounded-xl border flex items-center gap-3",
-                      playbook.visibility === 'public'
-                        ? "border-green-500/50 bg-green-500/10"
-                        : playbook.visibility === 'unlisted'
-                          ? "border-amber-500/50 bg-amber-500/10"
-                          : "border-blue-500/50 bg-blue-500/10"
-                    )}>
-                      {playbook.visibility === 'public' ? <Globe className="h-5 w-5" /> : playbook.visibility === 'unlisted' ? <Eye className="h-5 w-5" /> : <Lock className="h-5 w-5" />}
-                      <div className="text-left">
-                        <p className="font-medium text-neutral-900 dark:text-white">
-                          {playbook.visibility === 'public' ? "Public" : playbook.visibility === 'unlisted' ? "Unlisted" : "Private"}
-                        </p>
-                        <p className="text-sm text-neutral-600 dark:text-slate-400">
-                          {playbook.visibility === 'public' ? "Anyone with the link can view" : playbook.visibility === 'unlisted' ? "Anyone with the link can view (not searchable)" : "Only the owner can access"}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
 
                 {/* Danger Zone */}
                 <div className={cn(

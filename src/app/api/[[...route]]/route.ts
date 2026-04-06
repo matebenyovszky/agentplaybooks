@@ -621,7 +621,7 @@ app.get("/playbooks/:id/api-keys", async (c) => {
 
   const { data, error } = await supabase
     .from("api_keys")
-    .select("id, key_prefix, name, permissions, last_used_at, expires_at, is_active, created_at")
+    .select("id, key_prefix, name, role, permissions, last_used_at, expires_at, rotated_at, is_active, created_at")
     .eq("playbook_id", playbookId)
     .order("created_at", { ascending: false });
 
@@ -708,6 +708,62 @@ app.delete("/playbooks/:id/api-keys/:kid", async (c) => {
   }
 
   return c.json({ success: true });
+});
+
+// PUT /api/playbooks/:id/api-keys/:kid/rotate - Regenerate API key (returns new plain key)
+app.put("/playbooks/:id/api-keys/:kid/rotate", async (c) => {
+  const user = await requireAuth(c);
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const playbookId = c.req.param("id");
+  const keyId = c.req.param("kid");
+
+  if (!(await checkPlaybookOwnership(user.id, playbookId))) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+
+  const supabase = getServiceSupabase();
+
+  // Fetch existing key to preserve name, role, permissions
+  const { data: existingKey, error: fetchError } = await supabase
+    .from("api_keys")
+    .select("id, name, role, permissions, expires_at")
+    .eq("id", keyId)
+    .eq("playbook_id", playbookId)
+    .single();
+
+  if (fetchError || !existingKey) {
+    return c.json({ error: "API key not found" }, 404);
+  }
+
+  // Generate new API key
+  const plainKey = generateApiKey();
+  const keyHash = await hashApiKey(plainKey);
+  const keyPrefix = getKeyPrefix(plainKey);
+
+  const { data, error } = await supabase
+    .from("api_keys")
+    .update({
+      key_hash: keyHash,
+      key_prefix: keyPrefix,
+      rotated_at: new Date().toISOString(),
+    })
+    .eq("id", keyId)
+    .eq("playbook_id", playbookId)
+    .select("id, key_prefix, name, role, permissions, expires_at, rotated_at, is_active, created_at")
+    .single();
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json({
+    ...data,
+    key: plainKey,
+    warning: "Save this key now! It will not be shown again.",
+  });
 });
 
 // ============================================

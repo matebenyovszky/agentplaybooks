@@ -163,6 +163,7 @@ export type ApiKeysRow = {
   permissions: string[];
   last_used_at: string | null;
   expires_at: string | null;
+  rotated_at: string | null;
   is_active: boolean;
   created_at: string;
 };
