@@ -485,12 +485,20 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
     setTimeout(() => setCopied(null), 2000);
   }, []);
 
-  // Get base URL for API endpoints
+  // Get base URL for API endpoints (browser = dynamic, server = apbks.com)
   const getBaseUrl = useCallback(() => {
     if (typeof window !== "undefined") {
       return window.location.origin;
     }
-    return "https://agentplaybooks.ai";
+    return "https://apbks.com";
+  }, []);
+
+  // Always use apbks.com for API endpoints in JSON configs (consistent cross-user reference)
+  const getApiBaseUrl = useCallback(() => {
+    if (typeof window !== "undefined") {
+      return window.location.origin;
+    }
+    return "https://apbks.com";
   }, []);
 
   const markdownPath = playbook ? `/api/playbooks/${playbook.guid}?format=markdown` : "";
@@ -1195,7 +1203,12 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                   ) : (
                     <div className="mb-3 px-3 py-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/30 rounded-lg">
                       <p className="text-sm text-amber-700 dark:text-amber-400">
-                        <strong>Private playbook</strong> — an API key is required. Create one in the API Keys section below, then replace <code className="text-xs bg-amber-100 dark:bg-amber-900/40 px-1 rounded">YOUR_API_KEY</code> in the config.
+                        <strong>Private playbook</strong> — an API key is required. After copying the config, replace <code className="text-xs bg-amber-100 dark:bg-amber-900/40 px-1 rounded">YOUR_API_KEY</code> with your full key.
+                        {apiKeys.length > 0 ? (
+                          <> You have a key: <code className="text-xs bg-amber-100 dark:bg-amber-900/40 px-1 rounded">{apiKeys[0].key_prefix}</code>... (full key shown only at creation). Need the full key? Create a new one below — the old one will still work.</>
+                        ) : (
+                          <> <button onClick={() => setActiveTab("apiKeys")} className="underline hover:no-underline font-medium">Create an API key</button> in the section below, then come back and copy the updated config.</>
+                        )}
                       </p>
                     </div>
                   )}
@@ -1208,8 +1221,8 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                         onClick={() => copyToClipboard(
                           JSON.stringify({
                             mcpServers: {
-                              [`agentplaybooks-${playbook?.name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 30) || "playbook"}`]: {
-                                url: `${getBaseUrl()}/api/mcp/${playbook?.guid}`,
+                              [`apb-${playbook?.name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 30) || "playbook"}`]: {
+                                url: `${getApiBaseUrl()}/api/mcp/${playbook?.guid}`,
                                 ...(playbook?.visibility !== "public" ? { headers: { Authorization: "Bearer YOUR_API_KEY" } } : {}),
                               }
                             }
@@ -1225,8 +1238,8 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                     <pre className="p-3 bg-neutral-100 dark:bg-slate-900/70 rounded-lg border border-neutral-200 dark:border-slate-700/50 text-xs font-mono text-neutral-800 dark:text-slate-300 overflow-x-auto">
 {JSON.stringify({
   mcpServers: {
-    [`agentplaybooks-${playbook?.name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 30) || "playbook"}`]: {
-      url: `${getBaseUrl()}/api/mcp/${playbook?.guid}`,
+    [`apb-${playbook?.name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 30) || "playbook"}`]: {
+      url: `${getApiBaseUrl()}/api/mcp/${playbook?.guid}`,
       ...(playbook?.visibility !== "public" ? { headers: { Authorization: "Bearer YOUR_API_KEY" } } : {}),
     }
   }
@@ -1245,9 +1258,9 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                         onClick={() => copyToClipboard(
                           JSON.stringify({
                             mcpServers: {
-                              [`agentplaybooks-${playbook?.name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 30) || "playbook"}`]: {
+                              [`apb-${playbook?.name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 30) || "playbook"}`]: {
                                 transport: "http",
-                                url: `${getBaseUrl()}/api/mcp/${playbook?.guid}`,
+                                url: `${getApiBaseUrl()}/api/mcp/${playbook?.guid}`,
                                 ...(playbook?.visibility !== "public" ? { headers: { Authorization: "Bearer YOUR_API_KEY" } } : {}),
                               }
                             }
@@ -1263,9 +1276,9 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                     <pre className="p-3 bg-neutral-100 dark:bg-slate-900/70 rounded-lg border border-neutral-200 dark:border-slate-700/50 text-xs font-mono text-neutral-800 dark:text-slate-300 overflow-x-auto">
 {JSON.stringify({
   mcpServers: {
-    [`agentplaybooks-${playbook?.name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 30) || "playbook"}`]: {
+    [`apb-${playbook?.name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 30) || "playbook"}`]: {
       transport: "http",
-      url: `${getBaseUrl()}/api/mcp/${playbook?.guid}`,
+      url: `${getApiBaseUrl()}/api/mcp/${playbook?.guid}`,
       ...(playbook?.visibility !== "public" ? { headers: { Authorization: "Bearer YOUR_API_KEY" } } : {}),
     }
   }
@@ -1282,7 +1295,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                       <span className="text-sm font-medium text-neutral-700 dark:text-slate-300">Claude Code (CLI)</span>
                       <button
                         onClick={() => copyToClipboard(
-                          `claude mcp add agentplaybooks-${playbook?.name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 30) || "playbook"} ${getBaseUrl()}/api/mcp/${playbook?.guid} --transport http`,
+                          `claude mcp add apb-${playbook?.name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 30) || "playbook"} ${getApiBaseUrl()}/api/mcp/${playbook?.guid} --transport http`,
                           "mcp-claude-code"
                         )}
                         className="text-xs text-amber-400 hover:text-amber-300 flex items-center gap-1"
@@ -1292,7 +1305,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                       </button>
                     </div>
                     <pre className="p-3 bg-neutral-100 dark:bg-slate-900/70 rounded-lg border border-neutral-200 dark:border-slate-700/50 text-xs font-mono text-neutral-800 dark:text-slate-300 overflow-x-auto">
-{`claude mcp add agentplaybooks-${playbook?.name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 30) || "playbook"} ${getBaseUrl()}/api/mcp/${playbook?.guid} --transport http`}
+{`claude mcp add apb-${playbook?.name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 30) || "playbook"} ${getApiBaseUrl()}/api/mcp/${playbook?.guid} --transport http`}
                     </pre>
                   </div>
 
@@ -1302,7 +1315,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                       <span className="text-sm font-medium text-neutral-700 dark:text-slate-300">Test connection</span>
                       <button
                         onClick={() => copyToClipboard(
-                          `curl -s ${getBaseUrl()}/api/mcp/${playbook?.guid} | head -c 200`,
+                          `curl -s ${getApiBaseUrl()}/api/mcp/${playbook?.guid} | head -c 200`,
                           "mcp-test"
                         )}
                         className="text-xs text-amber-400 hover:text-amber-300 flex items-center gap-1"
@@ -1312,8 +1325,11 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                       </button>
                     </div>
                     <pre className="p-3 bg-neutral-100 dark:bg-slate-900/70 rounded-lg border border-neutral-200 dark:border-slate-700/50 text-xs font-mono text-neutral-800 dark:text-slate-300 overflow-x-auto">
-{`curl -s ${getBaseUrl()}/api/mcp/${playbook?.guid} | head -c 200`}
+{`curl -s ${getApiBaseUrl()}/api/mcp/${playbook?.guid} | head -c 200`}
                     </pre>
+                    <p className="text-xs text-neutral-500 dark:text-slate-500 mt-1">
+                      {playbook?.visibility !== "public" && <>Add your API key to test private playbooks: <code className="bg-neutral-100 dark:bg-slate-800 px-1 rounded">curl -s -H "Authorization: Bearer YOUR_API_KEY" ...</code></>}
+                    </p>
                   </div>
 
                   <div className="mt-4 pt-3 border-t border-neutral-200 dark:border-slate-700/50">

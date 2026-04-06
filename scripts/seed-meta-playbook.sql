@@ -62,7 +62,7 @@ Users can generate a User API Key from their dashboard. This key allows full CRU
 Authorization: Bearer apb_live_xxxxxxxxxx
 ```
 
-API Base: `https://agentplaybooks.ai/api/manage`
+API Base: `https://apbks.com/api/manage`
 
 Endpoints:
 - GET /manage/playbooks - List playbooks
@@ -87,7 +87,7 @@ Connect to the Management MCP Server:
 {
   "mcpServers": {
     "agentplaybooks-manage": {
-      "url": "https://agentplaybooks.ai/api/mcp/manage",
+      "url": "https://apbks.com/api/mcp/manage",
       "headers": {
         "Authorization": "Bearer apb_live_xxxxxxxxxx"
       }
@@ -308,7 +308,7 @@ Ask the user to confirm before creating or deleting playbooks.',
                 }
             }'::jsonb,
             '[
-                {"input": {"name": "My Assistant", "format": "curl"}, "output": "curl -X POST https://agentplaybooks.ai/api/manage/playbooks -H \"Authorization: Bearer $API_KEY\" -H \"Content-Type: application/json\" -d ''{\"name\": \"My Assistant\"}''"}
+                {"input": {"name": "My Assistant", "format": "curl"}, "output": "curl -X POST https://apbks.com/api/manage/playbooks -H \"Authorization: Bearer $API_KEY\" -H \"Content-Type: application/json\" -d ''{\"name\": \"My Assistant\"}''"}
             ]'::jsonb
         );
 

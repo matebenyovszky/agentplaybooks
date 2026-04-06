@@ -5,7 +5,7 @@ Complete reference for all AgentPlaybooks API endpoints.
 ## Base URL
 
 ```
-https://agentplaybooks.ai/api
+https://apbks.com/api
 ```
 
 For self-hosted instances, replace with your domain.
@@ -76,7 +76,7 @@ You can connect any public playbook to ChatGPT as a Custom GPT Action. This allo
    - Click **Import from URL**
    - Enter your playbook's OpenAPI URL:
    ```
-   https://agentplaybooks.ai/api/playbooks/{your-guid}?format=openapi
+   https://apbks.com/api/playbooks/{your-guid}?format=openapi
    ```
    - ChatGPT will automatically parse the available endpoints
 
@@ -144,7 +144,7 @@ The `?format=openapi` response includes:
     "title": "Your Playbook Name",
     "description": "Your playbook description"
   },
-  "servers": [{ "url": "https://agentplaybooks.ai/api" }],
+  "servers": [{ "url": "https://apbks.com/api" }],
   "paths": { /* memory, skills, personas endpoints */ },
   "components": {
     "securitySchemes": {
@@ -793,7 +793,7 @@ Owner only. Permanently deletes the secret.
 
 ## User API Keys (Account-level)
 
-User API Keys provide access to ALL your playbooks, enabling AI agents to create and manage playbooks programmatically. Manage these at [Dashboard Settings](https://agentplaybooks.ai/dashboard/settings).
+User API Keys provide access to ALL your playbooks, enabling AI agents to create and manage playbooks programmatically. Manage these at [Dashboard Settings](https://apbks.com/dashboard/settings).
 
 ### List User API Keys
 

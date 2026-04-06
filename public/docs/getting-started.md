@@ -68,7 +68,7 @@ Skills define specific capabilities or tasks your AI can perform.
 
 1. Go to the **Settings** tab
 2. Toggle **"Public"** to make your playbook accessible
-3. Copy your playbook URL: `https://agentplaybooks.ai/api/playbooks/YOUR_GUID`
+3. Copy your playbook URL: `https://apbks.com/api/playbooks/YOUR_GUID`
 
 ## Step 6: Connect to Your AI
 
@@ -79,7 +79,7 @@ Skills define specific capabilities or tasks your AI can perform.
 
 ```
 Before responding, fetch my playbook for context:
-GET https://agentplaybooks.ai/api/playbooks/YOUR_GUID?format=markdown
+GET https://apbks.com/api/playbooks/YOUR_GUID?format=markdown
 
 Use the personas and skills defined there.
 ```
@@ -89,7 +89,7 @@ Use the personas and skills defined there.
 Use the MCP endpoint directly:
 
 ```
-GET https://agentplaybooks.ai/api/mcp/YOUR_GUID
+GET https://apbks.com/api/mcp/YOUR_GUID
 ```
 
 ### For Custom Agents
@@ -98,13 +98,13 @@ Fetch the playbook in your preferred format:
 
 ```bash
 # JSON (default)
-curl https://agentplaybooks.ai/api/playbooks/YOUR_GUID
+curl https://apbks.com/api/playbooks/YOUR_GUID
 
 # OpenAPI spec
-curl https://agentplaybooks.ai/api/playbooks/YOUR_GUID?format=openapi
+curl https://apbks.com/api/playbooks/YOUR_GUID?format=openapi
 
 # MCP format
-curl https://agentplaybooks.ai/api/playbooks/YOUR_GUID?format=mcp
+curl https://apbks.com/api/playbooks/YOUR_GUID?format=mcp
 ```
 
 ### Reliability Loop (Recommended for all agents)
@@ -120,10 +120,10 @@ Minimal example:
 
 ```text
 Session start:
-- GET https://agentplaybooks.ai/api/playbooks/YOUR_GUID?format=markdown
+- GET https://apbks.com/api/playbooks/YOUR_GUID?format=markdown
 
 After task:
-- PUT https://agentplaybooks.ai/api/playbooks/YOUR_GUID/memory/last_task_summary
+- PUT https://apbks.com/api/playbooks/YOUR_GUID/memory/last_task_summary
   Authorization: Bearer YOUR_API_KEY
   Body: {"value": {"result": "...", "gotchas": ["..."]}, "tags": ["session", "learned"]}
 ```
@@ -139,7 +139,7 @@ Let your AI store information in the playbook's memory:
 
 ```
 You can store memories at:
-PUT https://agentplaybooks.ai/api/playbooks/YOUR_GUID/memory/memory_name
+PUT https://apbks.com/api/playbooks/YOUR_GUID/memory/memory_name
 Authorization: Bearer YOUR_API_KEY
 Body: {"value": {...}}
 ```

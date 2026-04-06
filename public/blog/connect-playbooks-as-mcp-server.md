@@ -15,7 +15,7 @@ Today we're making this even easier with a new **Integrations** tab in the playb
 
 The [Model Context Protocol](https://modelcontextprotocol.io/) is an open standard (originally developed by Anthropic) that lets AI assistants connect to external tools and data sources over a simple JSON-RPC interface. Think of it as a universal plugin system for AI.
 
-AgentPlaybooks implements the MCP server specification for every playbook. Your skills become callable tools, your memory becomes readable/writable state, and your personas provide system prompt context — all via a single HTTP endpoint.
+AgentPlaybooks implements the MCP server specification for every playbook. Your memory becomes readable/writable state, your skills are accessible via built-in tools (`list_skills`, `get_skill`), and your personas provide system prompt context — all via a single HTTP endpoint.
 
 ## The New Integrations Tab
 
@@ -41,8 +41,8 @@ You'll see a ready-to-copy JSON block. It looks like this:
 ```json
 {
   "mcpServers": {
-    "agentplaybooks-my-assistant": {
-      "url": "https://agentplaybooks.ai/api/mcp/YOUR_GUID"
+    "apb-my-assistant": {
+      "url": "https://apbks.com/api/mcp/YOUR_GUID"
     }
   }
 }
@@ -63,9 +63,9 @@ Restart Cursor (or reload the window). Your playbook's tools will appear in Curs
 ```json
 {
   "mcpServers": {
-    "agentplaybooks-my-assistant": {
+    "apb-my-assistant": {
       "transport": "http",
-      "url": "https://agentplaybooks.ai/api/mcp/YOUR_GUID"
+      "url": "https://apbks.com/api/mcp/YOUR_GUID"
     }
   }
 }
@@ -78,7 +78,7 @@ Save this to your `claude_desktop_config.json` and restart Claude Desktop.
 One command:
 
 ```bash
-claude mcp add agentplaybooks-my-assistant https://agentplaybooks.ai/api/mcp/YOUR_GUID --transport http
+claude mcp add apb-my-assistant https://apbks.com/api/mcp/YOUR_GUID --transport http
 ```
 
 Verify with `claude mcp list`.
@@ -93,7 +93,7 @@ Verify with `claude mcp list`.
 {
   "mcpServers": {
     "my-playbook": {
-      "url": "https://agentplaybooks.ai/api/mcp/YOUR_GUID",
+      "url": "https://apbks.com/api/mcp/YOUR_GUID",
       "headers": {
         "Authorization": "Bearer apb_live_your_key_here"
       }
@@ -113,7 +113,7 @@ Once connected, your AI agent has access to:
 
 | Component | MCP Capability |
 |---|---|
-| **Skills** | Callable tools with defined input schemas |
+| **Skills** | Accessible via `list_skills` / `get_skill` tools and Skills resource |
 | **Memory** | Read/write/search persistent key-value store |
 | **Canvas** | Read/write structured markdown documents |
 | **Personas** | System prompt and personality context |
@@ -126,7 +126,7 @@ Built-in tools include `read_memory`, `write_memory`, `search_memory`, `read_can
 From the Integrations tab, copy the test command:
 
 ```bash
-curl -s https://agentplaybooks.ai/api/mcp/YOUR_GUID | head -c 200
+curl -s https://apbks.com/api/mcp/YOUR_GUID | head -c 200
 ```
 
 If you see JSON with `protocolVersion` and `serverInfo`, you're good.
@@ -135,7 +135,7 @@ If you see JSON with `protocolVersion` and `serverInfo`, you're good.
 
 - **Cursor Marketplace** — We're working on listing AgentPlaybooks in the Cursor extension/MCP marketplace
 - **Windsurf** and other MCP-compatible IDEs — Same endpoint works everywhere
-- **Management MCP Server** — Use `https://agentplaybooks.ai/api/mcp/manage` with a User API Key to create and manage playbooks from within your AI agent
+- **Management MCP Server** — Use `https://apbks.com/api/mcp/manage` with a User API Key to create and manage playbooks from within your AI agent
 
 Check the [MCP Integration docs](/docs/mcp-integration) and [Platform Integrations guide](/docs/platform-integrations) for the full reference.
 

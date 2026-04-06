@@ -51,7 +51,7 @@ First, create a playbook at [agentplaybooks.ai/dashboard](/dashboard) with:
 Every public playbook gets an MCP endpoint:
 
 ```
-https://agentplaybooks.ai/api/mcp/YOUR_GUID
+https://apbks.com/api/mcp/YOUR_GUID
 ```
 
 ### Step 3: Configure Clawdbot
@@ -67,7 +67,7 @@ llm:
 mcp_servers:
   - name: agent-playbook
     transport: http
-    url: https://agentplaybooks.ai/api/mcp/YOUR_GUID
+    url: https://apbks.com/api/mcp/YOUR_GUID
     description: My custom AI playbook with skills and memory
 
 messaging:
@@ -180,7 +180,7 @@ AgentPlaybooks supports write-back via API. Configure Clawdbot to persist memori
 mcp_servers:
   - name: agent-playbook
     transport: http
-    url: https://agentplaybooks.ai/api/mcp/YOUR_GUID
+    url: https://apbks.com/api/mcp/YOUR_GUID
     auth:
       type: bearer
       token: apb_live_xxx  # Your AgentPlaybooks API key
@@ -193,7 +193,7 @@ Now Clawdbot can update your playbook's memory:
 # Inside Clawdbot tool execution
 def remember_user_preference(key: str, value: any):
     requests.put(
-        f"https://agentplaybooks.ai/api/playbooks/{GUID}/memory/{key}",
+        f"https://apbks.com/api/playbooks/{GUID}/memory/{key}",
         headers={"Authorization": f"Bearer {API_KEY}"},
         json={"value": value}
     )

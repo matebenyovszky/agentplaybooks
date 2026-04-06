@@ -33,8 +33,8 @@ Give your AI agents, GPTs, and robots a platform-independent vault. Store skills
 
 ## Live Demo
 
-- Website: https://agentplaybooks.ai
-- Docs: https://agentplaybooks.ai/docs
+- Website: https://apbks.com
+- Docs: https://apbks.com/docs
 - GitHub: https://github.com/matebenyovszky/agentplaybooks
 
 ## Getting Started

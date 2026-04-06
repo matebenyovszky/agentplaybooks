@@ -40,12 +40,12 @@ Az AgentPlaybooks készségek már kompatibilisek az Anthropic eszközformátum�
 
 1. **Exportáld a playbook-odat** Anthropic formátumban:
    ```
-   https://agentplaybooks.ai/api/playbooks/YOUR_GUID?format=anthropic
+   https://apbks.com/api/playbooks/YOUR_GUID?format=anthropic
    ```
 
 2. **Konvertáld a készségeket helyi skill mappába**, amelyhez a Coworker hozzáférhet:
    ```bash
-   curl -s "https://agentplaybooks.ai/api/playbooks/YOUR_GUID?format=anthropic" \
+   curl -s "https://apbks.com/api/playbooks/YOUR_GUID?format=anthropic" \
      | jq '.tools' > ~/Documents/CoworkerSkills/my_skills.json
    ```
 
@@ -56,7 +56,7 @@ Az AgentPlaybooks készségek már kompatibilisek az Anthropic eszközformátum�
 A legerősebb integráció az **MCP (Model Context Protocol)** révén történik. Az AgentPlaybooks élő MCP végpontot biztosít minden playbook-hoz:
 
 ```
-https://agentplaybooks.ai/api/mcp/YOUR_GUID
+https://apbks.com/api/mcp/YOUR_GUID
 ```
 
 Konfiguráld a Claude Coworker MCP beállításait:
@@ -66,7 +66,7 @@ Konfiguráld a Claude Coworker MCP beállításait:
   "mcpServers": {
     "my-playbook": {
       "transport": "http",
-      "url": "https://agentplaybooks.ai/api/mcp/YOUR_GUID"
+      "url": "https://apbks.com/api/mcp/YOUR_GUID"
     }
   }
 }
@@ -83,7 +83,7 @@ Egyszerűbb beállításokhoz add hozzá a playbook-odat a Coworker működési 
 
 1. Exportálás markdown-ként:
    ```bash
-   curl -s "https://agentplaybooks.ai/api/playbooks/YOUR_GUID?format=markdown" > ~/Documents/playbook.md
+   curl -s "https://apbks.com/api/playbooks/YOUR_GUID?format=markdown" > ~/Documents/playbook.md
    ```
 
 2. Add hozzá a kijelölt Coworker mappákhoz referencia dokumentumként.

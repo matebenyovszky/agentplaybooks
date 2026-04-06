@@ -152,17 +152,9 @@ app.get("/", async (c) => {
   const persona = playbookToPersona(playbook);
 
   // Build tools: start with built-in playbook tools
+  // Skills are NOT exposed as separate tools — they are instructions/knowledge,
+  // not executable functions. Use list_skills / get_skill / the Skills resource instead.
   const tools: McpTool[] = [...PLAYBOOK_TOOLS];
-
-  // Add skill-based tools (prefixed with skill_ to distinguish from built-in)
-  // Note: Skills no longer have parameters, so use empty schema
-  for (const skill of skills) {
-    tools.push({
-      name: `skill_${skill.name.toLowerCase().replace(/\s+/g, "_")}`,
-      description: skill.description || skill.name,
-      inputSchema: { type: "object", properties: {} } as Record<string, unknown>,
-    });
-  }
 
   // Add tools from MCP servers
   for (const mcp of mcpServers) {
@@ -303,27 +295,12 @@ app.post("/", async (c) => {
       });
 
     case "tools/list": {
-      const serviceSupabase = getServiceSupabase();
-      const { data: skills } = await serviceSupabase
-        .from("skills")
-        .select("*")
-        .eq("playbook_id", playbook.id);
-
-      // Skill-based tools (from playbook definition)
-      // Note: Skills no longer have parameters, use empty schema
-      const skillTools = (skills || []).map((skill) => ({
-        name: `skill_${skill.name.toLowerCase().replace(/\s+/g, "_")}`,
-        description: skill.description || skill.name,
-        inputSchema: { type: "object", properties: {} },
-      }));
-
-      // Combine with built-in playbook tools
-      const allTools = [...PLAYBOOK_TOOLS, ...skillTools];
-
+      // Skills are accessible via list_skills / get_skill tools and the Skills resource.
+      // They are NOT exposed as separate skill_* tools (they are instructions, not executables).
       return c.json({
         jsonrpc: "2.0",
         id,
-        result: { tools: allTools },
+        result: { tools: [...PLAYBOOK_TOOLS] },
       });
     }
 
@@ -2038,17 +2015,7 @@ use_secret({
           }
 
           default:
-            // Check if it's a skill-based tool call
-            if (toolName.startsWith("skill_")) {
-              const skillName = toolName.replace("skill_", "").replace(/_/g, " ");
-              result = {
-                message: `Skill "${skillName}" was called`,
-                arguments: args,
-                note: "Skill execution should be handled by your AI system using the skill definition",
-              };
-            } else {
-              throw new Error(`Unknown tool: ${toolName}`);
-            }
+            throw new Error(`Unknown tool: ${toolName}. Use list_skills / get_skill to access skill definitions.`);
         }
 
         return c.json({

@@ -86,7 +86,7 @@ AgentPlaybooks skills are designed to be directly compatible with Anthropic's to
 import anthropic
 
 # Fetch skills from AgentPlaybooks
-skills_response = requests.get("https://agentplaybooks.ai/api/playbooks/YOUR_GUID?format=anthropic")
+skills_response = requests.get("https://apbks.com/api/playbooks/YOUR_GUID?format=anthropic")
 tools = skills_response.json()["tools"]
 
 # Use with Claude
@@ -230,11 +230,11 @@ Export your playbook skills for Claude Coworker:
 
 ```bash
 # Export skills in Anthropic format
-curl -s "https://agentplaybooks.ai/api/playbooks/YOUR_GUID?format=anthropic" \
+curl -s "https://apbks.com/api/playbooks/YOUR_GUID?format=anthropic" \
   | jq '.tools' > ~/Documents/CoworkerSkills/my_skills.json
 
 # Or connect via MCP (recommended)
 # Add to claude_desktop_config.json:
-# "mcpServers": {"playbook": {"transport": "http", "url": "https://agentplaybooks.ai/api/mcp/YOUR_GUID"}}
+# "mcpServers": {"playbook": {"transport": "http", "url": "https://apbks.com/api/mcp/YOUR_GUID"}}
 ```
 

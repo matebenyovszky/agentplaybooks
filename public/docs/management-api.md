@@ -26,7 +26,7 @@ Unlike Playbook API Keys (which only work for a single playbook), **User API Key
 
 ### Creating a User API Key
 
-1. Go to your [Dashboard Settings](https://agentplaybooks.ai/dashboard/settings)
+1. Go to your [Dashboard Settings](https://apbks.com/dashboard/settings)
 2. Click "Create Key"
 3. Enter an optional name (e.g., "Claude Desktop", "Cursor")
 4. Select permissions:
@@ -75,7 +75,7 @@ Response includes the plain key only once:
 ### Base URL
 
 ```
-https://agentplaybooks.ai/api/manage
+https://apbks.com/api/manage
 ```
 
 ### Authentication
@@ -121,7 +121,7 @@ This can be used with:
 #### Create a Playbook
 
 ```bash
-curl -X POST https://agentplaybooks.ai/api/manage/playbooks \
+curl -X POST https://apbks.com/api/manage/playbooks \
   -H "Authorization: Bearer $API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -153,7 +153,7 @@ Response:
 #### Add a Skill
 
 ```bash
-curl -X POST https://agentplaybooks.ai/api/manage/playbooks/$PLAYBOOK_ID/skills \
+curl -X POST https://apbks.com/api/manage/playbooks/$PLAYBOOK_ID/skills \
   -H "Authorization: Bearer $API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -188,7 +188,7 @@ curl -X POST https://agentplaybooks.ai/api/manage/playbooks/$PLAYBOOK_ID/skills 
 To update the persona, simply update the playbook:
 
 ```bash
-curl -X PUT https://agentplaybooks.ai/api/manage/playbooks/$PLAYBOOK_ID \
+curl -X PUT https://apbks.com/api/manage/playbooks/$PLAYBOOK_ID \
   -H "Authorization: Bearer $API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -207,7 +207,7 @@ The Management MCP Server allows AI agents using the Model Context Protocol to m
 ### Server URL
 
 ```
-https://agentplaybooks.ai/api/mcp/manage
+https://apbks.com/api/mcp/manage
 ```
 
 ### Configuration
@@ -220,7 +220,7 @@ Add to your `claude_desktop_config.json`:
 {
   "mcpServers": {
     "agentplaybooks-manage": {
-      "url": "https://agentplaybooks.ai/api/mcp/manage",
+      "url": "https://apbks.com/api/mcp/manage",
       "transport": "http",
       "headers": {
         "Authorization": "Bearer apb_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
@@ -238,7 +238,7 @@ Add to your MCP settings:
 {
   "mcpServers": {
     "agentplaybooks-manage": {
-      "url": "https://agentplaybooks.ai/api/mcp/manage",
+      "url": "https://apbks.com/api/mcp/manage",
       "headers": {
         "Authorization": "Bearer $AGENTPLAYBOOKS_API_KEY"
       }
@@ -473,7 +473,7 @@ Each public playbook has its own MCP server at `/api/mcp/:guid`. This allows AI 
 {
   "mcpServers": {
     "my-playbook": {
-      "url": "https://agentplaybooks.ai/api/mcp/abc123def456",
+      "url": "https://apbks.com/api/mcp/abc123def456",
       "transport": "http",
       "headers": {
         "Authorization": "Bearer apb_live_xxx"  // Optional, for write access

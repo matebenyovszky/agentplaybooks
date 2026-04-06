@@ -40,7 +40,7 @@ Az AgentPlaybooks teljesen kompatibilis MCP szerver végpontot biztosít minden 
 
 ### 1. lépés: Készítsd el a Playbook-odat
 
-Először készíts egy playbook-ot az [agentplaybooks.ai/dashboard](/dashboard) oldalon:
+Először készíts egy playbook-ot az [apbks.com/dashboard](/dashboard) oldalon:
 
 - **Személyiségek** — Definiáld, hogyan viselkedjen az asszisztensed
 - **Készségek** — Milyen képességekkel rendelkezzen
@@ -51,7 +51,7 @@ Először készíts egy playbook-ot az [agentplaybooks.ai/dashboard](/dashboard)
 Minden nyilvános playbook kap egy MCP végpontot:
 
 ```
-https://agentplaybooks.ai/api/mcp/YOUR_GUID
+https://apbks.com/api/mcp/YOUR_GUID
 ```
 
 ### 3. lépés: Konfiguráld a Clawdbotot
@@ -67,7 +67,7 @@ llm:
 mcp_servers:
   - name: agent-playbook
     transport: http
-    url: https://agentplaybooks.ai/api/mcp/YOUR_GUID
+    url: https://apbks.com/api/mcp/YOUR_GUID
     description: Egyéni AI playbook-om készségekkel és memóriával
 
 messaging:
@@ -180,7 +180,7 @@ Az AgentPlaybooks támogatja a visszaírást API-n keresztül. Konfiguráld a Cl
 mcp_servers:
   - name: agent-playbook
     transport: http
-    url: https://agentplaybooks.ai/api/mcp/YOUR_GUID
+    url: https://apbks.com/api/mcp/YOUR_GUID
     auth:
       type: bearer
       token: apb_live_xxx  # Az AgentPlaybooks API kulcsod
@@ -193,7 +193,7 @@ Most a Clawdbot képes frissíteni a playbook-od memóriáját:
 # A Clawdbot eszköz végrehajtásán belül
 def remember_user_preference(key: str, value: any):
     requests.put(
-        f"https://agentplaybooks.ai/api/playbooks/{GUID}/memory/{key}",
+        f"https://apbks.com/api/playbooks/{GUID}/memory/{key}",
         headers={"Authorization": f"Bearer {API_KEY}"},
         json={"value": value}
     )

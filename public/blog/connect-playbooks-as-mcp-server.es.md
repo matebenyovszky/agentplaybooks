@@ -41,8 +41,8 @@ Verás un bloque JSON listo para copiar. Se parece a esto:
 ```json
 {
   "mcpServers": {
-    "agentplaybooks-my-assistant": {
-      "url": "https://agentplaybooks.ai/api/mcp/YOUR_GUID"
+    "apb-my-assistant": {
+      "url": "https://apbks.com/api/mcp/YOUR_GUID"
     }
   }
 }
@@ -63,9 +63,9 @@ Reinicia Cursor (o recarga la ventana). Las herramientas de tu playbook aparecer
 ```json
 {
   "mcpServers": {
-    "agentplaybooks-my-assistant": {
+    "apb-my-assistant": {
       "transport": "http",
-      "url": "https://agentplaybooks.ai/api/mcp/YOUR_GUID"
+      "url": "https://apbks.com/api/mcp/YOUR_GUID"
     }
   }
 }
@@ -78,7 +78,7 @@ Guarda esto en tu `claude_desktop_config.json` y reinicia Claude Desktop.
 Un solo comando:
 
 ```bash
-claude mcp add agentplaybooks-my-assistant https://agentplaybooks.ai/api/mcp/YOUR_GUID --transport http
+claude mcp add apb-my-assistant https://apbks.com/api/mcp/YOUR_GUID --transport http
 ```
 
 Verifica con `claude mcp list`.
@@ -93,7 +93,7 @@ Los **playbooks privados** necesitan una API key. Genera una desde la pestaña I
 {
   "mcpServers": {
     "my-playbook": {
-      "url": "https://agentplaybooks.ai/api/mcp/YOUR_GUID",
+      "url": "https://apbks.com/api/mcp/YOUR_GUID",
       "headers": {
         "Authorization": "Bearer apb_live_your_key_here"
       }
@@ -126,7 +126,7 @@ Las herramientas integradas incluyen `read_memory`, `write_memory`, `search_memo
 Desde la pestaña Integraciones, copia el comando de prueba:
 
 ```bash
-curl -s https://agentplaybooks.ai/api/mcp/YOUR_GUID | head -c 200
+curl -s https://apbks.com/api/mcp/YOUR_GUID | head -c 200
 ```
 
 Si ves JSON con `protocolVersion` y `serverInfo`, todo está bien.
@@ -135,7 +135,7 @@ Si ves JSON con `protocolVersion` y `serverInfo`, todo está bien.
 
 - **Cursor Marketplace** — Estamos trabajando en listar AgentPlaybooks en el marketplace de extensiones/MCP de Cursor
 - **Windsurf** y otros IDE compatibles con MCP — El mismo endpoint funciona en todas partes
-- **Management MCP Server** — Usa `https://agentplaybooks.ai/api/mcp/manage` con una User API Key para crear y gestionar playbooks desde tu agente de IA
+- **Management MCP Server** — Usa `https://apbks.com/api/mcp/manage` con una User API Key para crear y gestionar playbooks desde tu agente de IA
 
 Consulta la [documentación de integración MCP](/docs/mcp-integration) y la [guía de integraciones de plataforma](/docs/platform-integrations) para la referencia completa.
 

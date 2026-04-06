@@ -41,8 +41,8 @@ Egy másolásra kész JSON blokkot látsz. Így néz ki:
 ```json
 {
   "mcpServers": {
-    "agentplaybooks-my-assistant": {
-      "url": "https://agentplaybooks.ai/api/mcp/YOUR_GUID"
+    "apb-my-assistant": {
+      "url": "https://apbks.com/api/mcp/YOUR_GUID"
     }
   }
 }
@@ -63,9 +63,9 @@ Indítsd újra a Cursort (vagy töltsd újra az ablakot). A playbook eszközei m
 ```json
 {
   "mcpServers": {
-    "agentplaybooks-my-assistant": {
+    "apb-my-assistant": {
       "transport": "http",
-      "url": "https://agentplaybooks.ai/api/mcp/YOUR_GUID"
+      "url": "https://apbks.com/api/mcp/YOUR_GUID"
     }
   }
 }
@@ -78,7 +78,7 @@ Mentsd ezt a `claude_desktop_config.json` fájlba, és indítsd újra a Claude D
 Egy parancs:
 
 ```bash
-claude mcp add agentplaybooks-my-assistant https://agentplaybooks.ai/api/mcp/YOUR_GUID --transport http
+claude mcp add apb-my-assistant https://apbks.com/api/mcp/YOUR_GUID --transport http
 ```
 
 Ellenőrzés: `claude mcp list`.
@@ -93,7 +93,7 @@ Ellenőrzés: `claude mcp list`.
 {
   "mcpServers": {
     "my-playbook": {
-      "url": "https://agentplaybooks.ai/api/mcp/YOUR_GUID",
+      "url": "https://apbks.com/api/mcp/YOUR_GUID",
       "headers": {
         "Authorization": "Bearer apb_live_your_key_here"
       }
@@ -126,7 +126,7 @@ A beépített eszközök között szerepel többek között a `read_memory`, `wr
 Az Integrations lapon másold ki a tesztparancsot:
 
 ```bash
-curl -s https://agentplaybooks.ai/api/mcp/YOUR_GUID | head -c 200
+curl -s https://apbks.com/api/mcp/YOUR_GUID | head -c 200
 ```
 
 Ha JSON-t látsz `protocolVersion` és `serverInfo` mezőkkel, minden rendben.
@@ -135,7 +135,7 @@ Ha JSON-t látsz `protocolVersion` és `serverInfo` mezőkkel, minden rendben.
 
 - **Cursor Marketplace** — Dolgozunk azon, hogy az AgentPlaybooks felkerüljön a Cursor bővítmény/MCP piactérre
 - **Windsurf** és más MCP-kompatibilis IDE-k — Ugyanaz a végpont mindenhol működik
-- **Management MCP Server** — Használd a `https://agentplaybooks.ai/api/mcp/manage` címet User API Key-jel playbookok létrehozásához és kezeléséhez közvetlenül az AI ügynöködből
+- **Management MCP Server** — Használd a `https://apbks.com/api/mcp/manage` címet User API Key-jel playbookok létrehozásához és kezeléséhez közvetlenül az AI ügynöködből
 
 A teljes referenciáért nézd meg az [MCP Integration dokumentációt](/docs/mcp-integration) és a [Platform Integrations útmutatót](/docs/platform-integrations).
 

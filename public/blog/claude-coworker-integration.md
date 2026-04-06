@@ -40,12 +40,12 @@ AgentPlaybooks skills are already compatible with Anthropic's tool format. To us
 
 1. **Export your playbook** in Anthropic format:
    ```
-   https://agentplaybooks.ai/api/playbooks/YOUR_GUID?format=anthropic
+   https://apbks.com/api/playbooks/YOUR_GUID?format=anthropic
    ```
 
 2. **Convert skills to a local skill folder** that Coworker can access:
    ```bash
-   curl -s "https://agentplaybooks.ai/api/playbooks/YOUR_GUID?format=anthropic" \
+   curl -s "https://apbks.com/api/playbooks/YOUR_GUID?format=anthropic" \
      | jq '.tools' > ~/Documents/CoworkerSkills/my_skills.json
    ```
 
@@ -56,7 +56,7 @@ AgentPlaybooks skills are already compatible with Anthropic's tool format. To us
 The most powerful integration is via **Model Context Protocol (MCP)**. AgentPlaybooks provides a live MCP endpoint for each playbook:
 
 ```
-https://agentplaybooks.ai/api/mcp/YOUR_GUID
+https://apbks.com/api/mcp/YOUR_GUID
 ```
 
 Configure Claude Coworker's MCP settings:
@@ -66,7 +66,7 @@ Configure Claude Coworker's MCP settings:
   "mcpServers": {
     "my-playbook": {
       "transport": "http",
-      "url": "https://agentplaybooks.ai/api/mcp/YOUR_GUID"
+      "url": "https://apbks.com/api/mcp/YOUR_GUID"
     }
   }
 }
@@ -83,7 +83,7 @@ For simpler setups, include your playbook in Coworker's operating context:
 
 1. Export as markdown:
    ```bash
-   curl -s "https://agentplaybooks.ai/api/playbooks/YOUR_GUID?format=markdown" > ~/Documents/playbook.md
+   curl -s "https://apbks.com/api/playbooks/YOUR_GUID?format=markdown" > ~/Documents/playbook.md
    ```
 
 2. Add to your designated Coworker folders as a reference document.

@@ -313,9 +313,9 @@ export default function SettingsPage() {
           <div className="bg-neutral-100 dark:bg-slate-900 rounded p-3 font-mono text-xs text-neutral-700 dark:text-slate-300 overflow-x-auto">
             <div className="text-neutral-500 dark:text-slate-500"># REST API</div>
             <div>curl -H &quot;Authorization: Bearer YOUR_API_KEY&quot; \</div>
-            <div className="pl-4">https://agentplaybooks.ai/api/manage/playbooks</div>
+            <div className="pl-4">https://apbks.com/api/manage/playbooks</div>
             <div className="mt-2 text-neutral-500 dark:text-slate-500"># MCP Server URL</div>
-            <div>https://agentplaybooks.ai/api/mcp/manage</div>
+            <div>https://apbks.com/api/mcp/manage</div>
           </div>
           <p className="text-xs text-neutral-500 dark:text-slate-500 mt-2">
             <Link href="/docs/management-api" className="text-amber-400 hover:underline">

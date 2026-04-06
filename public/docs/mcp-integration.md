@@ -15,7 +15,7 @@ AgentPlaybooks provides an MCP-compatible server endpoint for each public playbo
 After creating and publishing a playbook, your MCP endpoint is:
 
 ```
-https://agentplaybooks.ai/api/mcp/YOUR_GUID
+https://apbks.com/api/mcp/YOUR_GUID
 ```
 
 ### 2. Configure Your MCP Client
@@ -27,8 +27,8 @@ Add to your project's `.cursor/mcp.json` or global `~/.cursor/mcp.json`:
 ```json
 {
   "mcpServers": {
-    "my-playbook": {
-      "url": "https://agentplaybooks.ai/api/mcp/YOUR_GUID"
+    "apb-my-playbook": {
+      "url": "https://apbks.com/api/mcp/YOUR_GUID"
     }
   }
 }
@@ -39,8 +39,8 @@ For **private playbooks**, include your API key in the headers:
 ```json
 {
   "mcpServers": {
-    "my-playbook": {
-      "url": "https://agentplaybooks.ai/api/mcp/YOUR_GUID",
+    "apb-my-playbook": {
+      "url": "https://apbks.com/api/mcp/YOUR_GUID",
       "headers": {
         "Authorization": "Bearer YOUR_API_KEY"
       }
@@ -51,7 +51,7 @@ For **private playbooks**, include your API key in the headers:
 
 After saving, restart Cursor or reload the window. Your playbook's tools and resources will appear in the MCP tools panel.
 
-> **Tip:** You can find the ready-to-copy config in the **Integrations** tab of your playbook's dashboard.
+> **Tip:** You can find the ready-to-copy config in the **Integrations** tab of your playbook's dashboard. The server name uses the short `apb-` prefix to stay within Cursor's 60-character combined name limit.
 
 #### Claude Desktop
 
@@ -60,9 +60,9 @@ Add to your `claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
-    "my-playbook": {
+    "apb-my-playbook": {
       "transport": "http",
-      "url": "https://agentplaybooks.ai/api/mcp/YOUR_GUID"
+      "url": "https://apbks.com/api/mcp/YOUR_GUID"
     }
   }
 }
@@ -73,9 +73,9 @@ For **private playbooks**, add authentication:
 ```json
 {
   "mcpServers": {
-    "my-playbook": {
+    "apb-my-playbook": {
       "transport": "http",
-      "url": "https://agentplaybooks.ai/api/mcp/YOUR_GUID",
+      "url": "https://apbks.com/api/mcp/YOUR_GUID",
       "headers": {
         "Authorization": "Bearer YOUR_API_KEY"
       }
@@ -87,7 +87,7 @@ For **private playbooks**, add authentication:
 #### Claude Code (CLI)
 
 ```bash
-claude mcp add my-playbook https://agentplaybooks.ai/api/mcp/YOUR_GUID --transport http
+claude mcp add apb-my-playbook https://apbks.com/api/mcp/YOUR_GUID --transport http
 ```
 
 Verify the connection:
@@ -109,7 +109,7 @@ const client = new Client({
 // Connect to playbook
 await client.connect({
   transport: "http",
-  url: "https://agentplaybooks.ai/api/mcp/YOUR_GUID"
+  url: "https://apbks.com/api/mcp/YOUR_GUID"
 });
 
 // List available tools
@@ -200,13 +200,17 @@ When you access the MCP endpoint, it returns a server manifest:
 
 ## Available Tools
 
-Tools are generated from your playbook's skills. Each skill becomes an MCP tool:
+The MCP server exposes built-in tools for interacting with the playbook. Skills are **not** exposed as separate tools — they are instructions and knowledge that agents read via the `list_skills`, `get_skill` tools or the Skills resource.
 
-| Skill Property | MCP Tool Property |
-|----------------|-------------------|
-| `name` | `name` (snake_case) |
-| `description` | `description` |
-| `definition.parameters` | `inputSchema` |
+### Built-in Tool Categories
+
+| Category | Tools |
+|----------|-------|
+| **Skills** | `list_skills`, `get_skill`, `create_skill`, `update_skill`, `delete_skill`, `list_skill_versions`, `rollback_skill` |
+| **Memory** | `read_memory`, `write_memory`, `search_memory`, `delete_memory`, `consolidate_memories`, `promote_memory`, `get_memory_context`, `archive_memories`, `get_memory_tree`, `create_task_graph`, `update_task_status` |
+| **Canvas** | `list_canvas`, `read_canvas`, `write_canvas`, `patch_canvas_section`, `get_canvas_toc`, `lock_canvas_section`, `unlock_canvas_section` |
+| **Secrets** | `list_secrets`, `use_secret`, `store_secret`, `rotate_secret`, `delete_secret` |
+| **Playbook** | `update_playbook` |
 
 ## Available Resources
 
@@ -428,9 +432,14 @@ API keys come in three roles:
 - Restart Cursor after saving configuration changes
 - Check Cursor's MCP logs for connection errors
 
+**"Naming issues" warning — Combined server and tool name length exceeds 60 characters**
+- Cursor limits `server_name + tool_name` to 60 characters total
+- Use the short `apb-` prefix for your server name (e.g. `apb-my-playbook` instead of `agentplaybooks-my-playbook`)
+- The ready-to-copy configs in the Integrations tab already use the short prefix
+
 **Tools not loading**
-- Verify the playbook has skills defined (skills become MCP tools)
-- Test the endpoint directly: `curl -s https://agentplaybooks.ai/api/mcp/YOUR_GUID | head -c 200`
+- Verify the playbook has data (skills, memory, etc.) — use `list_skills` or `get_memory_context` to confirm
+- Test the endpoint directly: `curl -s https://apbks.com/api/mcp/YOUR_GUID | head -c 200`
 
 ### Claude Desktop Issues
 
@@ -453,7 +462,7 @@ Add to Clawdbot's `config.yaml`:
 mcp_servers:
   - name: agent-playbook
     transport: http
-    url: https://agentplaybooks.ai/api/mcp/YOUR_GUID
+    url: https://apbks.com/api/mcp/YOUR_GUID
     description: My custom AI playbook with skills and memory
 
 messaging:
@@ -471,7 +480,7 @@ messaging:
 mcp_servers:
   - name: agent-playbook
     transport: http
-    url: https://agentplaybooks.ai/api/mcp/YOUR_GUID
+    url: https://apbks.com/api/mcp/YOUR_GUID
     auth:
       type: bearer
       token: apb_live_xxx

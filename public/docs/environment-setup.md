@@ -11,7 +11,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 # Server-only key for Secrets Vault encryption (64-char hex, 32 bytes)
 SECRETS_ENCRYPTION_KEY=your-64-char-hex-key
 # Application URL (for production)
-NEXT_PUBLIC_APP_URL=https://agentplaybooks.ai
+NEXT_PUBLIC_APP_URL=https://apbks.com
 ```
 
 ## OAuth Configuration (CRITICAL)
@@ -24,12 +24,12 @@ OAuth redirect URLs **must be configured in the Supabase Dashboard**, not in cod
 
 2. Set **Site URL** to your production domain:
    ```
-   https://agentplaybooks.ai
+   https://apbks.com
    ```
 
 3. Add **Redirect URLs** for both production and development:
    ```
-   https://agentplaybooks.ai/**
+   https://apbks.com/**
    http://localhost:3000/**
    ```
 
@@ -39,7 +39,7 @@ OAuth redirect URLs **must be configured in the Supabase Dashboard**, not in cod
 
 2. Create new OAuth App or edit existing:
    - **Application name**: AgentPlaybooks
-   - **Homepage URL**: `https://agentplaybooks.ai`
+   - **Homepage URL**: `https://apbks.com`
    - **Authorization callback URL**: `https://<YOUR-PROJECT>.supabase.co/auth/v1/callback`
 
 3. Copy the **Client ID** and **Client Secret** to Supabase:
@@ -52,7 +52,7 @@ OAuth redirect URLs **must be configured in the Supabase Dashboard**, not in cod
 2. Create OAuth 2.0 Client ID:
    - **Application type**: Web application
    - **Authorized JavaScript origins**: 
-     - `https://agentplaybooks.ai`
+     - `https://apbks.com`
      - `http://localhost:3000`
    - **Authorized redirect URIs**: 
      - `https://<YOUR-PROJECT>.supabase.co/auth/v1/callback`
@@ -78,7 +78,7 @@ When deploying to Cloudflare Pages, set these environment variables:
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 SECRETS_ENCRYPTION_KEY=your-64-char-hex-key
-NEXT_PUBLIC_APP_URL=https://agentplaybooks.ai
+NEXT_PUBLIC_APP_URL=https://apbks.com
 ```
 
 ## Common Issues
@@ -87,7 +87,7 @@ NEXT_PUBLIC_APP_URL=https://agentplaybooks.ai
 
 **Cause**: Supabase "Site URL" is set to localhost or missing.
 
-**Fix**: Set Site URL to `https://agentplaybooks.ai` in Supabase Dashboard → Authentication → URL Configuration.
+**Fix**: Set Site URL to `https://apbks.com` in Supabase Dashboard → Authentication → URL Configuration.
 
 ### 404 on OAuth callback
 

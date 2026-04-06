@@ -6,7 +6,7 @@ This guide explains how to connect your AgentPlaybooks to various AI platforms, 
 
 Before integrating, make sure you have:
 
-1. A published playbook with a public URL: `https://agentplaybooks.ai/api/playbooks/YOUR_GUID`
+1. A published playbook with a public URL: `https://apbks.com/api/playbooks/YOUR_GUID`
 2. (Optional) An API key for write-back functionality
 3. Your preferred format URL ready:
    - **JSON**: `/api/playbooks/YOUR_GUID` (recommended for Gemini Gems)
@@ -66,7 +66,7 @@ If the playbook contains memory entries, use them as context for your responses.
 2. Click **Import from URL**
 3. Enter your OpenAPI URL:
    ```
-   https://agentplaybooks.ai/api/playbooks/YOUR_GUID?format=openapi
+   https://apbks.com/api/playbooks/YOUR_GUID?format=openapi
    ```
 4. Click **Import**
 
@@ -105,7 +105,7 @@ info:
   title: AgentPlaybooks Memory API
   version: "1.0"
 servers:
-  - url: https://agentplaybooks.ai
+  - url: https://apbks.com
 paths:
   /api/playbooks/{guid}/memory/{key}:
     put:
@@ -174,7 +174,7 @@ In the **Project Instructions** field, add:
 ## Your Configuration
 
 Fetch your playbook configuration from:
-https://agentplaybooks.ai/api/playbooks/YOUR_GUID?format=markdown
+https://apbks.com/api/playbooks/YOUR_GUID?format=markdown
 
 Follow the personas, skills, and guidelines defined there.
 
@@ -189,7 +189,7 @@ At the start of each conversation:
 ## Memory Management
 
 To view current memories:
-https://agentplaybooks.ai/api/playbooks/YOUR_GUID/memory
+https://apbks.com/api/playbooks/YOUR_GUID/memory
 
 When you need to remember something for future conversations, inform the user
 that they can manually update the playbook memory, or provide them with the
@@ -201,7 +201,7 @@ data to save.
 1. Click **Add content** → **Add files**
 2. Download your playbook as a text file:
    ```
-   curl https://agentplaybooks.ai/api/playbooks/YOUR_GUID?format=markdown -o playbook.md
+   curl https://apbks.com/api/playbooks/YOUR_GUID?format=markdown -o playbook.md
    ```
 3. Upload `playbook.md` to the project
 
@@ -222,7 +222,7 @@ For single conversations without Projects:
 ```
 Please configure yourself with this playbook:
 
-[Paste the content from: https://agentplaybooks.ai/api/playbooks/YOUR_GUID?format=markdown]
+[Paste the content from: https://apbks.com/api/playbooks/YOUR_GUID?format=markdown]
 
 Follow these instructions as your operational guidelines for this conversation.
 ```
@@ -255,7 +255,7 @@ You are an AI assistant configured with an AgentPlaybooks playbook.
 
 At the start of each conversation, reference your playbook configuration.
 For Gemini Gems, the JSON format works well:
-https://agentplaybooks.ai/api/playbooks/YOUR_GUID
+https://apbks.com/api/playbooks/YOUR_GUID
 
 ## Personas
 [Copy the personas section from your playbook's markdown export]
@@ -264,7 +264,7 @@ https://agentplaybooks.ai/api/playbooks/YOUR_GUID
 [Copy the skills section from your playbook's markdown export]
 
 ## Memory
-Check for persistent context at: https://agentplaybooks.ai/api/playbooks/YOUR_GUID/memory
+Check for persistent context at: https://apbks.com/api/playbooks/YOUR_GUID/memory
 
 ## Operating Guidelines
 1. Always follow your defined persona(s)
@@ -313,7 +313,7 @@ In the system prompt / project instructions:
 You are an AI assistant operating according to an AgentPlaybooks configuration.
 
 ## Playbook URL
-https://agentplaybooks.ai/api/playbooks/YOUR_GUID
+https://apbks.com/api/playbooks/YOUR_GUID
 
 ## Instructions
 1. Fetch and follow the playbook configuration at the start of each conversation
@@ -328,7 +328,7 @@ https://agentplaybooks.ai/api/playbooks/YOUR_GUID
 [List your skills here]
 
 ## Memory Context
-Check: https://agentplaybooks.ai/api/playbooks/YOUR_GUID/memory
+Check: https://apbks.com/api/playbooks/YOUR_GUID/memory
 ```
 
 #### Step 3: Model Settings
@@ -357,9 +357,9 @@ Configure Claude Coworker's MCP settings to connect to your playbook:
 ```json
 {
   "mcpServers": {
-    "my-playbook": {
+    "apb-my-playbook": {
       "transport": "http",
-      "url": "https://agentplaybooks.ai/api/mcp/YOUR_GUID"
+      "url": "https://apbks.com/api/mcp/YOUR_GUID"
     }
   }
 }
@@ -375,7 +375,7 @@ Coworker will have access to:
 Export your playbook skills to a local folder:
 
 ```bash
-curl -s "https://agentplaybooks.ai/api/playbooks/YOUR_GUID?format=anthropic" \
+curl -s "https://apbks.com/api/playbooks/YOUR_GUID?format=anthropic" \
   | jq '.tools' > ~/Documents/CoworkerSkills/my_skills.json
 ```
 
@@ -385,7 +385,7 @@ Point Claude Coworker to this folder in the app settings.
 
 1. Export as markdown:
    ```bash
-   curl -s "https://agentplaybooks.ai/api/playbooks/YOUR_GUID?format=markdown" > ~/Documents/playbook.md
+   curl -s "https://apbks.com/api/playbooks/YOUR_GUID?format=markdown" > ~/Documents/playbook.md
    ```
 
 2. Add `playbook.md` to your designated Coworker folders as a reference.
@@ -433,7 +433,7 @@ Clawdbot is an open-source, self-hosted AI assistant that bridges WhatsApp, Tele
 Every public playbook provides an MCP endpoint:
 
 ```
-https://agentplaybooks.ai/api/mcp/YOUR_GUID
+https://apbks.com/api/mcp/YOUR_GUID
 ```
 
 ### Step 2: Configure Clawdbot
@@ -448,7 +448,7 @@ llm:
 mcp_servers:
   - name: agent-playbook
     transport: http
-    url: https://agentplaybooks.ai/api/mcp/YOUR_GUID
+    url: https://apbks.com/api/mcp/YOUR_GUID
     description: My custom AI playbook
 
 messaging:
@@ -468,7 +468,7 @@ For bidirectional memory sync, add authentication:
 mcp_servers:
   - name: agent-playbook
     transport: http
-    url: https://agentplaybooks.ai/api/mcp/YOUR_GUID
+    url: https://apbks.com/api/mcp/YOUR_GUID
     auth:
       type: bearer
       token: apb_live_xxx  # Your AgentPlaybooks API key
@@ -491,7 +491,7 @@ clawdbot status
 
 | Playbook Component | Clawdbot Feature |
 |-------------------|------------------|
-| Skills | Callable MCP tools |
+| Skills | Accessible via list_skills / get_skill tools |
 | Personas | System prompt behavior |
 | Memory | Shared state across platforms |
 
@@ -546,7 +546,7 @@ Cursor is an AI-powered code editor with native MCP support. Connecting an Agent
 Your playbook's MCP endpoint:
 
 ```
-https://agentplaybooks.ai/api/mcp/YOUR_GUID
+https://apbks.com/api/mcp/YOUR_GUID
 ```
 
 > **Tip:** Go to the **Integrations** tab in your playbook's dashboard for a ready-to-copy config with the correct GUID.
@@ -558,8 +558,8 @@ Create or edit `.cursor/mcp.json` in your project root (for project-level) or `~
 ```json
 {
   "mcpServers": {
-    "my-playbook": {
-      "url": "https://agentplaybooks.ai/api/mcp/YOUR_GUID"
+    "apb-my-playbook": {
+      "url": "https://apbks.com/api/mcp/YOUR_GUID"
     }
   }
 }
@@ -570,8 +570,8 @@ For **private playbooks**, add authentication headers:
 ```json
 {
   "mcpServers": {
-    "my-playbook": {
-      "url": "https://agentplaybooks.ai/api/mcp/YOUR_GUID",
+    "apb-my-playbook": {
+      "url": "https://apbks.com/api/mcp/YOUR_GUID",
       "headers": {
         "Authorization": "Bearer apb_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
       }
@@ -586,13 +586,13 @@ After saving the configuration, restart Cursor or reload the window. The playboo
 
 ### Step 4: Verify Connection
 
-You should see your playbook's tools listed when Cursor shows available MCP tools. Each skill in your playbook becomes a callable tool, plus built-in tools like `read_memory`, `write_memory`, `search_memory`, `read_canvas`, etc.
+You should see your playbook's built-in tools listed when Cursor shows available MCP tools. Built-in tools include `list_skills`, `get_skill`, `read_memory`, `write_memory`, `search_memory`, `read_canvas`, etc. Skills are accessible via the `list_skills` and `get_skill` tools — they are not exposed as separate tools.
 
 ### What Cursor Gets from Your Playbook
 
 | Playbook Component | Cursor Integration |
 |---|---|
-| Skills | Callable MCP tools |
+| Skills | Accessible via list_skills / get_skill tools and Skills resource |
 | Personas | System prompt context via resources |
 | Memory | Persistent key-value storage (read/write) |
 | Canvas | Structured document workspace |
@@ -610,7 +610,7 @@ You should see your playbook's tools listed when Cursor shows available MCP tool
 - Ensure `.cursor/mcp.json` is valid JSON (no trailing commas, correct quoting)
 - Check that the GUID matches your playbook
 - For private playbooks, verify the API key starts with `apb_live_` and has not been revoked
-- Test the endpoint: `curl -s https://agentplaybooks.ai/api/mcp/YOUR_GUID | head -c 200`
+- Test the endpoint: `curl -s https://apbks.com/api/mcp/YOUR_GUID | head -c 200`
 
 ---
 
@@ -629,9 +629,9 @@ Add to your `~/.claude/claude_desktop_config.json` (or `claude_code_config.json`
 ```json
 {
   "mcpServers": {
-    "my-playbook": {
+    "apb-my-playbook": {
       "transport": "http",
-      "url": "https://agentplaybooks.ai/api/mcp/YOUR_GUID"
+      "url": "https://apbks.com/api/mcp/YOUR_GUID"
     }
   }
 }
@@ -664,7 +664,7 @@ Create a `.claude` or `CLAUDE.md` file in your project:
 
 ## Playbook
 This project uses AgentPlaybooks configuration from:
-https://agentplaybooks.ai/api/playbooks/YOUR_GUID
+https://apbks.com/api/playbooks/YOUR_GUID
 
 ## Persona
 [Paste your persona here]
@@ -681,7 +681,7 @@ https://agentplaybooks.ai/api/playbooks/YOUR_GUID
 ### Method 3: Command-Line System Prompt
 
 ```bash
-claude --system-prompt "$(curl -s https://agentplaybooks.ai/api/playbooks/YOUR_GUID?format=markdown)" "Your task here"
+claude --system-prompt "$(curl -s https://apbks.com/api/playbooks/YOUR_GUID?format=markdown)" "Your task here"
 ```
 
 ---
@@ -697,7 +697,7 @@ import openai
 import requests
 
 # Fetch playbook configuration
-playbook_url = "https://agentplaybooks.ai/api/playbooks/YOUR_GUID?format=anthropic"
+playbook_url = "https://apbks.com/api/playbooks/YOUR_GUID?format=anthropic"
 playbook = requests.get(playbook_url).json()
 
 client = openai.OpenAI()
@@ -743,7 +743,7 @@ import requests
 def write_memory(guid, key, value, api_key):
     """Write a memory entry to the playbook"""
     response = requests.put(
-        f"https://agentplaybooks.ai/api/playbooks/{guid}/memory/{key}",
+        f"https://apbks.com/api/playbooks/{guid}/memory/{key}",
         headers={
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json"
@@ -769,7 +769,7 @@ API_KEY = "apb_live_xxx"
 def get_playbook():
     """Fetch current playbook configuration"""
     response = requests.get(
-        f"https://agentplaybooks.ai/api/playbooks/{PLAYBOOK_GUID}?format=anthropic"
+        f"https://apbks.com/api/playbooks/{PLAYBOOK_GUID}?format=anthropic"
     )
     return response.json()
 
@@ -807,7 +807,7 @@ import anthropic
 import requests
 
 # Fetch playbook in Anthropic format
-playbook_url = "https://agentplaybooks.ai/api/playbooks/YOUR_GUID?format=anthropic"
+playbook_url = "https://apbks.com/api/playbooks/YOUR_GUID?format=anthropic"
 playbook = requests.get(playbook_url).json()
 
 client = anthropic.Anthropic()
@@ -863,7 +863,7 @@ API_KEY = "apb_live_xxx"
 
 def run_claude_agent(task: str):
     """Run Claude agent with playbook and tool handling"""
-    playbook_url = f"https://agentplaybooks.ai/api/playbooks/{PLAYBOOK_GUID}?format=anthropic"
+    playbook_url = f"https://apbks.com/api/playbooks/{PLAYBOOK_GUID}?format=anthropic"
     playbook = requests.get(playbook_url).json()
     
     client = anthropic.Anthropic()
@@ -904,11 +904,11 @@ def execute_tool(name: str, input_data: dict):
     # Example: memory operations
     if name == "read_memory":
         return requests.get(
-            f"https://agentplaybooks.ai/api/playbooks/{PLAYBOOK_GUID}/memory"
+            f"https://apbks.com/api/playbooks/{PLAYBOOK_GUID}/memory"
         ).json()
     elif name == "write_memory":
         return requests.put(
-            f"https://agentplaybooks.ai/api/playbooks/{PLAYBOOK_GUID}/memory/{input_data['key']}",
+            f"https://apbks.com/api/playbooks/{PLAYBOOK_GUID}/memory/{input_data['key']}",
             headers={"Authorization": f"Bearer {API_KEY}"},
             json={"value": input_data["value"]}
         ).json()
@@ -930,7 +930,7 @@ PLAYBOOK_GUID = "YOUR_GUID"
 
 # Fetch playbook
 playbook = requests.get(
-    f"https://agentplaybooks.ai/api/playbooks/{PLAYBOOK_GUID}?format=markdown"
+    f"https://apbks.com/api/playbooks/{PLAYBOOK_GUID}?format=markdown"
 ).text
 
 # Call Grok API
@@ -993,7 +993,7 @@ genai.configure(api_key="YOUR_GEMINI_API_KEY")
 
 # Fetch playbook
 playbook = requests.get(
-    "https://agentplaybooks.ai/api/playbooks/YOUR_GUID?format=markdown"
+    "https://apbks.com/api/playbooks/YOUR_GUID?format=markdown"
 ).text
 
 model = genai.GenerativeModel(
@@ -1013,7 +1013,7 @@ import requests
 
 # Fetch playbook with tools
 playbook = requests.get(
-    "https://agentplaybooks.ai/api/playbooks/YOUR_GUID?format=anthropic"
+    "https://apbks.com/api/playbooks/YOUR_GUID?format=anthropic"
 ).json()
 
 # Convert to Gemini format
@@ -1052,7 +1052,7 @@ class PlaybookAgent:
     def __init__(self, playbook_guid: str, api_key: str = None):
         self.guid = playbook_guid
         self.api_key = api_key
-        self.base_url = "https://agentplaybooks.ai/api"
+        self.base_url = "https://apbks.com/api"
     
     def get_playbook(self, format: str = "anthropic") -> dict:
         """Fetch playbook configuration"""
