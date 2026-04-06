@@ -8,10 +8,11 @@ import { useDashboardAuth } from "./DashboardAuthContext";
 import {
   BookOpen,
   Plus,
-  Brain,
   Zap,
   Lock,
-  Eye
+  Eye,
+  Server,
+  Database
 } from "lucide-react";
 import type { Playbook } from "@/lib/supabase/types";
 import { authFetch } from "@/lib/auth-fetch";
@@ -156,12 +157,16 @@ export default function DashboardPage() {
 
                 <div className="flex items-center gap-4 text-sm text-neutral-500 dark:text-slate-500">
                   <span className="flex items-center gap-1">
-                    <Brain className="h-4 w-4" />
-                    0 {t("dashboard.playbookCard.personas")}
+                    <Zap className="h-4 w-4" />
+                    {playbook.skill_count || 0} {t("dashboard.playbookCard.skills")}
                   </span>
                   <span className="flex items-center gap-1">
-                    <Zap className="h-4 w-4" />
-                    0 {t("dashboard.playbookCard.skills")}
+                    <Server className="h-4 w-4" />
+                    {playbook.mcp_server_count || 0} MCP
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Database className="h-4 w-4" />
+                    {playbook.memory_count || 0} Memory
                   </span>
                 </div>
 

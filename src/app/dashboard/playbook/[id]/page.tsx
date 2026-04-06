@@ -1172,7 +1172,6 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="max-w-3xl"
             >
               <h2 className="text-xl font-semibold mb-6 flex items-center gap-2 text-neutral-900 dark:text-white">
                 <Puzzle className="h-5 w-5 text-amber-500 dark:text-amber-400" />
@@ -1625,7 +1624,6 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="max-w-3xl"
             >
               <h2 className="text-xl font-semibold mb-6 flex items-center gap-2 text-neutral-900 dark:text-white">
                 <Settings className="h-5 w-5 text-neutral-500 dark:text-slate-400" />

@@ -17,7 +17,8 @@ export async function GET(request: NextRequest) {
         .select(`
       *,
       skills:skills(count),
-      mcp_servers:mcp_servers(count)
+      mcp_servers:mcp_servers(count),
+      memories:memories(count)
     `)
         .eq("user_id", user.id)
         .order("updated_at", { ascending: false });
@@ -31,14 +32,16 @@ export async function GET(request: NextRequest) {
         const playbook = p as unknown as Playbook & {
             skills: { count: number }[];
             mcp_servers: { count: number }[];
+            memories: { count: number }[];
         };
         return {
             ...playbook,
-            persona_count: playbook.persona_name ? 1 : 0,
             skill_count: playbook.skills?.[0]?.count || 0,
             mcp_server_count: playbook.mcp_servers?.[0]?.count || 0,
+            memory_count: playbook.memories?.[0]?.count || 0,
             skills: undefined,
             mcp_servers: undefined,
+            memories: undefined,
         };
     });
 
