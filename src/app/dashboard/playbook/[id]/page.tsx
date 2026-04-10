@@ -15,7 +15,6 @@ import {
   Zap,
   Server,
   Database,
-  Key,
   Shield,
   Settings,
   Save,
@@ -1437,7 +1436,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
 {`curl -s ${getApiBaseUrl()}/api/mcp/${playbook?.guid} | head -c 200`}
                     </pre>
                     <p className="text-xs text-neutral-500 dark:text-slate-500 mt-1">
-                      {playbook?.visibility !== "public" && <>Add your API key to test private playbooks: <code className="bg-neutral-100 dark:bg-slate-800 px-1 rounded">curl -s -H "Authorization: Bearer YOUR_API_KEY" ...</code></>}
+                      {playbook?.visibility !== "public" && <>Add your API key to test private playbooks: <code className="bg-neutral-100 dark:bg-slate-800 px-1 rounded">curl -s -H &quot;Authorization: Bearer YOUR_API_KEY&quot; ...</code></>}
                     </p>
                   </div>
 

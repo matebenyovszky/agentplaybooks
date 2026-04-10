@@ -17,10 +17,18 @@ import {
 import type { Playbook } from "@/lib/supabase/types";
 import { authFetch } from "@/lib/auth-fetch";
 
+// API returns Playbook rows enriched with computed counts
+type PlaybookWithCounts = Playbook & {
+  skill_count?: number;
+  mcp_server_count?: number;
+  persona_count?: number;
+  memory_count?: number;
+};
+
 export default function DashboardPage() {
   const t = useTranslations();
   const { user } = useDashboardAuth();
-  const [playbooks, setPlaybooks] = useState<Playbook[]>([]);
+  const [playbooks, setPlaybooks] = useState<PlaybookWithCounts[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -32,7 +40,7 @@ export default function DashboardPage() {
       const data = await res.json().catch(() => null);
 
       if (!active) return;
-      setPlaybooks(Array.isArray(data) ? data as Playbook[] : []);
+      setPlaybooks(Array.isArray(data) ? data as PlaybookWithCounts[] : []);
       setLoading(false);
     };
 
@@ -66,7 +74,7 @@ export default function DashboardPage() {
       return;
     }
 
-    setPlaybooks([data as Playbook, ...playbooks]);
+    setPlaybooks([data as PlaybookWithCounts, ...playbooks]);
   };
 
   if (loading) {

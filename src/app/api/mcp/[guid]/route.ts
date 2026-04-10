@@ -142,12 +142,11 @@ app.get("/", async (c) => {
     return c.json({ error: "Playbook not found" }, 404);
   }
 
-  const [skillsRes, mcpRes] = await Promise.all([
+  const [, mcpRes] = await Promise.all([
     supabase.from("skills").select("*").eq("playbook_id", playbook.id),
     supabase.from("mcp_servers").select("*").eq("playbook_id", playbook.id),
   ]);
 
-  const skills = skillsRes.data || [];
   const mcpServers = mcpRes.data || [];
   const persona = playbookToPersona(playbook);
 
