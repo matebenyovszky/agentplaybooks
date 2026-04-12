@@ -353,11 +353,17 @@ app.post("/proxy", async (c) => {
     if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
       return c.json({ error: "Only http and https URLs are allowed" }, 400);
     }
-    const hostname = parsed.hostname.toLowerCase();
+    // Block private/internal IPs (including IPv6 variants)
+    const hostname = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, "");
     if (hostname === "localhost" || hostname === "127.0.0.1" || hostname === "0.0.0.0" ||
+        hostname === "::1" || hostname === "::ffff:127.0.0.1" || hostname === "0000:0000:0000:0000:0000:0000:0000:0001" ||
+        hostname.startsWith("::ffff:10.") || hostname.startsWith("::ffff:192.168.") || hostname.startsWith("::ffff:172.") ||
         hostname.startsWith("10.") || hostname.startsWith("192.168.") ||
-        hostname.startsWith("172.") || hostname.endsWith(".internal") ||
-        hostname.endsWith(".local")) {
+        hostname.startsWith("172.") || hostname.startsWith("169.254.") ||
+        hostname.startsWith("fc") || hostname.startsWith("fd") || hostname.startsWith("fe80") ||
+        hostname.endsWith(".internal") || hostname.endsWith(".local") ||
+        hostname === "metadata.google.internal" ||
+        !/^[a-z0-9.:\-\[\]]+$/i.test(hostname)) {
       return c.json({ error: "Requests to private/internal addresses are not allowed" }, 400);
     }
   } catch {
