@@ -162,7 +162,7 @@ Key-value storage for remembering facts, preferences, and state across sessions.
 
 ### 6. Secrets - Secure Credentials
 
-Encrypted key-value vault for storing API keys, passwords, and tokens. Values are AES-256-GCM encrypted and never exposed in plaintext to the AI agents. Instead, agents use the `use_secret` MCP tool to inject these credentials into HTTP requests server-side.
+Encrypted key-value vault for storing API keys, passwords, and tokens. Values are AES-256-GCM encrypted. By default, they are never exposed in plaintext to the AI agents (Proxy Only). Instead, agents use the `use_secret` MCP tool to inject these credentials into HTTP requests server-side. Users can optionally enable **API Key Reveal** on a per-secret basis if an agent explicitly requires the raw value.
 
 ```json
 {

@@ -19,6 +19,8 @@ Secrets Vault löst das mit einem **Proxy-Pattern**, das um das `use_secret`-Too
 
 Der Agent liest das Secret nie. Er bittet den Server, ein benanntes Secret zu **verwenden**—zum Beispiel: *„Nutze meinen `OPENAI_API_KEY`, um diese URL aufzurufen.“* Der Server entschlüsselt innerhalb der vertrauenswürdigen Grenze, setzt den Header (z. B. `Authorization: Bearer …`) und liefert **nur die HTTP-Antwort** zurück. Klartext erreicht das Modell nie.
 
+**Proxy vs Reveal:** In vielen Systemen gewährt ein Agent-API-Key implizit die Berechtigung, Roh-Secrets zu "enthüllen". Bei AgentPlaybooks haben wir dies streng getrennt, indem wir "Proxy Only" als Standard verwenden. Von Agenten verwendete API-Keys sind technisch für den `/reveal`-Endpunkt gesperrt, es sei denn, Sie aktivieren explizit **Reveal Enabled** für ein bestimmtes Secret. Selbst wenn der API-Key eines Agenten kompromittiert ist, kann der Angreifer Ihre Anmeldedaten standardmäßig nicht extrahieren – er kann sie nur über den Proxy verwenden. Klartext erreicht das Modell nur dann, wenn Sie dies ausdrücklich erlauben.
+
 ## ⚙️ So funktioniert es (technisch)
 
 Defense in depth: **AES-256-GCM** mit pro Verschlüsselung zufälligen IVs; **HKDF-abgeleitete pro-Benutzer-Keys**, damit Ciphertext pro Identität isoliert ist; **kein Klartext at rest**. Der **`use_secret`**-Pfad ist Agent → serverseitige Entschlüsselung → Header injizieren → HTTP hinaus → **nur Antwort** zurück. **SSRF-Regeln** blockieren private/interne Ziele. **Row Level Security (RLS)** schränkt Zeilen so ein, dass nur Playbook-Besitzer ihre eigenen Secrets sehen—durchgesetzt in der Datenbank, nicht nur im App-Code.
@@ -56,7 +58,7 @@ Das Modell sieht das Upstream-JSON oder den Fehler—**niemals** den Token. Dass
 
 ## Verwaltung im Dashboard
 
-Im Dashboard unterstützt **Secrets** **Anlegen**, **nur-Metadaten**-Ansicht, **Rotation** und **Löschen**, mit **Kategorien** und **Ablauf**-Tracking—ohne Rohwerte nach dem Speichern anzuzeigen.
+Im Dashboard unterstützt **Secrets** **Anlegen**, **nur-Metadaten**-Ansicht, **Rotation** und **Löschen**, mit **Kategorien**, **Ablauf**-Tracking und einem visuellen **Proxy Only / Reveal Enabled** Schalter—ohne Rohwerte nach dem Speichern anzuzeigen.
 
 ## Erste Schritte
 

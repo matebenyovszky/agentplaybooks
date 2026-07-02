@@ -64,6 +64,7 @@ export function SecretManager({ storage, readOnly = false }: SecretManagerProps)
   const [newDescription, setNewDescription] = useState("");
   const [newCategory, setNewCategory] = useState<SecretCategory>("api_key");
   const [newExpiresAt, setNewExpiresAt] = useState("");
+  const [newAllowApiKeyReveal, setNewAllowApiKeyReveal] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState("");
   const [actionError, setActionError] = useState("");
@@ -104,6 +105,7 @@ export function SecretManager({ storage, readOnly = false }: SecretManagerProps)
         description: newDescription || undefined,
         category: newCategory,
         expires_at: newExpiresAt || undefined,
+        allow_api_key_reveal: newAllowApiKeyReveal,
       });
 
       if (result) {
@@ -131,6 +133,7 @@ export function SecretManager({ storage, readOnly = false }: SecretManagerProps)
     setNewDescription("");
     setNewCategory("api_key");
     setNewExpiresAt("");
+    setNewAllowApiKeyReveal(false);
     setCreateError("");
   };
 
@@ -377,6 +380,18 @@ export function SecretManager({ storage, readOnly = false }: SecretManagerProps)
                         Expiring soon
                       </span>
                     )}
+                    <span
+                      className={cn(
+                        "px-2 py-0.5 rounded text-xs font-medium border flex items-center gap-1",
+                        secret.allow_api_key_reveal
+                          ? "bg-amber-500/20 text-amber-400 border-amber-500/30"
+                          : "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+                      )}
+                      title={secret.allow_api_key_reveal ? "Agents can read the raw secret value" : "Agents can only use this via secure proxy"}
+                    >
+                      {secret.allow_api_key_reveal ? <Eye className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
+                      {secret.allow_api_key_reveal ? "Reveal Enabled" : "Proxy Only"}
+                    </span>
                   </div>
 
                   {secret.description && (

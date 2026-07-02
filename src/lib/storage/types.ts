@@ -34,6 +34,7 @@ export type SecretInput = {
   description?: string | null;
   category?: SecretCategory;
   expires_at?: string | null;
+  allow_api_key_reveal?: boolean;
 };
 
 export interface StorageAdapter {

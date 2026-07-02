@@ -306,6 +306,7 @@ export type SecretsRow = {
   expires_at: string | null;
   last_used_at: string | null;
   use_count: number;
+  allow_api_key_reveal: boolean;
   created_by: string | null;
   updated_by: string | null;
   created_at: string;
@@ -329,6 +330,7 @@ export type SecretMetadata = {
   expires_at: string | null;
   last_used_at: string | null;
   use_count: number;
+  allow_api_key_reveal: boolean;
   created_at: string;
   updated_at: string;
 };

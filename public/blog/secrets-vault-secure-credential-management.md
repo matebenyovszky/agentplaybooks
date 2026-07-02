@@ -17,7 +17,9 @@ Agents need **API keys and tokens** to reach LLM APIs, payment systems, webhooks
 
 Secrets Vault solves this with a **proxy pattern** built around the `use_secret` tool.
 
-The agent never reads the secret. It asks the server to **use** a named secret—for example: *"Use my `OPENAI_API_KEY` to call this URL."* The server decrypts inside the trusted boundary, injects the header (e.g. `Authorization: Bearer …`), and returns **only the HTTP response**. Plaintext never reaches the model.
+The agent never reads the secret. It asks the server to **use** a named secret—for example: *"Use my `OPENAI_API_KEY` to call this URL."* The server decrypts inside the trusted boundary, injects the header (e.g. `Authorization: Bearer …`), and returns **only the HTTP response**. 
+
+**Proxy vs Reveal:** In many systems, an agent API key might implicitly grant permission to "reveal" raw secret strings. In AgentPlaybooks, we've strictly separated these by defaulting to "Proxy Only". API keys used by agents are technically blocked from accessing the `/reveal` endpoint unless you explicitly enable **Reveal Enabled** for a specific secret. Even if an agent's API key is compromised, the attacker cannot extract your raw credentials by default—they can only use them through the proxy, where you maintain full audit trails. Plaintext never reaches the model unless you specifically authorize it.
 
 ## ⚙️ How It Works (Technical)
 
@@ -56,7 +58,7 @@ The model sees the upstream JSON or error—**never** the token. Same pattern fo
 
 ## Dashboard Management
 
-In the dashboard, **Secrets** supports **create**, **metadata-only** viewing, **rotate**, and **delete**, with **categories** and **expiration** tracking—without showing raw values after you save.
+In the dashboard, **Secrets** supports **create**, **metadata-only** viewing, **rotate**, and **delete**, with **categories**, **expiration** tracking, and a visual **Proxy Only / Reveal Enabled** toggle—without showing raw values after you save.
 
 ## Getting Started
 

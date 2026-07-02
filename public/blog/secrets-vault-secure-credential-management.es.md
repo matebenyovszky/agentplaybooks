@@ -19,6 +19,8 @@ Secrets Vault lo resuelve con un **patrón proxy** construido en torno a la herr
 
 El agente nunca lee el secreto. Pide al servidor que **use** un secreto con nombre —por ejemplo: *«Usa mi `OPENAI_API_KEY` para llamar a esta URL».* El servidor descifra dentro del límite de confianza, inyecta la cabecera (p. ej. `Authorization: Bearer …`) y devuelve **solo la respuesta HTTP**. El texto plano nunca llega al modelo.
 
+**Proxy vs Reveal:** En muchos sistemas, una clave de API de agente podría otorgar implícitamente permiso para "revelar" cadenas secretas. En AgentPlaybooks hemos separado esto estrictamente al establecer "Proxy Only" por defecto. Las claves de API usadas por los agentes tienen bloqueado técnicamente el acceso al endpoint `/reveal` a menos que habilites explícitamente **Reveal Enabled** para un secreto en particular. Incluso si la clave de API de un agente se ve comprometida, el atacante no puede extraer las credenciales sin procesar por defecto: solo puede usarlas a través del proxy. El texto sin formato nunca llega al modelo a menos que lo autorices.
+
 ## ⚙️ Cómo funciona (aspecto técnico)
 
 Defensa en profundidad: **AES-256-GCM** con IV aleatorios por cifrado; **claves derivadas por usuario con HKDF** para aislar el cifrado por identidad; **sin texto plano en reposo**. El flujo **`use_secret`** es agente → descifrado en servidor → inyección de cabecera → petición HTTP saliente → **solo la respuesta** de vuelta. Las **reglas SSRF** bloquean destinos privados o internos. **Row Level Security (RLS)** limita las filas para que solo los propietarios del playbook vean sus propios secretos —aplicado en la base de datos, no solo en el código de la aplicación.
@@ -56,7 +58,7 @@ El modelo ve el JSON de origen o el error —**nunca** el token. El mismo patró
 
 ## Gestión en el panel
 
-En el panel, **Secretos** permite **crear**, ver **solo metadatos**, **rotar** y **eliminar**, con **categorías** y seguimiento de **caducidad** —sin mostrar valores en bruto después de guardar.
+En el panel, **Secretos** permite **crear**, ver **solo metadatos**, **rotar** y **eliminar**, con **categorías**, seguimiento de **caducidad** y un interruptor visual de **Proxy Only / Reveal Enabled** —sin mostrar valores en bruto después de guardar.
 
 ## Primeros pasos
 

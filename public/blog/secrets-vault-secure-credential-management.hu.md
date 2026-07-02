@@ -17,7 +17,9 @@ Az ügynököknek **API-kulcsokra és tokenekre** van szükségük az LLM API-k,
 
 A Secrets Vault ezt egy **`use_secret`** eszközre épülő **proxy mintával** oldja meg.
 
-Az ügynök soha nem olvassa be a titkot. Arra kéri a szervert, hogy **használjon** egy elnevezett titkot – például: *„Használd az `OPENAI_API_KEY` kulcsomat ehhez az URL-hez intézett híváshoz.”* A szerver a megbízható határon belül visszafejt, beilleszti a fejlécet (pl. `Authorization: Bearer …`), és **csak a HTTP választ** adja vissza. A nyílt szöveg nem jut el a modellhez.
+Az ügynök soha nem olvassa be a titkot. Arra kéri a szervert, hogy **használjon** egy elnevezett titkot – például: *„Használd az `OPENAI_API_KEY` kulcsomat ehhez az URL-hez intézett híváshoz.”* A szerver a megbízható határon belül visszafejt, beilleszti a fejlécet (pl. `Authorization: Bearer …`), és **csak a HTTP választ** adja vissza. 
+
+**Proxy vs Reveal:** Sok rendszerben az ügynökök API kulcsa automatikusan hozzáférést biztosít a titkok nyers visszafejtéséhez (reveal). Az AgentPlaybooks-nál ezt szigorúan szétválasztottuk, az alapértelmezett "Proxy Only" móddal. Az ügynökök által használt API kulcsok technikailag le vannak tiltva a `/reveal` végpontról, hacsak nem engedélyezed kifejezetten a **Reveal Enabled** opciót egy adott titoknál. Így még ha egy ügynök API kulcsa kompromittálódik is, a támadó alapértelmezés szerint nem tudja ellopni a nyers jelszavaidat – csak a proxy-n keresztül tudja azokat felhasználni. A nyílt szöveg soha nem jut el a modellhez, hacsak nem adsz rá külön engedélyt.
 
 ## ⚙️ Hogyan működik (technikai részletek)
 
@@ -56,7 +58,7 @@ A modell a felsőbb réteg JSON-ját vagy hibáját látja – **soha** a tokent
 
 ## Kezelés a vezérlőpultról
 
-A vezérlőpulton a **Titkok** szekció **létrehozást**, **csak metaadatokon alapuló megtekintést**, **rotációt** és **törlést** támogat, **kategóriákkal** és **lejárat** követéssel – mentés után a nyers értékeket nem mutatja.
+A vezérlőpulton a **Titkok** szekció **létrehozást**, **csak metaadatokon alapuló megtekintést**, **rotációt** és **törlést** támogat, **kategóriákkal**, **lejárat** követéssel és egy vizuális **Proxy Only / Reveal Enabled** kapcsolóval – mentés után a nyers értékeket nem mutatja.
 
 ## Első lépések
 

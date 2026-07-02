@@ -699,7 +699,7 @@ DELETE /api/playbooks/:id/api-keys/:kid
 
 Encrypted credential storage for playbook tools and integrations. Values are AES-256-GCM encrypted with per-user derived keys.
 
-**Security model:** Secret values are never exposed to AI agents. Agents reference secrets by name and use the `use_secret` MCP tool or `/proxy` REST endpoint to inject secrets into HTTP requests server-side.
+**Security model:** Secret values are AES-256-GCM encrypted. By default, agents reference secrets by name and use the `use_secret` MCP tool or `/proxy` REST endpoint to inject secrets into HTTP requests server-side. Agents can only access the raw secret value if the `allow_api_key_reveal` flag is set to true for that specific secret.
 
 ### List Secrets
 
@@ -723,20 +723,21 @@ Content-Type: application/json
   "value": "sk-...",
   "description": "OpenAI API key for GPT-4",
   "category": "api_key",
-  "expires_at": "2027-01-01T00:00:00Z"
+  "expires_at": "2027-01-01T00:00:00Z",
+  "allow_api_key_reveal": false
 }
 ```
 
 The `value` is encrypted immediately and never stored in plaintext.
 
-### Reveal Secret (Dashboard Only)
+### Reveal Secret
 
 ```http
 GET /api/playbooks/:guid/secrets/reveal/:name
-Authorization: Bearer <jwt>
+Authorization: Bearer <jwt_or_api_key>
 ```
 
-Returns the decrypted value. **For human dashboard use only** — agents should use `use_secret` instead.
+Returns the decrypted value. If called with an API key, the request will only succeed if the secret has `allow_api_key_reveal` set to true. Otherwise, it will return a 403 Forbidden error (Proxy Only mode).
 
 ### Use Secret (Proxy)
 

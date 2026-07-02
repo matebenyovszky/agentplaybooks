@@ -1940,6 +1940,7 @@ use_secret({
                 description: (args.description as string) || null,
                 category: (args.category as SecretCategory) || "general",
                 expires_at: (args.expires_at as string) || null,
+                allow_api_key_reveal: (args.allow_api_key_reveal as boolean) || false,
                 encrypted_value: encrypted.encrypted_value,
                 iv: encrypted.iv,
                 auth_tag: encrypted.auth_tag,
