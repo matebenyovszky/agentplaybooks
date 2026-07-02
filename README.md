@@ -141,6 +141,23 @@ POST   /api/playbooks/:id/api-keys
 DELETE /api/playbooks/:id/api-keys/:kid
 ```
 
+### Playbook Secrets (owner or API key)
+
+Secrets are encrypted using AES-256-GCM. Agents can use the `use_secret` MCP tool or proxy endpoint to use secrets in HTTP requests without ever reading the plaintext value.
+
+```
+GET    /api/playbooks/:guid/secrets          # List metadata only
+POST   /api/playbooks/:guid/secrets          # Create encrypted secret
+PUT    /api/playbooks/:guid/secrets/:name    # Update/rotate secret
+DELETE /api/playbooks/:guid/secrets/:name    # Delete secret
+
+# Dashboard only
+GET    /api/playbooks/:guid/secrets/reveal/:name
+
+# Proxy external requests using a secret
+POST   /api/playbooks/:guid/secrets/proxy
+```
+
 ### User profile and user API keys (Management)
 
 

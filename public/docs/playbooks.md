@@ -160,6 +160,23 @@ Key-value storage for remembering facts, preferences, and state across sessions.
 - Accumulated facts
 - Configuration data
 
+### 6. Secrets - Secure Credentials
+
+Encrypted key-value vault for storing API keys, passwords, and tokens. Values are AES-256-GCM encrypted and never exposed in plaintext to the AI agents. Instead, agents use the `use_secret` MCP tool to inject these credentials into HTTP requests server-side.
+
+```json
+{
+  "OPENAI_API_KEY": "sk-...",
+  "DB_PASSWORD": "super-secret-password"
+}
+```
+
+**Use cases:**
+- API authentication (OpenAI, Anthropic, GitHub)
+- Database connection strings
+- Webhook signing secrets
+- Third-party service tokens
+
 ## How It All Fits Together
 
 ```
@@ -181,6 +198,12 @@ Key-value storage for remembering facts, preferences, and state across sessions.
 │  │   Working documents     │  │   Persistent facts      │  │
 │  │   Notes, drafts, files  │  │   Key-value storage     │  │
 │  └─────────────────────────┘  └─────────────────────────┘  │
+│                                                             │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │                       SECRETS                         │  │
+│  │                                                       │  │
+│  │      Encrypted keys, tokens, and credentials          │  │
+│  └───────────────────────────────────────────────────────┘  │
 │                                                             │
 └─────────────────────────────────────────────────────────────┘
                               │
