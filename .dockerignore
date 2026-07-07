@@ -1,0 +1,13 @@
+node_modules
+.next
+.git
+.github
+.open-next
+.wrangler
+*.log
+*.md
+!public/**/*.md
+.env*
+.DS_Store
+drizzle
+coverage

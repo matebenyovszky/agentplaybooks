@@ -60,6 +60,30 @@ Das Modell sieht das Upstream-JSON oder den Fehler—**niemals** den Token. Dass
 
 Im Dashboard unterstützt **Secrets** **Anlegen**, **nur-Metadaten**-Ansicht, **Rotation** und **Löschen**, mit **Kategorien**, **Ablauf**-Tracking und einem visuellen **Proxy Only / Reveal Enabled** Schalter—ohne Rohwerte nach dem Speichern anzuzeigen.
 
+## Python-Integration
+
+Nutzen Sie die REST-API direkt aus Python — kein MCP-Client nötig:
+
+```python
+import requests
+
+HEADERS = {"Authorization": "Bearer apb_live_your_key", "Content-Type": "application/json"}
+
+# Proxy: OpenAI aufrufen, ohne den Schlüssel preiszugeben
+result = requests.post(
+    "https://apbks.com/api/playbooks/YOUR_GUID/secrets/proxy",
+    headers=HEADERS,
+    json={
+        "secret_name": "OPENAI_API_KEY",
+        "url": "https://api.openai.com/v1/models",
+        "method": "GET",
+    },
+).json()
+print(result["body"])  # Der Agent sieht den API-Key nie!
+```
+
+Vollständige Codebeispiele finden Sie in der [Python-Dokumentation](/docs/secrets-python-examples) (Englisch).
+
 ## Erste Schritte
 
 1. Benannte Secrets im Dashboard hinzufügen (`OPENAI_API_KEY`, `STRIPE_SECRET_KEY`, usw.).

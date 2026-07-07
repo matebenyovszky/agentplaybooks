@@ -1,6 +1,8 @@
 import { cookies } from "next/headers";
 import { hashApiKey } from "@/lib/utils";
-import { getSupabase, getServiceSupabase } from "./supabase";
+import { getSupabase, getDb } from "./supabase";
+import { schema } from "@/lib/db";
+import { eq, and } from "drizzle-orm";
 import type { ApiKey, UserApiKeysRow } from "@/lib/supabase/types";
 
 type ApiKeyWithPlaybook = ApiKey & {
@@ -61,16 +63,13 @@ export async function validateApiKey(
 
   const apiKey = authHeader.replace("Bearer ", "");
   const keyHash = await hashApiKey(apiKey);
-  const supabase = getServiceSupabase();
+  const db = getDb();
 
-  const { data } = await supabase
-    .from("api_keys")
-    .select("*")
-    .eq("key_hash", keyHash)
-    .eq("is_active", true)
-    .single();
-
-  const apiKeyData = data as ApiKey | null;
+  const [apiKeyData] = await db
+    .select()
+    .from(schema.apiKeys)
+    .where(and(eq(schema.apiKeys.key_hash, keyHash), eq(schema.apiKeys.is_active, true)))
+    .limit(1);
 
   if (!apiKeyData) {
     return null;
@@ -86,22 +85,23 @@ export async function validateApiKey(
     return null;
   }
 
-  const { data: playbook } = await supabase
-    .from("playbooks")
-    .select("id, guid")
-    .eq("id", apiKeyData.playbook_id)
-    .single();
+  const [playbook] = await db
+    .select({ id: schema.playbooks.id, guid: schema.playbooks.guid })
+    .from(schema.playbooks)
+    .where(eq(schema.playbooks.id, apiKeyData.playbook_id))
+    .limit(1);
 
   if (!playbook) {
     return null;
   }
 
-  await supabase
-    .from("api_keys")
-    .update({ last_used_at: new Date().toISOString() })
-    .eq("id", apiKeyData.id);
+  await db
+    .update(schema.apiKeys)
+    .set({ last_used_at: new Date() })
+    .where(eq(schema.apiKeys.id, apiKeyData.id));
 
-  return { ...apiKeyData, playbooks: playbook };
+  // Typecasting back to expected Supabase interface type to avoid rewriting the rest of the application
+  return { ...apiKeyData, playbooks: playbook } as unknown as ApiKeyWithPlaybook;
 }
 
 export async function validateUserApiKey(
@@ -115,14 +115,13 @@ export async function validateUserApiKey(
 
   const apiKey = authHeader.replace("Bearer ", "");
   const keyHash = await hashApiKey(apiKey);
-  const supabase = getServiceSupabase();
+  const db = getDb();
 
-  const { data: userKeyData } = await supabase
-    .from("user_api_keys")
-    .select("*")
-    .eq("key_hash", keyHash)
-    .eq("is_active", true)
-    .single();
+  const [userKeyData] = await db
+    .select()
+    .from(schema.userApiKeys)
+    .where(and(eq(schema.userApiKeys.key_hash, keyHash), eq(schema.userApiKeys.is_active, true)))
+    .limit(1);
 
   if (!userKeyData) {
     return null;
@@ -136,12 +135,12 @@ export async function validateUserApiKey(
     return null;
   }
 
-  await supabase
-    .from("user_api_keys")
-    .update({ last_used_at: new Date().toISOString() })
-    .eq("id", userKeyData.id);
+  await db
+    .update(schema.userApiKeys)
+    .set({ last_used_at: new Date() })
+    .where(eq(schema.userApiKeys.id, userKeyData.id));
 
-  return userKeyData as UserApiKeyData;
+  return userKeyData as unknown as UserApiKeyData;
 }
 
 export async function getUserFromAuthOrApiKey(

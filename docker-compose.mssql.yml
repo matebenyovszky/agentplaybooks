@@ -1,0 +1,36 @@
+# ============================================
+# AgentPlaybooks - Docker Compose MSSQL Override
+# Usage: docker compose -f docker-compose.yml -f docker-compose.mssql.yml up
+# ============================================
+
+services:
+  # --- Microsoft SQL Server ---
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    restart: unless-stopped
+    volumes:
+      - mssqldata:/var/opt/mssql
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:-YourStr0ngP@ssw0rd!}
+      MSSQL_PID: Express
+    ports:
+      - "1433:1433"
+    healthcheck:
+      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$${MSSQL_SA_PASSWORD}" -Q "SELECT 1" -C -b -o /dev/null
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # --- Override app to use MSSQL ---
+  app:
+    depends_on:
+      mssql:
+        condition: service_healthy
+    environment:
+      DB_DIALECT: mssql
+      DATABASE_URL: "Server=mssql,1433;Database=agentplaybooks;User Id=sa;Password=${MSSQL_SA_PASSWORD:-YourStr0ngP@ssw0rd!};Encrypt=false;TrustServerCertificate=true;"
+
+volumes:
+  mssqldata:
