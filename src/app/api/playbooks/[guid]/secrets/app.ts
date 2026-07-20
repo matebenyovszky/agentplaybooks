@@ -1,4 +1,3 @@
-import { handle } from "hono/vercel";
 import { createApiApp } from "@/app/api/_shared/hono";
 import { getServiceSupabase } from "@/app/api/_shared/supabase";
 import { getAuthenticatedUser, validateApiKey } from "@/app/api/_shared/auth";

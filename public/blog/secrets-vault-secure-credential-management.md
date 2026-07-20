@@ -60,6 +60,30 @@ The model sees the upstream JSON or error—**never** the token. Same pattern fo
 
 In the dashboard, **Secrets** supports **create**, **metadata-only** viewing, **rotate**, and **delete**, with **categories**, **expiration** tracking, and a visual **Proxy Only / Reveal Enabled** toggle—without showing raw values after you save.
 
+## Python Integration
+
+Use the REST API directly from Python—no MCP client needed:
+
+```python
+import requests
+
+HEADERS = {"Authorization": "Bearer apb_live_your_key", "Content-Type": "application/json"}
+
+# Proxy: call OpenAI without exposing the key
+result = requests.post(
+    "https://apbks.com/api/playbooks/YOUR_GUID/secrets/proxy",
+    headers=HEADERS,
+    json={
+        "secret_name": "OPENAI_API_KEY",
+        "url": "https://api.openai.com/v1/models",
+        "method": "GET",
+    },
+).json()
+print(result["body"])  # The agent never sees the API key!
+```
+
+See the full [Python Examples](/docs/secrets-python-examples) for reveal, store, rotate, and more.
+
 ## Getting Started
 
 1. Add named secrets in the dashboard (`OPENAI_API_KEY`, `STRIPE_SECRET_KEY`, etc.).

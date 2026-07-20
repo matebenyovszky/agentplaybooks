@@ -60,6 +60,30 @@ El modelo ve el JSON de origen o el error —**nunca** el token. El mismo patró
 
 En el panel, **Secretos** permite **crear**, ver **solo metadatos**, **rotar** y **eliminar**, con **categorías**, seguimiento de **caducidad** y un interruptor visual de **Proxy Only / Reveal Enabled** —sin mostrar valores en bruto después de guardar.
 
+## Integración con Python
+
+Usa la API REST directamente desde Python — sin necesidad de cliente MCP:
+
+```python
+import requests
+
+HEADERS = {"Authorization": "Bearer apb_live_your_key", "Content-Type": "application/json"}
+
+# Proxy: llamar a OpenAI sin exponer la clave
+result = requests.post(
+    "https://apbks.com/api/playbooks/YOUR_GUID/secrets/proxy",
+    headers=HEADERS,
+    json={
+        "secret_name": "OPENAI_API_KEY",
+        "url": "https://api.openai.com/v1/models",
+        "method": "GET",
+    },
+).json()
+print(result["body"])  # ¡El agente nunca ve la clave API!
+```
+
+Para ejemplos completos, consulta la [documentación de Python](/docs/secrets-python-examples) (en inglés).
+
 ## Primeros pasos
 
 1. Añade secretos con nombre en el panel (`OPENAI_API_KEY`, `STRIPE_SECRET_KEY`, etc.).

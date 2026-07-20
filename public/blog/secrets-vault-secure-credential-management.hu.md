@@ -60,6 +60,30 @@ A modell a felsőbb réteg JSON-ját vagy hibáját látja – **soha** a tokent
 
 A vezérlőpulton a **Titkok** szekció **létrehozást**, **csak metaadatokon alapuló megtekintést**, **rotációt** és **törlést** támogat, **kategóriákkal**, **lejárat** követéssel és egy vizuális **Proxy Only / Reveal Enabled** kapcsolóval – mentés után a nyers értékeket nem mutatja.
 
+## Python integráció
+
+Használd a REST API-t közvetlenül Pythonból — MCP kliens nélkül:
+
+```python
+import requests
+
+HEADERS = {"Authorization": "Bearer apb_live_your_key", "Content-Type": "application/json"}
+
+# Proxy: hívd az OpenAI-t anélkül, hogy a kulcs látszódna
+result = requests.post(
+    "https://apbks.com/api/playbooks/YOUR_GUID/secrets/proxy",
+    headers=HEADERS,
+    json={
+        "secret_name": "OPENAI_API_KEY",
+        "url": "https://api.openai.com/v1/models",
+        "method": "GET",
+    },
+).json()
+print(result["body"])  # Az ügynök soha nem látja az API kulcsot!
+```
+
+Teljes kódpéldákért lásd a [Python példák](/docs/secrets-python-examples) dokumentációt (angol).
+
 ## Első lépések
 
 1. Adj meg elnevezett titkokat a vezérlőpulton (`OPENAI_API_KEY`, `STRIPE_SECRET_KEY` stb.).

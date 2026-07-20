@@ -1,27 +1,33 @@
-import { getServiceSupabase } from "./supabase";
+import { getDb } from "./supabase";
+import { schema } from "@/lib/db";
+import { and, eq } from "drizzle-orm";
 import type { Playbook } from "@/lib/supabase/types";
 
 export async function checkPlaybookOwnership(userId: string, playbookId: string): Promise<boolean> {
-  const supabase = getServiceSupabase();
-  const { data } = await supabase
-    .from("playbooks")
-    .select("id")
-    .eq("id", playbookId)
-    .eq("user_id", userId)
-    .single();
-  return !!data;
+  const db = getDb();
+  const [playbook] = await db
+    .select({ id: schema.playbooks.id })
+    .from(schema.playbooks)
+    .where(and(eq(schema.playbooks.id, playbookId), eq(schema.playbooks.user_id, userId)))
+    .limit(1);
+  return !!playbook;
 }
 
 export async function getPlaybookByGuid(
   guid: string,
   userId: string | null
 ): Promise<Pick<Playbook, "id" | "user_id" | "visibility" | "guid"> | null> {
-  const supabase = getServiceSupabase();
-  const { data: playbook } = await supabase
-    .from("playbooks")
-    .select("id, user_id, visibility, guid")
-    .eq("guid", guid)
-    .single();
+  const db = getDb();
+  const [playbook] = await db
+    .select({
+      id: schema.playbooks.id,
+      user_id: schema.playbooks.user_id,
+      visibility: schema.playbooks.visibility,
+      guid: schema.playbooks.guid,
+    })
+    .from(schema.playbooks)
+    .where(eq(schema.playbooks.guid, guid))
+    .limit(1);
 
   if (!playbook) return null;
 
@@ -30,5 +36,6 @@ export async function getPlaybookByGuid(
     return null;
   }
 
-  return playbook;
+  // Cast visibility to match supabase type expectations if needed, but string should be fine
+  return playbook as Pick<Playbook, "id" | "user_id" | "visibility" | "guid">;
 }
