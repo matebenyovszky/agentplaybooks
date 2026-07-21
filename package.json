@@ -63,7 +63,7 @@
     "@vitejs/plugin-react": "^5.1.2",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9",
-    "eslint-config-next": "15.5.20",
+    "eslint-config-next": "16.2.10",
     "tailwindcss": "^4",
     "tsx": "^4.7.0",
     "typescript": "^5",
