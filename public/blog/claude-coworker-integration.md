@@ -208,7 +208,7 @@ Here are three production-ready skills you can add to your AgentPlaybooks playbo
 
 ## Getting Started
 
-1. **Create a playbook** at [agentplaybooks.ai/dashboard](/dashboard)
+1. **Create a playbook** at [apbks.com/dashboard](/dashboard)
 2. **Add your skills and personas** using our intuitive editor
 3. **Export via MCP** to connect with Claude Coworker
 4. **Share with your team** — one URL, instant synchronization
@@ -218,4 +218,3 @@ Here are three production-ready skills you can add to your AgentPlaybooks playbo
 Claude Coworker represents the future of AI assistance — agents that actually *work* alongside you. With AgentPlaybooks, you ensure that work is consistent, transferable, and under your control.
 
 Ready to supercharge your AI coworker? [Start building your playbook today →](/dashboard)
-

@@ -171,6 +171,14 @@ CREATE POLICY "Owner access memories" ON memories
 - Optional expiration dates
 - Granular permissions (`memory:write`, `skills:write`, etc.)
 
+### Human Collaboration Security
+
+- Human editor membership is stored separately from bearer API keys in `playbook_collaborators`
+- Invite links contain 256 bits of randomness; only their SHA-256 digests are stored
+- Links are single-use, expire after 72 hours, and are atomically bound to the accepting account
+- Editors may change content, while secrets, API keys, visibility, sharing, ownership, and deletion remain owner-only
+- Removing a membership immediately revokes account-based access without rotating integration keys
+
 ### Secrets Encryption
 
 - Master key stored as `SECRETS_ENCRYPTION_KEY` environment variable

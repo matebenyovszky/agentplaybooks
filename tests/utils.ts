@@ -1,7 +1,4 @@
-import { Hono } from 'hono';
-import { vi } from 'vitest';
-
-export function createMockRequest(method: string, path: string, body?: any, headers: Record<string, string> = {}) {
+export function createMockRequest(method: string, path: string, body?: unknown, headers: Record<string, string> = {}) {
     const reqInit: RequestInit = {
         method,
         headers: {
@@ -14,7 +11,6 @@ export function createMockRequest(method: string, path: string, body?: any, head
         reqInit.body = JSON.stringify(body);
     }
 
-    // @ts-ignore - Mocking NextRequest/Request
     return new Request(`http://localhost${path}`, reqInit);
 }
 

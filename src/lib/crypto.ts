@@ -17,6 +17,12 @@ const ALGORITHM = "AES-GCM";
 const KEY_LENGTH = 256;
 const IV_LENGTH = 12; // 96 bits recommended for GCM
 const HKDF_INFO = "agentplaybooks-secrets-v1";
+const CIPHERTEXT_V2_PREFIX = "v2:";
+
+export type SecretEncryptionContext = {
+  playbookId: string;
+  secretName: string;
+};
 
 function getMasterKeyHex(): string {
   const key = process.env.SECRETS_ENCRYPTION_KEY;
@@ -26,7 +32,7 @@ function getMasterKeyHex(): string {
       "Generate one with: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\""
     );
   }
-  if (key.length !== 64) {
+  if (!/^[0-9a-f]{64}$/i.test(key)) {
     throw new Error(
       "SECRETS_ENCRYPTION_KEY must be a 64-character hex string (32 bytes). " +
       "Generate one with: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\""
@@ -101,19 +107,34 @@ export type EncryptedData = {
   auth_tag: string;        // base64 auth tag (appended by WebCrypto in GCM mode)
 };
 
+function encodeAdditionalData(userId: string, context: SecretEncryptionContext): ArrayBuffer {
+  return new TextEncoder().encode(
+    ["agentplaybooks-secrets-v2", userId, context.playbookId, context.secretName].join("\0")
+  ).buffer as ArrayBuffer;
+}
+
 /**
  * Encrypt a plaintext secret value using AES-256-GCM with a per-user derived key.
  * @param plaintext - The secret value to encrypt
  * @param userId - The owner's user ID (used to derive their unique encryption key)
  */
-export async function encryptSecret(plaintext: string, userId: string): Promise<EncryptedData> {
+export async function encryptSecret(
+  plaintext: string,
+  userId: string,
+  context: SecretEncryptionContext
+): Promise<EncryptedData> {
   const key = await deriveUserKey(userId);
   const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH));
   const encoded = new TextEncoder().encode(plaintext);
 
   // WebCrypto AES-GCM appends the 16-byte auth tag to the ciphertext
   const ciphertextWithTag = await crypto.subtle.encrypt(
-    { name: ALGORITHM, iv, tagLength: 128 },
+    {
+      name: ALGORITHM,
+      iv,
+      tagLength: 128,
+      additionalData: encodeAdditionalData(userId, context),
+    },
     key,
     encoded
   );
@@ -124,7 +145,7 @@ export async function encryptSecret(plaintext: string, userId: string): Promise<
   const authTag = fullBytes.slice(fullBytes.length - 16);
 
   return {
-    encrypted_value: bufferToBase64(ciphertext.buffer),
+    encrypted_value: CIPHERTEXT_V2_PREFIX + bufferToBase64(ciphertext.buffer),
     iv: bufferToBase64(iv.buffer),
     auth_tag: bufferToBase64(authTag.buffer),
   };
@@ -135,10 +156,21 @@ export async function encryptSecret(plaintext: string, userId: string): Promise<
  * @param data - The encrypted data (ciphertext, IV, auth tag)
  * @param userId - The owner's user ID (must match the ID used during encryption)
  */
-export async function decryptSecret(data: EncryptedData, userId: string): Promise<string> {
+export async function decryptSecret(
+  data: EncryptedData,
+  userId: string,
+  context?: SecretEncryptionContext
+): Promise<string> {
   const key = await deriveUserKey(userId);
   const iv = new Uint8Array(base64ToBuffer(data.iv));
-  const ciphertext = new Uint8Array(base64ToBuffer(data.encrypted_value));
+  const isV2 = data.encrypted_value.startsWith(CIPHERTEXT_V2_PREFIX);
+  if (isV2 && !context) {
+    throw new Error("Encryption context is required for v2 secret ciphertext");
+  }
+  const encodedCiphertext = isV2
+    ? data.encrypted_value.slice(CIPHERTEXT_V2_PREFIX.length)
+    : data.encrypted_value;
+  const ciphertext = new Uint8Array(base64ToBuffer(encodedCiphertext));
   const authTag = new Uint8Array(base64ToBuffer(data.auth_tag));
 
   // WebCrypto expects ciphertext + authTag concatenated
@@ -147,7 +179,14 @@ export async function decryptSecret(data: EncryptedData, userId: string): Promis
   combined.set(authTag, ciphertext.length);
 
   const decrypted = await crypto.subtle.decrypt(
-    { name: ALGORITHM, iv, tagLength: 128 },
+    {
+      name: ALGORITHM,
+      iv,
+      tagLength: 128,
+      ...(isV2 && context
+        ? { additionalData: encodeAdditionalData(userId, context) }
+        : {}),
+    },
     key,
     combined.buffer
   );

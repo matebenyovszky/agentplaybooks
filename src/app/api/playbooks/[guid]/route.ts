@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "../../_shared/supabase";
 import { getAuthenticatedUser } from "../../_shared/auth";
+import { getPlaybookAccessRole } from "../../_shared/guards";
+import { buildPlaybookUpdate } from "@/lib/playbook-access";
 import {
     formatAsOpenAPI,
     formatAsMCP,
@@ -60,10 +62,10 @@ export async function GET(
     }
 
     // Check access: Public/Unlisted OR Owner
-    const isOwner = user && playbook.user_id === user.id;
+    const accessRole = user ? await getPlaybookAccessRole(user.id, playbook.id) : null;
     const isPublicOrUnlisted = playbook.visibility === 'public' || playbook.visibility === 'unlisted';
 
-    if (!isPublicOrUnlisted && !isOwner) {
+    if (!isPublicOrUnlisted && !accessRole) {
         return NextResponse.json({ error: "Playbook not found" }, { status: 404 });
     }
 
@@ -77,6 +79,7 @@ export async function GET(
 
     const fullPlaybook: PlaybookWithExports = {
         ...playbook,
+        current_user_role: accessRole || "viewer",
         persona,
         personas: [persona],
         skills: skillsRes.data || [],
@@ -126,23 +129,16 @@ export async function PUT(
         return NextResponse.json({ error: "Playbook not found" }, { status: 404 });
     }
 
-    // Check ownership
-    if (playbook.user_id !== user.id) {
+    const accessRole = await getPlaybookAccessRole(user.id, playbook.id);
+    if (!accessRole) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const body = await request.json();
-    const { name, description, is_public, visibility, config } = body;
-
-    const updateData: Record<string, unknown> = {};
-    if (name !== undefined) updateData.name = name;
-    if (description !== undefined) updateData.description = description;
-    if (visibility !== undefined) {
-        updateData.visibility = visibility;
-    } else if (is_public !== undefined) {
-        updateData.visibility = is_public ? 'public' : 'private';
+    const updateData = buildPlaybookUpdate(body, accessRole);
+    if (Object.keys(updateData).length === 0) {
+        return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
     }
-    if (config !== undefined) updateData.config = config;
 
     const { data, error } = await supabase
         .from("playbooks")

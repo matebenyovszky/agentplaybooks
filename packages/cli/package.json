@@ -1,0 +1,22 @@
+{
+  "name": "@agentplaybooks/cli",
+  "version": "0.1.0-alpha.0",
+  "description": "Audit and synchronize portable AI agent playbooks",
+  "type": "module",
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "bin": {
+    "apb": "./bin/agentplaybooks.js",
+    "agentplaybooks": "./bin/agentplaybooks.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test"
+  }
+}

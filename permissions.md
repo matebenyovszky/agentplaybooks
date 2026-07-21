@@ -6,7 +6,7 @@ This document outlines the permission and visibility system for AgentPlaybooks.
 
 Playbooks now use a `visibility` setting instead of a simple boolean.
 
-- **Private** (`private`): Only the owner and users with valid API keys can access.
+- **Private** (`private`): Only the owner, accepted human editors, and clients with valid API keys can access.
 - **Public** (`public`): Visible to everyone, appears in "Explore" and search results.
 - **Unlisted** (`unlisted`): Accessible by anyone who has the link (GUID/ID) but hidden from search and lists.
 
@@ -29,8 +29,16 @@ API Keys are now assigned a **Role**, which determines their permissions.
 3.  **Admin** (`admin`)
     - Full access to everything.
     - Can modify Playbook settings (name, description, visibility).
-    - Can manage API keys.
-    - Reserved for highly trusted agents or the owner.
+    - Has full agent/API access within the playbook permission model.
+    - Human-only control-plane actions such as deleting the playbook, managing collaborators, and managing API keys remain owner-only.
+
+## Human Collaboration
+
+- Human access is stored separately in `playbook_collaborators`; an API key is never converted into a user session.
+- The MVP has one collaborator role: `editor`.
+- Editors can update playbook content, personas, skills, MCP servers, attachments, canvas, and memory.
+- Editors cannot access secrets, manage API keys or collaborators, change visibility, or delete the playbook.
+- Invitations use a one-time random token, stored only as a SHA-256 hash, and expire after 72 hours.
 
 ### Implementation Details
 

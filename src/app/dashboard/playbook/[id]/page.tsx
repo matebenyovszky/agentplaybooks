@@ -31,7 +31,8 @@ import {
   Download,
   X,
   Tag,
-  Puzzle
+  Puzzle,
+  UsersRound
 } from "lucide-react";
 import type { Playbook, Persona, Skill, MCPServer, Memory, ApiKey } from "@/lib/supabase/types";
 import { ChatGPTIcon, ClaudeIcon, MarkdownIcon } from "@/components/ui/ai-icons";
@@ -44,8 +45,10 @@ import { MemoryEditor } from "@/components/playbook/MemoryEditor";
 import { ApiKeyManager } from "@/components/playbook/ApiKeyManager";
 import { SecretManager } from "@/components/playbook/SecretManager";
 import { McpRegistrySearch } from "@/components/playbook/McpRegistrySearch";
+import { CollaborationManager } from "@/components/playbook/CollaborationManager";
 
-type TabType = "details" | "skills" | "mcp" | "memory" | "secrets" | "apiKeys";
+type TabType = "details" | "skills" | "mcp" | "memory" | "secrets" | "apiKeys" | "sharing";
+type PlaybookWithAccess = Playbook & { current_user_role?: "owner" | "editor" | "viewer" };
 
 // Debounce hook
 function useDebounce<T>(value: T, delay: number): T {
@@ -67,7 +70,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
   const t = useTranslations();
 
   // State
-  const [playbook, setPlaybook] = useState<Playbook | null>(null);
+  const [playbook, setPlaybook] = useState<PlaybookWithAccess | null>(null);
 
   // Create storage adapter using the actual playbook ID (UUID), not the URL id param
   // This is important when the URL uses a GUID slug instead of UUID
@@ -84,6 +87,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
   const [copied, setCopied] = useState<string | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
+  const [canEdit, setCanEdit] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [forking, setForking] = useState(false);
   const [forkSuccess, setForkSuccess] = useState(false);
@@ -129,7 +133,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
       return;
     }
 
-    const pb = (await playbookResponse.json().catch(() => null)) as Playbook | null;
+    const pb = (await playbookResponse.json().catch(() => null)) as PlaybookWithAccess | null;
     if (!pb) {
       setLoading(false);
       return;
@@ -138,21 +142,23 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
     const playbookId = pb.id;
 
     // Now fetch related data using the actual playbook ID
+    const owner = userId !== null && pb.user_id === userId;
     const [playbookResData, memoryData, keyData] = await Promise.all([
       authFetch(`/api/manage/playbooks/${playbookId}`),
       authFetch(`/api/manage/playbooks/${playbookId}/memory`),
-      authFetch(`/api/playbooks/${playbookId}/api-keys`),
+      owner ? authFetch(`/api/playbooks/${playbookId}/api-keys`) : Promise.resolve(null),
     ]);
 
     const playbookData = await playbookResData.json().catch(() => null);
     const memoriesData = await memoryData.json().catch(() => null);
-    const apiKeysData = await keyData.json().catch(() => null);
+    const apiKeysData = keyData ? await keyData.json().catch(() => null) : [];
     const skillsFromApi = (playbookData?.skills as Skill[]) || (pb as { skills?: Skill[] })?.skills || [];
     const mcpFromApi = (playbookData?.mcp_servers as MCPServer[]) || (pb as { mcp_servers?: MCPServer[] })?.mcp_servers || [];
 
     setPlaybook(pb);
     // Check if current user is the owner
-    setIsOwner(userId !== null && pb.user_id === userId);
+    setIsOwner(owner);
+    setCanEdit(owner || pb.current_user_role === "editor" || playbookData?.current_user_role === "editor");
     // 1 Playbook = 1 Persona (stored on playbook)
     setPersonas([buildPersonaFromPlaybook(pb)]);
 
@@ -182,7 +188,8 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
         body: JSON.stringify({
           name: debouncedPlaybook.name,
           description: debouncedPlaybook.description,
-          visibility: debouncedPlaybook.visibility,
+          tags: debouncedPlaybook.tags,
+          ...(isOwner ? { visibility: debouncedPlaybook.visibility } : {}),
         }),
       });
 
@@ -197,7 +204,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
     };
 
     save();
-  }, [debouncedPlaybook, hasChanges, id]);
+  }, [debouncedPlaybook, hasChanges, id, isOwner]);
 
   const handleManualSave = async () => {
     if (!playbook) return;
@@ -211,7 +218,8 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
       body: JSON.stringify({
         name: playbook.name,
         description: playbook.description,
-        visibility: playbook.visibility,
+        tags: playbook.tags,
+        ...(isOwner ? { visibility: playbook.visibility } : {}),
       }),
     });
 
@@ -746,8 +754,11 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
     { id: "skills" as TabType, label: t("editor.tabs.skills"), icon: Zap, count: skills.length, color: "purple" },
     { id: "mcp" as TabType, label: t("editor.tabs.mcp"), icon: Server, count: mcpServers.length, color: "pink" },
     { id: "memory" as TabType, label: t("editor.tabs.memory"), icon: Database, count: memories.length, color: "teal" },
-    { id: "secrets" as TabType, label: t("editor.tabs.secrets") || "Secrets", icon: Shield, count: 0, color: "emerald" },
-    { id: "apiKeys" as TabType, label: t("editor.tabs.apiKeys"), icon: Puzzle, count: apiKeys.length, color: "amber" },
+    ...(isOwner ? [
+      { id: "secrets" as TabType, label: t("editor.tabs.secrets") || "Secrets", icon: Shield, count: 0, color: "emerald" },
+      { id: "apiKeys" as TabType, label: t("editor.tabs.apiKeys"), icon: Puzzle, count: apiKeys.length, color: "amber" },
+      { id: "sharing" as TabType, label: "Sharing", icon: UsersRound, count: 0, color: "blue" },
+    ] : []),
   ];
 
   if (loading) {
@@ -790,7 +801,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
               <ArrowLeft className="h-5 w-5" />
             </Link>
             <div>
-              {isOwner ? (
+              {canEdit ? (
                 <input
                   type="text"
                   value={playbook.name}
@@ -822,16 +833,23 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Read-only badge for non-owners */}
-            {!isOwner && (
+            {/* Access badge */}
+            {!canEdit && (
               <span className="px-3 py-1.5 bg-neutral-100 dark:bg-slate-700/50 text-neutral-600 dark:text-slate-400 text-sm rounded-lg border border-neutral-200 dark:border-slate-600/50 flex items-center gap-2">
                 <Eye className="h-4 w-4" />
                 {t("editor.readOnly") || "Read Only"}
               </span>
             )}
 
-            {/* Fork button for logged-in non-owners viewing public playbooks */}
-            {!isOwner && playbook.visibility === 'public' && currentUserId && (
+            {canEdit && !isOwner && (
+              <span className="px-3 py-1.5 bg-blue-500/10 text-blue-500 text-sm rounded-lg border border-blue-500/20 flex items-center gap-2">
+                <UsersRound className="h-4 w-4" />
+                Shared editor
+              </span>
+            )}
+
+            {/* Fork button for logged-in viewers of public playbooks */}
+            {!canEdit && playbook.visibility === 'public' && currentUserId && (
               <button
                 onClick={handleForkPlaybook}
                 disabled={forking || forkSuccess}
@@ -862,7 +880,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
             )}
 
             {/* Sign in prompt for non-logged users viewing public playbooks */}
-            {!isOwner && playbook.visibility === 'public' && !currentUserId && (
+            {!canEdit && playbook.visibility === 'public' && !currentUserId && (
               <Link
                 href="/login"
                 className="px-4 py-2 rounded-lg text-sm text-amber-400 border border-amber-500/30 hover:bg-amber-500/10 transition-colors flex items-center gap-2"
@@ -872,11 +890,11 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
               </Link>
             )}
 
-            {/* Status indicators - only for owners */}
-            {isOwner && hasChanges && !saving && (
+            {/* Save status for owners and editors */}
+            {canEdit && hasChanges && !saving && (
               <span className="text-amber-400 text-sm">Unsaved changes</span>
             )}
-            {isOwner && saving && (
+            {canEdit && saving && (
               <span className="flex items-center gap-2 text-blue-400 text-sm">
                 <Loader2 className="h-3 w-3 animate-spin" />
                 Saving...
@@ -909,8 +927,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
               </span>
             )}
 
-            {/* Save button - only for owners */}
-            {isOwner && (
+            {canEdit && (
               <button
                 onClick={handleManualSave}
                 disabled={saving || !hasChanges}
@@ -986,7 +1003,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                   <Zap className="h-5 w-5 text-purple-400" />
                   {t("editor.tabs.skills")}
                 </h2>
-                {isOwner && (
+                {canEdit && (
                   <div className="flex items-center gap-2">
                     <button
                       onClick={openBrowseSkills}
@@ -1028,7 +1045,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                       key={skill.id}
                       skill={skill}
                       storage={storage}
-                      readOnly={!isOwner}
+                      readOnly={!canEdit}
                       onDelete={() => handleDeleteSkill(skill.id)}
                       onUpdate={(updated) => {
                         setSkills(skills.map(s => s.id === updated.id ? updated : s));
@@ -1053,7 +1070,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                   <Server className="h-5 w-5 text-pink-400" />
                   {t("editor.tabs.mcp")}
                 </h2>
-                {isOwner && (
+                {canEdit && (
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setShowMcpRegistry(true)}
@@ -1106,7 +1123,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                       key={mcp.id}
                       mcpServer={mcp}
                       storage={storage}
-                      readOnly={!isOwner}
+                      readOnly={!canEdit}
                       onDelete={() => handleDeleteMCP(mcp.id)}
                       onUpdate={(updated) => {
                         setMcpServers(mcpServers.map(m => m.id === updated.id ? updated : m));
@@ -1130,7 +1147,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                 storage={storage}
                 memories={memories}
                 onUpdate={setMemories}
-                readOnly={!isOwner}
+                readOnly={!canEdit}
               />
             </motion.div>
           )}
@@ -1704,6 +1721,21 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
             </motion.div>
           )}
 
+          {activeTab === "sharing" && isOwner && (
+            <motion.div
+              key="sharing"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+            >
+              <h2 className="text-xl font-semibold mb-6 flex items-center gap-2 text-neutral-900 dark:text-white">
+                <UsersRound className="h-5 w-5 text-blue-500" />
+                Sharing
+              </h2>
+              <CollaborationManager playbookId={playbook.id} />
+            </motion.div>
+          )}
+
           {/* Details Tab */}
           {activeTab === "details" && (
             <motion.div
@@ -1727,7 +1759,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                   <label className="block text-sm font-medium text-neutral-600 dark:text-slate-400 mb-2">
                     Description
                   </label>
-                  {isOwner ? (
+                  {canEdit ? (
                     <textarea
                       value={playbook.description || ""}
                       onChange={(e) => updatePlaybook({ description: e.target.value })}
@@ -1764,7 +1796,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                     <PersonaEditor
                       persona={personas[0]}
                       storage={storage}
-                      readOnly={!isOwner}
+                      readOnly={!canEdit}
                       onDelete={() => handleDeletePersona(personas[0].id)}
                       onUpdate={(updated) => setPersonas([updated])}
                     />
@@ -1785,7 +1817,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                     <Tag className="h-4 w-4" />
                     Tags
                   </label>
-                  {isOwner && (
+                  {canEdit && (
                     <p className="text-xs text-neutral-500 dark:text-slate-500 mb-3">
                       Add tags to help others find your playbook in the Explore page
                     </p>
@@ -1799,7 +1831,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/20 text-amber-400 rounded-full text-sm"
                       >
                         {tag}
-                        {isOwner && (
+                        {canEdit && (
                           <button
                             onClick={() => {
                               const newTags = (playbook.tags || []).filter(t => t !== tag);
@@ -1817,8 +1849,8 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                     )}
                   </div>
 
-                  {/* Add new tag - only for owner */}
-                  {isOwner && (
+                  {/* Add new tag - owners and editors */}
+                  {canEdit && (
                     <>
                       <div className="flex gap-2">
                         <input
@@ -1892,7 +1924,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                 </div>
 
                 {/* Danger Zone */}
-                <div className={cn(
+                {isOwner && <div className={cn(
                   "p-5 rounded-xl",
                   "bg-red-50 dark:bg-gradient-to-br dark:from-red-950/30 dark:to-red-900/20",
                   "border border-red-200 dark:border-red-900/30"
@@ -1918,7 +1950,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                   >
                     Delete Playbook
                   </button>
-                </div>
+                </div>}
               </div>
             </motion.div>
           )}

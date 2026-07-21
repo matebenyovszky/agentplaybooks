@@ -33,6 +33,12 @@ export const docsEntries: DocEntry[] = [
     section: "concepts",
   },
   {
+    slug: "team-collaboration",
+    title: "Team Collaboration",
+    description: "Securely share playbooks with editors",
+    section: "guides",
+  },
+  {
     slug: "skills",
     title: "Skills",
     description: "Structured capability definitions",

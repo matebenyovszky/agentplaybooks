@@ -2,7 +2,7 @@ import { handle } from "hono/vercel";
 import { createApiApp } from "@/app/api/_shared/hono";
 import { getServiceSupabase } from "@/app/api/_shared/supabase";
 import { requireAuth, validateApiKey } from "@/app/api/_shared/auth";
-import { getPlaybookByGuid } from "@/app/api/_shared/guards";
+import { checkPlaybookWriteAccess, getPlaybookByGuid } from "@/app/api/_shared/guards";
 
 const app = createApiApp("/api/playbooks/:guid/memory/:key");
 
@@ -29,7 +29,7 @@ app.put("/", async (c) => {
     }
 
     const playbook = await getPlaybookByGuid(guid, user.id);
-    if (!playbook || playbook.user_id !== user.id) {
+    if (!playbook || !(await checkPlaybookWriteAccess(user.id, playbook.id))) {
       return c.json({ error: "Forbidden" }, 403);
     }
   }
@@ -116,7 +116,7 @@ app.delete("/", async (c) => {
     }
 
     const playbook = await getPlaybookByGuid(guid, user.id);
-    if (!playbook || playbook.user_id !== user.id) {
+    if (!playbook || !(await checkPlaybookWriteAccess(user.id, playbook.id))) {
       return c.json({ error: "Forbidden" }, 403);
     }
   }

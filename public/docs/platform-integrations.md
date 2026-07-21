@@ -1183,15 +1183,14 @@ agent.write_memory("last_session", {"task": "code review", "completed": True})
 - Verify the API key is active and not expired
 
 **Rate limiting**
-- Agent writes: 60 requests/minute/API key
-- Public reads: 100 requests/minute/IP
-- Consider caching playbook configuration
+- Application-level limits are planned and are not currently guaranteed by the API
+- Handle `429 Too Many Requests` responses with exponential backoff
+- Cache playbook configuration where appropriate
 
 ### Getting Help
 
 - [API Reference](./api-reference.md) - Full endpoint documentation
 - [MCP Integration](./mcp-integration.md) - Model Context Protocol details
 - [GitHub Issues](https://github.com/matebenyovszky/agentplaybooks/issues) - Report bugs
-
 
 

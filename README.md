@@ -13,6 +13,7 @@ Give your AI agents, GPTs, and robots a platform-independent vault. Store skills
 - Memory: key-value store with tags and descriptions
 - Export formats: JSON, OpenAPI, MCP, Anthropic, Markdown
 - API keys: Role-Based Access Control (Viewer, Coworker, Admin)
+- Team collaboration: one-time editor invites without sharing human credentials or agent API keys
 - Marketplace: Public and Unlisted playbooks, skills, MCP servers
 - Theme: System-aware Light and Dark modes
 
@@ -110,7 +111,7 @@ PUT    /api/playbooks/:id
 DELETE /api/playbooks/:id
 ```
 
-### Personas (owner only)
+### Personas (owner or editor)
 
 ```
 POST   /api/playbooks/:id/personas
@@ -118,7 +119,7 @@ PUT    /api/playbooks/:id/personas/:pid
 DELETE /api/playbooks/:id/personas/:pid
 ```
 
-### Skills (owner only)
+### Skills (owner or editor)
 
 ```
 POST   /api/playbooks/:id/skills
@@ -140,6 +141,21 @@ GET    /api/playbooks/:id/api-keys
 POST   /api/playbooks/:id/api-keys
 DELETE /api/playbooks/:id/api-keys/:kid
 ```
+
+### Human collaboration (session auth; owner manages access)
+
+Human editors are invited with a one-time link. They can edit playbook content, while ownership controls remain owner-only.
+
+```
+GET    /api/playbooks/:id/collaborators
+POST   /api/playbooks/:id/collaborators
+DELETE /api/playbooks/:id/collaborators/:collaboratorId
+
+GET    /api/collaboration-invites/:token
+POST   /api/collaboration-invites/:token
+```
+
+Invite links expire after 72 hours and can be accepted once. See [Team Collaboration](https://apbks.com/docs/team-collaboration) for the full permission model and security notes.
 
 ### Playbook Secrets (owner or API key)
 
@@ -273,6 +289,7 @@ agentplaybooks/
 - memories: key-value memory store
 - api_keys: playbook-scoped API keys with RBAC roles
 - user_api_keys: user-scoped API keys
+- playbook_collaborators: accepted human editor memberships and hashed one-time invites
 - profiles: public user profile data
 - playbook_stars: marketplace stars
 

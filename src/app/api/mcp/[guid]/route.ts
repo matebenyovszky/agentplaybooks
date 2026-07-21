@@ -1802,6 +1802,9 @@ use_secret({
               if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
                 throw new Error("Only http and https URLs are allowed");
               }
+              if (parsed.username || parsed.password) {
+                throw new Error("Credentials in proxy URLs are not allowed");
+              }
               // Block private/internal IPs (including IPv6 variants)
               const hostname = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, "");
               if (hostname === "localhost" || hostname === "127.0.0.1" || hostname === "0.0.0.0" ||
@@ -1836,7 +1839,7 @@ use_secret({
               encrypted_value: useSecretData.encrypted_value,
               iv: useSecretData.iv,
               auth_tag: useSecretData.auth_tag,
-            }, playbook.user_id);
+            }, playbook.user_id, { playbookId: playbook.id, secretName: useSecretData.name });
 
             // Build the outgoing request
             const method = (args.method as string || "GET").toUpperCase();
@@ -1863,6 +1866,8 @@ use_secret({
             const fetchOptions: RequestInit = {
               method,
               headers: outHeaders,
+              // Do not leak the injected secret across an unchecked redirect.
+              redirect: "manual",
               signal: AbortSignal.timeout(timeoutMs),
             };
 
@@ -1930,7 +1935,10 @@ use_secret({
               throw new Error(`Secret '${storeName}' already exists. Use rotate_secret to update.`);
             }
 
-            const encrypted = await encryptSecret(storeValue, playbook.user_id);
+            const encrypted = await encryptSecret(storeValue, playbook.user_id, {
+              playbookId: playbook.id,
+              secretName: normalizedStoreName,
+            });
 
             const { data: storedSecret, error: storeError } = await serviceSupabase
               .from("secrets")
@@ -1979,7 +1987,10 @@ use_secret({
 
             if (!existingSecret) throw new Error(`Secret '${rotateName}' not found`);
 
-            const rotateEncrypted = await encryptSecret(rotateValue, playbook.user_id);
+            const rotateEncrypted = await encryptSecret(rotateValue, playbook.user_id, {
+              playbookId: playbook.id,
+              secretName: rotateName,
+            });
 
             const { data: rotatedSecret, error: rotateError } = await serviceSupabase
               .from("secrets")
@@ -2056,4 +2067,3 @@ use_secret({
 
 export const GET = handle(app);
 export const POST = handle(app);
-

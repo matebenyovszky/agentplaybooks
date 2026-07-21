@@ -188,7 +188,8 @@ Each playbook can be exported as:
 
 All database access uses Supabase RLS:
 
-- **Authenticated users** - Full CRUD on their own data
+- **Owners** - Full CRUD on their own data
+- **Editors** - Content CRUD on accepted shared playbooks; control-plane fields remain owner-only
 - **Public playbooks** - Read-only access for anyone
 - **API keys** - Validated at API layer, bypass RLS with service role
 
@@ -310,6 +311,13 @@ GET    /api/playbooks/:id/api-keys
 POST   /api/playbooks/:id/api-keys          // Returns plain key ONCE
 DELETE /api/playbooks/:id/api-keys/:kid
 
+// Collaboration (owner-managed, JWT session only)
+GET    /api/playbooks/:id/collaborators
+POST   /api/playbooks/:id/collaborators
+DELETE /api/playbooks/:id/collaborators/:collaboratorId
+GET    /api/collaboration-invites/:token
+POST   /api/collaboration-invites/:token
+
 // Public Repository
 GET    /api/public/skills
 GET    /api/public/skills/:id
@@ -349,6 +357,9 @@ The `GET /api/playbooks/:guid` endpoint supports multiple output formats:
 ```bash
 # Run linter
 npm run lint
+
+# Run application and CLI tests
+npm run test:all
 
 # Type check
 npx tsc --noEmit

@@ -2,6 +2,7 @@ import type { Playbook, Skill, MCPServer, Persona } from "@/lib/supabase/types";
 import { PLAYBOOK_TOOLS } from "@/app/api/_shared/playbook-tools";
 
 export type PlaybookWithExports = Playbook & {
+    current_user_role?: "owner" | "editor" | "viewer";
     persona?: Persona | null;
     personas?: Persona[];
     skills: Skill[];

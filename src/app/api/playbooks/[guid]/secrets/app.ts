@@ -123,7 +123,10 @@ app.post("/", async (c) => {
   // Encrypt with per-user derived key (playbook owner's user_id)
   let encrypted: Awaited<ReturnType<typeof encryptSecret>>;
   try {
-    encrypted = await encryptSecret(value, playbook.user_id);
+    encrypted = await encryptSecret(value, playbook.user_id, {
+      playbookId: playbook.id,
+      secretName: normalizedName,
+    });
   } catch (err) {
     console.error("Secrets encryption failed during create:", err);
     return c.json(
@@ -210,7 +213,7 @@ app.get("/reveal/:name", async (c) => {
       encrypted_value: secret.encrypted_value,
       iv: secret.iv,
       auth_tag: secret.auth_tag,
-    }, playbook.user_id);
+    }, playbook.user_id, { playbookId: playbook.id, secretName: secret.name });
 
     // Update usage stats
     await supabase
@@ -276,7 +279,10 @@ app.put("/:name", async (c) => {
   if (value && typeof value === "string") {
     let encrypted: Awaited<ReturnType<typeof encryptSecret>>;
     try {
-      encrypted = await encryptSecret(value, playbook.user_id);
+      encrypted = await encryptSecret(value, playbook.user_id, {
+        playbookId: playbook.id,
+        secretName: name,
+      });
     } catch (err) {
       console.error("Secrets encryption failed during rotate:", err);
       return c.json(
@@ -366,6 +372,9 @@ app.post("/proxy", async (c) => {
     if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
       return c.json({ error: "Only http and https URLs are allowed" }, 400);
     }
+    if (parsed.username || parsed.password) {
+      return c.json({ error: "Credentials in proxy URLs are not allowed" }, 400);
+    }
     // Block private/internal IPs (including IPv6 variants)
     const hostname = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, "");
     if (hostname === "localhost" || hostname === "127.0.0.1" || hostname === "0.0.0.0" ||
@@ -401,7 +410,7 @@ app.post("/proxy", async (c) => {
       encrypted_value: secret.encrypted_value,
       iv: secret.iv,
       auth_tag: secret.auth_tag,
-    }, playbook.user_id);
+    }, playbook.user_id, { playbookId: playbook.id, secretName: secret.name });
   } catch {
     return c.json({ error: "Failed to decrypt secret" }, 500);
   }
@@ -428,6 +437,9 @@ app.post("/proxy", async (c) => {
   const fetchOptions: RequestInit = {
     method: httpMethod,
     headers: outHeaders,
+    // Never forward a credential-bearing request to a redirect target that has
+    // not gone through the proxy URL checks.
+    redirect: "manual",
     signal: AbortSignal.timeout(timeout),
   };
 

@@ -48,6 +48,20 @@ export type PlaybookStarsRow = {
 export type PlaybookStarsInsert = Partial<PlaybookStarsRow>;
 export type PlaybookStarsUpdate = Partial<PlaybookStarsRow>;
 
+export type PlaybookCollaboratorsRow = {
+  id: string;
+  playbook_id: string;
+  user_id: string | null;
+  invited_by: string;
+  invite_token_hash: string;
+  invite_expires_at: string;
+  accepted_at: string | null;
+  created_at: string;
+};
+
+export type PlaybookCollaboratorsInsert = Partial<PlaybookCollaboratorsRow>;
+export type PlaybookCollaboratorsUpdate = Partial<PlaybookCollaboratorsRow>;
+
 /**
  * Persona type (logical model)
  *
@@ -356,6 +370,12 @@ export interface Database {
         Update: PlaybookStarsUpdate;
         Relationships: [];
       };
+      playbook_collaborators: {
+        Row: PlaybookCollaboratorsRow;
+        Insert: PlaybookCollaboratorsInsert;
+        Update: PlaybookCollaboratorsUpdate;
+        Relationships: [];
+      };
       skills: {
         Row: SkillsRow;
         Insert: SkillsInsert;
@@ -421,6 +441,7 @@ export interface Database {
 // Convenience types
 export type Playbook = Database["public"]["Tables"]["playbooks"]["Row"];
 export type PlaybookStar = Database["public"]["Tables"]["playbook_stars"]["Row"];
+export type PlaybookCollaborator = Database["public"]["Tables"]["playbook_collaborators"]["Row"];
 export type Skill = Database["public"]["Tables"]["skills"]["Row"];
 export type MCPServer = Database["public"]["Tables"]["mcp_servers"]["Row"];
 export type Canvas = Database["public"]["Tables"]["canvas"]["Row"];

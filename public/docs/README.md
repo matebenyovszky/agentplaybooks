@@ -8,6 +8,7 @@ Welcome to the AgentPlaybooks documentation.
 - [What is a Playbook?](./playbooks.md) - Understanding the core concept
 - [Getting Started](./getting-started.md) - First steps with AgentPlaybooks
 - [Platform Integrations](./platform-integrations.md) - Connect to ChatGPT, Claude, Gemini, Grok & more
+- [Team Collaboration](./team-collaboration.md) - Share playbooks securely with human editors
 - [Roadmap](./ROADMAP.md) - Development roadmap and future plans
 
 ### Core Concepts
@@ -31,6 +32,7 @@ AgentPlaybooks is a platform-independent memory and toolkit for AI agents, inclu
 - **Skills** - Structured capabilities in Anthropic skill format
 - **MCP Servers** - Model Context Protocol configurations
 - **Memory** - Persistent key-value storage accessible by AI agents
+- **Team Collaboration** - Account-bound editor access without sharing API keys
 - **Multi-Format Export** - JSON, OpenAPI, MCP protocol, Markdown
 
 ## Why AgentPlaybooks?
@@ -46,6 +48,6 @@ AgentPlaybooks solves this by providing a central vault that any AI can access.
 
 This documentation is both:
 - Displayed on [GitHub](https://github.com/matebenyovszky/agentplaybooks) as standard Markdown
-- Rendered beautifully on our website at [agentplaybooks.ai/docs](https://agentplaybooks.ai/docs)
+- Rendered on our website at [apbks.com/docs](https://apbks.com/docs)
 
 This documentation is open source. Found an issue? [Edit on GitHub](https://github.com/matebenyovszky/agentplaybooks/tree/main/docs).
