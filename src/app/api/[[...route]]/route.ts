@@ -12,6 +12,8 @@ import {
 } from "@/lib/attachment-validator";
 import { hashApiKey, generateApiKey, generateGuid, getKeyPrefix } from "@/lib/utils";
 import { cookies } from "next/headers";
+import { checkPlaybookWriteAccess, getPlaybookAccessRole } from "@/app/api/_shared/guards";
+import { buildPlaybookUpdate } from "@/lib/playbook-access";
 
 // User API Key with user_id
 type UserApiKeyData = UserApiKeysRow & { user_id: string };
@@ -100,7 +102,10 @@ function getSupabase() {
 // Helper: Get service role client (bypasses RLS)
 function getServiceSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!key) {
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY is required for privileged database access");
+  }
   return createServerClient(url, key);
 }
 
@@ -303,8 +308,9 @@ app.get("/playbooks/:id/personas", async (c) => {
     return c.json({ error: "Playbook not found" }, 404);
   }
 
-  // Must be public or owned
-  if (!['public', 'unlisted'].includes(playbook.visibility) && (!user || playbook.user_id !== user.id)) {
+  // Must be public/unlisted or accessible to the current user.
+  const hasAccess = user ? await checkPlaybookWriteAccess(user.id, playbook.id) : false;
+  if (!['public', 'unlisted'].includes(playbook.visibility) && !hasAccess) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -321,7 +327,7 @@ app.post("/playbooks/:id/personas", async (c) => {
 
   const playbookId = c.req.param("id");
 
-  if (!(await checkPlaybookOwnership(user.id, playbookId))) {
+  if (!(await checkPlaybookWriteAccess(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -342,7 +348,6 @@ app.post("/playbooks/:id/personas", async (c) => {
       persona_metadata: metadata || {},
     })
     .eq("id", playbookId)
-    .eq("user_id", user.id)
     .select("id, created_at, persona_name, persona_system_prompt, persona_metadata")
     .single();
 
@@ -363,7 +368,7 @@ app.put("/playbooks/:id/personas/:pid", async (c) => {
   const playbookId = c.req.param("id");
   const personaId = c.req.param("pid");
 
-  if (!(await checkPlaybookOwnership(user.id, playbookId))) {
+  if (!(await checkPlaybookWriteAccess(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
   }
   // Persona is a singleton; we use playbookId as personaId
@@ -385,7 +390,6 @@ app.put("/playbooks/:id/personas/:pid", async (c) => {
     .from("playbooks")
     .update(updateData)
     .eq("id", playbookId)
-    .eq("user_id", user.id)
     .select("id, created_at, persona_name, persona_system_prompt, persona_metadata")
     .single();
 
@@ -406,7 +410,7 @@ app.delete("/playbooks/:id/personas/:pid", async (c) => {
   const playbookId = c.req.param("id");
   const personaId = c.req.param("pid");
 
-  if (!(await checkPlaybookOwnership(user.id, playbookId))) {
+  if (!(await checkPlaybookWriteAccess(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
   }
   if (personaId !== playbookId) {
@@ -422,8 +426,7 @@ app.delete("/playbooks/:id/personas/:pid", async (c) => {
       persona_system_prompt: "You are a helpful AI assistant.",
       persona_metadata: {},
     })
-    .eq("id", playbookId)
-    .eq("user_id", user.id);
+    .eq("id", playbookId);
 
   if (error) {
     return c.json({ error: error.message }, 500);
@@ -462,8 +465,9 @@ app.get("/playbooks/:id/skills", async (c) => {
     return c.json({ error: "Playbook not found" }, 404);
   }
 
-  // Check access - public playbooks are readable by anyone, private only by owner
-  if (!['public', 'unlisted'].includes(playbook.visibility) && (!user || playbook.user_id !== user.id)) {
+  // Public playbooks are readable by anyone; private playbooks require owner/editor access.
+  const hasAccess = user ? await checkPlaybookWriteAccess(user.id, playbook.id) : false;
+  if (!['public', 'unlisted'].includes(playbook.visibility) && !hasAccess) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -489,7 +493,7 @@ app.post("/playbooks/:id/skills", async (c) => {
 
   const playbookId = c.req.param("id");
 
-  if (!(await checkPlaybookOwnership(user.id, playbookId))) {
+  if (!(await checkPlaybookWriteAccess(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -531,7 +535,7 @@ app.put("/playbooks/:id/skills/:sid", async (c) => {
   const playbookId = c.req.param("id");
   const skillId = c.req.param("sid");
 
-  if (!(await checkPlaybookOwnership(user.id, playbookId))) {
+  if (!(await checkPlaybookWriteAccess(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -571,7 +575,7 @@ app.delete("/playbooks/:id/skills/:sid", async (c) => {
   const playbookId = c.req.param("id");
   const skillId = c.req.param("sid");
 
-  if (!(await checkPlaybookOwnership(user.id, playbookId))) {
+  if (!(await checkPlaybookWriteAccess(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -1037,12 +1041,13 @@ app.get("/manage/playbooks", async (c) => {
 
   const supabase = getServiceSupabase();
 
-  const { data, error } = await supabase
+  const { data: ownedData, error } = await supabase
     .from("playbooks")
     .select(`
       *,
       skills:skills(count),
-      mcp_servers:mcp_servers(count)
+      mcp_servers:mcp_servers(count),
+      memories:memories(count)
     `)
     .eq("user_id", user.id)
     .order("updated_at", { ascending: false });
@@ -1051,14 +1056,47 @@ app.get("/manage/playbooks", async (c) => {
     return c.json({ error: error.message }, 500);
   }
 
-  const playbookRows = (data as unknown as PlaybookWithCounts[] | null) ?? [];
-  const playbooks = playbookRows.map((p) => ({
+  const { data: memberships, error: membershipError } = await supabase
+    .from("playbook_collaborators")
+    .select("playbook_id")
+    .eq("user_id", user.id)
+    .not("accepted_at", "is", null);
+  if (membershipError) {
+    return c.json({ error: membershipError.message }, 500);
+  }
+
+  const sharedIds = (memberships || []).map((membership) => membership.playbook_id);
+  let sharedData: unknown[] = [];
+  if (sharedIds.length > 0) {
+    const sharedResult = await supabase
+      .from("playbooks")
+      .select(`
+        *,
+        skills:skills(count),
+        mcp_servers:mcp_servers(count),
+        memories:memories(count)
+      `)
+      .in("id", sharedIds)
+      .order("updated_at", { ascending: false });
+    if (sharedResult.error) return c.json({ error: sharedResult.error.message }, 500);
+    sharedData = sharedResult.data || [];
+  }
+
+  type PlaybookWithAllCounts = PlaybookWithCounts & { memories?: Array<{ count: number }> };
+  const ownedRows = (ownedData as unknown as PlaybookWithAllCounts[] | null) ?? [];
+  const sharedRows = (sharedData as PlaybookWithAllCounts[]) ?? [];
+  const playbooks = [...ownedRows.map((p) => ({ p, accessRole: "owner" as const })), ...sharedRows.map((p) => ({ p, accessRole: "editor" as const }))]
+    .sort((a, b) => new Date(b.p.updated_at).getTime() - new Date(a.p.updated_at).getTime())
+    .map(({ p, accessRole }) => ({
     ...p,
+    current_user_role: accessRole,
     persona_count: p.persona_name ? 1 : 0,
     skill_count: p.skills?.[0]?.count || 0,
     mcp_server_count: p.mcp_servers?.[0]?.count || 0,
+    memory_count: p.memories?.[0]?.count || 0,
     skills: undefined,
     mcp_servers: undefined,
+    memories: undefined,
   }));
 
   return c.json(playbooks);
@@ -1132,11 +1170,13 @@ app.get("/manage/playbooks/:id", async (c) => {
   const playbookId = c.req.param("id");
   const supabase = getServiceSupabase();
 
+  const accessRole = await getPlaybookAccessRole(user.id, playbookId);
+  if (!accessRole) return c.json({ error: "Playbook not found" }, 404);
+
   const { data: playbook, error } = await supabase
     .from("playbooks")
     .select("*")
     .eq("id", playbookId)
-    .eq("user_id", user.id)
     .single();
 
   if (error || !playbook) {
@@ -1153,6 +1193,7 @@ app.get("/manage/playbooks/:id", async (c) => {
 
   return c.json({
     ...playbook,
+    current_user_role: accessRole,
     persona,
     personas: [persona], // backward-compatible shape
     skills: skills.data || [],
@@ -1169,24 +1210,20 @@ app.put("/manage/playbooks/:id", async (c) => {
 
   const playbookId = c.req.param("id");
 
-  if (!(await checkPlaybookOwnership(user.id, playbookId))) {
+  const accessRole = await getPlaybookAccessRole(user.id, playbookId);
+  if (!accessRole) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
   const body = await c.req.json();
-  const { name, description, is_public, visibility, config } = body;
 
   const supabase = getServiceSupabase();
 
-  const updateData: Record<string, unknown> = {};
-  if (name !== undefined) updateData.name = name;
-  if (description !== undefined) updateData.description = description;
-  if (visibility !== undefined) {
-    updateData.visibility = visibility;
-  } else if (is_public !== undefined) {
-    updateData.visibility = is_public ? 'public' : 'private';
+  const updateData = buildPlaybookUpdate(body, accessRole);
+
+  if (Object.keys(updateData).length === 0) {
+    return c.json({ error: "No valid fields to update" }, 400);
   }
-  if (config !== undefined) updateData.config = config;
 
   const { data, error } = await supabase
     .from("playbooks")
@@ -1238,7 +1275,7 @@ app.post("/manage/playbooks/:id/personas", async (c) => {
 
   const playbookId = c.req.param("id");
 
-  if (!(await checkPlaybookOwnership(user.id, playbookId))) {
+  if (!(await checkPlaybookWriteAccess(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -1259,7 +1296,6 @@ app.post("/manage/playbooks/:id/personas", async (c) => {
       persona_metadata: metadata || {},
     })
     .eq("id", playbookId)
-    .eq("user_id", user.id)
     .select("id, created_at, persona_name, persona_system_prompt, persona_metadata")
     .single();
 
@@ -1280,7 +1316,7 @@ app.put("/manage/playbooks/:id/personas/:pid", async (c) => {
   const playbookId = c.req.param("id");
   const personaId = c.req.param("pid");
 
-  if (!(await checkPlaybookOwnership(user.id, playbookId))) {
+  if (!(await checkPlaybookWriteAccess(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
   }
   if (personaId !== playbookId) {
@@ -1299,7 +1335,6 @@ app.put("/manage/playbooks/:id/personas/:pid", async (c) => {
     .from("playbooks")
     .update(updateData)
     .eq("id", playbookId)
-    .eq("user_id", user.id)
     .select("id, created_at, persona_name, persona_system_prompt, persona_metadata")
     .single();
 
@@ -1320,7 +1355,7 @@ app.delete("/manage/playbooks/:id/personas/:pid", async (c) => {
   const playbookId = c.req.param("id");
   const personaId = c.req.param("pid");
 
-  if (!(await checkPlaybookOwnership(user.id, playbookId))) {
+  if (!(await checkPlaybookWriteAccess(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
   }
   if (personaId !== playbookId) {
@@ -1336,8 +1371,7 @@ app.delete("/manage/playbooks/:id/personas/:pid", async (c) => {
       persona_system_prompt: "You are a helpful AI assistant.",
       persona_metadata: {},
     })
-    .eq("id", playbookId)
-    .eq("user_id", user.id);
+    .eq("id", playbookId);
 
   if (error) {
     return c.json({ error: error.message }, 500);
@@ -1355,7 +1389,7 @@ app.post("/manage/playbooks/:id/skills", async (c) => {
 
   const playbookId = c.req.param("id");
 
-  if (!(await checkPlaybookOwnership(user.id, playbookId))) {
+  if (!(await checkPlaybookWriteAccess(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -1397,7 +1431,7 @@ app.put("/manage/playbooks/:id/skills/:sid", async (c) => {
   const playbookId = c.req.param("id");
   const skillId = c.req.param("sid");
 
-  if (!(await checkPlaybookOwnership(user.id, playbookId))) {
+  if (!(await checkPlaybookWriteAccess(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -1440,7 +1474,7 @@ app.delete("/manage/playbooks/:id/skills/:sid", async (c) => {
   const playbookId = c.req.param("id");
   const skillId = c.req.param("sid");
 
-  if (!(await checkPlaybookOwnership(user.id, playbookId))) {
+  if (!(await checkPlaybookWriteAccess(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -1468,7 +1502,7 @@ app.get("/manage/playbooks/:id/mcp-servers", async (c) => {
   }
 
   const playbookId = c.req.param("id");
-  if (!(await checkPlaybookOwnership(user.id, playbookId))) {
+  if (!(await checkPlaybookWriteAccess(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -1494,7 +1528,7 @@ app.post("/manage/playbooks/:id/mcp-servers", async (c) => {
   }
 
   const playbookId = c.req.param("id");
-  if (!(await checkPlaybookOwnership(user.id, playbookId))) {
+  if (!(await checkPlaybookWriteAccess(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -1536,7 +1570,7 @@ app.put("/manage/playbooks/:id/mcp-servers/:mid", async (c) => {
 
   const playbookId = c.req.param("id");
   const mcpId = c.req.param("mid");
-  if (!(await checkPlaybookOwnership(user.id, playbookId))) {
+  if (!(await checkPlaybookWriteAccess(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -1578,7 +1612,7 @@ app.delete("/manage/playbooks/:id/mcp-servers/:mid", async (c) => {
 
   const playbookId = c.req.param("id");
   const mcpId = c.req.param("mid");
-  if (!(await checkPlaybookOwnership(user.id, playbookId))) {
+  if (!(await checkPlaybookWriteAccess(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -1621,9 +1655,9 @@ app.get("/manage/skills/:skillId/attachments", async (c) => {
   // Check if public or owned
   const user = await getAuthenticatedUser(c);
   const isPublicOrUnlisted = skill.playbooks?.visibility === 'public' || skill.playbooks?.visibility === 'unlisted';
-  const isOwner = user && skill.playbooks?.user_id === user.id;
+  const hasAccess = user ? await checkPlaybookWriteAccess(user.id, skill.playbook_id) : false;
 
-  if (!isPublicOrUnlisted && !isOwner) {
+  if (!isPublicOrUnlisted && !hasAccess) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -1661,9 +1695,9 @@ app.get("/manage/skills/:skillId/attachments/:attachmentId", async (c) => {
 
   const user = await getAuthenticatedUser(c);
   const isPublicOrUnlisted = skill.playbooks?.visibility === 'public' || skill.playbooks?.visibility === 'unlisted';
-  const isOwner = user && skill.playbooks?.user_id === user.id;
+  const hasAccess = user ? await checkPlaybookWriteAccess(user.id, skill.playbook_id) : false;
 
-  if (!isPublicOrUnlisted && !isOwner) {
+  if (!isPublicOrUnlisted && !hasAccess) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -1716,7 +1750,7 @@ app.post("/manage/skills/:skillId/attachments", async (c) => {
     return c.json({ error: "Skill not found" }, 404);
   }
 
-  if (skill.playbooks?.user_id !== user.id) {
+  if (!(await checkPlaybookWriteAccess(user.id, skill.playbook_id))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -1789,7 +1823,7 @@ app.put("/manage/skills/:skillId/attachments/:attachmentId", async (c) => {
 
   const skill = skillData as SkillWithPlaybookOwner | null;
 
-  if (!skill || skill.playbooks?.user_id !== user.id) {
+  if (!skill || !(await checkPlaybookWriteAccess(user.id, skill.playbook_id))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -1857,7 +1891,7 @@ app.delete("/manage/skills/:skillId/attachments/:attachmentId", async (c) => {
 
   const skill = data as SkillWithPlaybookOwner | null;
 
-  if (!skill || skill.playbooks?.user_id !== user.id) {
+  if (!skill || !(await checkPlaybookWriteAccess(user.id, skill.playbook_id))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -1890,15 +1924,7 @@ app.get("/manage/playbooks/:id/memory", async (c) => {
   const tagsParam = c.req.query("tags");
   const supabase = getServiceSupabase();
 
-  // Check ownership
-  const { data: playbook } = await supabase
-    .from("playbooks")
-    .select("id")
-    .eq("id", playbookId)
-    .eq("user_id", user.id)
-    .single();
-
-  if (!playbook) {
+  if (!(await checkPlaybookWriteAccess(user.id, playbookId))) {
     return c.json({ error: "Playbook not found" }, 404);
   }
 
@@ -1939,15 +1965,7 @@ app.get("/manage/playbooks/:id/memory/:key", async (c) => {
   const key = c.req.param("key");
   const supabase = getServiceSupabase();
 
-  // Check ownership
-  const { data: playbook } = await supabase
-    .from("playbooks")
-    .select("id")
-    .eq("id", playbookId)
-    .eq("user_id", user.id)
-    .single();
-
-  if (!playbook) {
+  if (!(await checkPlaybookWriteAccess(user.id, playbookId))) {
     return c.json({ error: "Playbook not found" }, 404);
   }
 
@@ -1979,15 +1997,7 @@ app.put("/manage/playbooks/:id/memory/:key", async (c) => {
   const key = c.req.param("key");
   const supabase = getServiceSupabase();
 
-  // Check ownership
-  const { data: playbook } = await supabase
-    .from("playbooks")
-    .select("id")
-    .eq("id", playbookId)
-    .eq("user_id", user.id)
-    .single();
-
-  if (!playbook) {
+  if (!(await checkPlaybookWriteAccess(user.id, playbookId))) {
     return c.json({ error: "Playbook not found" }, 404);
   }
 
@@ -2108,15 +2118,7 @@ app.delete("/manage/playbooks/:id/memory/:key", async (c) => {
   const key = c.req.param("key");
   const supabase = getServiceSupabase();
 
-  // Check ownership
-  const { data: playbook } = await supabase
-    .from("playbooks")
-    .select("id")
-    .eq("id", playbookId)
-    .eq("user_id", user.id)
-    .single();
-
-  if (!playbook) {
+  if (!(await checkPlaybookWriteAccess(user.id, playbookId))) {
     return c.json({ error: "Playbook not found" }, 404);
   }
 

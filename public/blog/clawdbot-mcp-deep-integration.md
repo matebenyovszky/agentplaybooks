@@ -40,7 +40,7 @@ AgentPlaybooks provides a fully compliant MCP server endpoint for every playbook
 
 ### Step 1: Create Your Playbook
 
-First, create a playbook at [agentplaybooks.ai/dashboard](/dashboard) with:
+First, create a playbook at [apbks.com/dashboard](/dashboard) with:
 
 - **Personas** — Define how your assistant should behave
 - **Skills** — What capabilities it should have
@@ -275,7 +275,7 @@ Unlike cloud-only solutions, the Clawdbot + AgentPlaybooks combo offers:
 ## Getting Started Today
 
 1. **Install Clawdbot** — Follow the [Clawdbot documentation](https://github.com/steipete/clawdbot)
-2. **Create a playbook** — Design your AI at [agentplaybooks.ai/dashboard](/dashboard)
+2. **Create a playbook** — Design your AI at [apbks.com/dashboard](/dashboard)
 3. **Connect via MCP** — Add your playbook endpoint to Clawdbot config
 4. **Start chatting** — Your AI assistant is ready on WhatsApp, Telegram, and Discord
 
@@ -284,4 +284,3 @@ Unlike cloud-only solutions, the Clawdbot + AgentPlaybooks combo offers:
 The combination of Clawdbot's self-hosted infrastructure and AgentPlaybooks' portable playbooks creates the ultimate AI assistant stack — private, powerful, and completely under your control.
 
 Ready to build your own? [Create your playbook →](/dashboard)
-

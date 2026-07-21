@@ -1,0 +1,148 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentplaybooks.ai/schemas/agentplaybook-v1alpha1.schema.json",
+  "title": "AgentPlaybook",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "properties": {
+    "apiVersion": { "const": "agentplaybooks.ai/v1alpha1" },
+    "kind": { "const": "Playbook" },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$|^[a-z0-9]$" },
+        "displayName": { "type": "string" },
+        "description": { "type": "string" },
+        "generatedAt": { "type": "string", "format": "date-time" },
+        "labels": { "type": "object", "additionalProperties": { "type": "string" } }
+      }
+    },
+    "spec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["instructions", "skills", "connections", "memory", "secrets", "targets", "policies", "governance"],
+      "properties": {
+        "instructions": { "type": "array", "items": { "$ref": "#/$defs/sourceRef" } },
+        "skills": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["source", "platform", "digest", "name"],
+            "properties": {
+              "source": { "type": "string" },
+              "platform": { "type": "string" },
+              "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+              "name": { "type": "string" },
+              "description": { "type": "string" }
+            }
+          }
+        },
+        "connections": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mcp"],
+          "properties": {
+            "mcp": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["name", "source", "platform"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "source": { "type": "string" },
+                  "platform": { "type": "string" },
+                  "transport": { "enum": ["stdio", "http", "sse", "unknown"] },
+                  "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+                }
+              }
+            }
+          }
+        },
+        "memory": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode"],
+          "properties": {
+            "mode": { "enum": ["disabled", "local", "remote", "hybrid"] },
+            "provider": { "type": "string" },
+            "namespace": { "type": "string" },
+            "writeBack": { "type": "boolean", "default": false }
+          }
+        },
+        "secrets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "ref"],
+            "properties": {
+              "name": { "type": "string" },
+              "ref": { "type": "string" },
+              "required": { "type": "boolean", "default": true }
+            }
+          }
+        },
+        "targets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "type", "enabled"],
+            "properties": {
+              "id": { "type": "string" },
+              "type": {
+                "enum": ["codex", "claude", "cursor", "copilot", "gemini", "generic-mcp", "ros2", "opcua", "edge-runtime", "enterprise-gateway"]
+              },
+              "enabled": { "type": "boolean" },
+              "config": { "type": "object" }
+            }
+          }
+        },
+        "policies": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["network", "physicalActions", "humanApproval", "emergencyStopRequired"],
+          "properties": {
+            "network": { "enum": ["deny", "allowlist", "unrestricted"] },
+            "physicalActions": { "enum": ["deny", "simulate", "allowlist"] },
+            "humanApproval": { "enum": ["always", "on-risk", "never"] },
+            "emergencyStopRequired": { "type": "boolean" },
+            "allowedTools": { "type": "array", "items": { "type": "string" } },
+            "deniedTools": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "governance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["environment", "approvalRequired", "signedArtifacts"],
+          "properties": {
+            "environment": { "enum": ["draft", "development", "staging", "production"] },
+            "approvalRequired": { "type": "boolean" },
+            "signedArtifacts": { "type": "boolean" },
+            "inherits": { "type": "array", "items": { "type": "string" } },
+            "owner": { "type": "string" }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "sourceRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "platform", "digest"],
+      "properties": {
+        "source": { "type": "string" },
+        "platform": { "type": "string" },
+        "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "name": { "type": "string" },
+        "description": { "type": "string" }
+      }
+    }
+  }
+}

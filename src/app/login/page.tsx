@@ -16,6 +16,11 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  const getPostAuthPath = () => {
+    const requested = new URLSearchParams(window.location.search).get("next");
+    return requested?.startsWith("/") && !requested.startsWith("//") ? requested : "/dashboard";
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -30,7 +35,7 @@ export default function LoginPage() {
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/dashboard`,
+            emailRedirectTo: `${window.location.origin}${getPostAuthPath()}`,
           },
         });
         if (error) throw error;
@@ -41,7 +46,7 @@ export default function LoginPage() {
           password,
         });
         if (error) throw error;
-        window.location.href = "/dashboard";
+        window.location.href = getPostAuthPath();
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "An error occurred";
@@ -58,7 +63,7 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/dashboard`,
+        redirectTo: `${window.location.origin}${getPostAuthPath()}`,
       },
     });
 
@@ -75,7 +80,7 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "github",
       options: {
-        redirectTo: `${window.location.origin}/dashboard`,
+        redirectTo: `${window.location.origin}${getPostAuthPath()}`,
       },
     });
 
@@ -92,7 +97,7 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "linkedin_oidc",
       options: {
-        redirectTo: `${window.location.origin}/dashboard`,
+        redirectTo: `${window.location.origin}${getPostAuthPath()}`,
       },
     });
 
@@ -252,4 +257,3 @@ export default function LoginPage() {
     </div>
   );
 }
-

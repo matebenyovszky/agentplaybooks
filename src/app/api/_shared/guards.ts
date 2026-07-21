@@ -13,6 +13,33 @@ export async function checkPlaybookOwnership(userId: string, playbookId: string)
   return !!playbook;
 }
 
+export type PlaybookAccessRole = "owner" | "editor";
+
+export async function getPlaybookAccessRole(
+  userId: string,
+  playbookId: string
+): Promise<PlaybookAccessRole | null> {
+  if (await checkPlaybookOwnership(userId, playbookId)) {
+    return "owner";
+  }
+
+  const db = getDb();
+  const [collaborator] = await db
+    .select({ id: schema.playbookCollaborators.id })
+    .from(schema.playbookCollaborators)
+    .where(and(
+      eq(schema.playbookCollaborators.playbook_id, playbookId),
+      eq(schema.playbookCollaborators.user_id, userId)
+    ))
+    .limit(1);
+
+  return collaborator ? "editor" : null;
+}
+
+export async function checkPlaybookWriteAccess(userId: string, playbookId: string): Promise<boolean> {
+  return (await getPlaybookAccessRole(userId, playbookId)) !== null;
+}
+
 export async function getPlaybookByGuid(
   guid: string,
   userId: string | null
@@ -32,8 +59,10 @@ export async function getPlaybookByGuid(
   if (!playbook) return null;
 
   const isPublicOrUnlisted = playbook.visibility === 'public' || playbook.visibility === 'unlisted';
-  if (!isPublicOrUnlisted && (!userId || playbook.user_id !== userId)) {
-    return null;
+  if (!isPublicOrUnlisted) {
+    if (!userId || !(await checkPlaybookWriteAccess(userId, playbook.id))) {
+      return null;
+    }
   }
 
   // Cast visibility to match supabase type expectations if needed, but string should be fine

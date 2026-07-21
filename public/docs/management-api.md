@@ -15,12 +15,14 @@ Both methods require a **User API Key** for authentication.
 
 ## User API Keys
 
-Unlike Playbook API Keys (which only work for a single playbook), **User API Keys** provide access to all of a user's playbooks. This allows AI agents to:
+Unlike Playbook API Keys (which only work for a single playbook), **User API Keys** represent one user account across the Management API. They can access playbooks owned by that account and playbooks shared with it. This allows AI agents to:
 
 - Create new playbooks (with embedded persona)
 - Manage existing playbooks
 - Add/update/delete skills and memory
-- List all playbooks owned by the user
+- List owned and shared playbooks, including `current_user_role`
+
+For a shared playbook, the User API Key inherits the account's editor boundaries: it may change content but cannot change visibility, manage collaborators or playbook API keys, access secrets, or delete the playbook. Human invitation endpoints themselves require an interactive JWT session and are not exposed through this API.
 
 > **Architecture Note:** AgentPlaybooks uses a **1 Playbook = 1 Persona** model. Each playbook has exactly one persona embedded directly in the playbook record. There's no separate personas table.
 
@@ -103,11 +105,11 @@ This can be used with:
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/manage/playbooks` | List all playbooks |
+| GET | `/manage/playbooks` | List owned and shared playbooks |
 | POST | `/manage/playbooks` | Create playbook (with persona) |
 | GET | `/manage/playbooks/:id` | Get playbook with all contents |
 | PUT | `/manage/playbooks/:id` | Update playbook (incl. persona fields) |
-| DELETE | `/manage/playbooks/:id` | Delete playbook |
+| DELETE | `/manage/playbooks/:id` | Delete an owned playbook (owner only) |
 | POST | `/manage/playbooks/:id/skills` | Add skill |
 | PUT | `/manage/playbooks/:id/skills/:sid` | Update skill |
 | DELETE | `/manage/playbooks/:id/skills/:sid` | Delete skill |
@@ -561,10 +563,8 @@ Common errors:
 
 ## Rate Limits
 
-| Endpoint Type | Limit |
-|---------------|-------|
-| Management API | 120 requests/minute/user |
-| MCP Tools | 120 requests/minute/user |
+Application-level limits are planned and are not currently guaranteed by the API. Clients should
+handle `429 Too Many Requests` responses with exponential backoff.
 
 ---
 

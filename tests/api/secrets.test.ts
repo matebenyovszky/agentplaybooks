@@ -36,14 +36,13 @@ describe('Secrets API - Security Tests', () => {
         id: 'key1', 
         playbooks: { id: 'playbook1' },
         key_prefix: 'test' 
-      } as any);
+      } as unknown as Awaited<ReturnType<typeof validateApiKey>>);
       vi.mocked(getPlaybookByGuid).mockResolvedValue({
         id: 'playbook1',
         user_id: 'user1',
-      } as any);
+      } as unknown as Awaited<ReturnType<typeof getPlaybookByGuid>>);
 
       // Mock DB call inside reveal
-      const mockEq = vi.fn().mockReturnThis();
       const mockSingle = vi.fn().mockResolvedValue({
         data: {
           id: 'sec1',
@@ -66,7 +65,7 @@ describe('Secrets API - Security Tests', () => {
             eq: vi.fn()
           })
         })
-      } as any);
+      } as unknown as ReturnType<typeof getServiceSupabase>);
 
       const res = await app.request('/api/playbooks/guid1/secrets/reveal/my-secret', {
         method: 'GET',
@@ -85,14 +84,13 @@ describe('Secrets API - Security Tests', () => {
         id: 'key1', 
         playbooks: { id: 'playbook1' },
         key_prefix: 'test' 
-      } as any);
+      } as unknown as Awaited<ReturnType<typeof validateApiKey>>);
       vi.mocked(getPlaybookByGuid).mockResolvedValue({
         id: 'playbook1',
         user_id: 'user1',
-      } as any);
+      } as unknown as Awaited<ReturnType<typeof getPlaybookByGuid>>);
 
       // Mock DB call inside reveal
-      const mockEq = vi.fn().mockReturnThis();
       const mockSingle = vi.fn().mockResolvedValue({
         data: {
           id: 'sec1',
@@ -115,7 +113,7 @@ describe('Secrets API - Security Tests', () => {
             eq: vi.fn()
           })
         })
-      } as any);
+      } as unknown as ReturnType<typeof getServiceSupabase>);
 
       const res = await app.request('/api/playbooks/guid1/secrets/reveal/my-secret', {
         method: 'GET',
@@ -129,14 +127,13 @@ describe('Secrets API - Security Tests', () => {
 
     it('should allow access for playbook owner with valid session regardless of allow_api_key_reveal', async () => {
       // Simulate Owner session
-      vi.mocked(getAuthenticatedUser).mockResolvedValue({ id: 'user1' } as any);
+      vi.mocked(getAuthenticatedUser).mockResolvedValue({ id: 'user1' });
       vi.mocked(getPlaybookByGuid).mockResolvedValue({
         id: 'playbook1',
         user_id: 'user1',
-      } as any);
+      } as unknown as Awaited<ReturnType<typeof getPlaybookByGuid>>);
 
       // Mock DB call inside reveal
-      const mockEq = vi.fn().mockReturnThis();
       const mockSingle = vi.fn().mockResolvedValue({
         data: {
           id: 'sec1',
@@ -159,7 +156,7 @@ describe('Secrets API - Security Tests', () => {
             eq: vi.fn()
           })
         })
-      } as any);
+      } as unknown as ReturnType<typeof getServiceSupabase>);
       
       const res = await app.request('/api/playbooks/guid1/secrets/reveal/my-secret', {
         method: 'GET',
@@ -173,12 +170,12 @@ describe('Secrets API - Security Tests', () => {
 
     it('should deny access for non-owner valid session', async () => {
       // Simulate non-owner session
-      vi.mocked(getAuthenticatedUser).mockResolvedValue({ id: 'user2' } as any);
+      vi.mocked(getAuthenticatedUser).mockResolvedValue({ id: 'user2' });
       vi.mocked(validateApiKey).mockResolvedValue(null);
       vi.mocked(getPlaybookByGuid).mockResolvedValue({
         id: 'playbook1',
         user_id: 'user1', // owner is user1
-      } as any);
+      } as unknown as Awaited<ReturnType<typeof getPlaybookByGuid>>);
 
       const res = await app.request('/api/playbooks/guid1/secrets/reveal/my-secret', {
         method: 'GET'

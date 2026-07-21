@@ -9,7 +9,7 @@ This guide will help you create your first playbook and connect it to an AI agen
 
 ## Step 1: Create an Account
 
-1. Go to [agentplaybooks.ai](https://agentplaybooks.ai)
+1. Go to [apbks.com](https://apbks.com)
 2. Click "Get Started" or "Sign In"
 3. Register with email, Google, or GitHub
 
@@ -71,6 +71,10 @@ Skills define specific capabilities or tasks your AI can perform.
 3. Copy your playbook URL: `https://apbks.com/api/playbooks/YOUR_GUID`
 
 ## Step 6: Connect to Your AI
+
+### Optional: Invite a human editor
+
+Open **Sharing**, create a one-time invite link, and send it privately to the teammate who should edit the playbook. The link expires after 72 hours and can be accepted once. Editors can change content but cannot access secrets, API keys, visibility, sharing, or deletion. See [Team Collaboration](./team-collaboration.md).
 
 ### For ChatGPT (Custom GPT)
 
@@ -150,3 +154,4 @@ Body: {"value": {...}}
 - [Explore the public repository](/explore) for pre-built skills
 - Read the [API Reference](./api-reference.md) for all endpoints
 - Learn about [MCP Integration](./mcp-integration.md) for Claude
+- Share safely with people using [Team Collaboration](./team-collaboration.md)

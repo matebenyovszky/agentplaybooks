@@ -38,12 +38,12 @@ vi.mock('next/headers', () => ({
 }));
 
 // Mock next/server
-vi.mock('next/server', () => {
-    const actual = vi.importActual('next/server');
+vi.mock('next/server', async () => {
+    const actual = await vi.importActual<typeof import('next/server')>('next/server');
     return {
         ...actual,
         NextResponse: {
-            json: (body: any, options?: any) => ({
+            json: (body: unknown, options?: { status?: number }) => ({
                 status: options?.status || 200,
                 json: async () => body,
             }),

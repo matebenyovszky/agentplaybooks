@@ -208,7 +208,7 @@ A Coworker minden péntek reggel önállóan futtatja ezeket.
 
 ## Kezdés
 
-1. **Készíts egy playbook-ot** az [agentplaybooks.ai/dashboard](/dashboard) oldalon
+1. **Készíts egy playbook-ot** az [apbks.com/dashboard](/dashboard) oldalon
 2. **Add hozzá a készségeidet és személyiségeidet** az intuitív szerkesztőnkkel
 3. **Exportáld MCP-n keresztül** a Claude Coworkerrel való összekapcsoláshoz
 4. **Oszd meg a csapatoddal** — egy URL, azonnali szinkronizáció
@@ -218,4 +218,3 @@ A Coworker minden péntek reggel önállóan futtatja ezeket.
 A Claude Coworker az AI asszisztencia jövőjét képviseli — ágensek, amelyek ténylegesen *dolgoznak* melletted. Az AgentPlaybooks-szal biztosítod, hogy ez a munka konzisztens, átadható és az irányításod alatt áll.
 
 Készen állsz, hogy felturbózd az AI munkatársadat? [Kezdd el a playbook-od építését még ma →](/dashboard)
-

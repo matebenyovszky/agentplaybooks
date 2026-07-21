@@ -111,7 +111,7 @@ This returns an OpenAPI 3.0 specification that can be used as a GPT Action.
 
 ## Public Skill Repository
 
-Browse community-contributed skills at [agentplaybooks.ai/explore](https://agentplaybooks.ai/explore):
+Browse community-contributed skills at [apbks.com/explore](https://apbks.com/explore):
 
 - **Coding** - Code search, refactoring, documentation
 - **Writing** - Grammar check, summarization, translation
@@ -237,4 +237,3 @@ curl -s "https://apbks.com/api/playbooks/YOUR_GUID?format=anthropic" \
 # Add to claude_desktop_config.json:
 # "mcpServers": {"playbook": {"transport": "http", "url": "https://apbks.com/api/mcp/YOUR_GUID"}}
 ```
-

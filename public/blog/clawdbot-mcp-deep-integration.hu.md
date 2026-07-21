@@ -275,7 +275,7 @@ A csak felhős megoldásokkal ellentétben a Clawdbot + AgentPlaybooks kombinác
 ## Kezdj bele még ma!
 
 1. **Telepítsd a Clawdbotot** — Kövesd a [Clawdbot dokumentációt](https://github.com/steipete/clawdbot)
-2. **Készíts egy playbook-ot** — Tervezd meg az AI-dat az [agentplaybooks.ai/dashboard](/dashboard) oldalon
+2. **Készíts egy playbook-ot** — Tervezd meg az AI-dat az [apbks.com/dashboard](/dashboard) oldalon
 3. **Csatlakozz MCP-n keresztül** — Add hozzá a playbook végpontodat a Clawdbot konfighoz
 4. **Kezdj csevelni** — Az AI asszisztensed készen áll WhatsApp-on, Telegram-on és Discord-on
 
@@ -284,4 +284,3 @@ A csak felhős megoldásokkal ellentétben a Clawdbot + AgentPlaybooks kombinác
 A Clawdbot saját hosztolású infrastruktúrájának és az AgentPlaybooks hordozható playbook-jainak kombinációja létrehozza a tökéletes AI asszisztens stacket — privát, erőteljes és teljesen az irányításod alatt.
 
 Készen állsz a sajátod megépítésére? [Készítsd el a playbook-odat →](/dashboard)
-

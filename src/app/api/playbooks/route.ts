@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
 
     const supabase = getServiceSupabase();
 
-    const { data, error } = await supabase
+    const { data: ownedData, error } = await supabase
         .from("playbooks")
         .select(`
       *,
@@ -27,8 +27,40 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    const { data: memberships, error: membershipError } = await supabase
+        .from("playbook_collaborators")
+        .select("playbook_id")
+        .eq("user_id", user.id)
+        .not("accepted_at", "is", null);
+    if (membershipError) {
+        return NextResponse.json({ error: membershipError.message }, { status: 500 });
+    }
+
+    const sharedIds = (memberships || []).map((membership) => membership.playbook_id);
+    let sharedData: typeof ownedData = [];
+    if (sharedIds.length > 0) {
+        const sharedResult = await supabase
+            .from("playbooks")
+            .select(`
+      *,
+      skills:skills(count),
+      mcp_servers:mcp_servers(count),
+      memories:memories(count)
+    `)
+            .in("id", sharedIds)
+            .order("updated_at", { ascending: false });
+        if (sharedResult.error) {
+            return NextResponse.json({ error: sharedResult.error.message }, { status: 500 });
+        }
+        sharedData = sharedResult.data || [];
+    }
+
     // Transform count objects to numbers
-    const playbooks = (data || []).map((p) => {
+    const rows = [
+        ...(ownedData || []).map((playbook) => ({ playbook, role: "owner" as const })),
+        ...(sharedData || []).map((playbook) => ({ playbook, role: "editor" as const })),
+    ].sort((a, b) => new Date(b.playbook.updated_at).getTime() - new Date(a.playbook.updated_at).getTime());
+    const playbooks = rows.map(({ playbook: p, role }) => {
         const playbook = p as unknown as Playbook & {
             skills: { count: number }[];
             mcp_servers: { count: number }[];
@@ -36,6 +68,7 @@ export async function GET(request: NextRequest) {
         };
         return {
             ...playbook,
+            current_user_role: role,
             skill_count: playbook.skills?.[0]?.count || 0,
             mcp_server_count: playbook.mcp_servers?.[0]?.count || 0,
             memory_count: playbook.memories?.[0]?.count || 0,

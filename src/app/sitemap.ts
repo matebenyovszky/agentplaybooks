@@ -4,7 +4,7 @@ import { getBlogPosts, type BlogPost } from "@/lib/blog-server";
 
 export const dynamic = "force-static";
 
-const baseUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://agentplaybooks.ai").replace(/\/$/, "");
+const baseUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://apbks.com").replace(/\/$/, "");
 
 const paths = [
   "",
@@ -32,6 +32,7 @@ const docSlugs = [
   "playbooks",
   "self-hosting",
   "skills",
+  "team-collaboration",
   "roadmap",
 ];
 

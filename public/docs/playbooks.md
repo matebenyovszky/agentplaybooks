@@ -227,7 +227,7 @@ Once published, your playbook is available in multiple formats:
 
 ## Creating Your First Playbook
 
-1. **Sign up** at [agentplaybooks.ai](https://agentplaybooks.ai)
+1. **Sign up** at [apbks.com](https://apbks.com)
 2. **Create a playbook** from the dashboard
 3. **Add a persona** - Define your AI's personality
 4. **Add skills** - Define what it can do
@@ -235,6 +235,16 @@ Once published, your playbook is available in multiple formats:
 6. **Connect** - Give the URL to your AI
 
 See [Getting Started](./getting-started.md) for detailed instructions.
+
+## Working With a Team
+
+The owner of a playbook can invite signed-in people as editors from the **Sharing** tab. An accepted playbook appears on the editor's dashboard with a **Shared** badge and can be edited alongside their own playbooks.
+
+Editors can work on the playbook's name, description, configuration, persona, skills, MCP servers, attachments, canvas, and memory. The owner retains exclusive control over visibility, collaborators, playbook API keys, secrets, and deletion.
+
+Human collaboration is deliberately separate from agent access. Do not send an Admin or Coworker API key to a person as a substitute for an invitation: API keys are bearer credentials, while an editor invitation is bound to the account that accepts it and can be revoked independently.
+
+See [Team Collaboration](./team-collaboration.md) for the invitation flow, permission matrix, and security model.
 
 ## Best Practices
 
@@ -263,5 +273,4 @@ See [Getting Started](./getting-started.md) for detailed instructions.
 - [Platform Integrations](./platform-integrations.md) - Connect to ChatGPT, Claude, Gemini
 - [MCP Integration](./mcp-integration.md) - Deep dive into Model Context Protocol
 - [API Reference](./api-reference.md) - Full endpoint documentation
-
 

@@ -2,6 +2,9 @@
   "name": "agentplaybooks",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "license": "PolyForm-Noncommercial-1.0.0",
   "author": "AgentPlaybooks",
   "scripts": {
@@ -20,22 +23,24 @@
     "seed:skills": "tsx scripts/github-skill-parser.ts",
     "seed:dry": "DRY_RUN=true tsx scripts/seed-data.ts",
     "test": "vitest",
+    "test:cli": "npm --prefix packages/cli test",
+    "test:all": "vitest run && npm run test:cli",
     "test:watch": "vitest"
   },
   "dependencies": {
     "@mdx-js/loader": "^3.1.1",
     "@mdx-js/react": "^3.1.1",
-    "@next/mdx": "^16.1.1",
-    "@opennextjs/cloudflare": "^1.14.8",
+    "@next/mdx": "15.5.20",
+    "@opennextjs/cloudflare": "1.20.1",
     "@supabase/supabase-js": "^2.89.0",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.2",
     "framer-motion": "^12.23.26",
-    "hono": "^4.11.3",
+    "hono": "4.12.31",
     "jszip": "^3.10.1",
     "lucide-react": "^0.562.0",
-    "next": "15.5.9",
-    "next-intl": "3.26.0",
+    "next": "15.5.20",
+    "next-intl": "4.13.2",
     "pg": "^8.22.0",
     "react": "19.0.0",
     "react-dom": "19.0.0",
@@ -47,7 +52,7 @@
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260101.0",
+    "@cloudflare/workers-types": "5.20260719.1",
     "@eslint/eslintrc": "^3.3.3",
     "@eslint/js": "^9.39.2",
     "@swc/helpers": "^0.5.18",
@@ -58,15 +63,14 @@
     "@vitejs/plugin-react": "^5.1.2",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9",
-    "eslint-config-next": "15.5.9",
+    "eslint-config-next": "15.5.20",
     "tailwindcss": "^4",
     "tsx": "^4.7.0",
     "typescript": "^5",
-    "vitest": "^4.0.16",
-    "wrangler": "^4.59.1"
+    "vitest": "4.1.10",
+    "wrangler": "4.112.0"
   },
   "overrides": {
-    "cloudflare": "5.2.0",
-    "formdata-node": "6.0.3"
+    "postcss": "8.5.10"
   }
 }

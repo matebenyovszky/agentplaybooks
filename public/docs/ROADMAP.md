@@ -165,7 +165,10 @@ This document outlines the development roadmap for AgentPlaybooks - the first op
 
 ### Workspaces 💡
 
-- [ ] **Team Collaboration**
+- [x] **Playbook Collaboration MVP**
+  - One-time editor invitations and shared playbooks
+  - Owner-only secrets, API keys, visibility, sharing, and deletion
+- [ ] **Team Workspaces**
   - Shared playbook collections
   - Role-based access (admin, editor, viewer)
   - Team billing
@@ -277,4 +280,3 @@ Have ideas? Found something missing?
 ---
 
 *Last updated: January 2026*
-

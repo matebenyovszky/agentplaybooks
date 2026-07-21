@@ -55,6 +55,10 @@ User API Keys work with the Management API (`/api/manage/*`) and Management MCP 
 
 See [Management API & MCP](./management-api.md) for details.
 
+### Human editor authorization
+
+Signed-in editors use the same Supabase JWT/session authentication as owners. Their accepted membership authorizes content edits only. Visibility, collaborators, playbook API keys, secrets, ownership, and deletion are always owner-only. Playbook API keys cannot manage human collaborators.
+
 ---
 
 ## Connect with ChatGPT (Custom GPT Actions)
@@ -620,6 +624,71 @@ Authorization: Bearer apb_live_xxx
 
 ---
 
+## Human Collaboration (Session Authenticated)
+
+Owners can invite human editors without sharing a bearer API key. These endpoints require a signed-in Supabase session/JWT; playbook API keys cannot manage collaborators.
+
+### List editors and invitations
+
+```http
+GET /api/playbooks/:id/collaborators
+Authorization: Bearer <supabase_jwt_token>
+```
+
+Owner only. Returns active editors and pending or expired invitations. Raw invite tokens are never returned by this endpoint.
+
+### Create an editor invitation
+
+```http
+POST /api/playbooks/:id/collaborators
+Authorization: Bearer <supabase_jwt_token>
+```
+
+**Response (201):**
+
+```json
+{
+  "id": "uuid",
+  "invite_expires_at": "2026-07-24T12:00:00.000Z",
+  "created_at": "2026-07-21T12:00:00.000Z",
+  "status": "pending",
+  "invite_path": "/invite/one-time-token",
+  "warning": "This invite link is shown once and expires in 72 hours."
+}
+```
+
+The link can be accepted once and expires after 72 hours. A playbook can have at most 25 active editor and pending invite rows. Copy the URL immediately and treat it as a temporary credential.
+
+### Preview an invitation
+
+```http
+GET /api/collaboration-invites/:token
+```
+
+Returns only the playbook name and expiry for a valid pending invitation. Invalid, expired, revoked, or already accepted tokens return `404`.
+
+### Accept an invitation
+
+```http
+POST /api/collaboration-invites/:token
+Authorization: Bearer <supabase_jwt_token>
+```
+
+Atomically binds the invitation to the signed-in account. Owners cannot accept an invitation to their own playbook. Reuse returns `404` or `409` depending on whether another request won the acceptance race.
+
+### Remove an editor or revoke an invitation
+
+```http
+DELETE /api/playbooks/:id/collaborators/:collaboratorId
+Authorization: Bearer <supabase_jwt_token>
+```
+
+Owner only. Revocation ends membership access immediately but does not revoke any separately issued API key.
+
+See [Team Collaboration](./team-collaboration.md) for the permission matrix and operational guidance.
+
+---
+
 ## API Keys Management (Authenticated)
 
 Manage API keys for your playbooks. Only the playbook owner can access these endpoints.
@@ -1082,20 +1151,10 @@ All endpoints return consistent error responses:
 
 ## Rate Limits
 
-| Endpoint Type | Limit |
-|---------------|-------|
-| Public reads | 100 requests/minute/IP |
-| Authenticated reads | 200 requests/minute/user |
-| Agent writes | 60 requests/minute/API key |
-| MCP endpoints | 100 requests/minute/IP |
-
-Rate limit headers are included in responses:
-
-```http
-X-RateLimit-Limit: 100
-X-RateLimit-Remaining: 95
-X-RateLimit-Reset: 1705312800
-```
+Application-level rate limits are planned but are not currently part of the API contract.
+The hosting platform may still throttle abusive traffic. Clients should handle `429 Too Many
+Requests` responses with exponential backoff and must not rely on `X-RateLimit-*` headers until
+versioned limits are documented here.
 
 ---
 
@@ -1133,6 +1192,16 @@ X-RateLimit-Reset: 1705312800
 | `GET` | `/api/user/api-keys` | JWT | List user API keys |
 | `POST` | `/api/user/api-keys` | JWT | Create user API key |
 | `DELETE` | `/api/user/api-keys/:kid` | JWT | Delete user API key |
+
+### Human Collaboration
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `GET` | `/api/playbooks/:id/collaborators` | Owner JWT | List editors and invitations |
+| `POST` | `/api/playbooks/:id/collaborators` | Owner JWT | Create a one-time editor invite |
+| `DELETE` | `/api/playbooks/:id/collaborators/:collaboratorId` | Owner JWT | Remove editor or revoke invite |
+| `GET` | `/api/collaboration-invites/:token` | Invite token | Preview valid invite |
+| `POST` | `/api/collaboration-invites/:token` | JWT + invite token | Accept invite |
 
 ### Management API (AI Automation)
 

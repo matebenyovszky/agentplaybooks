@@ -40,6 +40,17 @@ interface Publisher {
   is_virtual?: boolean;
 }
 
+function PublisherAvatar({ value }: { value: string }) {
+  const trimmed = value.trim();
+  const src = trimmed.startsWith("<svg")
+    ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(trimmed)}`
+    : trimmed;
+
+  // SVG is intentionally loaded as an isolated image, never inserted into the DOM as active markup.
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src={src} alt="" className="h-full w-full object-cover" />;
+}
+
 interface PublicPlaybook {
   id: string;
   guid: string;
@@ -627,10 +638,9 @@ function PlaybookCard({ playbook, index, isStarred, onToggleStar, isLoggedIn, is
               {playbook.publisher && (
                 <div className="flex items-center gap-2">
                   {playbook.publisher.avatar_svg ? (
-                    <div
-                      className="w-5 h-5 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-700 flex items-center justify-center"
-                      dangerouslySetInnerHTML={{ __html: playbook.publisher.avatar_svg }}
-                    />
+                    <div className="w-5 h-5 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
+                      <PublisherAvatar value={playbook.publisher.avatar_svg} />
+                    </div>
                   ) : (
                     <div className="w-5 h-5 rounded-full bg-neutral-100 dark:bg-slate-700 flex items-center justify-center">
                       <User className="h-3 w-3 text-neutral-400 dark:text-slate-400" />
@@ -828,10 +838,9 @@ function SkillCard({ skill, index }: { skill: SkillWithPublisher; index: number 
         {skill.publisher ? (
           <div className="flex items-center gap-2">
             {skill.publisher.avatar_svg ? (
-              <div
-                className="w-5 h-5 rounded-full overflow-hidden bg-neutral-100 dark:bg-slate-700 flex items-center justify-center"
-                dangerouslySetInnerHTML={{ __html: skill.publisher.avatar_svg }}
-              />
+              <div className="w-5 h-5 rounded-full overflow-hidden bg-neutral-100 dark:bg-slate-700 flex items-center justify-center">
+                <PublisherAvatar value={skill.publisher.avatar_svg} />
+              </div>
             ) : (
               <div className="w-5 h-5 rounded-full bg-neutral-100 dark:bg-slate-700 flex items-center justify-center">
                 <User className="h-3 w-3 text-neutral-400 dark:text-slate-400" />
@@ -1009,10 +1018,9 @@ function MCPCard({ mcp, index }: { mcp: MCPWithPublisher; index: number }) {
         {mcp.publisher ? (
           <div className="flex items-center gap-2">
             {mcp.publisher.avatar_svg ? (
-              <div
-                className="w-5 h-5 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-700 flex items-center justify-center"
-                dangerouslySetInnerHTML={{ __html: mcp.publisher.avatar_svg }}
-              />
+              <div className="w-5 h-5 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
+                <PublisherAvatar value={mcp.publisher.avatar_svg} />
+              </div>
             ) : (
               <div className="w-5 h-5 rounded-full bg-neutral-100 dark:bg-slate-700 flex items-center justify-center">
                 <User className="h-3 w-3 text-neutral-400 dark:text-slate-400" />

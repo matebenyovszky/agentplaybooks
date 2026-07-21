@@ -1,7 +1,7 @@
 /**
  * Drizzle ORM Schema: Playbooks
  */
-import { pgTable, uuid, text, timestamp, jsonb, integer, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, jsonb, integer, pgEnum, uniqueIndex } from "drizzle-orm/pg-core";
 
 export const visibilityEnum = pgEnum("visibility", ["public", "private", "unlisted"]);
 
@@ -30,3 +30,21 @@ export const playbookStars = pgTable("playbook_stars", {
   user_id: uuid("user_id").notNull(),
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
+
+/**
+ * Human access to a playbook. Pending rows contain an invite hash and no user;
+ * accepting an invite binds the row to exactly one authenticated account.
+ */
+export const playbookCollaborators = pgTable("playbook_collaborators", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  playbook_id: uuid("playbook_id").notNull().references(() => playbooks.id, { onDelete: "cascade" }),
+  user_id: uuid("user_id"),
+  invited_by: uuid("invited_by").notNull(),
+  invite_token_hash: text("invite_token_hash").notNull().unique(),
+  invite_expires_at: timestamp("invite_expires_at", { withTimezone: true }).notNull(),
+  accepted_at: timestamp("accepted_at", { withTimezone: true }),
+  created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("playbook_collaborators_playbook_user_idx")
+    .on(table.playbook_id, table.user_id),
+]);
