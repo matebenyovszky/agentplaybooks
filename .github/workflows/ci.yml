@@ -31,5 +31,5 @@ jobs:
       - run: npm run lint
       - run: npm run test:all
       - run: npm run prebuild && npx tsc --noEmit
-      - run: npm audit --omit=dev --audit-level=high
+      - run: npm run audit:production
       - run: npm run build
