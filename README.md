@@ -10,6 +10,7 @@ Give your AI agents, GPTs, and robots a platform-independent vault. Store skills
 - Skills: JSON schema definitions plus optional SKILL.md content
 - Skill attachments: secure file storage for code, prompts, and docs
 - MCP servers: tools and resources in Model Context Protocol format
+- Canvas: versioned markdown work documents for long-running agent workflows
 - Memory: key-value store with tags and descriptions
 - Export formats: JSON, OpenAPI, MCP, Anthropic, Markdown
 - API keys: Role-Based Access Control (Viewer, Coworker, Admin)
@@ -133,6 +134,40 @@ PUT    /api/playbooks/:guid/memory/:key
 DELETE /api/playbooks/:guid/memory/:key
 ```
 
+### Canvas work documents
+
+Canvas documents belong to an isolated workflow run, so multiple teams can execute the same
+playbook without sharing work products. They are long-form markdown artifacts that agents can revise over time. Use
+memory for durable facts and structured state; use canvas for deliverables such as a PR review,
+research report, implementation plan, or draft that may be edited passage by passage.
+
+```http
+GET    /api/playbooks/:guid/runs
+POST   /api/playbooks/:guid/runs
+GET    /api/playbooks/:guid/canvas?runId=:runId
+POST   /api/playbooks/:guid/canvas
+GET    /api/playbooks/:guid/canvas/:slug?runId=:runId
+PUT    /api/playbooks/:guid/canvas/:slug?runId=:runId
+PATCH  /api/playbooks/:guid/canvas/:slug?runId=:runId
+DELETE /api/playbooks/:guid/canvas/:slug?runId=:runId
+```
+
+`PUT` replaces document fields and requires `expectedVersion`. `PATCH` performs an incremental
+`append`, `prepend`, or exact `replace` operation and also requires `expectedVersion`. A stale
+version returns HTTP `409`, preventing two agents from silently overwriting each other's work.
+
+```bash
+curl -X PATCH 'https://your-domain.com/api/playbooks/abc123/canvas/pr-review?runId=RUN_UUID' \
+  -H "Authorization: Bearer apb_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "operation": "replace",
+    "search": "## Security review\nPending.",
+    "content": "## Security review\nNo blocking issues found.",
+    "expectedVersion": 3
+  }'
+```
+
 ### Playbook API keys (owner only)
 
 ```
@@ -253,6 +288,8 @@ agentplaybooks/
 - skills: skill definitions and optional SKILL.md content
 - skill_attachments: secure attachment storage for skills
 - mcp_servers: MCP tools and resources
+- playbook_runs: isolated executions of a reusable playbook
+- canvas: versioned markdown work documents
 - memories: key-value memory store
 - api_keys: playbook-scoped API keys with RBAC roles
 - user_api_keys: user-scoped API keys

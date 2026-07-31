@@ -99,17 +99,33 @@ export type MCPServersUpdate = Partial<MCPServersRow>;
 export type CanvasRow = {
   id: string;
   playbook_id: string;
+  run_id: string;
   name: string;
   slug: string;
   content: string;
   metadata: Record<string, unknown>;
   sort_order: number;
+  version: number;
   created_at: string;
   updated_at: string;
 };
 
 export type CanvasInsert = Partial<CanvasRow>;
 export type CanvasUpdate = Partial<CanvasRow>;
+
+export type PlaybookRunsRow = {
+  id: string;
+  playbook_id: string;
+  created_by: string | null;
+  name: string;
+  status: "active" | "completed" | "archived";
+  context: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PlaybookRunsInsert = Partial<PlaybookRunsRow>;
+export type PlaybookRunsUpdate = Partial<PlaybookRunsRow>;
 
 export type MemoriesRow = {
   id: string;
@@ -288,6 +304,12 @@ export interface Database {
         Update: CanvasUpdate;
         Relationships: [];
       };
+      playbook_runs: {
+        Row: PlaybookRunsRow;
+        Insert: PlaybookRunsInsert;
+        Update: PlaybookRunsUpdate;
+        Relationships: [];
+      };
       memories: {
         Row: MemoriesRow;
         Insert: MemoriesInsert;
@@ -332,6 +354,7 @@ export type PlaybookStar = Database["public"]["Tables"]["playbook_stars"]["Row"]
 export type Skill = Database["public"]["Tables"]["skills"]["Row"];
 export type MCPServer = Database["public"]["Tables"]["mcp_servers"]["Row"];
 export type Canvas = Database["public"]["Tables"]["canvas"]["Row"];
+export type PlaybookRun = Database["public"]["Tables"]["playbook_runs"]["Row"];
 export type Memory = Database["public"]["Tables"]["memories"]["Row"];
 export type ApiKey = Database["public"]["Tables"]["api_keys"]["Row"];
 export type UserApiKey = Database["public"]["Tables"]["user_api_keys"]["Row"];

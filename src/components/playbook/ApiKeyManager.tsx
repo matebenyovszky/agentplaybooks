@@ -33,8 +33,8 @@ const ROLES = [
 ];
 
 const ROLE_PERMISSIONS: Record<string, string[]> = {
-  viewer: ["memory:read", "skills:read", "personas:read"],
-  coworker: ["memory:read", "memory:write", "skills:read", "skills:write", "personas:read", "personas:write"],
+  viewer: ["memory:read", "canvas:read", "skills:read", "personas:read"],
+  coworker: ["memory:read", "memory:write", "canvas:read", "canvas:write", "skills:read", "skills:write", "personas:read", "personas:write"],
   admin: ["full"],
 };
 
@@ -419,5 +419,4 @@ export function ApiKeyManager({ playbook_id, apiKeys, onUpdate }: ApiKeyManagerP
 }
 
 export default ApiKeyManager;
-
 

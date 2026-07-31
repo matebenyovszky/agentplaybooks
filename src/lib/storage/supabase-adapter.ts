@@ -5,8 +5,8 @@
  */
 
 import { createBrowserClient } from "@/lib/supabase/client";
-import type { Persona, Skill, MCPServer, Memory, Playbook } from "@/lib/supabase/types";
-import type { StorageAdapter, PersonaInput, SkillInput, MCPServerInput, MemoryInput } from "./types";
+import type { Persona, Skill, MCPServer, Canvas, PlaybookRun, Memory, Playbook } from "@/lib/supabase/types";
+import type { StorageAdapter, PersonaInput, SkillInput, MCPServerInput, PlaybookRunInput, CanvasInput, MemoryInput } from "./types";
 
 type PersonaSource = Pick<
   Playbook,
@@ -268,6 +268,129 @@ export function createSupabaseAdapter(playbookId: string): StorageAdapter {
       }
       return true;
     },
+
+    // Workflow runs
+    async getRuns(): Promise<PlaybookRun[]> {
+      const { data, error } = await supabase
+        .from("playbook_runs")
+        .select("*")
+        .eq("playbook_id", playbookId)
+        .order("updated_at", { ascending: false });
+
+      if (error) {
+        console.error("Error fetching workflow runs:", error);
+        return [];
+      }
+      return (data as PlaybookRun[]) || [];
+    },
+
+    async addRun(input: PlaybookRunInput): Promise<PlaybookRun | null> {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data, error } = await supabase
+        .from("playbook_runs")
+        .insert({ playbook_id: playbookId, created_by: user?.id || null, ...input })
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error creating workflow run:", error);
+        return null;
+      }
+      return data as PlaybookRun;
+    },
+
+    async updateRun(id: string, updates: Partial<PlaybookRunInput>): Promise<PlaybookRun | null> {
+      const { data, error } = await supabase
+        .from("playbook_runs")
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq("id", id)
+        .eq("playbook_id", playbookId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error updating workflow run:", error);
+        return null;
+      }
+      return data as PlaybookRun;
+    },
+
+    async deleteRun(id: string): Promise<boolean> {
+      const { error } = await supabase.from("playbook_runs").delete().eq("id", id).eq("playbook_id", playbookId);
+      if (error) {
+        console.error("Error deleting workflow run:", error);
+        return false;
+      }
+      return true;
+    },
+
+    // Canvas documents
+    async getCanvases(runId?: string): Promise<Canvas[]> {
+      let query = supabase
+        .from("canvas")
+        .select("*")
+        .eq("playbook_id", playbookId)
+        .order("sort_order")
+        .order("updated_at", { ascending: false });
+
+      if (runId) query = query.eq("run_id", runId);
+      const { data, error } = await query;
+
+      if (error) {
+        console.error("Error fetching canvas documents:", error);
+        return [];
+      }
+      return (data as Canvas[]) || [];
+    },
+
+    async addCanvas(input: CanvasInput): Promise<Canvas | null> {
+      const { data, error } = await supabase
+        .from("canvas")
+        .insert({ playbook_id: playbookId, ...input })
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error adding canvas document:", error);
+        return null;
+      }
+      return data as Canvas;
+    },
+
+    async updateCanvas(id: string, updates: Partial<CanvasInput>, expectedVersion: number): Promise<Canvas | null> {
+      const query = supabase
+        .from("canvas")
+        .update({
+          ...updates,
+          version: expectedVersion + 1,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", id)
+        .eq("playbook_id", playbookId)
+        .eq("version", expectedVersion);
+
+      const { data, error } = await query.select().single();
+
+      if (error) {
+        console.error("Error updating canvas document:", error);
+        return null;
+      }
+      return data as Canvas;
+    },
+
+    async deleteCanvas(id: string): Promise<boolean> {
+      const { error } = await supabase
+        .from("canvas")
+        .delete()
+        .eq("id", id)
+        .eq("playbook_id", playbookId);
+
+      if (error) {
+        console.error("Error deleting canvas document:", error);
+        return false;
+      }
+      return true;
+    },
     
     // Memory
     async getMemories(): Promise<Memory[]> {
@@ -330,4 +453,3 @@ export function createSupabaseAdapter(playbookId: string): StorageAdapter {
     },
   };
 }
-
