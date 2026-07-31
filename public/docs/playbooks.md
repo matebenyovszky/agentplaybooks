@@ -39,25 +39,15 @@ You:
 
 ### 2. Skills - Knowledge & Capabilities
 
-Structured task definitions and knowledge the agent can use. Skills define **WHAT** the agent knows and can do. Written in Anthropic Skill format for maximum compatibility.
+Portable SKILL.md instructions and knowledge the agent can load. Skills describe **HOW** to approach a task; executable network operations belong to MCP/OpenAPI integrations.
 
 ```json
 {
-  "name": "code_review",
-  "description": "Review code for bugs, security issues, and improvements",
-  "parameters": {
-    "type": "object",
-    "properties": {
-      "code": { "type": "string", "description": "The code to review" },
-      "language": { "type": "string", "description": "Programming language" },
-      "focus": { 
-        "type": "array", 
-        "items": { "type": "string" },
-        "description": "Areas to focus on: security, performance, style"
-      }
-    },
-    "required": ["code"]
-  }
+  "name": "Code review guide",
+  "description": "Use when reviewing code for correctness and security",
+  "content": "# Code review\nUse this checklist...",
+  "licence": "MIT",
+  "priority": 80
 }
 ```
 
@@ -71,7 +61,7 @@ Structured task definitions and knowledge the agent can use. Skills define **WHA
 
 External tools and APIs the agent can access via the [Model Context Protocol](https://modelcontextprotocol.io/). MCP provides a standardized way for AI to use external tools.
 
-**Important:** Code execution happens at the agent itself - the MCP server just provides the connection and tool definitions.
+**Important:** AgentPlaybooks discovers and executes configured MCP/OpenAPI operations through its federated proxy. The agent only needs the playbook MCP endpoint.
 
 ```json
 {
@@ -240,5 +230,4 @@ See [Getting Started](./getting-started.md) for detailed instructions.
 - [Platform Integrations](./platform-integrations.md) - Connect to ChatGPT, Claude, Gemini
 - [MCP Integration](./mcp-integration.md) - Deep dive into Model Context Protocol
 - [API Reference](./api-reference.md) - Full endpoint documentation
-
 

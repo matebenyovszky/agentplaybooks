@@ -8,6 +8,12 @@ The [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) is an open 
 
 AgentPlaybooks provides an MCP-compatible server endpoint for each public playbook.
 
+> [!NOTE]
+> **External MCP and OpenAPI integrations are federated at runtime.** Configure an
+> upstream once in the playbook and every agent using the live playbook MCP endpoint
+> can discover and call its namespaced tools. See [Federated tools](./mcp-federation.md)
+> for transport, OAuth, secrets, timeout, access-control, and audit configuration.
+
 ## Quick Start
 
 ### 1. Get Your MCP Endpoint
@@ -79,7 +85,7 @@ When you access the MCP endpoint, it returns a server manifest:
 
 ```json
 {
-  "protocolVersion": "2024-11-05",
+  "protocolVersion": "2025-03-26",
   "serverInfo": {
     "name": "My AI Assistant",
     "version": "1.0.0",
@@ -130,13 +136,15 @@ When you access the MCP endpoint, it returns a server manifest:
 
 ## Available Tools
 
-Tools are generated from your playbook's skills. Each skill becomes an MCP tool:
+Skills are instructions, not pretend executable functions. The live server exposes
+`list_skills` and `get_skill` to read them. Executable external MCP/OpenAPI operations
+are discovered and exposed as namespaced tools:
 
-| Skill Property | MCP Tool Property |
-|----------------|-------------------|
-| `name` | `name` (snake_case) |
-| `description` | `description` |
-| `definition.parameters` | `inputSchema` |
+| Source | MCP representation |
+|--------|--------------------|
+| Playbook skill | `playbook://GUID/skills` resource; `list_skills`/`get_skill` tools |
+| External MCP tool | `ext__SERVER_ID__TOOL_NAME` executable tool |
+| OpenAPI operation | Namespaced executable tool using `operationId` |
 
 ## Available Resources
 
@@ -146,7 +154,7 @@ Each playbook exposes these resources:
 |--------------|-------------|
 | `playbook://GUID/personas` | All personas with system prompts |
 | `playbook://GUID/memory` | All stored memories |
-| `playbook://GUID/skills` | All skills with definitions |
+| `playbook://GUID/skills` | All instructional skills with SKILL.md content |
 
 ## JSON-RPC Methods
 
@@ -160,7 +168,7 @@ The MCP endpoint supports standard JSON-RPC 2.0:
   "id": 1,
   "method": "initialize",
   "params": {
-    "protocolVersion": "2024-11-05",
+    "protocolVersion": "2025-03-26",
     "clientInfo": {
       "name": "my-client",
       "version": "1.0.0"
@@ -204,13 +212,16 @@ The MCP endpoint supports standard JSON-RPC 2.0:
 
 ## Adding MCP Servers to Your Playbook
 
-You can define custom MCP server configurations within your playbook:
+You can configure executable external MCP or OpenAPI connections within your playbook:
 
 1. Go to the **MCP Servers** tab in the Playbook Editor
 2. Click **"Add MCP Server"**
 3. Define tools and resources
 
-These will be merged into your playbook's MCP manifest.
+AgentPlaybooks performs live discovery for `tools/list` and `resources/list`,
+namespaces upstream names to prevent collisions, and routes `tools/call` and
+`resources/read` back to the correct server. The same tool calls are also available
+through the generated OpenAPI export and REST bridge.
 
 ### Example MCP Server Definition
 
@@ -297,4 +308,3 @@ mcp_servers:
 | **Flexible backend** | Switch between Claude, ChatGPT, Gemini |
 
 See [Platform Integrations](./platform-integrations.md) for Claude Coworker and other integrations.
-

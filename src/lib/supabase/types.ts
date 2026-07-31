@@ -88,8 +88,29 @@ export type MCPServersRow = {
   description: string | null;
   tools: McpTool[];
   resources: McpResource[];
-  transport_type?: "stdio" | "http" | "sse" | null;
+  transport_type?: "stdio" | "http" | "sse" | "openapi" | null;
   transport_config?: Record<string, unknown>;
+  created_at: string;
+};
+
+export type MCPServerSecretRow = {
+  mcp_server_id: string;
+  encrypted_payload: string;
+  iv: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type MCPProxyAuditLogRow = {
+  id: string;
+  playbook_id: string;
+  mcp_server_id: string;
+  operation: string;
+  target: string | null;
+  status: "success" | "error";
+  latency_ms: number;
+  error_code: string | null;
+  request_id: string | null;
   created_at: string;
 };
 
@@ -292,6 +313,18 @@ export interface Database {
         Row: MCPServersRow;
         Insert: MCPServersInsert;
         Update: MCPServersUpdate;
+        Relationships: [];
+      };
+      mcp_server_secrets: {
+        Row: MCPServerSecretRow;
+        Insert: Omit<MCPServerSecretRow, "created_at" | "updated_at"> & { created_at?: string; updated_at?: string };
+        Update: Partial<Omit<MCPServerSecretRow, "mcp_server_id" | "created_at">>;
+        Relationships: [];
+      };
+      mcp_proxy_audit_logs: {
+        Row: MCPProxyAuditLogRow;
+        Insert: Omit<MCPProxyAuditLogRow, "id" | "created_at"> & { id?: string; created_at?: string };
+        Update: Partial<Omit<MCPProxyAuditLogRow, "id" | "created_at">>;
         Relationships: [];
       };
       canvas: {

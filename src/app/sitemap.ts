@@ -27,6 +27,7 @@ const docSlugs = [
   "getting-started",
   "management-api",
   "mcp-integration",
+  "mcp-federation",
   "memory",
   "platform-integrations",
   "playbooks",

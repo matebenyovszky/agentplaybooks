@@ -238,6 +238,8 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
       publisher_id: currentUserId,
       tools: [],
       resources: [],
+      transport_type: "http",
+      transport_config: { url: "", timeout_ms: 15000, access: "playbook_api_key" },
     });
 
     if (data) {
@@ -277,6 +279,8 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
         description: publicMCP.description,
         tools: publicMCP.tools,
         resources: publicMCP.resources,
+        transport_type: publicMCP.transport_type,
+        transport_config: publicMCP.transport_config,
       })
       .select()
       .single();
@@ -402,6 +406,8 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
             description: m.description,
             tools: m.tools,
             resources: m.resources,
+            transport_type: m.transport_type,
+            transport_config: m.transport_config,
           }))
         );
       }

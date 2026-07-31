@@ -51,6 +51,12 @@ export const docsEntries: DocEntry[] = [
     section: "concepts",
   },
   {
+    slug: "mcp-federation",
+    title: "Federated MCP & OpenAPI Tools",
+    description: "Runtime proxy, OAuth, encrypted secrets, timeouts, and audit logs",
+    section: "guides",
+  },
+  {
     slug: "api-reference",
     title: "API Reference",
     description: "Complete API documentation",

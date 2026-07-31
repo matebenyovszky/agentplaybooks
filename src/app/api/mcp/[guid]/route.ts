@@ -2,7 +2,17 @@ import { handle } from "hono/vercel";
 import { createApiApp } from "@/app/api/_shared/hono";
 import { validateApiKey } from "@/app/api/_shared/auth";
 import { getServiceSupabase, getSupabase } from "@/app/api/_shared/supabase";
-import type { McpResource, McpTool, Playbook, MemoryTier } from "@/lib/supabase/types";
+import type { McpResource, McpTool, MCPServer, Playbook, MemoryTier } from "@/lib/supabase/types";
+import {
+  callFederatedTool,
+  federatedServerPrefix,
+  listFederatedResources,
+  listFederatedTools,
+  parseFederatedResourceUri,
+  readFederatedResource,
+  type FederationAuditEvent,
+} from "@/lib/mcp/federation";
+import { decryptMcpSecrets } from "@/lib/mcp/secrets";
 
 type PersonaSource = Pick<Playbook, "id" | "persona_name" | "persona_system_prompt" | "persona_metadata">;
 
@@ -17,6 +27,71 @@ function playbookToPersona(playbook: PersonaSource) {
     system_prompt: playbook.persona_system_prompt || "You are a helpful AI assistant.",
     metadata: playbook.persona_metadata ?? {},
   };
+}
+
+async function loadMcpSecrets(serverId: string) {
+  const { data } = await getServiceSupabase()
+    .from("mcp_server_secrets")
+    .select("encrypted_payload, iv")
+    .eq("mcp_server_id", serverId)
+    .maybeSingle();
+  if (!data) return {};
+  return decryptMcpSecrets(data.encrypted_payload, data.iv);
+}
+
+function auditWriter(playbookId: string, requestId: string | undefined) {
+  return async (event: FederationAuditEvent) => {
+    const { error } = await getServiceSupabase().from("mcp_proxy_audit_logs").insert({
+      playbook_id: playbookId,
+      mcp_server_id: event.serverId,
+      operation: event.operation,
+      target: event.target || null,
+      status: event.status,
+      latency_ms: event.latencyMs,
+      error_code: event.errorCode || null,
+      request_id: requestId || null,
+    });
+    if (error) console.error("Failed to write MCP proxy audit log", error.message);
+  };
+}
+
+async function federationOptions(server: MCPServer, playbookId: string, requestId?: string) {
+  return {
+    secrets: await loadMcpSecrets(server.id),
+    audit: auditWriter(playbookId, requestId),
+  };
+}
+
+async function federatedTools(servers: MCPServer[], playbookId: string, requestId?: string) {
+  const groups = await Promise.all(servers.map(async (server) => {
+    const discovered = await listFederatedTools([server], await federationOptions(server, playbookId, requestId));
+    const tools = discovered.map((tool) => ({
+      name: tool._meta.originalName,
+      description: tool.description?.replace(/^\[[^\]]+\]\s*/, ""),
+      inputSchema: tool.inputSchema,
+    }));
+    if (tools.length && JSON.stringify(tools) !== JSON.stringify(server.tools || [])) {
+      const { error } = await getServiceSupabase().from("mcp_servers").update({ tools }).eq("id", server.id);
+      if (error) console.error("Failed to cache federated tool schemas", error.message);
+    }
+    return discovered;
+  }));
+  return groups.flat();
+}
+
+async function federatedResources(servers: MCPServer[], playbookId: string, requestId?: string) {
+  const groups = await Promise.all(servers.map(async (server) =>
+    listFederatedResources([server], await federationOptions(server, playbookId, requestId)),
+  ));
+  return groups.flat();
+}
+
+function serverForFederatedTool(servers: MCPServer[], toolName: string) {
+  return servers.find((server) => toolName.startsWith(federatedServerPrefix(server)));
+}
+
+function isMcpToolResult(value: unknown): value is { content: unknown[] } {
+  return typeof value === "object" && value !== null && Array.isArray((value as { content?: unknown }).content);
 }
 
 
@@ -189,34 +264,18 @@ app.get("/", async (c) => {
     return c.json({ error: "Playbook not found" }, 404);
   }
 
-  const [skillsRes, mcpRes] = await Promise.all([
-    supabase.from("skills").select("*").eq("playbook_id", playbook.id),
-    supabase.from("mcp_servers").select("*").eq("playbook_id", playbook.id),
-  ]);
-
-  const skills = skillsRes.data || [];
-  const mcpServers = mcpRes.data || [];
+  const { data: mcpRows } = await supabase
+    .from("mcp_servers")
+    .select("*")
+    .eq("playbook_id", playbook.id);
+  const mcpServers = (mcpRows || []) as MCPServer[];
   const persona = playbookToPersona(playbook);
 
-  // Build tools: start with built-in playbook tools
-  const tools: McpTool[] = [...PLAYBOOK_TOOLS];
-
-  // Add skill-based tools (prefixed with skill_ to distinguish from built-in)
-  // Note: Skills no longer have parameters, so use empty schema
-  for (const skill of skills) {
-    tools.push({
-      name: `skill_${skill.name.toLowerCase().replace(/\s+/g, "_")}`,
-      description: skill.description || skill.name,
-      inputSchema: { type: "object", properties: {} } as Record<string, unknown>,
-    });
-  }
-
-  // Add tools from MCP servers
-  for (const mcp of mcpServers) {
-    if (Array.isArray(mcp.tools)) {
-      tools.push(...mcp.tools);
-    }
-  }
+  // Skills are instructions/resources; only executable operations are MCP tools.
+  const tools: McpTool[] = [
+    ...PLAYBOOK_TOOLS,
+    ...await federatedTools(mcpServers, playbook.id, c.req.header("cf-ray") || c.req.header("x-request-id")),
+  ];
 
   // Build resources
   // Note: Persona is embedded in the manifest under _playbook.persona (1 Playbook = 1 Persona)
@@ -235,16 +294,15 @@ app.get("/", async (c) => {
     },
   ];
 
-  // Add resources from MCP servers
-  for (const mcp of mcpServers) {
-    if (Array.isArray(mcp.resources)) {
-      resources.push(...mcp.resources);
-    }
-  }
+  resources.push(...await federatedResources(
+    mcpServers,
+    playbook.id,
+    c.req.header("cf-ray") || c.req.header("x-request-id"),
+  ));
 
   // MCP Server manifest
   const manifest = {
-    protocolVersion: "2024-11-05",
+    protocolVersion: "2025-03-26",
     serverInfo: {
       name: playbook.name,
       version: "1.0.0",
@@ -309,28 +367,22 @@ app.post("/", async (c) => {
         jsonrpc: "2.0",
         id,
         result: {
-          protocolVersion: "2024-11-05",
+          protocolVersion: "2025-03-26",
           serverInfo: { name: "AgentPlaybooks", version: "1.0.0" },
           capabilities: { tools: {}, resources: {} },
         },
       });
 
     case "tools/list": {
-      const { data: skills } = await supabase
-        .from("skills")
+      const { data: mcpRows } = await supabase
+        .from("mcp_servers")
         .select("*")
         .eq("playbook_id", playbook.id);
-
-      // Skill-based tools (from playbook definition)
-      // Note: Skills no longer have parameters, use empty schema
-      const skillTools = (skills || []).map((skill) => ({
-        name: `skill_${skill.name.toLowerCase().replace(/\s+/g, "_")}`,
-        description: skill.description || skill.name,
-        inputSchema: { type: "object", properties: {} },
-      }));
-
-      // Combine with built-in playbook tools
-      const allTools = [...PLAYBOOK_TOOLS, ...skillTools];
+      const mcpServers = (mcpRows || []) as MCPServer[];
+      const allTools = [
+        ...PLAYBOOK_TOOLS,
+        ...await federatedTools(mcpServers, playbook.id, c.req.header("cf-ray") || c.req.header("x-request-id")),
+      ];
 
       return c.json({
         jsonrpc: "2.0",
@@ -381,6 +433,16 @@ app.post("/", async (c) => {
         }
       }
 
+      const { data: mcpRows } = await supabase
+        .from("mcp_servers")
+        .select("*")
+        .eq("playbook_id", playbook.id);
+      resources.push(...await federatedResources(
+        (mcpRows || []) as MCPServer[],
+        playbook.id,
+        c.req.header("cf-ray") || c.req.header("x-request-id"),
+      ));
+
       return c.json({
         jsonrpc: "2.0",
         id,
@@ -391,6 +453,33 @@ app.post("/", async (c) => {
     case "resources/read": {
       const uri = rpcParams?.uri as string;
       const serviceSupabase = getServiceSupabase();
+
+      const federated = parseFederatedResourceUri(uri || "");
+      if (federated) {
+        const { data: serverRow } = await supabase
+          .from("mcp_servers")
+          .select("*")
+          .eq("id", federated.serverId)
+          .eq("playbook_id", playbook.id)
+          .single();
+        if (!serverRow) {
+          return c.json({ jsonrpc: "2.0", id, error: { code: -32002, message: "Federated resource server not found" } });
+        }
+        try {
+          const result = await readFederatedResource(
+            serverRow as MCPServer,
+            federated.originalUri,
+            await federationOptions(serverRow as MCPServer, playbook.id, c.req.header("cf-ray") || c.req.header("x-request-id")),
+          );
+          return c.json({ jsonrpc: "2.0", id, result });
+        } catch (error) {
+          return c.json({
+            jsonrpc: "2.0",
+            id,
+            error: { code: -32000, message: error instanceof Error ? error.message : "Federated resource read failed" },
+          });
+        }
+      }
 
       // Memory resource
       if (uri?.match(/\/memory$/)) {
@@ -437,7 +526,7 @@ app.post("/", async (c) => {
       if (uri?.match(/\/skills$/)) {
         const { data: skills } = await supabase
           .from("skills")
-          .select("id, name, description, definition, examples, priority")
+          .select("id, name, description, content, licence, publisher_id, priority")
           .eq("playbook_id", playbook.id)
           .order("priority", { ascending: false });
 
@@ -503,6 +592,50 @@ app.post("/", async (c) => {
       const args = rpcParams?.arguments || {};
       const serviceSupabase = getServiceSupabase();
 
+      if (toolName?.startsWith("ext__")) {
+        const { data: mcpRows } = await supabase
+          .from("mcp_servers")
+          .select("*")
+          .eq("playbook_id", playbook.id);
+        const mcpServers = (mcpRows || []) as MCPServer[];
+        const server = serverForFederatedTool(mcpServers, toolName);
+        if (!server) {
+          return c.json({ jsonrpc: "2.0", id, error: { code: -32602, message: "Federated tool not found" } });
+        }
+        const access = (server.transport_config as { access?: string } | null)?.access;
+        if (access === "playbook_api_key") {
+          const apiKey = await validateApiKey(c.req.raw, "tools:call");
+          if (!apiKey || apiKey.playbooks.id !== playbook.id) {
+            return c.json({
+              jsonrpc: "2.0",
+              id,
+              error: { code: -32001, message: "Playbook API key with tools:call permission required" },
+            });
+          }
+        }
+        try {
+          const result = await callFederatedTool(
+            server,
+            toolName,
+            args,
+            await federationOptions(server, playbook.id, c.req.header("cf-ray") || c.req.header("x-request-id")),
+          );
+          return c.json({
+            jsonrpc: "2.0",
+            id,
+            result: isMcpToolResult(result)
+              ? result
+              : { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] },
+          });
+        } catch (error) {
+          return c.json({
+            jsonrpc: "2.0",
+            id,
+            error: { code: -32000, message: error instanceof Error ? error.message : "Federated tool call failed" },
+          });
+        }
+      }
+
       try {
         let result: unknown;
 
@@ -510,7 +643,7 @@ app.post("/", async (c) => {
           case "list_skills": {
             const { data } = await serviceSupabase
               .from("skills")
-              .select("id, name, description, definition, examples, priority")
+              .select("id, name, description, content, licence, publisher_id, priority")
               .eq("playbook_id", playbook.id)
               .order("priority", { ascending: false });
             result = data || [];
@@ -949,17 +1082,7 @@ app.post("/", async (c) => {
           }
 
           default:
-            // Check if it's a skill-based tool call
-            if (toolName.startsWith("skill_")) {
-              const skillName = toolName.replace("skill_", "").replace(/_/g, " ");
-              result = {
-                message: `Skill "${skillName}" was called`,
-                arguments: args,
-                note: "Skill execution should be handled by your AI system using the skill definition",
-              };
-            } else {
-              throw new Error(`Unknown tool: ${toolName}`);
-            }
+            throw new Error(`Unknown tool: ${toolName}`);
         }
 
         return c.json({

@@ -28,10 +28,11 @@ Welcome to the AgentPlaybooks documentation.
 AgentPlaybooks is a platform-independent memory and toolkit for AI agents, including Gemini Gems (Gem agents). It provides:
 
 - **Personas** - Reusable system prompts that work across any AI platform
-- **Skills** - Structured capabilities in Anthropic skill format
+- **Skills** - Portable SKILL.md-compatible instructions
 - **MCP Servers** - Model Context Protocol configurations
 - **Memory** - Persistent key-value storage accessible by AI agents
-- **Multi-Format Export** - JSON, OpenAPI, MCP protocol, Markdown
+- **Federated tools** - MCP/OpenAPI discovery and calls through one playbook endpoint
+- **Multi-Format Export** - JSON, OpenAPI, MCP protocol, Anthropic, Markdown
 
 ## Why AgentPlaybooks?
 

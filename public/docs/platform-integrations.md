@@ -366,8 +366,8 @@ Configure Claude Coworker's MCP settings to connect to your playbook:
 ```
 
 Coworker will have access to:
-- **Tools** — All playbook skills as callable functions
-- **Resources** — Personas, memory, and skill definitions
+- **Tools** — Built-in operations plus federated MCP/OpenAPI tools
+- **Resources** — Persona, memory, and instructional SKILL.md content
 - **Persistent Memory** — Context that persists across sessions
 
 ### Method 2: Skills Folder Export
@@ -376,7 +376,7 @@ Export your playbook skills to a local folder:
 
 ```bash
 curl -s "https://agentplaybooks.ai/api/playbooks/YOUR_GUID?format=anthropic" \
-  | jq '.tools' > ~/Documents/CoworkerSkills/my_skills.json
+  | jq '.skills' > ~/Documents/CoworkerSkills/my_skills.json
 ```
 
 Point Claude Coworker to this folder in the app settings.
@@ -571,8 +571,8 @@ Your playbook tools and resources should appear.
 #### Step 3: Use in Claude Code
 
 When running Claude Code, it will automatically have access to:
-- Your playbook's tools (from skills)
-- Your playbook's resources (personas, memory, skills)
+- Your playbook's executable tools (built-in and federated MCP/OpenAPI)
+- Your playbook's resources (persona, memory, instructional skills)
 
 ```bash
 claude "Use my playbook configuration to review this code"
@@ -823,7 +823,7 @@ def run_claude_agent(task: str):
         messages.append({"role": "user", "content": tool_results})
 
 def execute_tool(name: str, input_data: dict):
-    """Execute a tool - implement based on your playbook's skills"""
+    """Execute a tool through the AgentPlaybooks MCP/OpenAPI bridge."""
     # Example: memory operations
     if name == "read_memory":
         return requests.get(
@@ -1114,6 +1114,5 @@ agent.write_memory("last_session", {"task": "code review", "completed": True})
 - [API Reference](./api-reference.md) - Full endpoint documentation
 - [MCP Integration](./mcp-integration.md) - Model Context Protocol details
 - [GitHub Issues](https://github.com/matebenyovszky/agentplaybooks/issues) - Report bugs
-
 
 

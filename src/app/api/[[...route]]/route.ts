@@ -11,6 +11,9 @@ import {
   validateContent
 } from "@/lib/attachment-validator";
 import { hashApiKey, generateApiKey, generateGuid, getKeyPrefix } from "@/lib/utils";
+import { federatedToolName, listFederatedTools } from "@/lib/mcp/federation";
+import { decryptMcpSecrets } from "@/lib/mcp/secrets";
+import { exportSkill, exportedMemoryFields, exportedSkillSchema } from "@/lib/playbook-export-schema";
 import { cookies } from "next/headers";
 
 // User API Key with user_id
@@ -60,13 +63,6 @@ type PlaybookWithExports = Playbook & {
   personas?: Persona[];
   skills: Skill[];
   mcp_servers: MCPServer[];
-};
-
-type OpenApiSkillSchema = {
-  type: "object";
-  description?: string;
-  properties?: Record<string, unknown>;
-  required?: string[];
 };
 
 type StarredPlaybookRow = { playbooks?: Playbook | null };
@@ -349,6 +345,10 @@ app.get("/playbooks/:guid", async (c) => {
 
   const persona = playbookToPersona(playbook);
 
+  const exportMcpServers = ["openapi", "mcp", "anthropic"].includes(format)
+    ? await hydrateExternalToolSchemas((mcpServers.data || []) as MCPServer[])
+    : (mcpServers.data || []);
+
   const fullPlaybook = {
     ...playbook,
     // New: singular persona for clarity
@@ -356,7 +356,7 @@ app.get("/playbooks/:guid", async (c) => {
     // Backward-compatible: personas array shape
     personas: [persona],
     skills: skills.data || [],
-    mcp_servers: mcpServers.data || [],
+    mcp_servers: exportMcpServers,
   };
 
   // Format output
@@ -640,7 +640,7 @@ app.get("/playbooks/:id/skills", async (c) => {
 
   const { data, error } = await supabase
     .from("skills")
-    .select("id, name, description, definition, examples, priority")
+    .select("id, name, description, content, licence, publisher_id, priority")
     .eq("playbook_id", playbook.id)
     .order("priority", { ascending: false });
 
@@ -665,7 +665,7 @@ app.post("/playbooks/:id/skills", async (c) => {
   }
 
   const body = await c.req.json();
-  const { name, description, content, licence } = body;
+  const { name, description, content, licence, priority } = body;
 
   if (!name) {
     return c.json({ error: "Name is required" }, 400);
@@ -681,6 +681,7 @@ app.post("/playbooks/:id/skills", async (c) => {
       description: description || null,
       content: content || null,
       licence: licence || null,
+      priority: priority ?? 0,
     })
     .select()
     .single();
@@ -707,7 +708,7 @@ app.put("/playbooks/:id/skills/:sid", async (c) => {
   }
 
   const body = await c.req.json();
-  const { name, description, content, licence } = body;
+  const { name, description, content, licence, priority } = body;
 
   const supabase = getServiceSupabase();
 
@@ -716,6 +717,7 @@ app.put("/playbooks/:id/skills/:sid", async (c) => {
   if (description !== undefined) updateData.description = description;
   if (content !== undefined) updateData.content = content;
   if (licence !== undefined) updateData.licence = licence;
+  if (priority !== undefined) updateData.priority = priority;
 
   const { data, error } = await supabase
     .from("skills")
@@ -833,7 +835,7 @@ app.post("/playbooks/:id/api-keys", async (c) => {
       key_hash: keyHash,
       key_prefix: keyPrefix,
       name: name || null,
-      permissions: permissions || ["memory:read", "memory:write"],
+      permissions: permissions || ["memory:read", "memory:write", "tools:call"],
       expires_at: expires_at || null,
       is_active: true,
     })
@@ -2162,23 +2164,11 @@ app.get("/manage/openapi.json", (c) => {
                   type: "object",
                   required: ["name"],
                   properties: {
-                    name: { type: "string", description: "Skill name (use snake_case)" },
-                    description: { type: "string", description: "What the skill does" },
-                    definition: {
-                      type: "object",
-                      description: "Skill definition with parameters schema",
-                      properties: {
-                        parameters: {
-                          type: "object",
-                          properties: {
-                            type: { type: "string", enum: ["object"] },
-                            properties: { type: "object" },
-                            required: { type: "array", items: { type: "string" } }
-                          }
-                        }
-                      }
-                    },
-                    examples: { type: "array", description: "Example usages" }
+                    name: { type: "string", description: "Human-readable skill name" },
+                    description: { type: "string", description: "When the skill should be used" },
+                    content: { type: "string", description: "SKILL.md instruction body" },
+                    licence: { type: "string" },
+                    priority: { type: "integer", minimum: 0, maximum: 100 }
                   }
                 }
               }
@@ -2203,8 +2193,9 @@ app.get("/manage/openapi.json", (c) => {
                   properties: {
                     name: { type: "string" },
                     description: { type: "string" },
-                    definition: { type: "object" },
-                    examples: { type: "array" }
+                    content: { type: "string" },
+                    licence: { type: "string" },
+                    priority: { type: "integer", minimum: 0, maximum: 100 }
                   }
                 }
               }
@@ -2323,6 +2314,11 @@ app.get("/manage/openapi.json", (c) => {
             value: { type: "object", description: "Stored JSON value" },
             tags: { type: "array", items: { type: "string" }, description: "Tags for categorization and search" },
             description: { type: "string", description: "Human-readable description of this memory" },
+            tier: { type: "string", enum: ["working", "contextual", "longterm"] },
+            priority: { type: "integer", minimum: 1, maximum: 100 },
+            parent_key: { type: ["string", "null"] },
+            summary: { type: ["string", "null"] },
+            retention_policy: { type: "string", enum: ["permanent", "session", "auto"] },
             updated_at: { type: "string", format: "date-time" }
           }
         },
@@ -2331,10 +2327,10 @@ app.get("/manage/openapi.json", (c) => {
           description: "A skill defines a capability or rule for solving tasks",
           properties: {
             id: { type: "string", format: "uuid" },
-            name: { type: "string", description: "Skill name (snake_case)" },
-            description: { type: "string", description: "What this skill does" },
-            definition: { type: "object", description: "Skill definition with parameters schema" },
-            examples: { type: "array", description: "Example usages" },
+            name: { type: "string", description: "Skill name" },
+            description: { type: "string", description: "When the skill should be used" },
+            content: { type: ["string", "null"], description: "SKILL.md instruction body" },
+            licence: { type: ["string", "null"] },
             priority: { type: "integer", description: "Priority (higher = more important)" }
           }
         },
@@ -2709,6 +2705,35 @@ app.get("/public/mcp/:id", async (c) => {
 // FORMAT HELPERS
 // ============================================
 
+async function hydrateExternalToolSchemas(servers: MCPServer[]) {
+  const supabase = getServiceSupabase();
+  return Promise.all(servers.map(async (server) => {
+    try {
+      const { data: secretRow } = await supabase
+        .from("mcp_server_secrets")
+        .select("encrypted_payload, iv")
+        .eq("mcp_server_id", server.id)
+        .maybeSingle();
+      const secrets = secretRow
+        ? await decryptMcpSecrets(secretRow.encrypted_payload, secretRow.iv)
+        : {};
+      const discovered = await listFederatedTools([server], { secrets });
+      const tools = discovered.map((tool) => ({
+        name: tool._meta.originalName,
+        description: tool.description?.replace(/^\[[^\]]+\]\s*/, ""),
+        inputSchema: tool.inputSchema,
+      }));
+      if (tools.length && JSON.stringify(tools) !== JSON.stringify(server.tools || [])) {
+        await supabase.from("mcp_servers").update({ tools }).eq("id", server.id);
+      }
+      return { ...server, tools: tools.length ? tools : server.tools };
+    } catch (error) {
+      console.error(`Failed to refresh federated schemas for ${server.name}`, error);
+      return server;
+    }
+  }));
+}
+
 function formatAsOpenAPI(playbook: PlaybookWithExports) {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://agentplaybooks.ai";
   const persona = playbook.persona || (Array.isArray(playbook.personas) ? playbook.personas[0] : null);
@@ -2716,28 +2741,32 @@ function formatAsOpenAPI(playbook: PlaybookWithExports) {
     ? `## Persona: ${persona.name}\n\n${persona.system_prompt}\n\n---\n\n`
     : "";
 
-  // Convert skills to OpenAPI-compatible tool definitions
-  // Note: Skills no longer have parameters (definition removed)
-  const tools = playbook.skills.map((skill) => ({
-    type: "function",
-    function: {
-      name: skill.name.toLowerCase().replace(/\s+/g, "_"),
-      description: skill.description || skill.name,
-      parameters: { type: "object", properties: {} },
+  const externalTools = playbook.mcp_servers.flatMap((server) =>
+    (server.tools || []).map((tool) => ({ server, tool, name: federatedToolName(server, tool.name) })),
+  );
+  const externalToolPaths = Object.fromEntries(externalTools.map(({ tool, name }) => [
+    `/mcp/${playbook.guid}/tools/${name}`,
+    {
+      post: {
+        operationId: name,
+        summary: tool.description || tool.name,
+        description: `Call federated tool ${tool.name} through AgentPlaybooks`,
+        requestBody: {
+          required: false,
+          content: {
+            "application/json": {
+              schema: tool.inputSchema || { type: "object", properties: {} },
+            },
+          },
+        },
+        responses: {
+          "200": { description: "Federated tool result" },
+          "401": { description: "Playbook API key required by this integration" },
+          "502": { description: "Upstream MCP/OpenAPI call failed" },
+        },
+      },
     },
-  }));
-
-  // Build skill schemas for OpenAPI
-  const skillSchemas: Record<string, OpenApiSkillSchema> = {};
-  playbook.skills.forEach((skill) => {
-    const skillName = skill.name.toLowerCase().replace(/\s+/g, "_");
-    skillSchemas[`Skill_${skillName}`] = {
-      type: "object",
-      description: skill.description || skill.name,
-      properties: {},
-      required: [],
-    };
-  });
+  ]));
 
   return {
     openapi: "3.1.0",
@@ -2749,6 +2778,7 @@ function formatAsOpenAPI(playbook: PlaybookWithExports) {
     },
     servers: [{ url: `${baseUrl}/api` }],
     paths: {
+      ...externalToolPaths,
       // Memory: List & Search
       [`/playbooks/${playbook.guid}/memory`]: {
         get: {
@@ -2935,7 +2965,7 @@ function formatAsOpenAPI(playbook: PlaybookWithExports) {
       [`/playbooks/${playbook.guid}/skills/{skillId}`]: {
         get: {
           summary: "Get skill",
-          description: "Get a specific skill definition including its parameters and examples",
+          description: "Get a specific skill including its SKILL.md content and metadata",
           operationId: "getSkill",
           parameters: [
             {
@@ -3002,6 +3032,7 @@ function formatAsOpenAPI(playbook: PlaybookWithExports) {
               description: "Tags for categorization and search"
             },
             description: { type: "string", description: "Human-readable description" },
+            ...exportedMemoryFields,
             updated_at: { type: "string", format: "date-time", description: "Last update timestamp" },
           },
         },
@@ -3016,30 +3047,15 @@ function formatAsOpenAPI(playbook: PlaybookWithExports) {
               description: "Optional tags for categorization"
             },
             description: { type: "string", description: "Optional description" },
+            tier: { type: "string", enum: ["working", "contextual", "longterm"], default: "contextual" },
+            priority: { type: "integer", minimum: 1, maximum: 100, default: 50 },
+            parent_key: { type: ["string", "null"] },
+            summary: { type: ["string", "null"] },
+            retention_policy: { type: "string", enum: ["permanent", "session", "auto"], default: "permanent" },
           },
           required: ["value"],
         },
-        Skill: {
-          type: "object",
-          description: "A skill defines a capability or rule for solving tasks",
-          properties: {
-            id: { type: "string", format: "uuid" },
-            name: { type: "string", description: "Skill name (snake_case)" },
-            description: { type: "string", description: "What this skill does" },
-            definition: {
-              type: "object",
-              description: "Skill definition with parameters schema",
-              properties: {
-                parameters: { type: "object", description: "JSON Schema for input parameters" },
-              },
-            },
-            examples: {
-              type: "array",
-              items: { type: "object" },
-              description: "Example usages"
-            },
-          },
-        },
+        Skill: exportedSkillSchema,
         Persona: {
           type: "object",
           description: "An AI personality with a system prompt",
@@ -3062,8 +3078,6 @@ function formatAsOpenAPI(playbook: PlaybookWithExports) {
             error: { type: "string", description: "Error message" },
           },
         },
-        // Include skill-specific schemas
-        ...skillSchemas,
       },
       securitySchemes: {
         apiKey: {
@@ -3078,7 +3092,13 @@ function formatAsOpenAPI(playbook: PlaybookWithExports) {
       guid: playbook.guid,
       persona,
       personas: playbook.personas, // backward-compatible
-      skills: tools,
+      skills: playbook.skills.map(exportSkill),
+      federated_tools: externalTools.map(({ server, tool, name }) => ({
+        name,
+        original_name: tool.name,
+        server_id: server.id,
+        transport_type: server.transport_type,
+      })),
       mcp_servers: playbook.mcp_servers.map((mcp) => ({
         name: mcp.name,
         description: mcp.description,
@@ -3090,11 +3110,39 @@ function formatAsOpenAPI(playbook: PlaybookWithExports) {
 
 function formatAsMCP(playbook: PlaybookWithExports) {
   const persona = playbook.persona || (Array.isArray(playbook.personas) ? playbook.personas[0] : null);
-  const tools = playbook.skills.map((skill) => ({
-    name: skill.name.toLowerCase().replace(/\s+/g, "_"),
-    description: skill.description || skill.name,
-    inputSchema: { type: "object", properties: {} },
-  }));
+  const tools: Array<{ name: string; description: string; inputSchema: Record<string, unknown> }> = [
+    { name: "list_skills", description: "List playbook skills/instructions", inputSchema: { type: "object", properties: {} } },
+    {
+      name: "get_skill",
+      description: "Read a skill and its SKILL.md content",
+      inputSchema: {
+        type: "object",
+        properties: { skill_id: { type: "string" } },
+        required: ["skill_id"],
+      },
+    },
+    {
+      name: "read_memory",
+      description: "Read a playbook memory by key",
+      inputSchema: {
+        type: "object",
+        properties: { key: { type: "string" } },
+        required: ["key"],
+      },
+    },
+    {
+      name: "search_memory",
+      description: "Search playbook memory",
+      inputSchema: {
+        type: "object",
+        properties: {
+          search: { type: "string" },
+          tags: { type: "array", items: { type: "string" } },
+          tier: { type: "string", enum: ["working", "contextual", "longterm"] },
+        },
+      },
+    },
+  ];
 
   const resources = [
     {
@@ -3114,12 +3162,9 @@ function formatAsMCP(playbook: PlaybookWithExports) {
   // Add MCP servers from playbook
   for (const mcp of playbook.mcp_servers) {
     const mcpTools = (mcp.tools || []).map((tool) => ({
-      name: tool.name,
-      description: tool.description || tool.name,
-      inputSchema: {
-        type: (tool.inputSchema?.type as string) || "object",
-        properties: (tool.inputSchema?.properties as Record<string, unknown>) || {},
-      },
+      name: federatedToolName(mcp, tool.name),
+      description: `[${mcp.name}] ${tool.description || tool.name}`,
+      inputSchema: tool.inputSchema || { type: "object", properties: {} },
     }));
     tools.push(...mcpTools);
     const mcpResources = (mcp.resources || []).map((resource) => ({
@@ -3132,7 +3177,7 @@ function formatAsMCP(playbook: PlaybookWithExports) {
   }
 
   return {
-    protocolVersion: "2024-11-05",
+    protocolVersion: "2025-03-26",
     serverInfo: {
       name: playbook.name,
       version: "1.0.0",
@@ -3143,6 +3188,7 @@ function formatAsMCP(playbook: PlaybookWithExports) {
     },
     tools,
     resources,
+    skills: playbook.skills.map(exportSkill),
     persona: persona
       ? { name: persona.name, systemPrompt: persona.system_prompt }
       : null,
@@ -3157,11 +3203,14 @@ function formatAsMCP(playbook: PlaybookWithExports) {
 
 function formatAsAnthropic(playbook: PlaybookWithExports) {
   const persona = playbook.persona || (Array.isArray(playbook.personas) ? playbook.personas[0] : null);
-  // Anthropic tool format
-  const tools = playbook.skills.map((skill) => ({
-    name: skill.name.toLowerCase().replace(/\s+/g, "_"),
-    description: skill.description || skill.name,
-    input_schema: { type: "object", properties: {} },
+  const tools = playbook.mcp_servers.flatMap((server) => (server.tools || []).map((tool) => {
+    const name = federatedToolName(server, tool.name);
+    return {
+      name,
+      description: `[${server.name}] ${tool.description || tool.name}`,
+      input_schema: tool.inputSchema || { type: "object", properties: {} },
+      endpoint: `/api/mcp/${playbook.guid}/tools/${name}`,
+    };
   }));
 
   return {
@@ -3172,6 +3221,7 @@ function formatAsAnthropic(playbook: PlaybookWithExports) {
     },
     system_prompt: persona?.name && persona?.system_prompt ? `## ${persona.name}\n\n${persona.system_prompt}` : null,
     tools,
+    skills: playbook.skills.map(exportSkill),
     mcp_servers: playbook.mcp_servers.map((mcp) => ({
       name: mcp.name,
       description: mcp.description,

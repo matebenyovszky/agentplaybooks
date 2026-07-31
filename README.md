@@ -252,7 +252,9 @@ agentplaybooks/
 - playbooks: core entity (includes visibility enum: private, public, unlisted)
 - skills: skill definitions and optional SKILL.md content
 - skill_attachments: secure attachment storage for skills
-- mcp_servers: MCP tools and resources
+- mcp_servers: MCP/OpenAPI transport configuration, tools, and resources
+- mcp_server_secrets: AES-GCM encrypted upstream credentials (service-role only)
+- mcp_proxy_audit_logs: metadata-only federated tool call audit trail
 - memories: key-value memory store
 - api_keys: playbook-scoped API keys with RBAC roles
 - user_api_keys: user-scoped API keys

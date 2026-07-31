@@ -172,25 +172,23 @@ const MCP_TOOLS = [
   },
   {
     name: "create_skill",
-    description: "Add a skill (capability/tool definition) to a playbook. Skills define what the AI can do with input/output schemas.",
+    description: "Add an instructional skill to a playbook using SKILL.md-compatible content.",
     inputSchema: {
       type: "object",
       properties: {
         playbook_id: { type: "string", description: "UUID of the playbook" },
-        name: { type: "string", description: "Skill name (use snake_case, e.g., 'code_review')" },
-        description: { type: "string", description: "Description of what the skill does" },
-        definition: {
-          type: "object",
-          description: "Skill definition with parameters schema. Example: { parameters: { type: 'object', properties: { code: { type: 'string' } }, required: ['code'] } }",
-        },
-        examples: { type: "array", description: "Example usages of the skill" },
+        name: { type: "string", description: "Human-readable skill name" },
+        description: { type: "string", description: "Short description of when to use the skill" },
+        content: { type: "string", description: "SKILL.md instruction body" },
+        licence: { type: "string", description: "Optional licence identifier" },
+        priority: { type: "integer", minimum: 0, maximum: 100 },
       },
       required: ["playbook_id", "name"],
     },
   },
   {
     name: "update_skill",
-    description: "Update a skill's name, description, definition, or examples.",
+    description: "Update a skill's name, description, SKILL.md content, licence, or priority.",
     inputSchema: {
       type: "object",
       properties: {
@@ -198,8 +196,9 @@ const MCP_TOOLS = [
         skill_id: { type: "string", description: "UUID of the skill" },
         name: { type: "string", description: "New name" },
         description: { type: "string", description: "New description" },
-        definition: { type: "object", description: "New definition" },
-        examples: { type: "array", description: "New examples" },
+        content: { type: "string", description: "New SKILL.md instruction body" },
+        licence: { type: "string", description: "New licence identifier" },
+        priority: { type: "integer", minimum: 0, maximum: 100 },
       },
       required: ["playbook_id", "skill_id"],
     },
@@ -229,7 +228,7 @@ const MCP_TOOLS = [
   },
   {
     name: "get_skill",
-    description: "Get detailed information about a specific skill including its definition and examples.",
+    description: "Get a skill including its SKILL.md content and metadata.",
     inputSchema: {
       type: "object",
       properties: {
@@ -303,7 +302,7 @@ app.get("/", async (c) => {
   // But indicate that auth is required for tool execution
 
   const manifest = {
-    protocolVersion: "2024-11-05",
+    protocolVersion: "2025-03-26",
     serverInfo: {
       name: "AgentPlaybooks Management",
       version: "1.0.0",
@@ -338,7 +337,7 @@ app.post("/", async (c) => {
         jsonrpc: "2.0",
         id,
         result: {
-          protocolVersion: "2024-11-05",
+          protocolVersion: "2025-03-26",
           serverInfo: { name: "AgentPlaybooks Management", version: "1.0.0" },
           capabilities: { tools: {} },
         },
@@ -699,12 +698,13 @@ async function executeManagementTool(
         throw new Error("Permission denied: skills:write required");
       }
 
-      const { playbook_id, name, description, definition, examples } = args as {
+      const { playbook_id, name, description, content, licence, priority } = args as {
         playbook_id: string;
         name: string;
         description?: string;
-        definition?: Record<string, unknown>;
-        examples?: Record<string, unknown>[];
+        content?: string;
+        licence?: string;
+        priority?: number;
       };
 
       if (!playbook_id) throw new Error("playbook_id is required");
@@ -726,8 +726,9 @@ async function executeManagementTool(
           playbook_id,
           name,
           description: description || null,
-          definition: definition || {},
-          examples: examples || [],
+          content: content || null,
+          licence: licence || null,
+          priority: priority ?? 0,
         })
         .select()
         .single();
@@ -746,8 +747,9 @@ async function executeManagementTool(
         skill_id: string;
         name?: string;
         description?: string;
-        definition?: Record<string, unknown>;
-        examples?: Record<string, unknown>[];
+        content?: string;
+        licence?: string;
+        priority?: number;
       };
 
       if (!playbook_id || !skill_id) {
@@ -830,7 +832,7 @@ async function executeManagementTool(
 
       const { data, error } = await supabase
         .from("skills")
-        .select("id, name, description, definition, examples, priority")
+        .select("id, name, description, content, licence, publisher_id, priority")
         .eq("playbook_id", playbook_id)
         .order("priority", { ascending: false });
 

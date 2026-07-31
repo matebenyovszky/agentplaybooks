@@ -94,7 +94,7 @@ Once connected, ChatGPT can:
 | Write Memory | `PUT /memory/:key` | Save new data (requires API key) |
 | Delete Memory | `DELETE /memory/:key` | Remove entries |
 | List Skills | `GET /skills` | See available capabilities |
-| Get Skill | `GET /skills/:id` | Get skill details & examples |
+| Get Skill | `GET /skills/:id` | Get skill metadata and SKILL.md content |
 | List Personas | `GET /personas` | Get AI personality instructions |
 
 ### Example: Using Memory
@@ -147,13 +147,13 @@ The `?format=openapi` response includes:
   "x-playbook": {
     "guid": "your-guid",
     "persona": { /* embedded persona data */ },
-    "skills": [/* full skill definitions */],
+    "skills": [/* full instructional skill records */],
     "mcp_servers": [/* MCP server configs */]
   }
 }
 ```
 
-The `x-playbook` extension provides full context to the AI, including system prompts and skill definitions.
+The `x-playbook` extension provides full context to the AI, including system prompts, instructional skills, and federated tool metadata.
 
 ---
 
@@ -192,9 +192,11 @@ GET /api/playbooks/:guid
   "skills": [
     {
       "id": "uuid",
-      "name": "code_review",
+      "name": "Code review guide",
       "description": "Review code for issues",
-      "definition": { ... }
+      "content": "# Code review\nFollow these steps...",
+      "licence": "MIT",
+      "priority": 80
     }
   ],
   "mcp_servers": [
@@ -220,7 +222,7 @@ Returns an MCP-compatible server manifest with tools and resources.
 
 **Response (Anthropic):**
 
-Returns Anthropic-compatible tool definitions with system prompt.
+Returns Anthropic-compatible federated tool definitions, instructional skills, and system prompt.
 
 ```json
 {
@@ -232,7 +234,7 @@ Returns Anthropic-compatible tool definitions with system prompt.
   "system_prompt": "## Coder\n\nYou are a helpful...",
   "tools": [
     {
-      "name": "code_review",
+      "name": "ext__SERVER_ID__code_review",
       "description": "Review code for issues",
       "input_schema": { ... }
     }
@@ -290,18 +292,11 @@ GET /api/playbooks/:guid/skills
 [
   {
     "id": "uuid",
-    "name": "code_review",
+    "name": "Code review guide",
     "description": "Review code for issues and improvements",
-    "definition": {
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "code": { "type": "string" }
-        }
-      }
-    },
-    "examples": [],
-    "priority": 10
+    "content": "# Code review\nInspect correctness, security, and tests.",
+    "licence": "MIT",
+    "priority": 80
   }
 ]
 ```
@@ -518,19 +513,11 @@ POST /api/playbooks/:id/skills
 Content-Type: application/json
 
 {
-  "name": "code_review",
-  "description": "Review code for issues",
-  "definition": {
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "code": { "type": "string", "description": "Code to review" },
-        "language": { "type": "string", "description": "Programming language" }
-      },
-      "required": ["code"]
-    }
-  },
-  "examples": []
+  "name": "Code review guide",
+  "description": "Use when reviewing a proposed code change",
+  "content": "# Code review\n1. Inspect correctness...",
+  "licence": "MIT",
+  "priority": 80
 }
 ```
 
@@ -542,7 +529,8 @@ Content-Type: application/json
 
 {
   "description": "Updated description",
-  "definition": { ... }
+  "content": "# Updated instructions\n...",
+  "priority": 90
 }
 ```
 
@@ -824,7 +812,7 @@ GET /api/mcp/:guid
 
 ```json
 {
-  "protocolVersion": "2024-11-05",
+  "protocolVersion": "2025-03-26",
   "serverInfo": {
     "name": "My AI Assistant",
     "version": "1.0.0"

@@ -3,6 +3,7 @@ import { getLocale } from "next-intl/server";
 import BlogPostClient from "../BlogPostClient";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
+import { getRequestBaseUrl } from "@/lib/request-base-url";
 
 type PageProps = {
     params: Promise<{ slug: string }>;
@@ -11,8 +12,8 @@ type PageProps = {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
     const resolvedParams = await params;
     const locale = await getLocale();
-    // At build time, fs module is used, no baseUrl needed
-    const post = await getBlogPost(resolvedParams.slug, locale);
+    const baseUrl = await getRequestBaseUrl();
+    const post = await getBlogPost(resolvedParams.slug, locale, baseUrl);
 
     if (!post) {
         return {
@@ -26,25 +27,16 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     };
 }
 
-export async function generateStaticParams() {
-    // Use known slugs for static generation at build time
-    const { getKnownBlogSlugs } = await import("@/lib/blog-server");
-    const slugs = await getKnownBlogSlugs();
-    return slugs.map((slug) => ({
-        slug,
-    }));
-}
-
-// Force static generation for all blog posts
-export const dynamicParams = false;
+// Use request-aware rendering so locale and content can follow cookies.
+export const dynamic = "force-dynamic";
 
 export default async function BlogPostPage({ params }: PageProps) {
     const resolvedParams = await params;
     const locale = await getLocale();
-    // At build time, fs module is used, no baseUrl needed
+    const baseUrl = await getRequestBaseUrl();
     const [currentPost, posts] = await Promise.all([
-        getBlogPost(resolvedParams.slug, locale),
-        getBlogPosts(locale)
+        getBlogPost(resolvedParams.slug, locale, baseUrl),
+        getBlogPosts(locale, baseUrl)
     ]);
 
     if (!currentPost) {
