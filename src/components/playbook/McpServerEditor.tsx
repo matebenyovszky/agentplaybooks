@@ -15,10 +15,13 @@ import {
   AlertCircle,
   Wrench,
   FolderOpen,
-  ExternalLink
+  ExternalLink,
+  Shield,
+  PlugZap,
 } from "lucide-react";
 import type { MCPServer } from "@/lib/supabase/types";
 import type { StorageAdapter } from "@/lib/storage";
+import { createBrowserClient } from "@/lib/supabase/client";
 
 interface McpServerEditorProps {
   mcpServer: MCPServer;
@@ -41,6 +44,8 @@ interface Resource {
   mimeType?: string;
 }
 
+const DEFAULT_TRANSPORT_CONFIG = { url: "", timeout_ms: 15000 };
+
 export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOnly = false }: McpServerEditorProps) {
   const [expanded, setExpanded] = useState(false);
   const isReadOnly = readOnly;
@@ -52,11 +57,20 @@ export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOn
   const [resourcesJson, setResourcesJson] = useState(
     JSON.stringify(mcpServer.resources || [], null, 2)
   );
+  const [transportType, setTransportType] = useState<"http" | "sse" | "openapi">(
+    mcpServer.transport_type === "openapi" || mcpServer.transport_type === "sse" ? mcpServer.transport_type : "http"
+  );
+  const [transportConfigJson, setTransportConfigJson] = useState(
+    JSON.stringify(mcpServer.transport_config || DEFAULT_TRANSPORT_CONFIG, null, 2)
+  );
+  const [secretsJson, setSecretsJson] = useState("{}");
+  const [secretsChanged, setSecretsChanged] = useState(false);
+  const [hasStoredSecrets, setHasStoredSecrets] = useState(false);
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [jsonError, setJsonError] = useState<string | null>(null);
-  const [activeSection, setActiveSection] = useState<"tools" | "resources">("tools");
+  const [activeSection, setActiveSection] = useState<"connection" | "tools" | "resources">("connection");
 
   // Parse tools and resources
   const tools: Tool[] = Array.isArray(mcpServer.tools) ? mcpServer.tools as Tool[] : [];
@@ -67,11 +81,13 @@ export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOn
     try {
       JSON.parse(toolsJson);
       JSON.parse(resourcesJson);
+      JSON.parse(transportConfigJson);
+      JSON.parse(secretsJson);
       setJsonError(null);
     } catch {
       setJsonError("Invalid JSON");
     }
-  }, [toolsJson, resourcesJson]);
+  }, [toolsJson, resourcesJson, transportConfigJson, secretsJson]);
 
   // Track changes
   useEffect(() => {
@@ -79,9 +95,30 @@ export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOn
       name !== mcpServer.name ||
       description !== (mcpServer.description || "") ||
       toolsJson !== JSON.stringify(mcpServer.tools || [], null, 2) ||
-      resourcesJson !== JSON.stringify(mcpServer.resources || [], null, 2);
+      resourcesJson !== JSON.stringify(mcpServer.resources || [], null, 2) ||
+      transportType !== (mcpServer.transport_type || "http") ||
+      transportConfigJson !== JSON.stringify(mcpServer.transport_config || DEFAULT_TRANSPORT_CONFIG, null, 2) ||
+      secretsChanged;
     setHasChanges(changed);
-  }, [name, description, toolsJson, resourcesJson, mcpServer]);
+  }, [name, description, toolsJson, resourcesJson, transportType, transportConfigJson, secretsChanged, mcpServer]);
+
+  useEffect(() => {
+    if (readOnly) return;
+    const loadSecretStatus = async () => {
+      const supabase = createBrowserClient();
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) return;
+      const response = await fetch(`/api/mcp/config/${mcpServer.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) {
+        const config = await response.json() as { has_secrets?: boolean };
+        setHasStoredSecrets(!!config.has_secrets);
+      }
+    };
+    void loadSecretStatus();
+  }, [mcpServer.id, readOnly]);
 
   const handleSave = useCallback(async () => {
     if (jsonError) return;
@@ -90,15 +127,34 @@ export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOn
     try {
       const parsedTools = JSON.parse(toolsJson);
       const parsedResources = JSON.parse(resourcesJson);
+      const parsedTransportConfig = JSON.parse(transportConfigJson);
+      const parsedSecrets = JSON.parse(secretsJson);
 
       const updated = await storage.updateMcpServer(mcpServer.id, {
         name,
         description,
         tools: parsedTools,
-        resources: parsedResources
+        resources: parsedResources,
+        transport_type: transportType,
+        transport_config: parsedTransportConfig,
       });
 
       if (updated) {
+        if (secretsChanged) {
+          const supabase = createBrowserClient();
+          const { data } = await supabase.auth.getSession();
+          const token = data.session?.access_token;
+          if (!token) throw new Error("Authentication required to save MCP secrets");
+          const response = await fetch(`/api/mcp/config/${mcpServer.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ secrets: parsedSecrets }),
+          });
+          if (!response.ok) throw new Error("Failed to save encrypted MCP secrets");
+          setSecretsJson("{}");
+          setSecretsChanged(false);
+          setHasStoredSecrets(true);
+        }
         onUpdate(updated);
         setHasChanges(false);
       }
@@ -107,7 +163,7 @@ export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOn
     } finally {
       setSaving(false);
     }
-  }, [name, description, toolsJson, resourcesJson, mcpServer.id, jsonError, onUpdate, storage]);
+  }, [name, description, toolsJson, resourcesJson, transportType, transportConfigJson, secretsJson, secretsChanged, mcpServer.id, jsonError, onUpdate, storage]);
 
   // Debounced auto-save
   useEffect(() => {
@@ -319,6 +375,18 @@ export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOn
               {/* Section Toggle */}
               <div className="flex items-center gap-2 border-b border-slate-700/50 pb-2">
                 <button
+                  onClick={() => setActiveSection("connection")}
+                  className={cn(
+                    "px-3 py-1.5 rounded-lg text-sm flex items-center gap-2 transition-colors",
+                    activeSection === "connection"
+                      ? "bg-pink-500/20 text-pink-300 border border-pink-500/30"
+                      : "text-slate-400 hover:text-slate-200"
+                  )}
+                >
+                  <PlugZap className="h-4 w-4" />
+                  Connection
+                </button>
+                <button
                   onClick={() => setActiveSection("tools")}
                   className={cn(
                     "px-3 py-1.5 rounded-lg text-sm flex items-center gap-2 transition-colors",
@@ -343,6 +411,63 @@ export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOn
                   Resources ({resources.length})
                 </button>
               </div>
+
+              {activeSection === "connection" && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-400 mb-2">Transport</label>
+                    <select
+                      value={transportType}
+                      onChange={(event) => setTransportType(event.target.value as "http" | "sse" | "openapi")}
+                      disabled={isReadOnly}
+                      className="w-full rounded-lg bg-slate-900/70 border border-slate-700/50 px-3 py-2 text-slate-200"
+                    >
+                      <option value="http">MCP Streamable HTTP</option>
+                      <option value="sse">MCP HTTP/SSE response</option>
+                      <option value="openapi">OpenAPI</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-400 mb-2">Transport configuration</label>
+                    <textarea
+                      value={transportConfigJson}
+                      readOnly={isReadOnly}
+                      onChange={(event) => setTransportConfigJson(event.target.value)}
+                      className={cn(
+                        "w-full h-56 p-3 rounded-lg bg-slate-900/70 border font-mono text-sm text-slate-200",
+                        jsonError ? "border-red-500/50" : "border-slate-700/50"
+                      )}
+                      placeholder={'{"url":"https://example.com/mcp","timeout_ms":15000,"access":"playbook_api_key","auth":{"type":"bearer","token_secret":"token"}}'}
+                    />
+                    <p className="mt-2 text-xs text-slate-500">
+                      OpenAPI connections may use <code>spec_url</code> and <code>base_url</code>. Private and local network targets are blocked.
+                    </p>
+                  </div>
+                  {!isReadOnly && (
+                    <div>
+                      <label className="flex items-center gap-2 text-sm font-medium text-slate-400 mb-2">
+                        <Shield className="h-4 w-4" /> Encrypted secrets
+                        {hasStoredSecrets && <span className="text-emerald-400 text-xs">stored</span>}
+                      </label>
+                      <textarea
+                        value={secretsJson}
+                        onChange={(event) => {
+                          setSecretsJson(event.target.value);
+                          setSecretsChanged(true);
+                        }}
+                        className={cn(
+                          "w-full h-32 p-3 rounded-lg bg-slate-900/70 border font-mono text-sm text-slate-200",
+                          jsonError ? "border-red-500/50" : "border-slate-700/50"
+                        )}
+                        placeholder={'{"token":"..."} or {"client_secret":"..."}'}
+                      />
+                      <p className="mt-2 text-xs text-slate-500">
+                        Values are encrypted with AES-GCM and are never returned by the API. Enter only values that should replace the stored secret set.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Tools Section */}
               {activeSection === "tools" && (
@@ -570,5 +695,3 @@ export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOn
 }
 
 export default McpServerEditor;
-
-

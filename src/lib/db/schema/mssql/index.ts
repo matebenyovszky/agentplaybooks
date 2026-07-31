@@ -221,7 +221,7 @@ export const mcpServers = mssqlTable("mcp_servers", {
   resources: json<unknown[]>("resources").default(sql`N'[]'`),
   transport_type: nvarchar("transport_type", {
     length: 16,
-    enum: ["stdio", "http", "sse"],
+    enum: ["stdio", "http", "sse", "openapi"],
   }),
   transport_config: json<Record<string, unknown>>("transport_config"),
   created_at: createdAt(),
@@ -240,7 +240,7 @@ export const mcpServers = mssqlTable("mcp_servers", {
   ),
   check(
     "mcp_servers_transport_type_check",
-    sql`${table.transport_type} is null or ${table.transport_type} in (N'stdio', N'http', N'sse')`,
+    sql`${table.transport_type} is null or ${table.transport_type} in (N'stdio', N'http', N'sse', N'openapi')`,
   ),
 ]);
 

@@ -317,6 +317,8 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
         description: publicMCP.description,
         tools: publicMCP.tools,
         resources: publicMCP.resources,
+        transport_type: publicMCP.transport_type,
+        transport_config: publicMCP.transport_config,
       }),
     });
 
@@ -439,6 +441,8 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                 description: m.description,
                 tools: m.tools,
                 resources: m.resources,
+                transport_type: m.transport_type,
+                transport_config: m.transport_config,
               }),
             });
 

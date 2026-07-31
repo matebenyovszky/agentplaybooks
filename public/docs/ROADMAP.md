@@ -133,6 +133,13 @@ This document outlines the development roadmap for AgentPlaybooks - the first op
 
 > **Why this matters:** MCP protocol can be token-inefficient for simple operations. Sometimes a plain webhook, curl command, or standard REST/OpenAPI call is more efficient and costs fewer tokens. We want to support the best tool for each job.
 
+- [x] **External MCP Runtime Proxy**
+  - Include configured external tools and resources in `tools/list` and `resources/list`
+  - Route `tools/call` and `resources/read` to the configured upstream MCP server
+  - Support upstream authentication and secrets without exposing credentials
+  - Report upstream availability, timeouts, and structured errors
+  - Add integration tests with HTTP/SSE MCP servers such as research providers
+
 - [ ] **Multi-Protocol MCP Server Exposure**
   - Expose MCP servers via OpenAPI/REST endpoints
   - Convert MCP tools to OpenAI function calling format

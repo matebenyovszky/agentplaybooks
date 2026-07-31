@@ -83,8 +83,8 @@ This document describes the technical architecture of AgentPlaybooks.
     │ id              │  │ id              │  │ id              │
     │ playbook_id(FK) │  │ playbook_id(FK) │  │ playbook_id(FK) │
     │ name            │  │ name            │  │ name            │
-    │ system_prompt   │  │ definition      │  │ tools (JSONB)   │
-    │ metadata        │  │ examples        │  │ resources       │
+    │ system_prompt   │  │ content         │  │ tools (JSONB)   │
+    │ metadata        │  │ licence/priority│  │ transport config│
     └─────────────────┘  └─────────────────┘  └─────────────────┘
               
               ┌────────────────────┼────────────────────┐

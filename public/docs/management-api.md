@@ -159,29 +159,11 @@ curl -X POST https://apbks.com/api/manage/playbooks/$PLAYBOOK_ID/skills \
   -H "Authorization: Bearer $API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "review_code",
-    "description": "Review code for bugs, style issues, and improvements",
-    "definition": {
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string",
-            "description": "The code to review"
-          },
-          "language": {
-            "type": "string",
-            "description": "Programming language"
-          },
-          "focus": {
-            "type": "array",
-            "items": { "type": "string" },
-            "description": "Areas to focus on: bugs, performance, style"
-          }
-        },
-        "required": ["code"]
-      }
-    }
+    "name": "Code review guide",
+    "description": "Use when reviewing code for correctness and security",
+    "content": "# Code review\nFollow this checklist...",
+    "licence": "MIT",
+    "priority": 80
   }'
 ```
 
@@ -259,7 +241,7 @@ Add to your MCP settings:
 | `update_playbook` | Update playbook (incl. persona fields) |
 | `delete_playbook` | Delete a playbook (cannot be undone!) |
 | `list_skills` | List all skills in a playbook |
-| `get_skill` | Get skill details including definition and examples |
+| `get_skill` | Get skill metadata and SKILL.md content |
 | `create_skill` | Add a skill to a playbook |
 | `update_skill` | Update a skill |
 | `delete_skill` | Delete a skill |
@@ -292,18 +274,10 @@ Add to your MCP settings:
   "name": "create_skill",
   "arguments": {
     "playbook_id": "550e8400-e29b-41d4-a716-446655440000",
-    "name": "summarize_text",
-    "description": "Summarize a long piece of text",
-    "definition": {
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "text": { "type": "string", "description": "Text to summarize" },
-          "max_length": { "type": "integer", "description": "Maximum summary length in words" }
-        },
-        "required": ["text"]
-      }
-    }
+    "name": "Summarization guide",
+    "description": "Use when condensing a long document",
+    "content": "# Summarization\nPreserve facts and cite sections...",
+    "priority": 70
   }
 }
 ```

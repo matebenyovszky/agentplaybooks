@@ -157,8 +157,8 @@ npm run dev
 
 A playbook is a container for:
 - **Personas** - System prompts for AI agents
-- **Skills** - Structured capability definitions (Anthropic format)
-- **MCP Servers** - Model Context Protocol configurations
+- **Skills** - SKILL.md-compatible instructional content
+- **MCP Servers** - Executable federated MCP/OpenAPI connections
 - **Memory** - Key-value storage for context
 - **API Keys** - For write-back authentication
 - **Secrets Vault** - Encrypted credentials for agents (see [Secrets Vault](#secrets-vault))
@@ -337,7 +337,7 @@ The `GET /api/playbooks/:guid` endpoint supports multiple output formats:
 | `json` (default) | Custom agents, direct API use |
 | `openapi` | ChatGPT Custom Actions |
 | `mcp` | Claude, Cursor MCP integration |
-| `anthropic` | Anthropic tool definitions |
+| `anthropic` | Federated Anthropic tools plus instructional skills |
 | `markdown` | Human-readable documentation |
 
 **Authentication Flow:**

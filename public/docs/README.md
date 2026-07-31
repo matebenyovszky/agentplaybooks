@@ -16,6 +16,7 @@ Welcome to the AgentPlaybooks documentation.
 - [Skills](./skills.md) - Structured capability definitions
 - [Memory](./memory.md) - Persistent key-value storage
 - [MCP Integration](./mcp-integration.md) - Model Context Protocol guide
+- [Federated MCP & OpenAPI Tools](./mcp-federation.md) - Secure upstream tools, OAuth, secrets, and audit logs
 
 ### Reference
 - [API Reference](./api-reference.md) - Complete API documentation

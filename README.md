@@ -318,6 +318,8 @@ agentplaybooks/
 ## Database Schema
 
 - playbooks: core entity (includes visibility enum: private, public, unlisted)
+- mcp_server_secrets: encrypted credentials for federated MCP/OpenAPI servers (service-role only)
+- mcp_proxy_audit_logs: owner-readable audit trail for federated calls
 - skills: skill definitions and optional SKILL.md content
 - skill_attachments: secure attachment storage for skills
 - mcp_servers: MCP tools and resources

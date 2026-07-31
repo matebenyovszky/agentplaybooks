@@ -203,6 +203,7 @@ Copy the SQL from `supabase/migrations/initial_schema.sql` and run in Supabase S
 | `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase anon (public) key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes | Supabase service role key (secret) |
+| `MCP_SECRET_ENCRYPTION_KEY` | Yes for federated tools | Random value (32+ characters) used to encrypt upstream MCP/OpenAPI credentials |
 
 ## Custom Domain
 

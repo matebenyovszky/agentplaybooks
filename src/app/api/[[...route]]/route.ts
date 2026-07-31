@@ -1494,6 +1494,8 @@ app.delete("/manage/playbooks/:id/skills/:sid", async (c) => {
 });
 
 // MCP servers management (User API key supported)
+const MCP_TRANSPORT_TYPES = new Set(["stdio", "http", "sse", "openapi"]);
+
 // GET /api/manage/playbooks/:id/mcp-servers - List MCP servers for a playbook
 app.get("/manage/playbooks/:id/mcp-servers", async (c) => {
   const user = await getUserFromAuthOrApiKey(c, "playbooks:write");
@@ -1533,11 +1535,17 @@ app.post("/manage/playbooks/:id/mcp-servers", async (c) => {
   }
 
   const body = await c.req.json().catch(() => ({}));
-  const { name, description, tools, resources } = body;
+  const { name, description, tools, resources, transport_type, transport_config } = body;
   const supabase = getServiceSupabase();
 
   if (!name) {
     return c.json({ error: "Name is required" }, 400);
+  }
+  if (transport_type !== undefined && !MCP_TRANSPORT_TYPES.has(transport_type)) {
+    return c.json({ error: "Invalid MCP transport type" }, 400);
+  }
+  if (transport_config !== undefined && (typeof transport_config !== "object" || transport_config === null || Array.isArray(transport_config))) {
+    return c.json({ error: "Transport configuration must be an object" }, 400);
   }
 
   const insertData = {
@@ -1546,6 +1554,8 @@ app.post("/manage/playbooks/:id/mcp-servers", async (c) => {
     description: description || null,
     tools: tools || [],
     resources: resources || [],
+    transport_type: transport_type || "http",
+    transport_config: transport_config || {},
   };
 
   const { data, error } = await supabase
@@ -1577,12 +1587,21 @@ app.put("/manage/playbooks/:id/mcp-servers/:mid", async (c) => {
   const body = await c.req.json().catch(() => ({}));
   const supabase = getServiceSupabase();
 
+  if (body.transport_type !== undefined && !MCP_TRANSPORT_TYPES.has(body.transport_type)) {
+    return c.json({ error: "Invalid MCP transport type" }, 400);
+  }
+  if (body.transport_config !== undefined && (typeof body.transport_config !== "object" || body.transport_config === null || Array.isArray(body.transport_config))) {
+    return c.json({ error: "Transport configuration must be an object" }, 400);
+  }
+
   // Whitelist allowed fields to prevent mass-assignment
   const updateData: Record<string, unknown> = {};
   if (body.name !== undefined) updateData.name = body.name;
   if (body.description !== undefined) updateData.description = body.description;
   if (body.tools !== undefined) updateData.tools = body.tools;
   if (body.resources !== undefined) updateData.resources = body.resources;
+  if (body.transport_type !== undefined) updateData.transport_type = body.transport_type;
+  if (body.transport_config !== undefined) updateData.transport_config = body.transport_config;
 
   if (Object.keys(updateData).length === 0) {
     return c.json({ error: "No valid fields to update" }, 400);
