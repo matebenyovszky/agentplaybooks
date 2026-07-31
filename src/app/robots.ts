@@ -9,7 +9,9 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/dashboard", "/api"],
+        // Public playbook and MCP endpoints are intentionally crawlable so AI
+        // clients can retrieve shared playbooks (for example, /api/playbooks/:id).
+        disallow: ["/dashboard"],
       },
       // AI search engines and crawlers - explicitly allow
       {
