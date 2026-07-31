@@ -5,8 +5,8 @@
  */
 
 import { authFetch } from "@/lib/auth-fetch";
-import type { Persona, Skill, MCPServer, Memory, Playbook, SecretMetadata, SecretCategory } from "@/lib/supabase/types";
-import type { StorageAdapter, PersonaInput, SkillInput, MCPServerInput, MemoryInput, SecretInput } from "./types";
+import type { Persona, Skill, MCPServer, PlaybookRun, Canvas, Memory, Playbook, SecretMetadata, SecretCategory } from "@/lib/supabase/types";
+import type { StorageAdapter, PersonaInput, SkillInput, MCPServerInput, PlaybookRunInput, CanvasInput, MemoryInput, SecretInput } from "./types";
 
 type PersonaSource = Pick<
   Playbook,
@@ -164,6 +164,91 @@ export function createSupabaseAdapter(playbookId: string, playbookGuid?: string)
         method: "DELETE",
       });
       return data?.success === true;
+    },
+
+    // Workflow runs
+    async getRuns(): Promise<PlaybookRun[]> {
+      const guid = playbookGuid || playbookId;
+      return (await requestJson<PlaybookRun[]>(`/api/playbooks/${guid}/runs`)) || [];
+    },
+
+    async addRun(input: PlaybookRunInput): Promise<PlaybookRun | null> {
+      const guid = playbookGuid || playbookId;
+      return await requestJson<PlaybookRun>(`/api/playbooks/${guid}/runs`, {
+        method: "POST",
+        body: JSON.stringify(input),
+      });
+    },
+
+    async updateRun(id: string, updates: Partial<PlaybookRunInput>): Promise<PlaybookRun | null> {
+      const guid = playbookGuid || playbookId;
+      return await requestJson<PlaybookRun>(`/api/playbooks/${guid}/runs/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(updates),
+      });
+    },
+
+    async deleteRun(id: string): Promise<boolean> {
+      const guid = playbookGuid || playbookId;
+      const data = await requestJson<{ success: boolean }>(`/api/playbooks/${guid}/runs/${id}`, {
+        method: "DELETE",
+      });
+      return data?.success === true;
+    },
+
+    // Canvas documents
+    async getCanvases(runId?: string): Promise<Canvas[]> {
+      const guid = playbookGuid || playbookId;
+      const runIds = runId
+        ? [runId]
+        : ((await requestJson<PlaybookRun[]>(`/api/playbooks/${guid}/runs`)) || []).map((run) => run.id);
+      const groups = await Promise.all(
+        runIds.map((id) => requestJson<Canvas[]>(`/api/playbooks/${guid}/canvas?runId=${encodeURIComponent(id)}`)),
+      );
+      return groups.flatMap((group) => group || []);
+    },
+
+    async addCanvas(input: CanvasInput): Promise<Canvas | null> {
+      const guid = playbookGuid || playbookId;
+      const { run_id, ...canvas } = input;
+      return await requestJson<Canvas>(`/api/playbooks/${guid}/canvas`, {
+        method: "POST",
+        body: JSON.stringify({ ...canvas, runId: run_id }),
+      });
+    },
+
+    async updateCanvas(id: string, updates: Partial<CanvasInput>, expectedVersion: number): Promise<Canvas | null> {
+      const guid = playbookGuid || playbookId;
+      const runs = (await requestJson<PlaybookRun[]>(`/api/playbooks/${guid}/runs`)) || [];
+      for (const run of runs) {
+        const documents = (await requestJson<Canvas[]>(`/api/playbooks/${guid}/canvas?runId=${encodeURIComponent(run.id)}`)) || [];
+        const current = documents.find((canvas) => canvas.id === id);
+        if (!current) continue;
+        return await requestJson<Canvas>(
+          `/api/playbooks/${guid}/canvas/${encodeURIComponent(current.slug)}?runId=${encodeURIComponent(run.id)}`,
+          {
+            method: "PUT",
+            body: JSON.stringify({ ...updates, expectedVersion }),
+          },
+        );
+      }
+      return null;
+    },
+
+    async deleteCanvas(id: string): Promise<boolean> {
+      const guid = playbookGuid || playbookId;
+      const runs = (await requestJson<PlaybookRun[]>(`/api/playbooks/${guid}/runs`)) || [];
+      for (const run of runs) {
+        const documents = (await requestJson<Canvas[]>(`/api/playbooks/${guid}/canvas?runId=${encodeURIComponent(run.id)}`)) || [];
+        const current = documents.find((canvas) => canvas.id === id);
+        if (!current) continue;
+        const data = await requestJson<{ success: boolean }>(
+          `/api/playbooks/${guid}/canvas/${encodeURIComponent(current.slug)}?runId=${encodeURIComponent(run.id)}`,
+          { method: "DELETE" },
+        );
+        return data?.success === true;
+      }
+      return false;
     },
 
     // Memory

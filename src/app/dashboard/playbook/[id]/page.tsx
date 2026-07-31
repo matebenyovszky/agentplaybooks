@@ -32,9 +32,10 @@ import {
   X,
   Tag,
   Puzzle,
-  UsersRound
+  UsersRound,
+  FileText
 } from "lucide-react";
-import type { Playbook, Persona, Skill, MCPServer, Memory, ApiKey } from "@/lib/supabase/types";
+import type { Playbook, Persona, Skill, MCPServer, PlaybookRun, Canvas, Memory, ApiKey } from "@/lib/supabase/types";
 import { ChatGPTIcon, ClaudeIcon, MarkdownIcon } from "@/components/ui/ai-icons";
 
 // Import editor components
@@ -42,12 +43,13 @@ import { PersonaEditor } from "@/components/playbook/PersonaEditor";
 import { SkillEditor } from "@/components/playbook/SkillEditor";
 import { McpServerEditor } from "@/components/playbook/McpServerEditor";
 import { MemoryEditor } from "@/components/playbook/MemoryEditor";
+import { CanvasEditor } from "@/components/playbook/CanvasEditor";
 import { ApiKeyManager } from "@/components/playbook/ApiKeyManager";
 import { SecretManager } from "@/components/playbook/SecretManager";
 import { McpRegistrySearch } from "@/components/playbook/McpRegistrySearch";
 import { CollaborationManager } from "@/components/playbook/CollaborationManager";
 
-type TabType = "details" | "skills" | "mcp" | "memory" | "secrets" | "apiKeys" | "sharing";
+type TabType = "details" | "skills" | "mcp" | "canvas" | "memory" | "secrets" | "apiKeys" | "sharing";
 type PlaybookWithAccess = Playbook & { current_user_role?: "owner" | "editor" | "viewer" };
 
 // Debounce hook
@@ -79,6 +81,8 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
   const [mcpServers, setMcpServers] = useState<MCPServer[]>([]);
+  const [runs, setRuns] = useState<PlaybookRun[]>([]);
+  const [canvases, setCanvases] = useState<Canvas[]>([]);
   const [memories, setMemories] = useState<Memory[]>([]);
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [activeTab, setActiveTab] = useState<TabType>("details");
@@ -143,10 +147,13 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
 
     // Now fetch related data using the actual playbook ID
     const owner = userId !== null && pb.user_id === userId;
-    const [playbookResData, memoryData, keyData] = await Promise.all([
+    const loadStorage = createSupabaseAdapter(playbookId, pb.guid);
+    const [playbookResData, memoryData, keyData, runsData, canvasesData] = await Promise.all([
       authFetch(`/api/manage/playbooks/${playbookId}`),
       authFetch(`/api/manage/playbooks/${playbookId}/memory`),
       owner ? authFetch(`/api/playbooks/${playbookId}/api-keys`) : Promise.resolve(null),
+      loadStorage.getRuns(),
+      loadStorage.getCanvases(),
     ]);
 
     const playbookData = await playbookResData.json().catch(() => null);
@@ -164,6 +171,8 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
 
     setSkills(skillsFromApi);
     setMcpServers(mcpFromApi);
+    setRuns(runsData);
+    setCanvases(canvasesData);
     setMemories(Array.isArray(memoriesData) ? memoriesData as Memory[] : []);
     setApiKeys(Array.isArray(apiKeysData) ? apiKeysData as ApiKey[] : []);
     setLoading(false);
@@ -685,12 +694,18 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
       zip.file("playbook.json", JSON.stringify(playbookExport, null, 2));
       zip.file("skills.json", JSON.stringify(skillsExport, null, 2));
       zip.file("mcp-servers.json", JSON.stringify(mcpExport, null, 2));
+      zip.file("runs.json", JSON.stringify(runs, null, 2));
+      zip.file("canvas.json", JSON.stringify(canvases, null, 2));
       zip.file("memories.json", JSON.stringify(memories, null, 2));
       zip.file("agents.md", buildAgentsMarkdown());
 
       for (const skill of skillsExport) {
         const baseName = (skill.name || "skill").toLowerCase().replace(/[^a-z0-9-_]+/g, "_");
         zip.file(`skills/${baseName}.json`, JSON.stringify(skill, null, 2));
+      }
+
+      for (const canvas of canvases) {
+        zip.file(`canvas/${canvas.slug}.md`, canvas.content);
       }
 
       const [openapiRes, anthropicRes, mcpRes, markdownRes] = await Promise.all([
@@ -724,6 +739,8 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
           "- skills.json: skill list (Anthropic tool spec compatible)",
           "- skills/: individual skills as JSON",
           "- mcp-servers.json: MCP server entries for this playbook",
+          "- runs.json: isolated workflow run metadata",
+          "- canvas.json and canvas/: versioned markdown work documents",
           "- memories.json: playbook memories",
           "- openapi.json: OpenAPI export for GPT Actions",
           "- anthropic.json: Anthropic tool export",
@@ -747,12 +764,13 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
     } finally {
       setExporting(false);
     }
-  }, [playbook, exporting, skills, mcpServers, memories, markdownPath, buildAgentsMarkdown, getBaseUrl]);
+  }, [playbook, exporting, skills, mcpServers, runs, canvases, memories, markdownPath, buildAgentsMarkdown, getBaseUrl]);
 
   const tabs = [
     { id: "details" as TabType, label: t("editor.tabs.details"), icon: Settings, count: 0, color: "slate" },
     { id: "skills" as TabType, label: t("editor.tabs.skills"), icon: Zap, count: skills.length, color: "purple" },
     { id: "mcp" as TabType, label: t("editor.tabs.mcp"), icon: Server, count: mcpServers.length, color: "pink" },
+    { id: "canvas" as TabType, label: t("editor.tabs.canvas"), icon: FileText, count: canvases.length, color: "green" },
     { id: "memory" as TabType, label: t("editor.tabs.memory"), icon: Database, count: memories.length, color: "teal" },
     ...(isOwner ? [
       { id: "secrets" as TabType, label: t("editor.tabs.secrets") || "Secrets", icon: Shield, count: 0, color: "emerald" },
@@ -1132,6 +1150,26 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                   ))}
                 </div>
               )}
+            </motion.div>
+          )}
+
+          {/* Canvas Tab */}
+          {activeTab === "canvas" && playbook && (
+            <motion.div
+              key="canvas"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+            >
+              <CanvasEditor
+                storage={storage}
+                canvases={canvases}
+                onUpdate={setCanvases}
+                runs={runs}
+                onRunsUpdate={setRuns}
+                playbookGuid={playbook.guid}
+                readOnly={!canEdit}
+              />
             </motion.div>
           )}
 

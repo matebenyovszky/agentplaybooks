@@ -5,12 +5,14 @@
  * the Supabase storage backend.
  */
 
-import type { Persona, Skill, MCPServer, Memory, Playbook, MemoryTier, MemoryType, MemoryStatus, SecretMetadata, SecretCategory } from "@/lib/supabase/types";
+import type { Persona, Skill, MCPServer, Canvas, PlaybookRun, Memory, Playbook, MemoryTier, MemoryType, MemoryStatus, SecretMetadata, SecretCategory } from "@/lib/supabase/types";
 
 // Partial types for creating new items (without id, timestamps)
 export type PersonaInput = Omit<Persona, "id" | "playbook_id" | "created_at" | "updated_at">;
 export type SkillInput = Omit<Skill, "id" | "playbook_id" | "created_at" | "updated_at">;
 export type MCPServerInput = Omit<MCPServer, "id" | "playbook_id" | "created_at" | "updated_at">;
+export type CanvasInput = Omit<Canvas, "id" | "playbook_id" | "created_at" | "updated_at" | "version">;
+export type PlaybookRunInput = Omit<PlaybookRun, "id" | "playbook_id" | "created_by" | "created_at" | "updated_at">;
 // Memory input - tags, description, and RLM fields are optional (have defaults in DB)
 export type MemoryInput = {
   key: string;
@@ -61,6 +63,18 @@ export interface StorageAdapter {
   updateMcpServer(id: string, data: Partial<MCPServerInput>): Promise<MCPServer | null>;
   deleteMcpServer(id: string): Promise<boolean>;
 
+  // Workflow runs
+  getRuns(): Promise<PlaybookRun[]>;
+  addRun(data: PlaybookRunInput): Promise<PlaybookRun | null>;
+  updateRun(id: string, data: Partial<PlaybookRunInput>): Promise<PlaybookRun | null>;
+  deleteRun(id: string): Promise<boolean>;
+
+  // Canvas documents
+  getCanvases(runId?: string): Promise<Canvas[]>;
+  addCanvas(data: CanvasInput): Promise<Canvas | null>;
+  updateCanvas(id: string, data: Partial<CanvasInput>, expectedVersion: number): Promise<Canvas | null>;
+  deleteCanvas(id: string): Promise<boolean>;
+
   // Memory
   getMemories(): Promise<Memory[]>;
   addMemory(data: MemoryInput): Promise<Memory | null>;
@@ -81,4 +95,3 @@ export interface EditorContext {
   playbookId: string;
   playbookGuid: string;
 }
-

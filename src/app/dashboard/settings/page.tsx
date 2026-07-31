@@ -39,6 +39,8 @@ const AVAILABLE_PERMISSIONS = [
   { id: "skills:write", label: "Write Skills", description: "Add, update, delete skills" },
   { id: "memory:read", label: "Read Memory", description: "Read memory entries" },
   { id: "memory:write", label: "Write Memory", description: "Write and delete memory entries" },
+  { id: "canvas:read", label: "Read Canvas", description: "Read canvas work documents" },
+  { id: "canvas:write", label: "Write Canvas", description: "Create and revise canvas work documents" },
   { id: "full", label: "Full Access", description: "All permissions" },
 ];
 
@@ -48,7 +50,7 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newKeyName, setNewKeyName] = useState("");
-  const [selectedPermissions, setSelectedPermissions] = useState<string[]>(["playbooks:read", "playbooks:write", "memory:read", "memory:write"]);
+  const [selectedPermissions, setSelectedPermissions] = useState<string[]>(["playbooks:read", "playbooks:write", "memory:read", "memory:write", "canvas:read", "canvas:write"]);
   const [createdKey, setCreatedKey] = useState<NewKeyResponse | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -151,7 +153,7 @@ export default function SettingsPage() {
     setShowCreateModal(false);
     setCreatedKey(null);
     setNewKeyName("");
-    setSelectedPermissions(["playbooks:read", "playbooks:write", "memory:read", "memory:write"]);
+    setSelectedPermissions(["playbooks:read", "playbooks:write", "memory:read", "memory:write", "canvas:read", "canvas:write"]);
     setError(null);
   };
 
