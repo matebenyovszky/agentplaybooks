@@ -32,18 +32,31 @@ export default function DashboardPage() {
   const { user } = useDashboardAuth();
   const [playbooks, setPlaybooks] = useState<PlaybookWithCounts[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
 
     let active = true;
     const loadPlaybooks = async () => {
-      const res = await authFetch("/api/manage/playbooks");
-      const data = await res.json().catch(() => null);
+      try {
+        const res = await authFetch("/api/manage/playbooks");
+        const data = await res.json().catch(() => null);
 
-      if (!active) return;
-      setPlaybooks(Array.isArray(data) ? data as PlaybookWithCounts[] : []);
-      setLoading(false);
+        if (!active) return;
+        if (!res.ok || !Array.isArray(data)) {
+          const message = data && typeof data.error === "string"
+            ? data.error
+            : "Unable to load playbooks.";
+          setLoadError(message);
+          return;
+        }
+        setPlaybooks(data as PlaybookWithCounts[]);
+      } catch {
+        if (active) setLoadError("Unable to load playbooks.");
+      } finally {
+        if (active) setLoading(false);
+      }
     };
 
     loadPlaybooks();
@@ -83,6 +96,23 @@ export default function DashboardPage() {
     return (
       <div className="flex items-center justify-center py-20">
         <div className="animate-spin h-8 w-8 border-2 border-amber-500 border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="max-w-xl mx-auto my-16 p-6 rounded-xl border border-red-300 bg-red-50 dark:border-red-900 dark:bg-red-950/30">
+        <h2 className="text-lg font-semibold text-red-800 dark:text-red-300">
+          Could not load your playbooks
+        </h2>
+        <p className="mt-2 text-sm text-red-700 dark:text-red-400">{loadError}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="mt-4 px-4 py-2 rounded-lg bg-red-700 text-white hover:bg-red-800"
+        >
+          Try again
+        </button>
       </div>
     );
   }

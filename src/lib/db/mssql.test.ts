@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { drizzle } from "drizzle-orm/node-mssql";
-import { getDatabaseDialect } from "./index";
+import { getDatabaseDialect, hasDirectDatabaseConnection } from "./index";
 import { playbooks } from "./schema/mssql";
 
 describe("database dialect selection", () => {
@@ -19,6 +19,18 @@ describe("database dialect selection", () => {
     expect(() => getDatabaseDialect("oracle")).toThrow(
       'Unsupported DB_DIALECT "oracle"',
     );
+  });
+
+  it("does not mistake a Supabase service-role key for a database connection", () => {
+    expect(hasDirectDatabaseConnection("postgres", undefined, undefined)).toBe(false);
+  });
+
+  it.each([
+    ["postgres", "postgresql://example", undefined],
+    ["postgres", undefined, "database-password"],
+    ["mssql", "sqlserver://example", undefined],
+  ] as const)("detects direct %s configuration", (dialect, url, password) => {
+    expect(hasDirectDatabaseConnection(dialect, url, password)).toBe(true);
   });
 });
 

@@ -44,7 +44,7 @@ export function getDatabaseDialect(
  * 
  * Priority:
  * 1. DATABASE_URL env var (explicit, works for both PG and MSSQL)
- * 2. Supabase project URL + service role key → construct direct PG connection
+ * 2. Supabase project URL + database password → construct direct PG connection
  */
 function getDatabaseUrl(): string {
   if (process.env.DATABASE_URL) {
@@ -63,7 +63,10 @@ function getDatabaseUrl(): string {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   if (supabaseUrl) {
     const projectRef = new URL(supabaseUrl).hostname.split(".")[0];
-    const password = process.env.SUPABASE_DB_PASSWORD || process.env.SUPABASE_SERVICE_ROLE_KEY;
+    // A Supabase service-role key is a JWT for the Data API, not a PostgreSQL
+    // password. Treating it as one makes otherwise valid Supabase deployments
+    // fail every Drizzle query with a database authentication error.
+    const password = process.env.SUPABASE_DB_PASSWORD;
     if (projectRef && password) {
       // Use Supavisor pooler (port 6543) for serverless compatibility
       return `postgresql://postgres.${projectRef}:${password}@aws-0-eu-central-1.pooler.supabase.com:6543/postgres`;
@@ -72,6 +75,21 @@ function getDatabaseUrl(): string {
 
   throw new Error(
     "No database connection configured. Set DATABASE_URL or NEXT_PUBLIC_SUPABASE_URL + SUPABASE_DB_PASSWORD."
+  );
+}
+
+/**
+ * Whether the deployment has enough configuration for a direct database
+ * connection. Supabase-only deployments intentionally use the Data API.
+ */
+export function hasDirectDatabaseConnection(
+  configuredDialect = process.env.DB_DIALECT,
+  databaseUrl = process.env.DATABASE_URL,
+  supabaseDbPassword = process.env.SUPABASE_DB_PASSWORD,
+): boolean {
+  return Boolean(
+    databaseUrl
+      || (getDatabaseDialect(configuredDialect) === "postgres" && supabaseDbPassword),
   );
 }
 
