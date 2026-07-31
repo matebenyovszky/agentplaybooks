@@ -481,18 +481,26 @@ export function assertSafeRemoteUrl(value: string, allowInsecureHttp = false) {
   if (host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || host.endsWith(".internal") || host === "metadata.google.internal") {
     throw new FederationError("Private upstream host is not allowed", "UNSAFE_UPSTREAM", 400);
   }
+  const mappedIpv4 = host.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
+  const mappedIpv4Host = mappedIpv4
+    ? `${parseInt(mappedIpv4[1], 16) >> 8}.${parseInt(mappedIpv4[1], 16) & 255}.${parseInt(mappedIpv4[2], 16) >> 8}.${parseInt(mappedIpv4[2], 16) & 255}`
+    : null;
   if (
-    /^(0\.|10\.|127\.|169\.254\.|192\.168\.)/.test(host) ||
-    /^172\.(1[6-9]|2\d|3[01])\./.test(host) ||
-    host === "::1" || host === "0000:0000:0000:0000:0000:0000:0000:0001" ||
-    /^::ffff:(10\.|127\.|169\.254\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(host) ||
-    /^(fc|fd|fe80)/.test(host)
+    isPrivateIpv4Host(host) ||
+    (mappedIpv4Host !== null && isPrivateIpv4Host(mappedIpv4Host)) ||
+    host === "::" || host === "::1" || host === "0000:0000:0000:0000:0000:0000:0000:0001" ||
+    /^(fc|fd|fe[89ab])/.test(host)
   ) {
     throw new FederationError("Private upstream address is not allowed", "UNSAFE_UPSTREAM", 400);
   }
   if (!/^[a-z0-9.:-]+$/i.test(host)) {
     throw new FederationError("Invalid upstream host", "UNSAFE_UPSTREAM", 400);
   }
+}
+
+function isPrivateIpv4Host(host: string) {
+  return /^(0\.|10\.|127\.|169\.254\.|192\.168\.)/.test(host) ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(host);
 }
 
 function namespaceTool(server: MCPServer, tool: McpTool): FederatedTool {

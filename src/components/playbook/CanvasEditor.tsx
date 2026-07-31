@@ -87,6 +87,7 @@ export function CanvasEditor({ storage, canvases, onUpdate, runs, onRunsUpdate, 
       slug: documentSlug,
       run_id: selectedRunId,
       content: `# ${documentName}\n\n`,
+      sections: [],
       metadata: {},
       sort_order: runCanvases.length,
     });
