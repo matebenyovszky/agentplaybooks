@@ -1,6 +1,20 @@
 import { analyze } from "./checks.js";
 import { discover, discoverGlobal } from "./discovery.js";
 
+const PLATFORM_LABELS = {
+  claude: "Claude",
+  cursor: "Cursor",
+  codex: "Codex",
+  copilot: "Copilot",
+  gemini: "Gemini",
+  hermes: "Hermes",
+};
+
+const NAMED_PLATFORMS = new Set(Object.keys(PLATFORM_LABELS));
+// Always named as present or missing so a 100/100 report still names Claude
+// and Cursor in either direction. Other named platforms appear only when found.
+const REPORTED_ABSENCES = ["claude", "cursor"];
+
 export async function runDoctor(target) {
   const inventory = await discover(target);
   return analyze(inventory);
@@ -8,6 +22,34 @@ export async function runDoctor(target) {
 
 export async function runGlobalDoctor() {
   return analyze(await discoverGlobal());
+}
+
+/**
+ * Named platforms discovered in the inventory, plus informational absences.
+ *
+ * `portable` (AGENTS.md) and `generic` are not platforms. Claude and Cursor are
+ * each listed as missing when that tool has no project config yet, so a 100/100
+ * report still names both directions (Claude-only or Cursor-only). Those
+ * absences are not findings and do not affect the health score.
+ */
+export function platformPresence(inventory) {
+  const found = new Set();
+  for (const collection of [inventory.instructions, inventory.skills, inventory.mcpConfigs, inventory.mcpServers]) {
+    for (const item of collection ?? []) {
+      if (NAMED_PLATFORMS.has(item.platform)) found.add(item.platform);
+    }
+  }
+  const present = [...found].sort();
+  const missing = REPORTED_ABSENCES.filter((id) => !found.has(id));
+  return { present, missing };
+}
+
+function formatPlatformLine({ present, missing }) {
+  const parts = [
+    ...present.map((id) => `${PLATFORM_LABELS[id]} present`),
+    ...missing.map((id) => `${PLATFORM_LABELS[id]} not present`),
+  ];
+  return `Platforms: ${parts.join("; ")}.`;
 }
 
 export function publicReport(report) {
@@ -21,6 +63,7 @@ export function publicReport(report) {
       mcpServers: report.inventory.mcpServers.length,
       findings: report.findings.length,
     },
+    platforms: platformPresence(report.inventory),
     findings: report.findings,
   };
 }
@@ -33,6 +76,7 @@ export function printDoctor(report) {
 
   console.log(`AgentPlaybooks Doctor — health ${report.score}/100`);
   console.log(`Found ${report.inventory.instructions.length} instruction file(s), ${report.inventory.skills.length} skill(s), and ${report.inventory.mcpServers.length} MCP server definition(s).`);
+  console.log(formatPlatformLine(platformPresence(report.inventory)));
   console.log(`Findings: ${counts.critical ?? 0} critical, ${counts.high ?? 0} high, ${counts.medium ?? 0} medium, ${counts.low ?? 0} low.`);
 
   if (report.findings.length === 0) {
