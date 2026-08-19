@@ -16,10 +16,10 @@ import {
   Code,
   Server,
   HardDrive,
-  Github,
   ExternalLink,
   Settings
 } from "lucide-react";
+import { GithubIcon } from "@/components/ui/brand-icons";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   "getting-started": Rocket,
@@ -223,7 +223,7 @@ export default function DocsPageClient({ initialSlug = "readme", initialContent 
               rel="noopener noreferrer"
               className="flex items-center gap-2 px-3 py-2 text-sm text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
             >
-              <Github className="h-4 w-4" />
+              <GithubIcon className="h-4 w-4" />
               View on GitHub
               <ExternalLink className="h-3 w-3 ml-auto" />
             </a>
@@ -269,7 +269,7 @@ export default function DocsPageClient({ initialSlug = "readme", initialContent 
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 text-sm text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors"
             >
-              <Github className="h-4 w-4" />
+              <GithubIcon className="h-4 w-4" />
               Edit this page on GitHub
             </a>
           </div>

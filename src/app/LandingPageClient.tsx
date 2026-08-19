@@ -18,7 +18,6 @@ import {
   Users,
   BookOpen,
   ArrowRight,
-  Github,
   Globe,
   Play,
   Sparkles,
@@ -27,6 +26,7 @@ import {
   HelpCircle,
   Check
 } from "lucide-react";
+import { GithubIcon } from "@/components/ui/brand-icons";
 export default function LandingPageClient() {
   const t = useTranslations();
 
@@ -145,7 +145,7 @@ export default function LandingPageClient() {
               rel="noopener noreferrer"
               className="px-8 py-4 border border-neutral-300 dark:border-blue-800 rounded-full font-semibold text-lg hover:bg-neutral-100 dark:hover:bg-blue-950/50 dark:hover:border-blue-600 transition-colors flex items-center justify-center gap-2"
             >
-              <Github className="h-5 w-5" />
+              <GithubIcon className="h-5 w-5" />
               GitHub
             </a>
 
@@ -528,7 +528,7 @@ export default function LandingPageClient() {
             className="text-center mb-16"
           >
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-500/10 border border-green-500/20 mb-6">
-              <Github className="w-4 h-4 text-green-600 dark:text-green-400" />
+              <GithubIcon className="w-4 h-4 text-green-600 dark:text-green-400" />
               <span className="text-sm text-green-700 dark:text-green-300">100% Open Source</span>
             </div>
             <h2 className="text-4xl font-bold mb-4 text-neutral-900 dark:text-white">

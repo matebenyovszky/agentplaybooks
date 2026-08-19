@@ -3,7 +3,8 @@
 import { motion } from "framer-motion";
 import { FloatingNav } from "@/components/ui/floating-navbar";
 import Link from "next/link";
-import { ChevronRight, Calendar, ArrowLeft, User, Twitter, Linkedin, Link as LinkIcon } from "lucide-react";
+import { ChevronRight, Calendar, ArrowLeft, User, Link as LinkIcon } from "lucide-react";
+import { LinkedinIcon, TwitterIcon } from "@/components/ui/brand-icons";
 import type { BlogPost } from "@/lib/blog-server";
 import { useState, useEffect } from "react";
 
@@ -172,7 +173,7 @@ function SinglePostView({ post }: { post: BlogPost }) {
                             className="p-2.5 bg-neutral-100 dark:bg-neutral-900 rounded-full text-neutral-500 dark:text-neutral-400 hover:text-sky-500 dark:hover:text-sky-400 hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors"
                             aria-label="Share on Twitter"
                         >
-                            <Twitter className="h-5 w-5" />
+                            <TwitterIcon className="h-5 w-5" />
                         </a>
                         <a
                             href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`}
@@ -181,7 +182,7 @@ function SinglePostView({ post }: { post: BlogPost }) {
                             className="p-2.5 bg-neutral-100 dark:bg-neutral-900 rounded-full text-neutral-500 dark:text-neutral-400 hover:text-blue-600 dark:hover:text-blue-500 hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors"
                             aria-label="Share on LinkedIn"
                         >
-                            <Linkedin className="h-5 w-5" />
+                            <LinkedinIcon className="h-5 w-5" />
                         </a>
                         <button
                             onClick={copyLink}
