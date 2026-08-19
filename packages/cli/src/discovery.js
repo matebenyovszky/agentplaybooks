@@ -34,6 +34,16 @@ const MCP_JSON_FILES = new Set([
 const MAX_FILES = 20_000;
 const MAX_TEXT_BYTES = 2 * 1024 * 1024;
 
+// Any unreadable directory can throw EPERM/EACCES from scandir: a Windows
+// drive-root folder such as System Volume Information or $Recycle.Bin, a
+// protected AppData path, or a POSIX mode-000 directory. Skip that directory
+// and keep walking. Other errors still fail the scan.
+const PERMISSION_CODES = new Set(["EPERM", "EACCES"]);
+
+export function isPermissionError(error) {
+  return PERMISSION_CODES.has(error?.code);
+}
+
 export function digest(value) {
   return `sha256:${createHash("sha256").update(value).digest("hex")}`;
 }
@@ -74,13 +84,19 @@ function isMcpConfig(relativePath) {
     || normalized.endsWith("/.codex/config.toml");
 }
 
-async function walk(root) {
+async function walk(root, listDir = readdir) {
   const files = [];
   const queue = [root];
 
   while (queue.length > 0) {
     const current = queue.shift();
-    const entries = await readdir(current, { withFileTypes: true });
+    let entries;
+    try {
+      entries = await listDir(current, { withFileTypes: true });
+    } catch (error) {
+      if (isPermissionError(error)) continue;
+      throw error;
+    }
 
     for (const entry of entries) {
       if (entry.isSymbolicLink()) continue;
@@ -120,9 +136,9 @@ async function readText(absolutePath) {
   return normalizeText(buffer.toString("utf8"));
 }
 
-export async function discover(root) {
+export async function discover(root, options = {}) {
   const absoluteRoot = path.resolve(root);
-  const files = await walk(absoluteRoot);
+  const files = await walk(absoluteRoot, options.readdir);
   const inventory = {
     root: absoluteRoot,
     instructions: [],
