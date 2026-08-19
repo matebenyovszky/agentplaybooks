@@ -11,6 +11,9 @@ const PLATFORM_LABELS = {
 };
 
 const NAMED_PLATFORMS = new Set(Object.keys(PLATFORM_LABELS));
+// Always named as present or missing so a 100/100 report still names Claude
+// and Cursor in either direction. Other named platforms appear only when found.
+const REPORTED_ABSENCES = ["claude", "cursor"];
 
 export async function runDoctor(target) {
   const inventory = await discover(target);
@@ -24,10 +27,10 @@ export async function runGlobalDoctor() {
 /**
  * Named platforms discovered in the inventory, plus informational absences.
  *
- * `portable` (AGENTS.md) and `generic` are not platforms. Claude is listed as
- * missing when the project has no Claude config yet (no `.claude/`, `CLAUDE.md`,
- * or Claude `.mcp.json`) so a 100/100 Cursor-only report still names both.
- * That absence is not a finding and does not affect the health score.
+ * `portable` (AGENTS.md) and `generic` are not platforms. Claude and Cursor are
+ * each listed as missing when that tool has no project config yet, so a 100/100
+ * report still names both directions (Claude-only or Cursor-only). Those
+ * absences are not findings and do not affect the health score.
  */
 export function platformPresence(inventory) {
   const found = new Set();
@@ -37,7 +40,7 @@ export function platformPresence(inventory) {
     }
   }
   const present = [...found].sort();
-  const missing = found.has("claude") ? [] : ["claude"];
+  const missing = REPORTED_ABSENCES.filter((id) => !found.has(id));
   return { present, missing };
 }
 

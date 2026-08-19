@@ -86,13 +86,14 @@ test("doctor names Cursor and missing Claude on a healthy Cursor-only project", 
   assert.deepEqual(published.platforms, { present: ["cursor"], missing: ["claude"] });
   assert.match(output, /Cursor present/);
   assert.match(output, /Claude not present/);
+  assert.doesNotMatch(output, /Cursor not present/);
   assert.doesNotMatch(output, /\bCodex\b/);
   assert.doesNotMatch(JSON.stringify(report.findings), /claude/);
 });
 
-test("doctor names Claude as present when Claude project config exists", async () => {
+test("doctor names Claude and missing Cursor on a healthy Claude-only project", async () => {
   const root = await fixture();
-  await put(root, "CLAUDE.md", "# Claude project guidance\n");
+  await put(root, "AGENTS.md", "# Project guidance\nRun tests.\n");
   await put(root, ".claude/skills/code-review/SKILL.md", "---\nname: code-review\ndescription: Review code safely.\n---\n# Review\n");
   await put(root, ".mcp.json", JSON.stringify({
     mcpServers: { docs: { url: "https://example.com/mcp" } },
@@ -103,9 +104,13 @@ test("doctor names Claude as present when Claude project config exists", async (
   const output = capturePrint(report);
 
   assert.equal(report.score, 100);
-  assert.deepEqual(published.platforms, { present: ["claude"], missing: [] });
+  assert.equal(report.findings.length, 0);
+  assert.deepEqual(published.platforms, { present: ["claude"], missing: ["cursor"] });
   assert.match(output, /Claude present/);
-  assert.doesNotMatch(output, /Claude not present/);
+  assert.match(output, /Cursor not present/);
+  assert.doesNotMatch(output, /\bCodex\b/);
+  assert.doesNotMatch(output, /Cursor present/);
+  assert.doesNotMatch(JSON.stringify(report.findings), /cursor/);
 });
 
 test("doctor ignores generated and dependency directories", async () => {
