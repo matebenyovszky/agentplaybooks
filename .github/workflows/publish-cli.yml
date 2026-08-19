@@ -56,7 +56,8 @@ jobs:
           fi
           echo "npm $npm_version"
 
-      # The CLI has no dependencies, so its tests run straight from the source.
+      # Install the CLI's runtime deps (currently yaml) so tests can import them.
+      - run: npm install
       - run: node --test
 
       - name: Verify the tag matches package.json
