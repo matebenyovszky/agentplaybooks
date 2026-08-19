@@ -7,7 +7,7 @@
     "url": "https://agentplaybooks.ai"
   },
   "homepage": "https://agentplaybooks.ai",
-  "repository": "https://github.com/integrityauthority/agentplaybooks",
+  "repository": "https://github.com/matebenyovszky/agentplaybooks",
   "license": "PolyForm-Noncommercial-1.0.0",
   "keywords": ["playbooks", "skills", "mcp", "audit", "sync", "portability"]
 }

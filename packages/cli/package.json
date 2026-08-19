@@ -8,11 +8,11 @@
   "homepage": "https://agentplaybooks.ai",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/integrityauthority/agentplaybooks.git",
+    "url": "git+https://github.com/matebenyovszky/agentplaybooks.git",
     "directory": "packages/cli"
   },
   "bugs": {
-    "url": "https://github.com/integrityauthority/agentplaybooks/issues"
+    "url": "https://github.com/matebenyovszky/agentplaybooks/issues"
   },
   "keywords": [
     "agent",

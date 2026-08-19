@@ -7,7 +7,7 @@ name: Publish CLI
 # automatically, so `--provenance` is not passed.
 #
 # One-time setup on npmjs.com, under the package's Settings → Trusted publisher:
-#   Organization or user: integrityauthority
+#   Organization or user: matebenyovszky
 #   Repository:           agentplaybooks
 #   Workflow filename:    publish-cli.yml
 #   Allowed actions:      npm publish

@@ -4,7 +4,7 @@ The AgentPlaybooks CLI (`@agentplaybooks/cli`, binary `agentplaybooks` or
 `apb`) keeps your agent configuration — instruction files, Agent Skills, and
 MCP server definitions — healthy, consistent across AI coding tools, and
 shareable as a hosted playbook. It is a zero-dependency Node.js (>= 20)
-package that lives in [`packages/cli`](https://github.com/integrityauthority/agentplaybooks/tree/main/packages/cli).
+package that lives in [`packages/cli`](https://github.com/matebenyovszky/agentplaybooks/tree/main/packages/cli).
 
 ## Doctor: audit your agent configuration
 
@@ -167,7 +167,7 @@ The CLI package doubles as a Claude Code plugin with an `agentplaybooks`
 skill and `/agentplaybooks:doctor`, `:sync`, `:pull`, `:push` commands:
 
 ```text
-/plugin marketplace add integrityauthority/agentplaybooks
+/plugin marketplace add matebenyovszky/agentplaybooks
 /plugin install agentplaybooks@agentplaybooks
 ```
 

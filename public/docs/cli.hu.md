@@ -5,7 +5,7 @@ Az AgentPlaybooks CLI (`@agentplaybooks/cli`, bináris: `agentplaybooks` vagy
 szerver definíciókat — tartja egészségesen, konzisztensen az AI-kódoló
 eszközök között, és megoszthatóvá teszi hosztolt playbookként. Zéró
 függőségű Node.js (>= 20) csomag, helye:
-[`packages/cli`](https://github.com/integrityauthority/agentplaybooks/tree/main/packages/cli).
+[`packages/cli`](https://github.com/matebenyovszky/agentplaybooks/tree/main/packages/cli).
 
 ## Doctor: az ügynök-konfiguráció auditja
 
@@ -179,7 +179,7 @@ A CLI-csomag egyben Claude Code plugin is: `agentplaybooks` skillel és
 `/agentplaybooks:doctor`, `:sync`, `:pull`, `:push` parancsokkal:
 
 ```text
-/plugin marketplace add integrityauthority/agentplaybooks
+/plugin marketplace add matebenyovszky/agentplaybooks
 /plugin install agentplaybooks@agentplaybooks
 ```
 

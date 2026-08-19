@@ -105,7 +105,7 @@ The same package doubles as a Claude Code / Claude Cowork plugin (skill +
 slash commands). Install it from this repository:
 
 ```text
-/plugin marketplace add integrityauthority/agentplaybooks
+/plugin marketplace add matebenyovszky/agentplaybooks
 /plugin install agentplaybooks@agentplaybooks
 ```
 

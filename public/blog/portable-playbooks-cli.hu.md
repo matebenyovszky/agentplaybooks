@@ -105,7 +105,7 @@ A CLI-csomag önmagában Claude Code / Claude Cowork plugin, `agentplaybooks`
 skillel és slash-parancsokkal:
 
 ```text
-/plugin marketplace add integrityauthority/agentplaybooks
+/plugin marketplace add matebenyovszky/agentplaybooks
 /plugin install agentplaybooks@agentplaybooks
 ```
 
@@ -118,7 +118,7 @@ alkalmaz.
 ## Kezdj bele
 
 ```bash
-git clone https://github.com/integrityauthority/agentplaybooks
+git clone https://github.com/matebenyovszky/agentplaybooks
 node agentplaybooks/packages/cli/bin/agentplaybooks.js doctor .
 ```
 

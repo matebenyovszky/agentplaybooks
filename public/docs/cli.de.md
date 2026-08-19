@@ -5,7 +5,7 @@ Die AgentPlaybooks-CLI (`@agentplaybooks/cli`, Binary `agentplaybooks` oder
 MCP-Server-Definitionen — gesund, konsistent über alle KI-Coding-Tools hinweg
 und teilbar als gehostetes Playbook. Es ist ein Node.js-Paket (>= 20) ohne
 Abhängigkeiten und liegt in
-[`packages/cli`](https://github.com/integrityauthority/agentplaybooks/tree/main/packages/cli).
+[`packages/cli`](https://github.com/matebenyovszky/agentplaybooks/tree/main/packages/cli).
 
 ## Doctor: Agent-Konfiguration prüfen
 
@@ -179,7 +179,7 @@ Das CLI-Paket ist zugleich ein Claude-Code-Plugin mit dem
 `:pull`, `:push`:
 
 ```text
-/plugin marketplace add integrityauthority/agentplaybooks
+/plugin marketplace add matebenyovszky/agentplaybooks
 /plugin install agentplaybooks@agentplaybooks
 ```
 

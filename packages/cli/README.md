@@ -137,7 +137,7 @@ skill plus `/agentplaybooks:doctor`, `:sync`, `:pull`, and `:push` commands
 that drive this CLI. Install from the repository root marketplace:
 
 ```text
-/plugin marketplace add integrityauthority/agentplaybooks
+/plugin marketplace add matebenyovszky/agentplaybooks
 /plugin install agentplaybooks@agentplaybooks
 ```
 

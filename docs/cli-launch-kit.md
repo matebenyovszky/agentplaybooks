@@ -5,7 +5,7 @@ and keep the repository instructions). Canonical URLs:
 
 - Blog: `https://agentplaybooks.ai/blog/portable-playbooks-cli`
 - Documentation: `https://agentplaybooks.ai/docs/cli`
-- Repository: `https://github.com/integrityauthority/agentplaybooks`
+- Repository: `https://github.com/matebenyovszky/agentplaybooks`
 
 ## Positioning
 
@@ -64,7 +64,7 @@ three entries plus "…and more" buys the most room.
    insecure http:// MCP URLs, Agent Skills spec violations, 0–100 health score.
    `--strict` fails CI.
 6. And it ships as a Claude Code plugin, so the agent runs the workflow:
-   `/plugin marketplace add integrityauthority/agentplaybooks`
+   `/plugin marketplace add matebenyovszky/agentplaybooks`
 
 ## LinkedIn (3,000 character limit)
 
