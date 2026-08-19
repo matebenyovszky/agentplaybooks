@@ -2,7 +2,22 @@ import { handle } from "hono/vercel";
 import { createApiApp } from "@/app/api/_shared/hono";
 import { canAccessPrivatePlaybook, validatePlaybookCredential } from "@/app/api/_shared/auth";
 import { getServiceSupabase, getSupabase } from "@/app/api/_shared/supabase";
-import type { McpResource, McpTool, MCPServer, Playbook, MemoryTier, MemoryType, MemoryStatus, CanvasSection, SecretCategory } from "@/lib/supabase/types";
+import type {
+  McpResource,
+  McpTool,
+  MCPServer,
+  Playbook,
+  MemoryTier,
+  MemoryType,
+  MemoryStatus,
+  CanvasSection,
+  SecretCategory,
+  MemoriesUpdate,
+  SkillsUpdate,
+  PlaybooksUpdate,
+  MCPServersUpdate,
+  PlaybookRunsUpdate,
+} from "@/lib/supabase/types";
 import { encryptSecret, decryptSecret } from "@/lib/crypto";
 import { checkSecretDestination } from "@/lib/secret-destinations";
 import { PLAYBOOK_TOOLS } from "@/app/api/_shared/playbook-tools";
@@ -1065,7 +1080,7 @@ use_secret({
             if (parentError) throw new Error(parentError.message);
 
             // Update children to reference parent and optionally archive
-            const childUpdates: Record<string, unknown> = {
+            const childUpdates: MemoriesUpdate = {
               parent_key: parentKey,
               updated_at: new Date().toISOString(),
             };
@@ -1108,7 +1123,7 @@ use_secret({
 
             if (!current) throw new Error("Memory not found");
 
-            const updates: Record<string, unknown> = {
+            const updates: MemoriesUpdate = {
               priority: Math.min(100, (current.priority || 50) + priorityBoost),
               access_count: 0, // Reset on promotion
               last_accessed_at: new Date().toISOString(),
@@ -1121,7 +1136,7 @@ use_secret({
               const currentTierValue = tierOrder[current.tier as keyof typeof tierOrder] ?? 1;
               const targetTierValue = tierOrder[targetTier as keyof typeof tierOrder] ?? 1;
               if (targetTierValue >= currentTierValue) {
-                updates.tier = targetTier;
+                updates.tier = targetTier as MemoryTier;
               }
             }
 
@@ -1400,8 +1415,8 @@ use_secret({
             const taskSummary = args.summary as string | undefined;
 
             // Update the task
-            const updateData: Record<string, unknown> = {
-              status: newStatus,
+            const updateData: MemoriesUpdate = {
+              status: newStatus as MemoryStatus,
               updated_at: new Date().toISOString(),
             };
             if (taskSummary !== undefined) updateData.summary = taskSummary;
@@ -1779,7 +1794,7 @@ use_secret({
             const skillId = args.skill_id as string;
             const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(skillId);
 
-            const updates: Record<string, unknown> = {};
+            const updates: SkillsUpdate = {};
             if (args.name !== undefined) updates.name = args.name;
             if (args.description !== undefined) updates.description = args.description;
             if (args.content !== undefined) updates.content = args.content;
@@ -1941,7 +1956,7 @@ use_secret({
               throw new Error("API key with playbooks:write or full permission required for this playbook");
             }
 
-            const updates: Record<string, unknown> = {};
+            const updates: PlaybooksUpdate = {};
             if (args.name !== undefined) updates.name = args.name;
             if (args.description !== undefined) updates.description = args.description;
             if (args.visibility !== undefined) {
@@ -2081,9 +2096,14 @@ use_secret({
             )) {
               throw new Error("transport_config must be an object");
             }
-            const updates: Record<string, unknown> = {};
-            for (const field of ["name", "description", "tools", "resources", "transport_type", "transport_config"] as const) {
-              if (args[field] !== undefined) updates[field] = args[field];
+            const updates: MCPServersUpdate = {};
+            if (args.name !== undefined) updates.name = args.name as MCPServersUpdate["name"];
+            if (args.description !== undefined) updates.description = args.description as MCPServersUpdate["description"];
+            if (args.tools !== undefined) updates.tools = args.tools as MCPServersUpdate["tools"];
+            if (args.resources !== undefined) updates.resources = args.resources as MCPServersUpdate["resources"];
+            if (args.transport_type !== undefined) updates.transport_type = args.transport_type as MCPServersUpdate["transport_type"];
+            if (args.transport_config !== undefined) {
+              updates.transport_config = args.transport_config as MCPServersUpdate["transport_config"];
             }
             if (Object.keys(updates).length === 0) throw new Error("No fields to update");
             const { data, error } = await serviceSupabase
@@ -2157,7 +2177,7 @@ use_secret({
             }
             const runId = args.run_id as string;
             if (!runId) throw new Error("run_id is required");
-            const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
+            const updates: PlaybookRunsUpdate = { updated_at: new Date().toISOString() };
             if (typeof args.name === "string" && args.name.trim()) updates.name = args.name.trim();
             if (args.status !== undefined) {
               if (!["active", "completed", "archived"].includes(args.status as string)) throw new Error("Invalid run status");

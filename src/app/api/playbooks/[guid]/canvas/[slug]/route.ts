@@ -4,6 +4,7 @@ import { getServiceSupabase } from "@/app/api/_shared/supabase";
 import { getAuthenticatedUser, requireAuth, validateApiKey } from "@/app/api/_shared/auth";
 import { checkPlaybookWriteAccess, getPlaybookByGuid } from "@/app/api/_shared/guards";
 import { applyCanvasPatch, slugifyCanvasName, type CanvasPatchOperation } from "@/lib/canvas";
+import type { CanvasUpdate } from "@/lib/supabase/types";
 
 const app = createApiApp("/api/playbooks/:guid/canvas/:slug");
 
@@ -69,7 +70,7 @@ app.put("/", async (c) => {
     return c.json({ error: "expectedVersion is required for conflict-safe updates" }, 400);
   }
 
-  const updates: Record<string, unknown> = {
+  const updates: CanvasUpdate = {
     version: body.expectedVersion + 1,
     updated_at: new Date().toISOString(),
   };

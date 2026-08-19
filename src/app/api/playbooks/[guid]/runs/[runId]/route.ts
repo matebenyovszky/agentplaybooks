@@ -3,6 +3,7 @@ import { createApiApp } from "@/app/api/_shared/hono";
 import { getServiceSupabase } from "@/app/api/_shared/supabase";
 import { requireAuth, validateApiKey } from "@/app/api/_shared/auth";
 import { checkPlaybookWriteAccess, getPlaybookByGuid } from "@/app/api/_shared/guards";
+import type { PlaybookRunsUpdate } from "@/lib/supabase/types";
 
 const app = createApiApp("/api/playbooks/:guid/runs/:runId");
 
@@ -33,7 +34,7 @@ app.patch("/", async (c) => {
   if (!playbook) return c.json({ error: "Unauthorized or forbidden" }, 403);
 
   const body = await c.req.json();
-  const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  const updates: PlaybookRunsUpdate = { updated_at: new Date().toISOString() };
   if (typeof body.name === "string" && body.name.trim()) updates.name = body.name.trim();
   if (["active", "completed", "archived"].includes(body.status)) updates.status = body.status;
   if (body.context && typeof body.context === "object") updates.context = body.context;
