@@ -19,7 +19,7 @@
         "url": "https://agentplaybooks.ai"
       },
       "homepage": "https://agentplaybooks.ai",
-      "license": "PolyForm-Noncommercial-1.0.0",
+      "license": "MIT",
       "category": "productivity",
       "keywords": ["playbooks", "skills", "mcp", "audit", "sync", "portability"]
     }

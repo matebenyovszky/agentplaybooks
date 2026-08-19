@@ -101,7 +101,7 @@ This document outlines the development roadmap for AgentPlaybooks — the open s
   - Docker/docker-compose setup
   - Contributing guidelines (CONTRIBUTING.md)
   - Code of conduct
-  - License review (MIT)
+  - ~~License review (MIT)~~ — done, relicensed to MIT
   - Security policy (SECURITY.md)
   - Issue templates
   - PR templates
