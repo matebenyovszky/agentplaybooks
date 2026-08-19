@@ -1,7 +1,7 @@
 {
   "name": "agentplaybooks",
   "description": "Portable agent playbooks: audit, sync, pull, and push skills, instructions, and MCP configuration across Claude Code, Cursor, Codex, and agentplaybooks.ai.",
-  "version": "0.2.0-alpha.1",
+  "version": "0.2.0-alpha.2",
   "author": {
     "name": "AgentPlaybooks",
     "url": "https://agentplaybooks.ai"

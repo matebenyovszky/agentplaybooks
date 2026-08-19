@@ -15,8 +15,8 @@ const NAMED_PLATFORMS = new Set(Object.keys(PLATFORM_LABELS));
 // and Cursor in either direction. Other named platforms appear only when found.
 const REPORTED_ABSENCES = ["claude", "cursor"];
 
-export async function runDoctor(target) {
-  const inventory = await discover(target);
+export async function runDoctor(target, options) {
+  const inventory = await discover(target, options);
   return analyze(inventory);
 }
 
