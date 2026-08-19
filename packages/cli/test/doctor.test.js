@@ -4,7 +4,19 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { mkdtemp } from "node:fs/promises";
-import { runDoctor } from "../src/doctor.js";
+import { printDoctor, publicReport, runDoctor } from "../src/doctor.js";
+
+function capturePrint(report) {
+  const lines = [];
+  const original = console.log;
+  console.log = (...args) => lines.push(args.map(String).join(" "));
+  try {
+    printDoctor(report);
+  } finally {
+    console.log = original;
+  }
+  return lines.join("\n");
+}
 
 async function fixture() {
   return mkdtemp(path.join(tmpdir(), "agentplaybooks-doctor-"));
@@ -55,6 +67,50 @@ test("doctor reports spec errors, secret exposure, insecure MCP, and drift", asy
   const secretFinding = report.findings.find((item) => item.code === "secret.hardcoded");
   assert.deepEqual(secretFinding.lines, [5]);
   assert.doesNotMatch(JSON.stringify(secretFinding), /sk-abcdefghijklmnopqrstuvwxyz/);
+});
+
+test("doctor names Cursor and missing Claude on a healthy Cursor-only project", async () => {
+  const root = await fixture();
+  await put(root, "AGENTS.md", "# Project guidance\nRun tests.\n");
+  await put(root, ".cursor/skills/code-review/SKILL.md", "---\nname: code-review\ndescription: Review code safely.\n---\n# Review\n");
+  await put(root, ".cursor/mcp.json", JSON.stringify({
+    mcpServers: { docs: { url: "https://example.com/mcp" } },
+  }));
+
+  const report = await runDoctor(root);
+  const published = publicReport(report);
+  const output = capturePrint(report);
+
+  assert.equal(report.score, 100);
+  assert.equal(report.findings.length, 0);
+  assert.deepEqual(published.platforms, { present: ["cursor"], missing: ["claude"] });
+  assert.match(output, /Cursor present/);
+  assert.match(output, /Claude not present/);
+  assert.doesNotMatch(output, /Cursor not present/);
+  assert.doesNotMatch(output, /\bCodex\b/);
+  assert.doesNotMatch(JSON.stringify(report.findings), /claude/);
+});
+
+test("doctor names Claude and missing Cursor on a healthy Claude-only project", async () => {
+  const root = await fixture();
+  await put(root, "AGENTS.md", "# Project guidance\nRun tests.\n");
+  await put(root, ".claude/skills/code-review/SKILL.md", "---\nname: code-review\ndescription: Review code safely.\n---\n# Review\n");
+  await put(root, ".mcp.json", JSON.stringify({
+    mcpServers: { docs: { url: "https://example.com/mcp" } },
+  }));
+
+  const report = await runDoctor(root);
+  const published = publicReport(report);
+  const output = capturePrint(report);
+
+  assert.equal(report.score, 100);
+  assert.equal(report.findings.length, 0);
+  assert.deepEqual(published.platforms, { present: ["claude"], missing: ["cursor"] });
+  assert.match(output, /Claude present/);
+  assert.match(output, /Cursor not present/);
+  assert.doesNotMatch(output, /\bCodex\b/);
+  assert.doesNotMatch(output, /Cursor present/);
+  assert.doesNotMatch(JSON.stringify(report.findings), /cursor/);
 });
 
 test("doctor ignores generated and dependency directories", async () => {
