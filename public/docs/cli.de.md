@@ -122,6 +122,28 @@ zu schreiben. Geheimniswerte bewegen sich in keiner der beiden Richtungen —
 siehe unten. Für Self-Hosting nutzen Sie `--url=<base>` oder
 `AGENTPLAYBOOKS_URL`.
 
+## Auf welchem Playbook ein Befehl arbeitet
+
+Das Arbeitsverzeichnis entscheidet. `pull --apply` und `push` schreiben
+`.agentplaybooks/remote.json` in das Projektverzeichnis, und jeder Befehl, der
+mit einem Playbook spricht, liest die GUID von dort:
+
+```bash
+apb secrets status                     # das mit diesem Verzeichnis verknüpfte Playbook
+apb secrets status ../anderes-projekt  # das mit jenem Verzeichnis verknüpfte Playbook
+apb secrets status --playbook=<guid>   # die Verknüpfung übergehen
+```
+
+Die Zugangsdaten werden getrennt aufgelöst, und niemals aus der Verknüpfungs-
+datei: `AGENTPLAYBOOKS_PLAYBOOK_KEY`, falls gesetzt, andernfalls der auf ein
+Playbook beschränkte Schlüssel, den `secrets login` für diesen Server und diese
+GUID gespeichert hat. Ein Rechner kann Schlüssel für mehrere Playbooks halten,
+ohne dass sie austauschbar sind.
+
+Schreibende Befehle nennen ihr Ziel zuerst. Ein Verzeichnis daneben zu liegen ist
+ein leichter Fehler, und Zugangsdaten im falschen Tresor sind mühsam zu
+korrigieren.
+
 ## Secrets: Kein Klartextwert berührt jemals die Festplatte
 
 ```bash
@@ -152,6 +174,29 @@ apb secrets run -- npm run deploy
 Spricht Ihr Agent mit dem gehosteten Playbook als MCP-Server, brauchen Sie davon
 nichts: Das Tool `use_secret` lässt die Plattform die Zugangsdaten serverseitig
 injizieren, sodass der Wert auch nicht in den Kontext des Agents gelangt.
+
+### Einen OAuth-Anbieter verbinden
+
+Manche Verbindungen werden autorisiert statt eingefügt: sie brauchen ein Refresh-
+Token, und das erste kann nur ein Browser beschaffen. Genau das macht `auth`
+einmalig.
+
+```bash
+apb secrets push GOOGLE_CLIENT_SECRET   # der Austausch braucht es
+apb auth gmail
+```
+
+Es führt Authorization Code + PKCE gegen eine Loopback-Weiterleitung aus und
+übergibt den Code dann dem Server, der den Austausch durchführt und das Refresh-
+Token direkt in den Tresor schreibt. Weder das Client-Secret noch das Refresh-
+Token berührt diesen Rechner.
+
+Die `client_id` ist kein Geheimnis — sie steht in der Authorize-URL, die der
+Browser öffnet — und liegt daher als literaler Wert in
+`transport_config.auth.client_id` des MCP-Servers, wo auch die Föderation sie
+liest. `auth` liest dasselbe Feld, muss also nicht übergeben werden;
+`--client-id=…` und `AGENTPLAYBOOKS_OAUTH_CLIENT_ID` überschreiben es. Details in
+[Federated MCP & OpenAPI Tools](./mcp-federation.md).
 
 ## Das Playbook trägt den Vertrag, nicht die Zugangsdaten
 
