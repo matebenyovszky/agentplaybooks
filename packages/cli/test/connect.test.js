@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -103,6 +103,67 @@ test("refuses a target whose format cannot carry the credential", async () => {
   assert.equal(plan.changed, false);
   assert.equal(plan.conflicts.length, 1);
   assert.match(plan.conflicts[0].reason, /cannot be represented/i);
+});
+
+test("writes into the Hermes profile config, not the project", async () => {
+  const root = await fixture();
+  const home = await fixture();
+  const profile = path.join(home, ".hermes");
+  await mkdir(profile, { recursive: true });
+  await writeFile(
+    path.join(profile, "config.yaml"),
+    "mcp_servers:\n  existing:\n    url: https://example.test/mcp\nskills:\n  external_dirs:\n    - /some/dir\n",
+    "utf8",
+  );
+
+  const plan = await planConnect(root, {
+    playbook: GUID,
+    targets: ["hermes"],
+    name: "apbks-dev",
+    env: { HERMES_HOME: profile },
+    homedir: home,
+    platform: "linux",
+  });
+
+  assert.equal(plan.fileActions.length, 1);
+  assert.equal(plan.fileActions[0].target, "hermes");
+  assert.equal(plan.fileActions[0].absolutePath, path.join(profile, "config.yaml"));
+
+  await applyConnect(plan);
+  const written = await readFile(path.join(profile, "config.yaml"), "utf8");
+
+  assert.match(written, /apbks-dev:/);
+  assert.match(written, /X-API-Key/);
+  // The server it already had, and the skill store registration, are sync's
+  // business — connect must leave both exactly as they were.
+  assert.match(written, /existing:/);
+  assert.match(written, /- \/some\/dir/);
+  assert.equal((written.match(/external_dirs:/g) || []).length, 1);
+});
+
+test("does not overwrite a Hermes entry that points somewhere else", async () => {
+  const root = await fixture();
+  const home = await fixture();
+  const profile = path.join(home, ".hermes");
+  await mkdir(profile, { recursive: true });
+  await writeFile(
+    path.join(profile, "config.yaml"),
+    "mcp_servers:\n  apbks-dev:\n    url: https://elsewhere.test/mcp\n",
+    "utf8",
+  );
+
+  const plan = await planConnect(root, {
+    playbook: GUID,
+    targets: ["hermes"],
+    name: "apbks-dev",
+    env: { HERMES_HOME: profile },
+    homedir: home,
+    platform: "linux",
+  });
+
+  assert.equal(plan.changed, false);
+  assert.equal(plan.conflicts.length, 1);
+  assert.match(plan.conflicts[0].reason, /already defines/);
 });
 
 test("rejects an argument that is not a playbook GUID", async () => {

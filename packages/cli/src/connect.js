@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { applyAdapters, planMcpServerAction } from "./adapters.js";
+import { applyAdapters, planHermesMcpServerAction, planMcpServerAction } from "./adapters.js";
 import { resolveBaseUrl } from "./remote.js";
 
 /**
@@ -45,12 +45,20 @@ export function defaultKeyEnvVar(entryName) {
   return `APBKS_KEY_${entryName.replace(/[^A-Za-z0-9]+/g, "_").toUpperCase()}`;
 }
 
-export function serverDefinition({ url, keyEnvVar, keyHeader = DEFAULT_KEY_HEADER }) {
-  return {
-    type: "http",
-    url,
-    headers: { [keyHeader]: `\${${keyEnvVar}}` },
-  };
+/**
+ * Each target gets what its own schema accepts, rather than one definition
+ * pushed everywhere. Claude Code's `.mcp.json` wants an explicit
+ * `"type": "http"`; Hermes' `config.yaml` accepts command/args/env/url/headers
+ * and refuses anything else, so sending `type` there would have the entry
+ * rejected as unrepresentable — correctly, but for a key we added ourselves.
+ */
+const TARGETS_WITHOUT_TYPE = new Set(["hermes"]);
+
+export function serverDefinition({ url, keyEnvVar, keyHeader = DEFAULT_KEY_HEADER, target = "claude" }) {
+  const headers = { [keyHeader]: `\${${keyEnvVar}}` };
+  return TARGETS_WITHOUT_TYPE.has(target)
+    ? { url, headers }
+    : { type: "http", url, headers };
 }
 
 async function readIfPresent(absolutePath) {
@@ -81,11 +89,26 @@ export async function planConnect(root, options = {}) {
   }
   const keyHeader = options.keyHeader?.trim() || DEFAULT_KEY_HEADER;
 
-  const definition = serverDefinition({ url, keyEnvVar, keyHeader });
   const conflicts = [];
   const fileActions = [];
 
   for (const target of targets) {
+    const definition = serverDefinition({ url, keyEnvVar, keyHeader, target });
+
+    // Hermes keeps its MCP servers in the profile config, not in the project.
+    if (target === "hermes") {
+      const action = await planHermesMcpServerAction({
+        name: entryName,
+        definition,
+        conflicts,
+        env: options.env,
+        homedir: options.homedir,
+        platform: options.platform,
+      });
+      if (action) fileActions.push(action);
+      continue;
+    }
+
     const probe = planMcpServerAction({ root, target, name: entryName, definition, conflicts: [] });
     if (!probe) {
       planMcpServerAction({ root, target, name: entryName, definition, conflicts });
@@ -140,6 +163,10 @@ export function printConnectPlan(plan, log = console.log) {
     log("a variable set afterwards is invisible to a process already running, which");
     log("looks the same from the inside as a rejected key: no tools, refresh fails.");
   }
+
+  log("\nIf a client does not expand ${VAR} in headers, it sends the placeholder");
+  log("verbatim. The endpoint reports that specifically, so a 403 will say the");
+  log("reference was not expanded rather than blaming a permission.");
 
   for (const item of plan.conflicts) {
     log(`\nconflict (${item.target}): ${item.reason}`);

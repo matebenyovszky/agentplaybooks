@@ -1,4 +1,5 @@
 import { hashApiKey } from "@/lib/utils";
+import { presentedApiKey } from "./api-key-header";
 import { getServiceSupabase, getSupabase } from "./supabase";
 import type { ApiKey, UserApiKeysRow } from "@/lib/supabase/types";
 import { getPlaybookAccessRole } from "./guards";
@@ -52,31 +53,9 @@ export async function requireAuth(request: Request): Promise<{ id: string } | nu
   return user || null;
 }
 
-/**
- * The API key can arrive in either of two headers.
- *
- * `Authorization: Bearer apb_…` is the documented one. `X-API-Key` exists
- * because a client may reserve `Authorization` for its own authentication
- * handling, and then the operator has nowhere to put the key and no way to tell
- * that is what happened: the connection establishes, every listing comes back
- * empty, and refreshing it fails. A credential that never arrives looks exactly
- * like a server with nothing to offer.
- *
- * A `Bearer ` prefix is accepted in `X-API-Key` too — anyone copying the
- * documented value brings the scheme along with it, and rejecting that would
- * reproduce the same silent emptiness.
- */
-export function presentedApiKey(request: Request): string | null {
-  const authHeader = request.headers.get("Authorization");
-  if (authHeader?.startsWith("Bearer apb_")) {
-    return authHeader.slice("Bearer ".length).trim();
-  }
-
-  const raw = request.headers.get("X-API-Key")?.trim();
-  if (!raw) return null;
-  const value = raw.startsWith("Bearer ") ? raw.slice("Bearer ".length).trim() : raw;
-  return value.startsWith("apb_") ? value : null;
-}
+// Which headers may carry a key, and in what forms, lives in one place — see
+// api-key-header.ts for why the `Bearer` prefix is optional.
+export { presentedApiKey };
 
 export async function validateApiKey(
   request: Request,

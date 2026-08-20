@@ -333,8 +333,20 @@ function mergedHermesConfig(existingContent, additions, externalDir, { conflicts
     servers.push(name);
   }
 
+  // `connect` writes one server and nothing else: a null externalDir means
+  // "leave skills.external_dirs alone", which is sync's business, not this
+  // command's.
   const externalDirs = [];
-  const configured = document.getIn(["skills", "external_dirs"], true);
+  const configured = externalDir === null ? null : document.getIn(["skills", "external_dirs"], true);
+  if (externalDir === null) {
+    if (servers.length === 0) return { content: null, servers, externalDirs };
+    const serialized = document.toString({ lineWidth: 0 });
+    return {
+      content: serialized.endsWith("\n") ? serialized : `${serialized}\n`,
+      servers: servers.sort(),
+      externalDirs,
+    };
+  }
   const configuredList = configured === undefined
     ? []
     : (typeof configured?.toJSON === "function" ? configured.toJSON() : configured);
@@ -572,6 +584,44 @@ export { canonicalJson };
  * Returns null when there is nothing to write, which the caller reports along
  * with the conflicts it collected.
  */
+/**
+ * The same, for Hermes Agent, whose MCP servers live in its profile
+ * `config.yaml` rather than in a project file — so the path comes from the
+ * profile, not from the project root. Only the server is written: the skill
+ * store registration belongs to sync.
+ */
+export async function planHermesMcpServerAction({
+  name,
+  definition,
+  conflicts = [],
+  homedir = os.homedir(),
+  env = process.env,
+  platform = process.platform,
+}) {
+  const profile = await hermesProfile({ homedir, env, platform });
+  const configPath = path.join(profile.directory, "config.yaml");
+  const display = `${profile.display}/config.yaml`;
+  const existingContent = await readIfExists(configPath);
+  const merged = mergedHermesConfig(existingContent, { [name]: definition }, null, {
+    conflicts,
+    display,
+    homedir,
+    env,
+  });
+  if (merged.content === null || merged.servers.length === 0) return null;
+
+  return {
+    kind: "mcp-config",
+    target: "hermes",
+    name: display,
+    action: existingContent === null ? "create" : "merge",
+    path: display,
+    absolutePath: configPath,
+    servers: merged.servers,
+    content: merged.content,
+  };
+}
+
 export function planMcpServerAction({ root, target, name, definition, existingContent = null, conflicts = [] }) {
   const adapter = TARGET_ADAPTERS[target];
   if (!adapter?.mcpPath) {

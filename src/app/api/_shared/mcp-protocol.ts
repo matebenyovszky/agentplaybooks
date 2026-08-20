@@ -1,3 +1,5 @@
+import { credentialProblem, presentedApiKey } from "./api-key-header";
+
 /**
  * Transport-level rules shared by every MCP endpoint in this app.
  *
@@ -116,6 +118,15 @@ export function isHandshakeMethod(method: unknown): boolean {
  *
  * A credential that was presented and rejected gets 403 instead, naming the
  * permission it lacks: with 401 the client would keep retrying the same key.
+ *
+ * But "presented" is not one case, it is three, and telling them apart is the
+ * whole value of the message. A client's log showed
+ * `200 → 202 → 403 "needs the memory:read permission"`, and the permission was
+ * never the problem: its config had written `Authorization: apb_…` with no
+ * `Bearer` scheme, so the key arrived and went unrecognised. Sending an operator
+ * to edit permissions that are already correct is worse than saying nothing,
+ * because from the client side every one of these looks identical — an empty
+ * listing and a failing refresh.
  */
 
 export function privateAccessRefusal(request: Request): {
@@ -123,11 +134,15 @@ export function privateAccessRefusal(request: Request): {
   message: string;
   headers: Record<string, string>;
 } {
-  // Either header can carry the key, so either one means "a credential was
-  // presented and rejected" — answering 401 to a caller that did send one
-  // invites it to retry the same key forever.
-  const presented = Boolean(request.headers.get("Authorization") || request.headers.get("X-API-Key"));
-  return presented
+  // A credential arrived but is not usable — wrong shape, or a placeholder the
+  // client never expanded. Still 403: something was sent, so 401 would only
+  // invite the same value again.
+  const problem = credentialProblem(request);
+  if (problem) {
+    return { status: 403, message: problem.message, headers: {} };
+  }
+
+  return presentedApiKey(request)
     ? {
       status: 403,
       message: "That credential cannot read this playbook. A playbook API key needs the memory:read permission; a user API key needs playbooks:read and access to the playbook.",
@@ -135,7 +150,7 @@ export function privateAccessRefusal(request: Request): {
     }
     : {
       status: 401,
-      message: "This playbook is private. Send an API key as `Authorization: Bearer <key>`.",
+      message: "This playbook is private. Send an API key as `Authorization: Bearer <key>`, or as `X-API-Key: <key>` if this client reserves Authorization for itself.",
       headers: {},
     };
 }
