@@ -6,7 +6,6 @@ import { loadFederationSecrets } from "@/app/api/_shared/federation-secrets";
 import {
   LATEST_PROTOCOL_VERSION,
   privateAccessRefusal,
-  SUPPORTED_PROTOCOL_VERSIONS,
   isNotification,
   negotiateProtocolVersion,
   requestsEventStream,
@@ -327,10 +326,15 @@ app.post("/", async (c) => {
   // request/response method worked.
   // An explicit `id: null` is not treated as a notification: the spec forbids it
   // in a request, but a client that sends it is still waiting for an answer.
-  const protocolHeader = c.req.header("MCP-Protocol-Version");
-  if (protocolHeader && !SUPPORTED_PROTOCOL_VERSIONS.has(protocolHeader)) {
-    return c.json({ error: `Unsupported MCP protocol version: ${protocolHeader}` }, 400);
-  }
+  // The `MCP-Protocol-Version` header is a modern-era mechanism and is not
+  // validated here. This endpoint speaks the initialize-based revisions, and a
+  // dual-era client finds that out by sending a modern request and falling back
+  // when the answer is not a recognized modern error. Rejecting an unknown
+  // version with `400 {"error": ...}` broke exactly that: too error-shaped to
+  // ignore, too unlike UnsupportedProtocolVersionError (no -32022, no
+  // `data.supported`) to retry against — so the client had nowhere to go and
+  // reported the server as unreachable. Every future revision would have hit
+  // the same wall.
 
   if (isNotification(method, id)) {
     return c.body(null, 202);

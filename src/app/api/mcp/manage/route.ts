@@ -12,7 +12,6 @@ import { createPlaybook, listAccessiblePlaybooks } from "@/lib/repositories/play
 import { ACCOUNT_TOOLS } from "@/app/api/_shared/account-tools";
 import {
   LATEST_PROTOCOL_VERSION,
-  SUPPORTED_PROTOCOL_VERSIONS,
   negotiateProtocolVersion,
   requestsEventStream,
 } from "@/app/api/_shared/mcp-protocol";
@@ -93,10 +92,15 @@ app.post("/", async (c) => {
 
   const body = await c.req.json();
   const { method, params, id } = body;
-  const protocolHeader = c.req.header("MCP-Protocol-Version");
-  if (protocolHeader && !SUPPORTED_PROTOCOL_VERSIONS.has(protocolHeader)) {
-    return c.json({ error: `Unsupported MCP protocol version: ${protocolHeader}` }, 400);
-  }
+  // The `MCP-Protocol-Version` header is a modern-era mechanism and is not
+  // validated here. This endpoint speaks the initialize-based revisions, and a
+  // dual-era client finds that out by sending a modern request and falling back
+  // when the answer is not a recognized modern error. Rejecting an unknown
+  // version with `400 {"error": ...}` broke exactly that: too error-shaped to
+  // ignore, too unlike UnsupportedProtocolVersionError (no -32022, no
+  // `data.supported`) to retry against — so the client had nowhere to go and
+  // reported the server as unreachable. Every future revision would have hit
+  // the same wall.
 
   // Handle MCP methods
   switch (method) {

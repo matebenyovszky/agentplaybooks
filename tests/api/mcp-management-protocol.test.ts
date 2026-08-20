@@ -63,12 +63,16 @@ describe("AgentPlaybooks management MCP transport", () => {
     }
   });
 
-  it("rejects unsupported protocol version headers", async () => {
+  it("serves a request whose protocol version it has never heard of", async () => {
     const response = await POST(mcpRequest(
       { id: 3, method: "ping" },
       { "MCP-Protocol-Version": "2099-01-01" },
     ));
-    expect(response.status).toBe(400);
+
+    // This used to be a 400. The header is a modern-era mechanism; rejecting an
+    // unknown value left a dual-era client with a 400 it could neither retry
+    // against nor treat as "legacy server, fall back to initialize".
+    expect(response.status).toBe(200);
   });
 
   it("returns 405 for an unsupported server-to-client SSE stream", async () => {

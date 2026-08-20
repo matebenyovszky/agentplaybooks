@@ -53,13 +53,16 @@ describe("AgentPlaybooks playbook MCP transport", () => {
     expect(response.status).not.toBe(202);
   });
 
-  it("rejects a protocol revision it cannot speak", async () => {
+  it("does not reject a protocol revision it has never heard of", async () => {
+    // A dual-era client opens with the current revision and falls back to
+    // initialize when the answer is not a recognized modern error. Answering
+    // 400 here left it with nothing to fall back to, and every future revision
+    // would have hit the same wall.
     const response = await POST(
-      mcpRequest({ id: 1, method: "initialize", params: {} }, { "MCP-Protocol-Version": "1999-01-01" }),
+      mcpRequest({ method: "notifications/initialized" }, { "MCP-Protocol-Version": "2026-07-28" }),
     );
 
-    expect(response.status).toBe(400);
-    expect((await response.json()).error).toContain("Unsupported MCP protocol version");
+    expect(response.status).toBe(202);
   });
 });
 
