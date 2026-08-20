@@ -1,6 +1,6 @@
 # Serving both MCP eras
 
-Status: plan, with phase 1 in progress
+Status: phases 0-2 done; phase 3 unscheduled
 
 ## What happened
 
@@ -89,11 +89,15 @@ what differs between eras is the envelope, not the payload. A dual-era server is
 explicitly allowed to serve both on one endpoint, selecting behaviour from how
 the client opens — modern `_meta` means modern, `initialize` means legacy.
 
-**Phase 2 — modern era, federation client.** Detect the upstream's era once per
-origin and cache it: send a modern request first, fall back to `initialize` only
-when a `400` carries no recognized modern error. Drop session handling for modern
-upstreams. This is what keeps a federated Cloudflare or Supabase server working
-as those servers move on.
+**Phase 2 — modern era, federation client (done).** Opens modern: one POST
+carrying per-request `_meta` and the mirrored headers, no handshake and no
+session. Falls back to `initialize` only when a 4xx carries no recognized
+modern error, and caches that verdict per origin, because the era belongs to
+the server rather than to one request. An `UnsupportedProtocolVersionError` is
+followed rather than surfaced: the newest version it advertises is tried before
+giving up. The connection test reports which era answered, so "reached, legacy"
+shows up as the warning it is — that upstream breaks when it drops the
+handshake.
 
 **Phase 3 — the optional surface**, if and when we need it: `subscriptions/listen`
 for change notifications, MRTR if a tool ever needs to ask the user something.

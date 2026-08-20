@@ -102,7 +102,9 @@ export function McpServerEditor({ mcpServer, playbookGuid, storage, onUpdate, on
   const [vaultReferenceName, setVaultReferenceName] = useState("");
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<
-    { ok: true; tools: string[]; resources: string[] } | { ok: false; error: string; code?: string } | null
+    { ok: true; era?: "modern" | "legacy" | null; tools: string[]; resources: string[] }
+    | { ok: false; error: string; code?: string }
+    | null
   >(null);
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -579,7 +581,7 @@ export function McpServerEditor({ mcpServer, playbookGuid, storage, onUpdate, on
                       </div>
                       {testResult?.ok === true && (
                         <p className="mt-2 text-xs text-emerald-400">
-                          Reached the upstream: {testResult.tools.length} tool(s), {testResult.resources.length} resource(s).
+                          Reached the upstream{testResult.era ? ` (${testResult.era} protocol)` : ""}: {testResult.tools.length} tool(s), {testResult.resources.length} resource(s).
                           {testResult.tools.length > 0 && <span className="text-slate-400"> {testResult.tools.slice(0, 8).join(", ")}{testResult.tools.length > 8 ? "…" : ""}</span>}
                         </p>
                       )}

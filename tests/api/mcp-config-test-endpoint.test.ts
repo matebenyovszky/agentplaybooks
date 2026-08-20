@@ -1,11 +1,12 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
-const { getUserFromAuthOrApiKey, getServiceSupabase, loadFederationSecrets, listFederatedTools, listFederatedResources } = vi.hoisted(() => ({
+const { getUserFromAuthOrApiKey, getServiceSupabase, loadFederationSecrets, listFederatedTools, listFederatedResources, knownProtocolEra } = vi.hoisted(() => ({
   getUserFromAuthOrApiKey: vi.fn(),
   getServiceSupabase: vi.fn(),
   loadFederationSecrets: vi.fn(),
   listFederatedTools: vi.fn(),
   listFederatedResources: vi.fn(),
+  knownProtocolEra: vi.fn(),
 }));
 
 vi.mock("@/app/api/_shared/auth", () => ({ getUserFromAuthOrApiKey }));
@@ -17,7 +18,7 @@ vi.mock("@/lib/mcp/federation", async () => {
       super(message);
     }
   }
-  return { FederationError, listFederatedTools, listFederatedResources };
+  return { FederationError, listFederatedTools, listFederatedResources, knownProtocolEra };
 });
 
 import { POST } from "@/app/api/mcp/config/[serverId]/route";
@@ -47,6 +48,7 @@ beforeEach(() => {
     }),
   });
   loadFederationSecrets.mockResolvedValue({ token: "resolved" });
+  knownProtocolEra.mockReturnValue("modern");
 });
 
 /**
@@ -60,8 +62,11 @@ describe("POST /api/mcp/config/:serverId/test", () => {
 
     const payload = await (await POST(request())).json();
 
+    // The era is part of the answer: "reached, legacy" warns that this upstream
+    // will break when it drops the handshake.
     expect(payload).toEqual({
       ok: true,
+      era: "modern",
       tools: ["ext__a__search", "ext__a__fetch"],
       resources: ["mcp-proxy://a/doc"],
     });

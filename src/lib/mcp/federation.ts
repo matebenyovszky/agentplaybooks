@@ -74,6 +74,82 @@ const MAX_TIMEOUT_MS = 60_000;
 const oauthCache = new Map<string, { token: string; expiresAt: number }>();
 const mcpSessions = new Map<string, string | null>();
 
+/**
+ * Which protocol era an upstream speaks, cached per origin.
+ *
+ * Revision 2026-07-28 removed the `initialize` handshake and sessions: a modern
+ * request carries its version and identity in `_meta`, mirrored into headers,
+ * and stands on its own. This client only knew the handshake, which the spec
+ * compatibility matrix scores as "Legacy client + Modern server = Fails" — and
+ * the upstreams people actually federate (Cloudflare, Supabase) are built for
+ * the current revision.
+ *
+ * So we open modern and fall back exactly as the spec prescribes: on a 4xx, a
+ * recognized modern JSON-RPC error means the server is modern (and -32022 says
+ * which versions to retry with); anything else means legacy, and we run the
+ * handshake. The era belongs to the origin rather than to one request, so it is
+ * remembered.
+ */
+type ProtocolEra = "modern" | "legacy";
+
+const serverEras = new Map<string, ProtocolEra>();
+
+const CLIENT_PROTOCOL_VERSION = "2026-07-28";
+const LEGACY_CLIENT_PROTOCOL_VERSION = "2025-03-26";
+const MODERN_ERROR_CODES = new Set([-32020, -32022, -32601]);
+const META_PREFIX = "io.modelcontextprotocol/";
+
+/** The body field a method mirrors into `Mcp-Name`, if any. */
+function mirroredName(method: string, params: Record<string, unknown>): string | undefined {
+  if (method === "tools/call" || method === "prompts/get") {
+    return typeof params.name === "string" ? params.name : undefined;
+  }
+  if (method === "resources/read") {
+    return typeof params.uri === "string" ? params.uri : undefined;
+  }
+  return undefined;
+}
+
+function modernParams(params: Record<string, unknown>, version: string) {
+  return {
+    ...params,
+    _meta: {
+      ...(params._meta as Record<string, unknown> | undefined),
+      [`${META_PREFIX}protocolVersion`]: version,
+      [`${META_PREFIX}clientInfo`]: { name: "AgentPlaybooks Federation", version: "1.0.0" },
+      [`${META_PREFIX}clientCapabilities`]: {},
+    },
+  };
+}
+
+/** An ASCII-unsafe name travels Base64-wrapped, per the transport binding. */
+function headerSafe(value: string): string {
+  const safe = /^[\u0021-\u007e][\u0020-\u007e]*$/.test(value) && !value.startsWith("=?base64?");
+  if (safe) return value;
+  const bytes = new TextEncoder().encode(value);
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return `=?base64?${btoa(binary)}?=`;
+}
+
+/**
+ * The era an upstream was found to speak, once something has actually talked to
+ * it. Surfaced by the connection test: "reached, modern" and "reached, legacy"
+ * are different facts about an upstream, and the second one is a heads-up that
+ * it will stop working when that server drops the handshake.
+ */
+export function knownProtocolEra(url: string): "modern" | "legacy" | null {
+  return serverEras.get(originOf(url)) ?? null;
+}
+
+function originOf(url: string): string {
+  try {
+    return new URL(url).origin;
+  } catch {
+    return url;
+  }
+}
+
 export class FederationError extends Error {
   constructor(
     message: string,
@@ -184,12 +260,116 @@ async function mcpRequest<T = Record<string, unknown>>(
   if (!url) throw new FederationError(`Missing transport URL for ${server.name}`, "MISSING_URL", 400);
   assertSafeRemoteUrl(url, config.allow_insecure_http);
   const headers = await buildHeaders(server, config, options);
+  const origin = originOf(url);
+
+  if (serverEras.get(origin) !== "legacy") {
+    const attempt = await sendModernRpc<T>(url, method, params, headers, config, options);
+    if (attempt.kind === "result") {
+      serverEras.set(origin, "modern");
+      return attempt.result;
+    }
+    if (attempt.kind === "modern-error") {
+      serverEras.set(origin, "modern");
+      throw attempt.error;
+    }
+    serverEras.set(origin, "legacy");
+  }
+
+  return legacyRequest<T>(server, url, method, params, headers, config, options);
+}
+
+type ModernAttempt<T> =
+  | { kind: "result"; result: T }
+  | { kind: "modern-error"; error: FederationError }
+  | { kind: "not-modern" };
+
+/**
+ * One standalone POST, with the version in both `_meta` and the header the
+ * transport requires them to agree on.
+ */
+async function sendModernRpc<T>(
+  url: string,
+  method: string,
+  params: Record<string, unknown>,
+  headers: Record<string, string>,
+  config: FederatedTransportConfig,
+  options: FederationOptions,
+  version = CLIENT_PROTOCOL_VERSION,
+): Promise<ModernAttempt<T>> {
+  const name = mirroredName(method, params);
+  const response = await timedFetch(url, {
+    method: "POST",
+    headers: {
+      ...headers,
+      "Content-Type": "application/json",
+      Accept: "application/json, text/event-stream",
+      "MCP-Protocol-Version": version,
+      "Mcp-Method": method,
+      ...(name ? { "Mcp-Name": headerSafe(name) } : {}),
+    },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: crypto.randomUUID(),
+      method,
+      params: modernParams(params, version),
+    }),
+  }, config.timeout_ms, options.fetch);
+
+  const text = await response.text();
+  let payload: JsonRpcResponse<T> | null = null;
+  try {
+    payload = parseJsonRpcText<JsonRpcResponse<T>>(text, response.headers.get("content-type"));
+  } catch {
+    payload = null;
+  }
+
+  if (response.ok && payload?.result) return { kind: "result", result: payload.result };
+
+  const code = payload?.error?.code;
+  if (typeof code === "number" && MODERN_ERROR_CODES.has(code)) {
+    const supported = (payload?.error as { data?: { supported?: unknown } } | undefined)?.data?.supported;
+    if (code === -32022 && Array.isArray(supported)) {
+      // The point of -32022 is the list it carries; take the newest offered.
+      const next = supported
+        .filter((entry): entry is string => typeof entry === "string")
+        .sort()
+        .reverse()[0];
+      if (next && next !== version) {
+        return sendModernRpc<T>(url, method, params, headers, config, options, next);
+      }
+    }
+    return {
+      kind: "modern-error",
+      error: new FederationError(payload?.error?.message || `Upstream MCP error (${method})`, "UPSTREAM_RPC_ERROR"),
+    };
+  }
+
+  if (response.status >= 500) {
+    throw new FederationError(`Upstream returned ${response.status}`, "UPSTREAM_HTTP_ERROR");
+  }
+
+  // Anything else — a 4xx without a modern error, or a 200 carrying a plain
+  // JSON-RPC error — is how a handshake-era server answers a request it did not
+  // expect. Fall back rather than surface an error we can avoid.
+  return { kind: "not-modern" };
+}
+
+/** The handshake era: initialize, acknowledge, then the call, carrying a session. */
+async function legacyRequest<T>(
+  server: MCPServer,
+  url: string,
+  method: string,
+  params: Record<string, unknown>,
+  headers: Record<string, string>,
+  config: FederatedTransportConfig,
+  options: FederationOptions,
+): Promise<T> {
   if (!mcpSessions.has(server.id) && method !== "initialize") {
     const initialized = await sendMcpRpc<Record<string, unknown>>(
       url,
       "initialize",
       {
-        protocolVersion: "2025-03-26",
+        protocolVersion: LEGACY_CLIENT_PROTOCOL_VERSION,
         capabilities: {},
         clientInfo: { name: "AgentPlaybooks Federation", version: "1.0.0" },
       },
@@ -458,6 +638,17 @@ async function timedFetch(
   } finally {
     clearTimeout(timer);
   }
+}
+
+/** Shared so the modern path can read a body that came with a 4xx. */
+export function parseJsonRpcText<T>(text: string, contentType: string | null): T {
+  if (contentType?.includes("text/event-stream")) {
+    const data = text.split(/\r?\n/).filter((line) => line.startsWith("data:"))
+      .map((line) => line.slice(5).trim()).find((line) => line && line !== "[DONE]");
+    if (!data) throw new FederationError("SSE response contained no JSON-RPC data", "INVALID_UPSTREAM_RESPONSE");
+    return JSON.parse(data) as T;
+  }
+  return JSON.parse(text) as T;
 }
 
 async function parseJsonOrSse<T>(response: Response): Promise<T> {

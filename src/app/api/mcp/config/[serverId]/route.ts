@@ -2,7 +2,7 @@ import { handle } from "hono/vercel";
 import { createApiApp } from "@/app/api/_shared/hono";
 import { getUserFromAuthOrApiKey } from "@/app/api/_shared/auth";
 import { getServiceSupabase } from "@/app/api/_shared/supabase";
-import { FederationError, listFederatedResources, listFederatedTools } from "@/lib/mcp/federation";
+import { FederationError, knownProtocolEra, listFederatedResources, listFederatedTools } from "@/lib/mcp/federation";
 import { loadFederationSecrets } from "@/app/api/_shared/federation-secrets";
 import type { MCPServer } from "@/lib/supabase/types";
 
@@ -77,6 +77,7 @@ app.post("/test", async (c) => {
     ]);
     return c.json({
       ok: true,
+      era: knownProtocolEra(String((server.transport_config as { url?: string } | null)?.url ?? "")),
       tools: tools.map((tool) => tool.name),
       resources: resources.map((resource) => resource.uri),
     });
