@@ -4,6 +4,12 @@ import { canAccessPrivatePlaybook, validatePlaybookCredential } from "@/app/api/
 import { getServiceSupabase, getSupabase } from "@/app/api/_shared/supabase";
 import { loadFederationSecrets } from "@/app/api/_shared/federation-secrets";
 import {
+  METHOD_NOT_FOUND,
+  discoverResult,
+  isModernRequest,
+  validateModernEnvelope,
+} from "@/app/api/_shared/mcp-modern";
+import {
   LATEST_PROTOCOL_VERSION,
   privateAccessRefusal,
   isNotification,
@@ -340,6 +346,21 @@ app.post("/", async (c) => {
     return c.body(null, 202);
   }
 
+  // A dual-era endpoint picks its behaviour from how the client opened: modern
+  // per-request metadata, or an `initialize` handshake. Only the envelope
+  // differs — every payload handler below is shared.
+  const modern = isModernRequest(method, rpcParams);
+  if (modern) {
+    const problem = validateModernEnvelope(c.req.raw, body);
+    if (problem) {
+      return c.json({
+        jsonrpc: "2.0",
+        id,
+        error: { code: problem.code, message: problem.message, ...(problem.data ? { data: problem.data } : {}) },
+      }, problem.status);
+    }
+  }
+
   const supabase = getSupabase();
 
   // Check if it's a UUID or GUID
@@ -348,7 +369,7 @@ app.post("/", async (c) => {
   // Get playbook - try public first, then fallback to API key auth for private playbooks
   let query = supabase
     .from("playbooks")
-    .select("id, user_id, persona_name, persona_system_prompt, persona_metadata, instructions");
+    .select("id, user_id, name, description, persona_name, persona_system_prompt, persona_metadata, instructions");
 
   if (isUuid) {
     query = query.eq("id", guid);
@@ -365,7 +386,7 @@ app.post("/", async (c) => {
   if (!playbook) {
     let privateQuery = getServiceSupabase()
       .from("playbooks")
-      .select("id, user_id, persona_name, persona_system_prompt, persona_metadata, instructions");
+      .select("id, user_id, name, description, persona_name, persona_system_prompt, persona_metadata, instructions");
     privateQuery = isUuid ? privateQuery.eq("id", guid) : privateQuery.eq("guid", guid);
     const { data: privatePlaybook } = await privateQuery.maybeSingle();
     privateRowExists = Boolean(privatePlaybook);
@@ -394,6 +415,18 @@ app.post("/", async (c) => {
 
   // Handle MCP methods
   switch (method) {
+    case "server/discover":
+      // Mandatory for a modern client, and the only thing it can call before
+      // it knows anything about us.
+      return c.json({
+        jsonrpc: "2.0",
+        id,
+        result: discoverResult(
+          { name: playbook.name ?? "AgentPlaybooks playbook", version: "1.0.0" },
+          { instructions: playbook.description ?? undefined },
+        ),
+      });
+
     case "initialize":
       return c.json({
         jsonrpc: "2.0",
@@ -2618,11 +2651,14 @@ use_secret({
     }
 
     default:
+      // A modern client reads the status: 404 with -32601 says "this endpoint
+      // exists, that method does not", which is what separates us from a 404
+      // for a URL that hosts nothing. Legacy callers keep their 200.
       return c.json({
         jsonrpc: "2.0",
         id,
-        error: { code: -32601, message: `Method not found: ${method}` },
-      });
+        error: { code: METHOD_NOT_FOUND, message: `Method not found: ${method}` },
+      }, modern ? 404 : 200);
   }
 });
 

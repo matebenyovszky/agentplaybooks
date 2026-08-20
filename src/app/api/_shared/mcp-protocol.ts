@@ -8,13 +8,32 @@
  * actually worked. One definition, used by both, so that cannot happen again.
  */
 
-export const LATEST_PROTOCOL_VERSION = "2025-11-25";
+/**
+ * The two eras, kept apart on purpose.
+ *
+ * `2026-07-28` removed the `initialize` handshake, so it must never be the
+ * answer to one: a legacy client told "2026-07-28" has been handed a version
+ * whose handshake does not exist. Negotiation on `initialize` therefore picks
+ * from the legacy list only, while discovery reports everything we serve.
+ */
+export const MODERN_PROTOCOL_VERSIONS = ["2026-07-28"] as const;
 
-export const SUPPORTED_PROTOCOL_VERSIONS = new Set([
+export const LEGACY_PROTOCOL_VERSIONS = [
   "2024-11-05",
   "2025-03-26",
   "2025-06-18",
-  LATEST_PROTOCOL_VERSION,
+  "2025-11-25",
+] as const;
+
+/** The newest revision we serve at all. */
+export const LATEST_PROTOCOL_VERSION = MODERN_PROTOCOL_VERSIONS[0];
+
+/** The newest revision that still has a handshake to negotiate. */
+export const LATEST_LEGACY_PROTOCOL_VERSION = LEGACY_PROTOCOL_VERSIONS[LEGACY_PROTOCOL_VERSIONS.length - 1];
+
+export const SUPPORTED_PROTOCOL_VERSIONS = new Set<string>([
+  ...LEGACY_PROTOCOL_VERSIONS,
+  ...MODERN_PROTOCOL_VERSIONS,
 ]);
 
 /**
@@ -32,9 +51,10 @@ export function requestsEventStream(accept?: string): boolean {
  * asked for.
  */
 export function negotiateProtocolVersion(requested?: unknown): string {
-  return typeof requested === "string" && SUPPORTED_PROTOCOL_VERSIONS.has(requested)
+  return typeof requested === "string"
+    && (LEGACY_PROTOCOL_VERSIONS as readonly string[]).includes(requested)
     ? requested
-    : LATEST_PROTOCOL_VERSION;
+    : LATEST_LEGACY_PROTOCOL_VERSION;
 }
 
 /**
