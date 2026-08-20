@@ -176,6 +176,27 @@ equivalent; `pull` reports them instead of writing a half-translated config.
 Secret values never move in either direction — see below. Use `--url=<base>`
 or `AGENTPLAYBOOKS_URL` for self-hosted deployments.
 
+## Which playbook a command works on
+
+The working directory decides. `pull --apply` and `push` write
+`.agentplaybooks/remote.json` in the project root, and every command that talks
+to a playbook reads the guid from there:
+
+```bash
+apb secrets status                     # the playbook linked to this directory
+apb secrets status ../other-project    # the playbook linked to that directory
+apb secrets status --playbook=<guid>   # ignore the link, name the playbook
+```
+
+The credential is resolved separately, and never from the link file:
+`AGENTPLAYBOOKS_PLAYBOOK_KEY` if it is set, otherwise the playbook-scoped key
+`secrets login` stored for that server and guid. One machine can hold keys for
+several playbooks without them being interchangeable, and a link to a playbook
+you have no key for is an error that names the command to run.
+
+Commands that write name their target first. Being one directory over is an easy
+mistake, and a credential in the wrong vault is a tedious one to undo.
+
 ## Secrets: no plaintext value ever touches the disk
 
 ```bash
@@ -203,6 +224,28 @@ apb secrets run -- npm run deploy
 If your agent talks to the hosted playbook as an MCP server, you need none of
 this: the `use_secret` tool makes the platform inject the credential server-side,
 so the value never enters the agent's context either.
+
+### Connecting an OAuth provider
+
+Some connections are authorized rather than pasted: they need a refresh token,
+and only a browser can obtain the first one. `auth` does that once.
+
+```bash
+apb secrets push GOOGLE_CLIENT_SECRET   # the exchange needs it
+apb auth gmail
+```
+
+It runs authorization-code + PKCE against a loopback redirect, then hands the
+code to the server, which performs the exchange and writes the refresh token
+straight to the vault. Neither the client secret nor the refresh token touches
+this machine.
+
+`client_id` is not a secret — it travels in the authorize URL your browser
+opens — so it is a literal value in the MCP server's
+`transport_config.auth.client_id`, which is also where federation reads it.
+`auth` reads the same field, so it need not be passed; `--client-id=…` and
+`AGENTPLAYBOOKS_OAUTH_CLIENT_ID` override it. Full detail in
+[Federated MCP & OpenAPI Tools](./mcp-federation.md).
 
 ## The playbook carries the contract, not the credential
 

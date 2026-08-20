@@ -125,6 +125,27 @@ de escribir una configuración a medio traducir. Los valores secretos no se
 mueven en ninguna dirección — ver más abajo. Para despliegues self-hosted usa
 `--url=<base>` o `AGENTPLAYBOOKS_URL`.
 
+## En qué playbook trabaja un comando
+
+Lo decide el directorio de trabajo. `pull --apply` y `push` escriben
+`.agentplaybooks/remote.json` en la raíz del proyecto, y todo comando que habla
+con un playbook lee el guid de ahí:
+
+```bash
+apb secrets status                     # el playbook vinculado a este directorio
+apb secrets status ../otro-proyecto    # el playbook vinculado a ese directorio
+apb secrets status --playbook=<guid>   # ignorar el vínculo
+```
+
+La credencial se resuelve por separado, y nunca desde el archivo de vínculo:
+`AGENTPLAYBOOKS_PLAYBOOK_KEY` si está definida, y si no, la clave limitada a un
+playbook que `secrets login` guardó para ese servidor y ese guid. Una máquina
+puede tener claves de varios playbooks sin que sean intercambiables.
+
+Los comandos que escriben nombran su destino primero. Estar un directorio más
+allá es un error fácil, y una credencial en la bóveda equivocada es tedioso de
+deshacer.
+
 ## Secretos: ningún valor en texto plano toca nunca el disco
 
 ```bash
@@ -156,6 +177,29 @@ Si tu agente habla con el playbook alojado como servidor MCP, no necesitas nada
 de esto: la herramienta `use_secret` hace que la plataforma inyecte la credencial
 en el lado del servidor, así que el valor tampoco entra en el contexto del
 agente.
+
+### Conectar un proveedor OAuth
+
+Algunas conexiones se autorizan en lugar de pegarse: necesitan un refresh token,
+y el primero solo lo puede obtener un navegador. Eso es lo que hace `auth`, una
+sola vez.
+
+```bash
+apb secrets push GOOGLE_CLIENT_SECRET   # el intercambio lo necesita
+apb auth gmail
+```
+
+Ejecuta authorization code + PKCE contra una redirección de loopback y luego
+entrega el código al servidor, que realiza el intercambio y escribe el refresh
+token directamente en la bóveda. Ni el client secret ni el refresh token pasan
+por esta máquina.
+
+El `client_id` no es un secreto — viaja en la URL de autorización que abre tu
+navegador — así que es un valor literal en
+`transport_config.auth.client_id` del servidor MCP, que es también de donde lo
+lee la federación. `auth` lee ese mismo campo, así que no hace falta pasarlo;
+`--client-id=…` y `AGENTPLAYBOOKS_OAUTH_CLIENT_ID` lo sobrescriben. Detalles en
+[Federated MCP & OpenAPI Tools](./mcp-federation.md).
 
 ## El playbook lleva el contrato, no la credencial
 
