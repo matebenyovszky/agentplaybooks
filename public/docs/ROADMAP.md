@@ -85,18 +85,19 @@ This document outlines the development roadmap for AgentPlaybooks — the open s
   - Deliberately not solved by writing a `.env` file: a credential on disk is the
     thing we are trying to avoid
 
-- [ ] **One credential, one store** - Unify federation secrets with the vault (medium term)
-  - Today `transport_config.auth.token_secret` resolves only from the per-server
-    `mcp_server_secrets` payload, so the same token can be needed in two places
-  - Plan: keep the per-server payload authoritative, then fall back to the
-    playbook vault by name — no migration, nothing existing breaks
-  - Open question to settle first: a key with `secrets:read` can proxy vault
-    secrets, so federation credentials moving into the vault must either be
-    marked non-proxyable or pinned with `allowed_hosts`
-  - ✅ Done as a first step: `mcp_server_secrets` now matches the vault's crypto
-    (HKDF key per server, ciphertext bound to its server id, `v2:` prefix with
-    the previous format still readable), so the two stores are no longer
-    unequally protected while the merge is designed
+- [x] **One credential, one store** - Federation resolves from the vault
+  - `transport_config.auth.token_secret` (and `api_key_secret`, `client_secret`)
+    now resolve in two steps: the per-server payload first, then the playbook
+    vault by exact name — store a credential once, reference it everywhere.
+    The server editor autocompletes vault names and shows the resolution.
+  - Vault use by federation is proxy-style (injected server-side, never
+    returned), so the reveal flag is not bypassed; a secret's `allowed_hosts`,
+    when set, is enforced against the server's destinations
+  - `mcp_server_secrets` was first raised to the vault's crypto (HKDF key per
+    server, ciphertext bound to its server id, `v2:` prefix, previous format
+    still readable)
+  - Remaining (medium term): retire the per-server store's UI as the primary
+    path once vault references cover real usage, keeping it as an override
 
 ### Discoverability: SEO & AI Search 🚧
 

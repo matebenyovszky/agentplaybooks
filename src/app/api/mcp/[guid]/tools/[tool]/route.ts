@@ -2,9 +2,9 @@ import { handle } from "hono/vercel";
 import { createApiApp } from "@/app/api/_shared/hono";
 import { validateApiKey } from "@/app/api/_shared/auth";
 import { getServiceSupabase, getSupabase } from "@/app/api/_shared/supabase";
+import { loadFederationSecrets } from "@/app/api/_shared/federation-secrets";
 import { callFederatedTool, federatedServerPrefix } from "@/lib/mcp/federation";
 import { federationAuditWriter } from "@/app/api/_shared/audit";
-import { decryptMcpSecrets } from "@/lib/mcp/secrets";
 import type { ApiKey, MCPServer } from "@/lib/supabase/types";
 
 type AuthenticatedPlaybookKey = ApiKey & { playbooks: { id: string; guid: string } };
@@ -41,13 +41,7 @@ app.post("/", async (c) => {
     const key = authenticatedKey || await validateApiKey(c.req.raw, "tools:call");
     if (!key || key.playbooks.id !== playbook.id) return c.json({ error: "tools:call permission required" }, 401);
   }
-  const service = getServiceSupabase();
-  const { data: secretRow } = await service
-    .from("mcp_server_secrets")
-    .select("encrypted_payload, iv")
-    .eq("mcp_server_id", server.id)
-    .maybeSingle();
-  const secrets = secretRow ? await decryptMcpSecrets(secretRow.encrypted_payload, secretRow.iv, server.id) : {};
+  const secrets = await loadFederationSecrets(server, playbook.id);
   const requestId = c.req.header("cf-ray") || c.req.header("x-request-id") || crypto.randomUUID();
   const audit = federationAuditWriter(playbook.id, requestId);
   try {

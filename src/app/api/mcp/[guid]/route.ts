@@ -2,6 +2,7 @@ import { handle } from "hono/vercel";
 import { createApiApp } from "@/app/api/_shared/hono";
 import { canAccessPrivatePlaybook, validatePlaybookCredential } from "@/app/api/_shared/auth";
 import { getServiceSupabase, getSupabase } from "@/app/api/_shared/supabase";
+import { loadFederationSecrets } from "@/app/api/_shared/federation-secrets";
 import type { McpResource, McpTool, MCPServer, Playbook, MemoryTier, MemoryType, MemoryStatus, CanvasSection, SecretCategory } from "@/lib/supabase/types";
 import { encryptSecret, decryptSecret } from "@/lib/crypto";
 import { checkSecretDestination } from "@/lib/secret-destinations";
@@ -22,7 +23,6 @@ import {
   parseFederatedResourceUri,
   readFederatedResource,
 } from "@/lib/mcp/federation";
-import { decryptMcpSecrets } from "@/lib/mcp/secrets";
 import { composePlaybookSystemPrompt } from "@/lib/playbook-prompt";
 import { validateAgentSkillDescription, validateAgentSkillName } from "@/lib/agent-skills";
 
@@ -59,18 +59,9 @@ function playbookToPersona(playbook: PersonaSource) {
   };
 }
 
-async function loadMcpSecrets(serverId: string) {
-  const { data } = await getServiceSupabase()
-    .from("mcp_server_secrets")
-    .select("encrypted_payload, iv")
-    .eq("mcp_server_id", serverId)
-    .maybeSingle();
-  return data ? decryptMcpSecrets(data.encrypted_payload, data.iv, serverId) : {};
-}
-
 async function federationOptions(server: MCPServer, playbookId: string, requestId?: string) {
   return {
-    secrets: await loadMcpSecrets(server.id),
+    secrets: await loadFederationSecrets(server, playbookId),
     audit: federationAuditWriter(playbookId, requestId),
   };
 }

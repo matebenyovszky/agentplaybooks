@@ -47,6 +47,17 @@ Unter **Encrypted secrets** separat speichern:
 
 Bearer-Authentifizierung verwendet `token_secret`; API-Keys verwenden `header`, `prefix` und `api_key_secret`.
 
+### Wie Secret-Namen aufgelöst werden
+
+Der Name in `token_secret`, `api_key_secret` oder `client_secret` ist eine **Referenz**, die zur Aufrufzeit in zwei Schritten aufgelöst wird:
+
+1. **Die eigenen Encrypted secrets des Servers** — ist der Name dort definiert, gewinnt dieser Wert.
+2. **Der Secrets-Vault des Playbooks** — derselbe Speicher, den auch das Tool `use_secret` und der Secrets-Tab verwenden, abgeglichen über den exakten Namen.
+
+Ein Zugangsdatum muss so nur einmal existieren: Speichern Sie `SEARCH_TOKEN` im Secrets-Tab, setzen Sie `"auth": {"type": "bearer", "token_secret": "SEARCH_TOKEN"}` auf beliebig vielen Servern, und alle lösen es aus dem Vault auf — der Server-Editor vervollständigt Vault-Namen automatisch und zeigt an, woher jeder referenzierte Name kommen wird. Der Speicher pro Server bleibt als Override nützlich, oder für Zugangsdaten, die von anderen Servern niemals per Name erreichbar sein sollen.
+
+Die Auflösung aus dem Vault ist eine Proxy-Nutzung: Der entschlüsselte Wert wird serverseitig in die ausgehende Anfrage injiziert und nie an den Aufrufer zurückgegeben; sie funktioniert daher unabhängig vom Reveal-Flag des Secrets — genau wie `use_secret`. Deklariert das Vault-Secret `allowed_hosts`, wird diese Liste gegen jedes Ziel in der Transportkonfiguration des Servers durchgesetzt (`url`, `spec_url`, `base_url`); ein anderswo gepinntes Secret bleibt unaufgelöst, und der Aufruf schlägt mit `MISSING_SECRET` unter Nennung des Namens fehl, statt die Zugangsdaten an ein Ziel zu senden, das ihr Besitzer ausgeschlossen hat.
+
 ## OpenAPI-Konfiguration
 
 ```json

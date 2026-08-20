@@ -48,6 +48,17 @@ Save the sensitive value separately in **Encrypted secrets**:
 
 For bearer auth use `{"type":"bearer","token_secret":"token"}` and store `{"token":"..."}`. For an API key, configure `type`, `header`, `prefix`, and `api_key_secret`.
 
+### How secret names resolve
+
+The name in `token_secret`, `api_key_secret`, or `client_secret` is a **reference**, resolved at call time in two steps:
+
+1. **This server's own Encrypted secrets** — when the name is defined there, that value wins.
+2. **The playbook's Secrets vault** — the same store the `use_secret` tool and the Secrets tab use, matched by exact name.
+
+So a credential only needs to exist once. Store `SEARCH_TOKEN` on the Secrets tab, set `"auth": {"type": "bearer", "token_secret": "SEARCH_TOKEN"}` on any number of servers, and they all resolve it from the vault — the server editor autocompletes vault names and shows where each referenced name will come from. The per-server store remains useful as an override, or for a credential that should never be reachable by name from other servers.
+
+Vault resolution is proxy-style use: the decrypted value is injected into the outbound request server-side and is never returned to the caller, so it works regardless of the secret's reveal flag — exactly like `use_secret`. If the vault secret declares `allowed_hosts`, that list is enforced against every destination in the server's transport config (`url`, `spec_url`, `base_url`); a pinned-elsewhere secret stays unresolved and the call fails with `MISSING_SECRET` naming it, rather than sending the credential somewhere its owner excluded.
+
 ## OpenAPI configuration
 
 ```json

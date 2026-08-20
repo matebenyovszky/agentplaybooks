@@ -47,6 +47,17 @@ Az **Encrypted secrets** mezőbe külön kerüljön:
 
 Bearer hitelesítésnél `token_secret`, API-kulcsnál `header`, `prefix` és `api_key_secret` használható.
 
+### Hogyan oldódnak fel a titoknevek
+
+A `token_secret`, `api_key_secret` vagy `client_secret` mezőben megadott név **hivatkozás**, amely híváskor két lépésben oldódik fel:
+
+1. **A szerver saját Encrypted secrets tárolója** — ha a név itt van definiálva, ez az érték nyer.
+2. **A playbook Secrets vaultja** — ugyanaz a tároló, amit a `use_secret` eszköz és a Secrets fül is használ, pontos névegyezés alapján.
+
+Egy hitelesítő adatnak így elég egyszer léteznie. Vedd fel a `SEARCH_TOKEN`-t a Secrets fülön, állítsd be a `"auth": {"type": "bearer", "token_secret": "SEARCH_TOKEN"}` konfigurációt akárhány szerveren, és mindegyik a vaultból oldja fel — a szerverszerkesztő automatikusan kiegészíti a vaultbeli neveket, és megmutatja, honnan fog jönni minden hivatkozott név. A szerverenkénti tároló továbbra is hasznos felülbírálásként, vagy olyan hitelesítő adathoz, amelyet más szerverek név szerint sose érhessenek el.
+
+A vaultból való feloldás proxy-jellegű használat: a visszafejtett érték szerveroldalon kerül a kimenő kérésbe, és soha nem jut vissza a hívóhoz, így a titok reveal jelzőjétől függetlenül működik — pontosan úgy, mint a `use_secret`. Ha a vaultbeli titok `allowed_hosts` listát deklarál, az a szerver transport-konfigurációjának minden célcímére érvényesül (`url`, `spec_url`, `base_url`); a máshová rögzített titok feloldatlan marad, és a hívás a nevét megnevező `MISSING_SECRET` hibával bukik el, ahelyett hogy a hitelesítő adat olyan helyre menne, amelyet a tulajdonosa kizárt.
+
 ## OpenAPI-konfiguráció
 
 ```json

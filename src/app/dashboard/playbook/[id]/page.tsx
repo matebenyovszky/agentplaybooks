@@ -1208,6 +1208,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                     <McpServerEditor
                       key={mcp.id}
                       mcpServer={mcp}
+                      playbookGuid={playbook.guid}
                       storage={storage}
                       readOnly={!canEdit}
                       onDelete={() => handleDeleteMCP(mcp.id)}

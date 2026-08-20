@@ -47,6 +47,17 @@ Guardar por separado en **Encrypted secrets**:
 
 Bearer usa `token_secret`; una API key usa `header`, `prefix` y `api_key_secret`.
 
+### Cómo se resuelven los nombres de secretos
+
+El nombre en `token_secret`, `api_key_secret` o `client_secret` es una **referencia** que se resuelve en el momento de la llamada en dos pasos:
+
+1. **Los Encrypted secrets propios del servidor** — si el nombre está definido ahí, ese valor gana.
+2. **El vault de Secrets del playbook** — el mismo almacén que usan la herramienta `use_secret` y la pestaña Secrets, con coincidencia exacta de nombre.
+
+Así, una credencial solo necesita existir una vez: guardar `SEARCH_TOKEN` en la pestaña Secrets, configurar `"auth": {"type": "bearer", "token_secret": "SEARCH_TOKEN"}` en cualquier número de servidores, y todos lo resuelven desde el vault — el editor de servidores autocompleta los nombres del vault y muestra de dónde vendrá cada nombre referenciado. El almacén por servidor sigue siendo útil como override, o para una credencial que nunca deba ser accesible por nombre desde otros servidores.
+
+La resolución desde el vault es un uso de tipo proxy: el valor descifrado se inyecta del lado del servidor en la petición saliente y nunca se devuelve al llamante, por lo que funciona con independencia del flag de reveal del secreto — exactamente igual que `use_secret`. Si el secreto del vault declara `allowed_hosts`, esa lista se aplica a cada destino de la configuración de transporte del servidor (`url`, `spec_url`, `base_url`); un secreto fijado a otros hosts queda sin resolver y la llamada falla con `MISSING_SECRET` indicando su nombre, en lugar de enviar la credencial a un destino que su propietario excluyó.
+
 ## Configuración OpenAPI
 
 ```json

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import {
@@ -22,9 +22,12 @@ import {
 import type { MCPServer } from "@/lib/supabase/types";
 import type { StorageAdapter } from "@/lib/storage";
 import { createBrowserClient } from "@/lib/supabase/client";
+import { referencedSecretNames } from "@/lib/mcp/secret-references";
 
 interface McpServerEditorProps {
   mcpServer: MCPServer;
+  /** Enables vault secret name lookup for reference autocomplete. */
+  playbookGuid?: string;
   storage: StorageAdapter;
   onUpdate: (mcpServer: MCPServer) => void;
   onDelete: () => void;
@@ -46,7 +49,7 @@ interface Resource {
 
 const DEFAULT_TRANSPORT_CONFIG = { url: "", timeout_ms: 15000 };
 
-export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOnly = false }: McpServerEditorProps) {
+export function McpServerEditor({ mcpServer, playbookGuid, storage, onUpdate, onDelete, readOnly = false }: McpServerEditorProps) {
   const [expanded, setExpanded] = useState(false);
   const isReadOnly = readOnly;
   const [name, setName] = useState(mcpServer.name);
@@ -68,6 +71,8 @@ export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOn
   const [secretsJson, setSecretsJson] = useState("{}");
   const [secretsChanged, setSecretsChanged] = useState(false);
   const [hasStoredSecrets, setHasStoredSecrets] = useState(false);
+  const [vaultSecretNames, setVaultSecretNames] = useState<string[]>([]);
+  const [vaultReferenceName, setVaultReferenceName] = useState("");
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
@@ -121,6 +126,60 @@ export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOn
     };
     void loadSecretStatus();
   }, [mcpServer.id, readOnly]);
+
+  // Names in the playbook's Secrets vault, so auth references can be picked by
+  // name instead of retyped. Metadata only; values never reach the browser
+  // here. Editors without vault access simply get no suggestions.
+  useEffect(() => {
+    if (!playbookGuid) return;
+    const loadVaultNames = async () => {
+      const supabase = createBrowserClient();
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) return;
+      const response = await fetch(`/api/playbooks/${playbookGuid}/secrets`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) return;
+      const rows = await response.json() as Array<{ name?: string }>;
+      if (Array.isArray(rows)) {
+        setVaultSecretNames(rows.map((row) => row.name).filter((name): name is string => !!name));
+      }
+    };
+    void loadVaultNames();
+  }, [playbookGuid]);
+
+  const referencedNames = useMemo(() => {
+    try {
+      return referencedSecretNames(JSON.parse(transportConfigJson));
+    } catch {
+      return [];
+    }
+  }, [transportConfigJson]);
+
+  const insertVaultReference = useCallback(() => {
+    const name = vaultReferenceName.trim();
+    if (!name) return;
+    try {
+      const config = JSON.parse(transportConfigJson) as Record<string, unknown>;
+      const auth = (config.auth && typeof config.auth === "object" && !Array.isArray(config.auth)
+        ? config.auth
+        : {}) as Record<string, unknown>;
+      if (auth.type === "api_key") {
+        auth.api_key_secret = name;
+      } else if (auth.type === "oauth2_client_credentials") {
+        auth.client_secret = name;
+      } else {
+        auth.type = "bearer";
+        auth.token_secret = name;
+      }
+      config.auth = auth;
+      setTransportConfigJson(JSON.stringify(config, null, 2));
+      setVaultReferenceName("");
+    } catch {
+      // Invalid JSON in the textarea is already flagged by jsonError.
+    }
+  }, [vaultReferenceName, transportConfigJson]);
 
   const handleSave = useCallback(async () => {
     if (jsonError) return;
@@ -446,6 +505,50 @@ export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOn
                       Stdio connections use <code>command</code>, <code>args</code>, and optional <code>env</code>. OpenAPI connections may use <code>spec_url</code> and <code>base_url</code>. Private and local network targets are blocked.
                     </p>
                   </div>
+                  {(referencedNames.length > 0 || vaultSecretNames.length > 0) && (
+                    <div className="rounded-lg border border-slate-700/50 bg-slate-900/40 p-3">
+                      <p className="text-sm font-medium text-slate-400 mb-2">Secret references</p>
+                      {referencedNames.length > 0 && (
+                        <ul className="space-y-1 mb-2">
+                          {referencedNames.map((name) => (
+                            <li key={name} className="flex items-center gap-2 text-xs font-mono">
+                              <span className="text-slate-200">{name}</span>
+                              {vaultSecretNames.includes(name) ? (
+                                <span className="text-emerald-400">resolves from the Secrets vault</span>
+                              ) : (
+                                <span className="text-amber-400">not in the vault — provide it below or add it on the Secrets tab</span>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                      {!isReadOnly && vaultSecretNames.length > 0 && (
+                        <div className="flex items-center gap-2">
+                          <input
+                            list={`vault-secrets-${mcpServer.id}`}
+                            value={vaultReferenceName}
+                            onChange={(event) => setVaultReferenceName(event.target.value)}
+                            placeholder="Reference a vault secret by name..."
+                            className="flex-1 px-3 py-1.5 rounded-lg bg-slate-900/70 border border-slate-700/50 font-mono text-xs text-slate-200"
+                          />
+                          <datalist id={`vault-secrets-${mcpServer.id}`}>
+                            {vaultSecretNames.map((name) => <option key={name} value={name} />)}
+                          </datalist>
+                          <button
+                            type="button"
+                            onClick={insertVaultReference}
+                            disabled={!vaultReferenceName.trim()}
+                            className="px-3 py-1.5 rounded-lg text-xs bg-slate-700/60 text-slate-200 hover:bg-slate-600/60 disabled:opacity-40"
+                          >
+                            Insert reference
+                          </button>
+                        </div>
+                      )}
+                      <p className="mt-2 text-xs text-slate-500">
+                        Auth secrets resolve by name: this server&apos;s own encrypted secrets first, then the playbook&apos;s Secrets vault. Store a value once on the Secrets tab and reference it here — no need to paste it again.
+                      </p>
+                    </div>
+                  )}
                   {!isReadOnly && (
                     <div>
                       <label className="flex items-center gap-2 text-sm font-medium text-slate-400 mb-2">
@@ -465,7 +568,7 @@ export function McpServerEditor({ mcpServer, storage, onUpdate, onDelete, readOn
                         placeholder={'{"token":"..."} or {"client_secret":"..."}'}
                       />
                       <p className="mt-2 text-xs text-slate-500">
-                        Values are encrypted with AES-GCM and are never returned by the API. Enter only values that should replace the stored secret set.
+                        Values are encrypted with AES-GCM and are never returned by the API. Enter only values that should replace the stored secret set. Anything defined here overrides a vault secret of the same name; names not defined here fall back to the Secrets vault.
                       </p>
                     </div>
                   )}
