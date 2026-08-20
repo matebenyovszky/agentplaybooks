@@ -44,7 +44,20 @@ export function createApiApp(basePath?: string) {
       return null as unknown as string;
     },
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowHeaders: ["Content-Type", "Authorization", "MCP-Protocol-Version", "Mcp-Session-Id", "Last-Event-ID"],
+    // X-API-Key is the alternative credential carrier for clients that reserve
+    // Authorization for themselves; a browser client cannot send it unless the
+    // preflight says so. Mcp-Method and Mcp-Name are the modern era's mirrored
+    // request headers.
+    allowHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-API-Key",
+      "MCP-Protocol-Version",
+      "Mcp-Session-Id",
+      "Mcp-Method",
+      "Mcp-Name",
+      "Last-Event-ID",
+    ],
     credentials: true,
     maxAge: 86400,
   }));

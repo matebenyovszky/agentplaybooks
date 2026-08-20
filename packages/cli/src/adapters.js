@@ -558,3 +558,46 @@ export async function applyAdapters(actions, backupDirectory) {
 // Exported for reuse by remote pull, which compares fetched content against
 // local files using the same canonical comparison rules.
 export { canonicalJson };
+
+/**
+ * Plan one MCP server entry into a target's config file.
+ *
+ * `connect` writes a single server — the playbook's own hosted endpoint — rather
+ * than syncing an inventory, but it must land in the file the same way sync
+ * would: merged into whatever is already there, backed up before a rewrite, and
+ * refused rather than mangled when the target's format cannot hold the
+ * definition. So it reuses the same writers instead of growing a second
+ * implementation that drifts.
+ *
+ * Returns null when there is nothing to write, which the caller reports along
+ * with the conflicts it collected.
+ */
+export function planMcpServerAction({ root, target, name, definition, existingContent = null, conflicts = [] }) {
+  const adapter = TARGET_ADAPTERS[target];
+  if (!adapter?.mcpPath) {
+    conflicts.push(conflict(
+      target,
+      "mcp",
+      name,
+      adapter?.mcpUnsupported ?? `${target} cannot receive MCP servers from a config file.`,
+      [],
+    ));
+    return null;
+  }
+
+  const merged = adapter.format === "toml"
+    ? mergedTomlContent(existingContent, { [name]: definition }, target, conflicts, adapter.mcpPath)
+    : mergedJsonContent(existingContent, { [name]: definition }, target, conflicts, adapter.mcpPath);
+  if (merged.content === null || merged.added.length === 0) return null;
+
+  return {
+    kind: "mcp-config",
+    target,
+    name: adapter.mcpPath,
+    action: existingContent === null ? "create" : "merge",
+    path: adapter.mcpPath,
+    absolutePath: path.join(root, ...adapter.mcpPath.split("/")),
+    servers: merged.added,
+    content: merged.content,
+  };
+}

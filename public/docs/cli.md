@@ -223,10 +223,48 @@ version is preserved on the next sync. Literal credential values are never
 written into the manifest and never uploaded; `doctor` flags them and `push`
 refuses to run until they are replaced with references.
 
+## Connect: reach the playbook itself, not a copy of it
+
+`sync` and `pull` move a playbook's *contents* into the files your tools read.
+`connect` does the other direction: it points a tool at the playbook's own MCP
+endpoint, so memory, skills, and every federated tool arrive live through one
+connection.
+
+```bash
+agentplaybooks connect 011d8a7fa0ec4016 --target=claude --name=apbks-dev --apply
+```
+
+That writes the entry and nothing else:
+
+```json
+{
+  "mcpServers": {
+    "apbks-dev": {
+      "type": "http",
+      "url": "https://agentplaybooks.ai/api/mcp/011d8a7fa0ec4016",
+      "headers": { "X-API-Key": "${APBKS_KEY_APBKS_DEV}" }
+    }
+  }
+}
+```
+
+The key is never written — the config carries the reference, and the tool
+expands it at launch. Two details worth knowing, because both fail silently:
+
+- **Set the variable before starting the tool.** A variable added afterwards is
+  invisible to a process already running, and from the inside that is
+  indistinguishable from a rejected key: the connection establishes, no tools
+  appear, and refreshing fails.
+- **The credential goes in `X-API-Key` by default**, not `Authorization`. A
+  client may reserve `Authorization` for its own authentication handling and
+  drop what you put there without reporting anything. The endpoint accepts
+  either header; use `--key-header=Authorization` if you prefer it.
+
 ## Claude Code & Claude Cowork plugin
 
 The CLI package doubles as a Claude Code plugin with an `agentplaybooks`
-skill and `/agentplaybooks:doctor`, `:sync`, `:pull`, `:push` commands:
+skill and `/agentplaybooks:doctor`, `:sync`, `:pull`, `:push`, `:connect`
+commands:
 
 ```text
 /plugin marketplace add matebenyovszky/agentplaybooks

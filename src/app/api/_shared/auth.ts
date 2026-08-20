@@ -52,16 +52,41 @@ export async function requireAuth(request: Request): Promise<{ id: string } | nu
   return user || null;
 }
 
+/**
+ * The API key can arrive in either of two headers.
+ *
+ * `Authorization: Bearer apb_…` is the documented one. `X-API-Key` exists
+ * because a client may reserve `Authorization` for its own authentication
+ * handling, and then the operator has nowhere to put the key and no way to tell
+ * that is what happened: the connection establishes, every listing comes back
+ * empty, and refreshing it fails. A credential that never arrives looks exactly
+ * like a server with nothing to offer.
+ *
+ * A `Bearer ` prefix is accepted in `X-API-Key` too — anyone copying the
+ * documented value brings the scheme along with it, and rejecting that would
+ * reproduce the same silent emptiness.
+ */
+export function presentedApiKey(request: Request): string | null {
+  const authHeader = request.headers.get("Authorization");
+  if (authHeader?.startsWith("Bearer apb_")) {
+    return authHeader.slice("Bearer ".length).trim();
+  }
+
+  const raw = request.headers.get("X-API-Key")?.trim();
+  if (!raw) return null;
+  const value = raw.startsWith("Bearer ") ? raw.slice("Bearer ".length).trim() : raw;
+  return value.startsWith("apb_") ? value : null;
+}
+
 export async function validateApiKey(
   request: Request,
   requiredPermission: string
 ): Promise<ApiKeyWithPlaybook | null> {
-  const authHeader = request.headers.get("Authorization");
-  if (!authHeader?.startsWith("Bearer apb_")) {
+  const apiKey = presentedApiKey(request);
+  if (!apiKey) {
     return null;
   }
 
-  const apiKey = authHeader.replace("Bearer ", "");
   const keyHash = await hashApiKey(apiKey);
   const supabase = getServiceSupabase();
   const { data: apiKeyData, error } = await supabase
@@ -107,12 +132,11 @@ export async function validateUserApiKey(
   request: Request,
   requiredPermission?: string
 ): Promise<UserApiKeyData | null> {
-  const authHeader = request.headers.get("Authorization");
-  if (!authHeader?.startsWith("Bearer apb_")) {
+  const apiKey = presentedApiKey(request);
+  if (!apiKey) {
     return null;
   }
 
-  const apiKey = authHeader.replace("Bearer ", "");
   const keyHash = await hashApiKey(apiKey);
   const supabase = getServiceSupabase();
   const { data: userKeyData, error } = await supabase

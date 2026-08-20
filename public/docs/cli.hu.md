@@ -174,10 +174,49 @@ Literál hitelesítőadatok sosem íródnak a manifestbe és sosem kerülnek fel
 `doctor` megjelöli őket, a `push` pedig megtagadja a futást, amíg nem cserélted
 le őket hivatkozásra.
 
+## Connect: magát a playbookot érd el, ne egy másolatát
+
+A `sync` és a `pull` a playbook *tartalmát* mozgatja azokba a fájlokba, amiket
+az eszközeid olvasnak. A `connect` az ellenkező irány: az eszközt a playbook
+saját MCP-végpontjára állítja, így a memória, a skillek és minden föderált eszköz
+élőben, egyetlen kapcsolaton érkezik.
+
+```bash
+agentplaybooks connect 011d8a7fa0ec4016 --target=claude --name=apbks-dev --apply
+```
+
+Ez pontosan ennyit ír ki:
+
+```json
+{
+  "mcpServers": {
+    "apbks-dev": {
+      "type": "http",
+      "url": "https://agentplaybooks.ai/api/mcp/011d8a7fa0ec4016",
+      "headers": { "X-API-Key": "${APBKS_KEY_APBKS_DEV}" }
+    }
+  }
+}
+```
+
+A kulcs soha nem kerül a fájlba — a konfiguráció csak a hivatkozást tartalmazza,
+amit az eszköz indításkor bont fel. Két részlet, amit érdemes tudni, mert
+mindkettő némán hibázik:
+
+- **A változót az eszköz indítása előtt állítsd be.** Egy utólag hozzáadott
+  változót a már futó folyamat nem lát, és ez belülről megkülönböztethetetlen az
+  elutasított kulcstól: a kapcsolat létrejön, eszköz egy sem jelenik meg, a
+  frissítés pedig elhasal.
+- **A hitelesítőadat alapból az `X-API-Key` fejlécbe kerül**, nem az
+  `Authorization`-be. Egy kliens fenntarthatja magának az `Authorization`-t a
+  saját hitelesítéséhez, és jelzés nélkül eldobja, amit oda írtál. A végpont
+  mindkét fejlécet elfogadja; ha az `Authorization`-t szeretnéd, add meg a
+  `--key-header=Authorization` opciót.
+
 ## Claude Code és Claude Cowork plugin
 
 A CLI-csomag egyben Claude Code plugin is: `agentplaybooks` skillel és
-`/agentplaybooks:doctor`, `:sync`, `:pull`, `:push` parancsokkal:
+`/agentplaybooks:doctor`, `:sync`, `:pull`, `:push`, `:connect` parancsokkal:
 
 ```text
 /plugin marketplace add matebenyovszky/agentplaybooks

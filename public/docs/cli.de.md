@@ -173,11 +173,50 @@ Sync erhalten. Literale Zugangsdaten gelangen nie in das Manifest und werden
 nie hochgeladen; `doctor` meldet sie, und `push` verweigert die Ausführung,
 bis sie durch Referenzen ersetzt sind.
 
+## Connect: das Playbook selbst erreichen, nicht eine Kopie davon
+
+`sync` und `pull` bewegen den *Inhalt* eines Playbooks in die Dateien, die
+Ihre Tools lesen. `connect` geht die andere Richtung: Es richtet das Tool auf
+den eigenen MCP-Endpunkt des Playbooks, sodass Memory, Skills und jedes
+föderierte Tool live über eine einzige Verbindung ankommen.
+
+```bash
+agentplaybooks connect 011d8a7fa0ec4016 --target=claude --name=apbks-dev --apply
+```
+
+Geschrieben wird genau das:
+
+```json
+{
+  "mcpServers": {
+    "apbks-dev": {
+      "type": "http",
+      "url": "https://agentplaybooks.ai/api/mcp/011d8a7fa0ec4016",
+      "headers": { "X-API-Key": "${APBKS_KEY_APBKS_DEV}" }
+    }
+  }
+}
+```
+
+Der Schlüssel landet nie in der Datei — die Konfiguration enthält nur die
+Referenz, die das Tool beim Start auflöst. Zwei Details, die beide stumm
+scheitern:
+
+- **Setzen Sie die Variable, bevor das Tool startet.** Eine nachträglich
+  hinzugefügte Variable sieht ein laufender Prozess nicht, und von innen ist das
+  von einem abgelehnten Schlüssel nicht zu unterscheiden: Die Verbindung steht,
+  kein Tool erscheint, das Aktualisieren schlägt fehl.
+- **Die Zugangsdaten gehen standardmäßig in `X-API-Key`**, nicht in
+  `Authorization`. Ein Client kann `Authorization` für seine eigene
+  Authentifizierung beanspruchen und ohne Meldung verwerfen, was dort steht. Der
+  Endpunkt akzeptiert beide Header; mit `--key-header=Authorization` bleibt es
+  bei `Authorization`.
+
 ## Claude-Code- & Claude-Cowork-Plugin
 
 Das CLI-Paket ist zugleich ein Claude-Code-Plugin mit dem
 `agentplaybooks`-Skill und den Befehlen `/agentplaybooks:doctor`, `:sync`,
-`:pull`, `:push`:
+`:pull`, `:push`, `:connect`:
 
 ```text
 /plugin marketplace add matebenyovszky/agentplaybooks

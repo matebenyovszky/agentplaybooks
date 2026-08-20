@@ -123,7 +123,10 @@ export function privateAccessRefusal(request: Request): {
   message: string;
   headers: Record<string, string>;
 } {
-  const presented = Boolean(request.headers.get("Authorization"));
+  // Either header can carry the key, so either one means "a credential was
+  // presented and rejected" — answering 401 to a caller that did send one
+  // invites it to retry the same key forever.
+  const presented = Boolean(request.headers.get("Authorization") || request.headers.get("X-API-Key"));
   return presented
     ? {
       status: 403,
