@@ -147,6 +147,25 @@ Line endings are normalized (CRLF is treated as LF) everywhere digests and
 content comparisons happen, so a Windows checkout and a macOS checkout of the
 same skill are recognized as identical instead of drifting.
 
+## Which playbook, and OAuth providers
+
+The working directory decides which playbook a command works on:
+`pull --apply` and `push` write `.agentplaybooks/remote.json`, and everything
+that talks to a playbook reads the guid from there. `--playbook=<guid>`
+overrides it. The credential is separate — `AGENTPLAYBOOKS_PLAYBOOK_KEY`, or the
+playbook-scoped key `secrets login` stored for that server and guid.
+
+```bash
+apb secrets push GOOGLE_CLIENT_SECRET
+apb auth gmail
+```
+
+`auth` obtains the first refresh token for a connection that needs consent. It
+runs authorization code + PKCE against a loopback redirect and hands the code to
+the server, which completes the exchange and stores the refresh token. The
+`client_id` comes from the MCP server's `transport_config.auth.client_id` — it is
+public, not a vault secret — and `--client-id=…` overrides it.
+
 ## Claude Code / Claude Cowork plugin
 
 This package doubles as a Claude Code plugin: it ships an `agentplaybooks`

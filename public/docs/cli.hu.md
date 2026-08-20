@@ -122,6 +122,28 @@ konfigot ír a helyükre. Secret-értékek egyik irányban sem mozdulnak — lá
 lentebb. Self-hosted telepítéshez használd a `--url=<base>` kapcsolót vagy az
 `AGENTPLAYBOOKS_URL` változót.
 
+## Melyik playbookon dolgozik egy parancs
+
+A munkakönyvtár dönti el. A `pull --apply` és a `push` létrehozza a
+`.agentplaybooks/remote.json`-t a projekt gyökerében, és minden playbookkal
+beszélő parancs onnan olvassa a guid-ot:
+
+```bash
+apb secrets status                     # az ehhez a könyvtárhoz linkelt playbook
+apb secrets status ../masik-projekt    # az ahhoz a könyvtárhoz linkelt playbook
+apb secrets status --playbook=<guid>   # a linket figyelmen kívül hagyva
+```
+
+A hitelesítőadat külön oldódik fel, és soha nem a link fájlból: az
+`AGENTPLAYBOOKS_PLAYBOOK_KEY`, ha be van állítva, egyébként a `secrets login`
+által az adott szerverhez és guid-hoz elmentett, playbookra szűkített kulcs. Egy
+gépen több playbook kulcsa is ott lehet anélkül, hogy felcserélhetők lennének, és
+ha olyan playbookra van link, amihez nincs kulcs, a hiba megnevezi a futtatandó
+parancsot.
+
+Az író parancsok előbb megnevezik a célt. Egy könyvtárral arrébb lenni könnyű
+hiba, egy rossz széfbe került hitelesítőadatot pedig fárasztó visszacsinálni.
+
 ## Secretek: egyetlen plaintext érték sem kerül a lemezre
 
 ```bash
@@ -152,6 +174,28 @@ apb secrets run -- npm run deploy
 Ha az ügynököd MCP-szerverként beszél a hosztolt playbookkal, mindebből semmire
 nincs szükséged: a `use_secret` eszközzel a platform szerveroldalon injektálja a
 hitelesítőadatot, így az érték az ügynök kontextusába sem kerül be.
+
+### OAuth szolgáltató bekötése
+
+Néhány kapcsolatot nem beilleszteni kell, hanem engedélyezni: refresh token kell
+hozzá, és az elsőt csak böngésző tudja megszerezni. Ezt teszi meg egyszer az
+`auth`.
+
+```bash
+apb secrets push GOOGLE_CLIENT_SECRET   # a csere ehhez kell
+apb auth gmail
+```
+
+Authorization code + PKCE folyamatot futtat loopback átirányítással, majd a
+kódot átadja a szervernek, ami elvégzi a cserét és a refresh tokent egyenesen a
+széfbe írja. Sem a client secret, sem a refresh token nem érinti ezt a gépet.
+
+A `client_id` nem titok — benne van az authorize URL-ben, amit a böngésződ
+megnyit —, ezért literál értékként az MCP szerver
+`transport_config.auth.client_id` mezőjében van, ahonnan a federation is
+olvassa. Az `auth` ugyanezt a mezőt olvassa, tehát nem kell megadni; a
+`--client-id=…` és az `AGENTPLAYBOOKS_OAUTH_CLIENT_ID` felülírja. Részletek:
+[Federált MCP és OpenAPI eszközök](./mcp-federation.md).
 
 ## A playbook a szerződést hordozza, nem a hitelesítőadatot
 

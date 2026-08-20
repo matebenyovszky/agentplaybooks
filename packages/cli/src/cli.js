@@ -276,7 +276,22 @@ async function resolveVaultAccess(url, root, flags) {
   if (!playbookKey) {
     throw new Error(`No playbook key for ${guid}. Run 'agentplaybooks secrets login ${guid}', or set AGENTPLAYBOOKS_PLAYBOOK_KEY.`);
   }
-  return { guid, playbookKey };
+  // The name only exists when the guid came from the link file; --playbook names
+  // a playbook this directory knows nothing about.
+  const name = guid === link?.guid ? (link?.name ?? null) : null;
+  return { guid, playbookKey, name };
+}
+
+/**
+ * Which playbook a command is about to write to, said out loud.
+ *
+ * The playbook is decided by the working directory, which is convenient until
+ * it is wrong: run this one directory over and the credential lands in a
+ * different vault. Naming the target before acting makes that visible while it
+ * can still be stopped.
+ */
+function describeTarget({ guid, name }) {
+  return name ? `${name} (${guid})` : guid;
 }
 
 async function runSecrets(url, flags, positional, rest) {
@@ -657,7 +672,12 @@ export async function run(args) {
 
     const template = await fetchTemplate(url, provider);
     const plan = planConsent(template);
-    const { guid, playbookKey } = await resolveVaultAccess(url, root, flags);
+    const vault = await resolveVaultAccess(url, root, flags);
+    const { guid, playbookKey } = vault;
+
+    // Stated before anything is obtained or stored: this command ends in a
+    // credential being written, and the directory chose the destination.
+    console.log(`Connecting ${template.name} to ${describeTarget(vault)}.`);
 
     // What the playbook already knows: the client id from its MCP server
     // config, and whether the client secret is in the vault. Both are worth
