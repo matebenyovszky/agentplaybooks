@@ -6,6 +6,7 @@ import { applySync, planGlobalSync, planSync, printSyncPlan } from "./sync.js";
 import {
   applyPull,
   applyPush,
+  decidePush,
   listPlaybooks,
   planGlobalPush,
   planPull,
@@ -48,8 +49,8 @@ Usage:
   agentplaybooks logout [--url=<base>]
   agentplaybooks playbooks [--url=<base>] [--json]
   agentplaybooks pull <id|guid> [path] [--apply] [--json] [--url=<base>]
-  agentplaybooks push [path] [--apply] [--json] [--url=<base>]
-  agentplaybooks push --global [--apply] [--json] [--include-vendored]
+  agentplaybooks push [path] [--apply|--yes] [--json] [--url=<base>]
+  agentplaybooks push --global [--apply|--yes] [--json] [--include-vendored]
   agentplaybooks secrets login <guid> [--url=<base>]
   agentplaybooks secrets status [path] [--json] [--url=<base>]
   agentplaybooks secrets push <NAME> [--from-env=<VAR>] [--yes] [--url=<base>]
@@ -93,7 +94,9 @@ Commands:
 
 Safety:
   doctor is read-only and local-only.
-  sync, pull, and push are plan-only unless --apply is explicitly supplied.
+  sync and pull are plan-only unless --apply is explicitly supplied. push shows
+  its plan and then asks; pass --yes (or --apply) to skip the question, which is
+  what a script wants.
   Conflicting definitions are reported and skipped, never overwritten.
   Secret values are never written to disk, never printed, and never passed as
   command-line arguments. 'secrets push' reads the value from stdin or from a
@@ -173,6 +176,29 @@ function printRemotePlan(kind, plan) {
   for (const item of plan.conflicts) {
     console.log(`  [conflict] ${item.kind} '${item.name}': ${item.reason}`);
   }
+}
+
+/**
+ * Which files on this machine the plan drew from, named explicitly. "push" and
+ * "push --global" read different places, and the difference matters: one is a
+ * project, the other is everything the developer has.
+ */
+function printPushScope(plan, root) {
+  if (plan.scope === "global") {
+    console.log(`Scope: user — every skill this machine has, found under ${root}.`);
+    console.log("MCP configuration is not uploaded: a home-scoped MCP config is where auth headers live.");
+    return;
+  }
+  console.log(`Scope: project — ${root}.`);
+}
+
+/**
+ * Ask before uploading. The count goes in the question because that is the part
+ * someone skims, and a pipe has nobody to answer, so it says what to pass.
+ */
+async function confirmPush(plan) {
+  const target = plan.remote ? `playbook '${plan.remote.name}'` : "a new remote playbook";
+  return confirm(`Upload ${plan.actions.length} item(s) to ${target}?`);
 }
 
 const EXPANSION_NOTE = {
@@ -541,27 +567,46 @@ export async function run(args) {
       : await planPush(root, { url, apiKey });
     if (flags.has("--json")) {
       console.log(JSON.stringify({
+        scope: plan.scope,
         remote: plan.remote,
         actions: plan.actions,
         conflicts: plan.conflicts,
       }, null, 2));
     } else {
-      if (plan.scope === "global") {
-        console.log("Scope: this machine's own skills. MCP configuration is not uploaded — a home-scoped MCP config is where auth headers live.");
-      }
+      printPushScope(plan, root);
       console.log(plan.remote
         ? `Push plan for linked playbook '${plan.remote.name}' (${plan.remote.guid}):`
         : "Push plan (a new remote playbook will be created):");
       printRemotePlan("push", plan);
       console.log("Remote skills that no longer exist locally are left untouched.");
     }
-    if (flags.has("--apply")) {
-      const result = await applyPush(root, plan, { apiKey });
-      if (!flags.has("--json")) {
-        console.log(`Pushed to playbook '${result.name}' (${result.guid}).`);
+
+    // An upload leaves this machine, so it is confirmed rather than assumed.
+    // decidePush holds the rules; this branch only carries them out.
+    const decision = decidePush({
+      apply: flags.has("--apply"),
+      yes: flags.has("--yes"),
+      json: flags.has("--json"),
+      interactive: Boolean(process.stdin.isTTY),
+      actionCount: plan.actions.length,
+    });
+    let go = decision.upload;
+    if (decision.reason === "ask") {
+      go = await confirmPush(plan);
+    } else if (!go && !flags.has("--json")) {
+      console.log(decision.reason === "nothing-to-do"
+        ? "Nothing to upload."
+        : `Nothing has been uploaded. Pass --yes to push ${plan.actions.length} item(s).`);
+    }
+    if (!go) {
+      if (decision.reason === "ask" && !flags.has("--json")) {
+        console.log("Nothing has been uploaded.");
       }
-    } else if (!flags.has("--json")) {
-      console.log("Nothing has been uploaded. Run again with --apply to push.");
+      return;
+    }
+    const result = await applyPush(root, plan, { apiKey });
+    if (!flags.has("--json")) {
+      console.log(`Pushed to playbook '${result.name}' (${result.guid}).`);
     }
     return;
   }

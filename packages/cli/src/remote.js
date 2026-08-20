@@ -682,3 +682,30 @@ export async function applyPush(root, plan, { apiKey, fetchImpl } = {}) {
   await writeLink(root, { url, playbookId, guid, name, lastSyncedAt: new Date().toISOString() });
   return { playbookId, guid, name };
 }
+
+/**
+ * Whether a push should upload, given how it was invoked.
+ *
+ * Pushing leaves this machine, so consent is required rather than assumed. The
+ * shapes consent can take, and what each means:
+ *
+ *   --apply   the existing non-interactive form; kept working unchanged
+ *   --yes     the same intent, spelled the way the rest of the CLI spells it
+ *   a prompt  the interactive default, so the common case stops needing a
+ *             second invocation just to say "yes, that plan"
+ *
+ * `--json` never prompts: its caller is a program reading stdout, and a question
+ * printed into that stream is noise the program cannot answer. Neither does a
+ * non-TTY stdin — there is nobody there — so it reports what to pass instead of
+ * silently doing nothing or, worse, silently uploading.
+ *
+ * An empty plan short-circuits: asking whether to upload nothing wastes a
+ * decision on a non-event.
+ */
+export function decidePush({ apply, yes, json, interactive, actionCount }) {
+  if (apply || yes) return { upload: true, reason: "explicit" };
+  if (actionCount === 0) return { upload: false, reason: "nothing-to-do" };
+  if (json) return { upload: false, reason: "needs-explicit-flag" };
+  if (!interactive) return { upload: false, reason: "needs-explicit-flag" };
+  return { upload: false, reason: "ask" };
+}

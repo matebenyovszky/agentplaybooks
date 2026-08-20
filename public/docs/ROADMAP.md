@@ -87,17 +87,16 @@ This document outlines the development roadmap for AgentPlaybooks — the open s
 
 - [x] **One credential, one store** - Federation resolves from the vault
   - `transport_config.auth.token_secret` (and `api_key_secret`, `client_secret`)
-    now resolve in two steps: the per-server payload first, then the playbook
-    vault by exact name — store a credential once, reference it everywhere.
-    The server editor autocompletes vault names and shows the resolution.
+    resolve against the playbook vault by exact name — store a credential once,
+    reference it everywhere. The server editor autocompletes vault names and
+    shows where each reference resolves from.
   - Vault use by federation is proxy-style (injected server-side, never
     returned), so the reveal flag is not bypassed; a secret's `allowed_hosts`,
     when set, is enforced against the server's destinations
-  - `mcp_server_secrets` was first raised to the vault's crypto (HKDF key per
-    server, ciphertext bound to its server id, `v2:` prefix, previous format
-    still readable)
-  - Remaining (medium term): retire the per-server store's UI as the primary
-    path once vault references cover real usage, keeping it as an override
+  - `mcp_server_secrets` is gone. It was first raised to the vault's crypto, then
+    removed outright: a second store meant the credentials most worth stealing
+    sat in the weaker box, without the rotation, expiry, usage accounting, and
+    audit trail the vault already had.
 
 ### Discoverability: SEO & AI Search 🚧
 

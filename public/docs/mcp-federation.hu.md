@@ -39,22 +39,15 @@ Az **MCP Servers → Connection** részen:
 }
 ```
 
-Az **Encrypted secrets** mezőbe külön kerüljön:
-
-```json
-{ "client_secret": "titkos-ertek" }
-```
+A `client_secret` itt is **titoknév**, nem érték: magát az értéket a playbook **Secrets** fülén tárold ugyanezen a néven.
 
 Bearer hitelesítésnél `token_secret`, API-kulcsnál `header`, `prefix` és `api_key_secret` használható.
 
 ### Hogyan oldódnak fel a titoknevek
 
-A `token_secret`, `api_key_secret` vagy `client_secret` mezőben megadott név **hivatkozás**, amely híváskor két lépésben oldódik fel:
+A `token_secret`, `api_key_secret` vagy `client_secret` mezőben megadott név **hivatkozás**, nem érték. Híváskor pontos névegyezéssel a playbook Secrets vaultjából oldódik fel — ugyanabból a tárolóból, amit a `use_secret` eszköz és a Secrets fül is használ. Máshol nem keresi: szerverenkénti tároló egykor létezett, de megszüntettük, mert a legértékesebb hitelesítő adatokat a vaultnál gyengébb titkosítás alatt tartotta, rotáció, lejárat és audit nélkül.
 
-1. **A szerver saját Encrypted secrets tárolója** — ha a név itt van definiálva, ez az érték nyer.
-2. **A playbook Secrets vaultja** — ugyanaz a tároló, amit a `use_secret` eszköz és a Secrets fül is használ, pontos névegyezés alapján.
-
-Egy hitelesítő adatnak így elég egyszer léteznie. Vedd fel a `SEARCH_TOKEN`-t a Secrets fülön, állítsd be a `"auth": {"type": "bearer", "token_secret": "SEARCH_TOKEN"}` konfigurációt akárhány szerveren, és mindegyik a vaultból oldja fel — a szerverszerkesztő automatikusan kiegészíti a vaultbeli neveket, és megmutatja, honnan fog jönni minden hivatkozott név. A szerverenkénti tároló továbbra is hasznos felülbírálásként, vagy olyan hitelesítő adathoz, amelyet más szerverek név szerint sose érhessenek el.
+Egy hitelesítő adatnak így elég egyszer léteznie. Vedd fel a `SEARCH_TOKEN`-t a Secrets fülön, állítsd be a `"auth": {"type": "bearer", "token_secret": "SEARCH_TOKEN"}` konfigurációt akárhány szerveren, és mindegyik a vaultból oldja fel — a szerverszerkesztő automatikusan kiegészíti a vaultbeli neveket, és megmutatja, honnan fog jönni minden hivatkozott név.
 
 A vaultból való feloldás proxy-jellegű használat: a visszafejtett érték szerveroldalon kerül a kimenő kérésbe, és soha nem jut vissza a hívóhoz, így a titok reveal jelzőjétől függetlenül működik — pontosan úgy, mint a `use_secret`. Ha a vaultbeli titok `allowed_hosts` listát deklarál, az a szerver transport-konfigurációjának minden célcímére érvényesül (`url`, `spec_url`, `base_url`); a máshová rögzített titok feloldatlan marad, és a hívás a nevét megnevező `MISSING_SECRET` hibával bukik el, ahelyett hogy a hitelesítő adat olyan helyre menne, amelyet a tulajdonosa kizárt.
 
@@ -79,8 +72,6 @@ A `tools/list` a beépített playbookműveleteket és a federált eszközöket l
 ## Telepítés és biztonság
 
 A hitelesítő adatot a playbook **Secrets** fülén tárold, majd névvel hivatkozz rá a szerver transport configjából (`auth.token_secret`, `auth.api_key_secret`, `auth.client_secret`). Nincs külön MCP-titok tároló és nincs külön titkosítási kulcs: a széf tartja, AES-256-GCM-mel, tulajdonosonként származtatott kulccsal, és a plaintextet soha nem adja vissza. A titkon beállított `allowed_hosts` lista minden célhelyre érvényesül, amit a szerver configja elérhet.
-
-Az egyes szerverek hitelesítő adatait ebből az értékből HKDF-fel származtatott kulccsal titkosítjuk, amelyet a szerver azonosítója sóz meg, és az azonosító a titkosított adat hitelesített része. Így az egyik szerver kulcsanyagával nem lehet egy másik szerver adatát visszafejteni, egy másik szerver sorába átmásolt titkosított érték pedig egyáltalán nem fejthető vissza. A változás előtt írt sorok (nincs `v2:` prefixük) továbbra is olvashatók, és automatikusan frissülnek, amikor az adott szerver secretjeit legközelebb mented.
 
 Az `access: "public"` upstream költséget tehet nyilvánosan elérhetővé. Javasolt a `playbook_api_key`; ehhez a kliensnek `tools:call` vagy `full` jogosultságú playbookkulcs kell.
 

@@ -39,7 +39,7 @@ Unter **MCP Servers → Connection**:
 }
 ```
 
-Unter **Encrypted secrets** separat speichern:
+Auch `client_secret` ist ein **Secret-Name**, kein Wert: den Wert selbst unter demselben Namen im Secrets-Tab des Playbooks ablegen.
 
 ```json
 { "client_secret": "geheimer-wert" }
@@ -49,12 +49,9 @@ Bearer-Authentifizierung verwendet `token_secret`; API-Keys verwenden `header`, 
 
 ### Wie Secret-Namen aufgelöst werden
 
-Der Name in `token_secret`, `api_key_secret` oder `client_secret` ist eine **Referenz**, die zur Aufrufzeit in zwei Schritten aufgelöst wird:
+Der Name in `token_secret`, `api_key_secret` oder `client_secret` ist eine **Referenz**, kein Wert. Zur Aufrufzeit wird er über den exakten Namen gegen den **Secrets-Vault des Playbooks** aufgelöst — denselben Speicher, den auch das Tool `use_secret` und der Secrets-Tab verwenden. Eine zweite Stelle zum Nachsehen gibt es nicht: Ein Speicher pro Server existierte einmal und wurde entfernt, weil er die wertvollsten Zugangsdaten unter schwächerer Kryptografie als der Vault hielt, ohne Rotation, Ablauf und Audit-Trail.
 
-1. **Die eigenen Encrypted secrets des Servers** — ist der Name dort definiert, gewinnt dieser Wert.
-2. **Der Secrets-Vault des Playbooks** — derselbe Speicher, den auch das Tool `use_secret` und der Secrets-Tab verwenden, abgeglichen über den exakten Namen.
-
-Ein Zugangsdatum muss so nur einmal existieren: Speichern Sie `SEARCH_TOKEN` im Secrets-Tab, setzen Sie `"auth": {"type": "bearer", "token_secret": "SEARCH_TOKEN"}` auf beliebig vielen Servern, und alle lösen es aus dem Vault auf — der Server-Editor vervollständigt Vault-Namen automatisch und zeigt an, woher jeder referenzierte Name kommen wird. Der Speicher pro Server bleibt als Override nützlich, oder für Zugangsdaten, die von anderen Servern niemals per Name erreichbar sein sollen.
+Ein Zugangsdatum muss so nur einmal existieren: Speichern Sie `SEARCH_TOKEN` im Secrets-Tab, setzen Sie `"auth": {"type": "bearer", "token_secret": "SEARCH_TOKEN"}` auf beliebig vielen Servern, und alle lösen es aus dem Vault auf — der Server-Editor vervollständigt Vault-Namen automatisch und zeigt an, woher jeder referenzierte Name kommen wird.
 
 Die Auflösung aus dem Vault ist eine Proxy-Nutzung: Der entschlüsselte Wert wird serverseitig in die ausgehende Anfrage injiziert und nie an den Aufrufer zurückgegeben; sie funktioniert daher unabhängig vom Reveal-Flag des Secrets — genau wie `use_secret`. Deklariert das Vault-Secret `allowed_hosts`, wird diese Liste gegen jedes Ziel in der Transportkonfiguration des Servers durchgesetzt (`url`, `spec_url`, `base_url`); ein anderswo gepinntes Secret bleibt unaufgelöst, und der Aufruf schlägt mit `MISSING_SECRET` unter Nennung des Namens fehl, statt die Zugangsdaten an ein Ziel zu senden, das ihr Besitzer ausgeschlossen hat.
 
@@ -79,8 +76,6 @@ Jede OpenAPI-`operationId` wird zu einem namespaced MCP-Tool. Path-, Query- und 
 ## Bereitstellung und Sicherheit
 
 Speichere die Zugangsdaten im **Secrets**-Tab des Playbooks und verweise in der Transport-Konfiguration des Servers per Name darauf (`auth.token_secret`, `auth.api_key_secret`, `auth.client_secret`). Es gibt keinen separaten MCP-Secret-Speicher und keinen separaten Schlüssel: der Vault hält den Wert, verschlüsselt mit AES-256-GCM unter einem pro Eigentümer abgeleiteten Schlüssel, und gibt den Klartext nie zurück. Eine am Secret gesetzte `allowed_hosts`-Liste gilt für jedes Ziel, das die Server-Konfiguration erreichen kann.
-
-Die Zugangsdaten jedes Servers werden mit einem Schlüssel verschlüsselt, der über HKDF aus diesem Wert abgeleitet und mit der Server-ID gesalzen wird; die ID ist als Teil des Chiffrats authentifiziert. Das Schlüsselmaterial eines Servers kann daher die Daten eines anderen Servers nicht entschlüsseln, und ein in eine andere Serverzeile kopiertes Chiffrat lässt sich überhaupt nicht entschlüsseln. Vor dieser Änderung geschriebene Zeilen (ohne `v2:`-Präfix) bleiben lesbar und werden beim nächsten Speichern der Secrets des betreffenden Servers aktualisiert.
 
 `access: "public"` kann Upstream-Kosten öffentlich auslösbar machen. Empfohlen ist `playbook_api_key`; der Client benötigt dann `tools:call` oder `full`.
 

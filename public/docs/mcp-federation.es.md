@@ -39,7 +39,7 @@ En **MCP Servers → Connection**:
 }
 ```
 
-Guardar por separado en **Encrypted secrets**:
+`client_secret` también es un **nombre de secreto**, no un valor: guarda el valor con ese mismo nombre en la pestaña Secrets del playbook.
 
 ```json
 { "client_secret": "valor-secreto" }
@@ -49,12 +49,9 @@ Bearer usa `token_secret`; una API key usa `header`, `prefix` y `api_key_secret`
 
 ### Cómo se resuelven los nombres de secretos
 
-El nombre en `token_secret`, `api_key_secret` o `client_secret` es una **referencia** que se resuelve en el momento de la llamada en dos pasos:
+El nombre en `token_secret`, `api_key_secret` o `client_secret` es una **referencia**, no un valor. En el momento de la llamada se resuelve por coincidencia exacta de nombre contra el **vault de Secrets del playbook**, el mismo almacén que usan la herramienta `use_secret` y la pestaña Secrets. No hay un segundo lugar donde buscar: existió un almacén por servidor y se eliminó, porque guardaba las credenciales más valiosas con criptografía más débil que la del vault, sin rotación, caducidad ni registro de auditoría.
 
-1. **Los Encrypted secrets propios del servidor** — si el nombre está definido ahí, ese valor gana.
-2. **El vault de Secrets del playbook** — el mismo almacén que usan la herramienta `use_secret` y la pestaña Secrets, con coincidencia exacta de nombre.
-
-Así, una credencial solo necesita existir una vez: guardar `SEARCH_TOKEN` en la pestaña Secrets, configurar `"auth": {"type": "bearer", "token_secret": "SEARCH_TOKEN"}` en cualquier número de servidores, y todos lo resuelven desde el vault — el editor de servidores autocompleta los nombres del vault y muestra de dónde vendrá cada nombre referenciado. El almacén por servidor sigue siendo útil como override, o para una credencial que nunca deba ser accesible por nombre desde otros servidores.
+Así, una credencial solo necesita existir una vez: guardar `SEARCH_TOKEN` en la pestaña Secrets, configurar `"auth": {"type": "bearer", "token_secret": "SEARCH_TOKEN"}` en cualquier número de servidores, y todos lo resuelven desde el vault — el editor de servidores autocompleta los nombres del vault y muestra de dónde vendrá cada nombre referenciado.
 
 La resolución desde el vault es un uso de tipo proxy: el valor descifrado se inyecta del lado del servidor en la petición saliente y nunca se devuelve al llamante, por lo que funciona con independencia del flag de reveal del secreto — exactamente igual que `use_secret`. Si el secreto del vault declara `allowed_hosts`, esa lista se aplica a cada destino de la configuración de transporte del servidor (`url`, `spec_url`, `base_url`); un secreto fijado a otros hosts queda sin resolver y la llamada falla con `MISSING_SECRET` indicando su nombre, en lugar de enviar la credencial a un destino que su propietario excluyó.
 
@@ -79,8 +76,6 @@ Cada `operationId` de OpenAPI se convierte en una herramienta MCP con namespace.
 ## Despliegue y seguridad
 
 Guarda la credencial en la pestaña **Secrets** del playbook y referénciala por nombre desde la configuración de transporte del servidor (`auth.token_secret`, `auth.api_key_secret`, `auth.client_secret`). No hay un almacén de secretos de MCP aparte ni una clave de cifrado aparte: el vault lo guarda, cifrado con AES-256-GCM bajo una clave derivada por propietario, y nunca devuelve el texto en claro. La lista `allowed_hosts` de un secreto, si está definida, se aplica a todo destino que la configuración del servidor pueda alcanzar.
-
-Las credenciales de cada servidor se cifran con una clave derivada de ese valor mediante HKDF, usando el id del servidor como salt, y ese id se autentica como parte del texto cifrado. Por eso el material de clave de un servidor no puede descifrar la carga de otro, y una carga copiada a la fila de otro servidor no se descifra en absoluto. Las filas escritas antes de este cambio (sin el prefijo `v2:`) siguen siendo legibles y se actualizan la próxima vez que se guardan los secretos de ese servidor.
 
 `access: "public"` puede permitir que cualquiera genere costes upstream. Se recomienda `playbook_api_key`; el cliente necesita permiso `tools:call` o `full`.
 

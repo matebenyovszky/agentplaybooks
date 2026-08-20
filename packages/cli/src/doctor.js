@@ -68,6 +68,44 @@ export function publicReport(report) {
   };
 }
 
+/**
+ * What a push from here would and would not send, so `doctor` answers the
+ * question someone asks before running it: what leaves this machine?
+ *
+ * The exclusions are the interesting half. MCP *configuration* is never
+ * uploaded — a config carries auth headers, and a playbook can be shared with
+ * people the credential was not meant for — while the MCP server *definitions*
+ * inside a playbook are. That distinction is invisible from the inventory
+ * counts alone, which is exactly why it is stated.
+ */
+export function pushableInventory(report) {
+  const { instructions, skills, mcpConfigs } = report.inventory;
+  return {
+    uploads: [
+      { kind: "skill", count: skills.length },
+      { kind: "instruction file", count: instructions.length },
+    ].filter((item) => item.count > 0),
+    excluded: mcpConfigs.length > 0
+      ? [{ kind: "MCP client config", count: mcpConfigs.length, why: "carries auth headers" }]
+      : [],
+  };
+}
+
+function printPushable(report) {
+  const { uploads, excluded } = pushableInventory(report);
+  console.log("");
+  if (uploads.length === 0) {
+    console.log("A push from here would upload nothing.");
+  } else {
+    const parts = uploads.map((item) => `${item.count} ${item.kind}${item.count === 1 ? "" : "s"}`);
+    console.log(`A push from here would upload ${parts.join(" and ")}.`);
+  }
+  for (const item of excluded) {
+    console.log(`It would not upload ${item.count} ${item.kind}${item.count === 1 ? "" : "s"} — ${item.why}.`);
+  }
+  console.log("Run 'agentplaybooks push' to see the plan and be asked before anything is sent.");
+}
+
 export function printDoctor(report) {
   const counts = report.findings.reduce((result, item) => {
     result[item.severity] = (result[item.severity] ?? 0) + 1;
@@ -81,6 +119,7 @@ export function printDoctor(report) {
 
   if (report.findings.length === 0) {
     console.log("No findings.");
+    printPushable(report);
     return;
   }
 
@@ -91,4 +130,5 @@ export function printDoctor(report) {
     console.log(`  ${item.source}${lines}`);
     console.log(`  ${item.message}`);
   }
+  printPushable(report);
 }
