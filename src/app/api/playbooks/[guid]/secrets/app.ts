@@ -10,6 +10,7 @@ import {
   isPlanFailure,
   planExchange,
   readExchangeResponse,
+  resolveConfiguredClientId,
 } from "@/lib/oauth-exchange";
 import {
   destinationHostOf,
@@ -895,6 +896,57 @@ app.post("/oauth-exchange", async (c) => {
     rotated: Boolean(existing),
     provider: plan.template.name,
   }, existing ? 200 : 201);
+});
+
+/**
+ * GET /api/playbooks/:guid/secrets/oauth-exchange?template_id=gmail
+ *
+ * What the consent flow needs to know before it opens a browser: which client
+ * id this playbook is configured with, and whether the client secret is already
+ * in the vault.
+ *
+ * The client id is resolved here rather than asked of the caller because it
+ * already lives in the MCP server's `transport_config.auth.client_id`, which is
+ * where federation reads it at call time. Asking the CLI for it every run would
+ * make the same value exist in two places and drift.
+ *
+ * It returns the client id in plain text, which is correct: a client id is
+ * public — it travels in the authorize URL the user's browser opens. The client
+ * secret is only ever reported as present or absent.
+ */
+app.get("/oauth-exchange", async (c) => {
+  const guid = c.req.param("guid");
+  if (!guid) return c.json({ error: "Missing playbook GUID" }, 400);
+
+  const user = await getAuthenticatedUser(c.req.raw);
+  const apiKey = !user ? await validateApiKey(c.req.raw, "secrets:read") : null;
+
+  const playbook = await getPlaybookByGuid(guid, user?.id ?? null, apiKey?.playbooks.id ?? null);
+  if (!playbook) return c.json({ error: "Playbook not found" }, 404);
+
+  const isOwner = user && playbook.user_id === user.id;
+  const isApiKeyForPlaybook = apiKey && apiKey.playbooks.id === playbook.id;
+  if (!isOwner && !isApiKeyForPlaybook) return c.json({ error: "Forbidden" }, 403);
+
+  const plan = planExchange(c.req.query("template_id"));
+  if (isPlanFailure(plan)) return c.json({ error: plan.error }, plan.status as 400);
+
+  const supabase = getServiceSupabase();
+  const [{ data: servers }, { data: secretRows }] = await Promise.all([
+    supabase.from("mcp_servers").select("transport_config").eq("playbook_id", playbook.id),
+    supabase.from("secrets").select("name").eq("playbook_id", playbook.id),
+  ]);
+  const stored = new Set((secretRows ?? []).map((row) => row.name));
+
+  return c.json({
+    template_id: plan.template.id,
+    provider: plan.template.name,
+    client_id: resolveConfiguredClientId(servers, plan.template),
+    client_secret_secret: plan.clientSecretName,
+    client_secret_present: plan.clientSecretName ? stored.has(plan.clientSecretName) : null,
+    refresh_secret: plan.refreshSecretName,
+    refresh_secret_present: stored.has(plan.refreshSecretName),
+  });
 });
 
 export { app };

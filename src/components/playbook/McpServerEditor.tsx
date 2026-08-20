@@ -21,6 +21,7 @@ import type { MCPServer } from "@/lib/supabase/types";
 import type { StorageAdapter } from "@/lib/storage";
 import { createBrowserClient } from "@/lib/supabase/client";
 import { referencedSecretNames } from "@/lib/mcp/secret-references";
+import { withVaultReference } from "@/lib/mcp/vault-reference";
 
 interface McpServerEditorProps {
   mcpServer: MCPServer;
@@ -164,23 +165,11 @@ export function McpServerEditor({ mcpServer, playbookGuid, storage, onUpdate, on
   }, [transportConfigJson]);
 
   const insertVaultReference = useCallback(() => {
-    const name = vaultReferenceName.trim();
-    if (!name) return;
     try {
       const config = JSON.parse(transportConfigJson) as Record<string, unknown>;
-      const auth = (config.auth && typeof config.auth === "object" && !Array.isArray(config.auth)
-        ? config.auth
-        : {}) as Record<string, unknown>;
-      if (auth.type === "api_key") {
-        auth.api_key_secret = name;
-      } else if (auth.type === "oauth2_client_credentials") {
-        auth.client_secret = name;
-      } else {
-        auth.type = "bearer";
-        auth.token_secret = name;
-      }
-      config.auth = auth;
-      setTransportConfigJson(JSON.stringify(config, null, 2));
+      const updated = withVaultReference(config, vaultReferenceName);
+      if (updated === config) return;
+      setTransportConfigJson(JSON.stringify(updated, null, 2));
       setVaultReferenceName("");
     } catch {
       // Invalid JSON in the textarea is already flagged by jsonError.
