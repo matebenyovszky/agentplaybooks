@@ -10,6 +10,7 @@ import {
 import { POST as handleScopedPlaybookMcpPost } from "@/app/api/mcp/[guid]/route";
 import { createPlaybook, listAccessiblePlaybooks } from "@/lib/repositories/playbooks";
 import { ACCOUNT_TOOLS } from "@/app/api/_shared/account-tools";
+import { structuredToolResult } from "@/app/api/_shared/mcp-tool-hints";
 import {
   LATEST_PROTOCOL_VERSION,
   negotiateProtocolVersion,
@@ -194,11 +195,15 @@ app.post("/", async (c) => {
         }
 
         const result = await executeManagementTool(toolName, args, userKey);
+        // A declared outputSchema is honoured with matching structuredContent;
+        // see mcp-tool-hints.ts for why the two must never drift apart.
+        const structured = structuredToolResult(ACCOUNT_TOOLS, toolName, result);
         return c.json({
           jsonrpc: "2.0",
           id,
           result: {
-            content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+            content: [{ type: "text", text: JSON.stringify(structured ?? result, null, 2) }],
+            ...(structured ? { structuredContent: structured } : {}),
           },
         });
       } catch (error: unknown) {

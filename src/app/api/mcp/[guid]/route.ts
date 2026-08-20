@@ -44,6 +44,7 @@ import {
   type SecretAuditDraft,
 } from "@/app/api/_shared/audit";
 import { PLAYBOOK_TOOLS } from "@/app/api/_shared/playbook-tools";
+import { structuredToolResult } from "@/app/api/_shared/mcp-tool-hints";
 import {
   callFederatedTool,
   federatedCallPrefixes,
@@ -2661,11 +2662,16 @@ use_secret({
         }
 
         await flushSecretAudit(secretAuditContext(), secretAudit, "success");
+        // A tool that declares an outputSchema must deliver structuredContent
+        // to match — a strict client validates the result against the promise.
+        // The text block mirrors the same value, as the spec asks.
+        const structured = structuredToolResult(PLAYBOOK_TOOLS, toolName, result);
         return c.json({
           jsonrpc: "2.0",
           id,
           result: {
-            content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+            content: [{ type: "text", text: JSON.stringify(structured ?? result, null, 2) }],
+            ...(structured ? { structuredContent: structured } : {}),
           },
         });
       } catch (error: unknown) {
