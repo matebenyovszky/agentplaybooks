@@ -7,6 +7,7 @@ import {
   WRITE_CLOSED,
   canvasListOutputSchema,
   canvasTocOutputSchema,
+  findToolsOutputSchema,
   memoryContextOutputSchema,
   memoryRecordOutputSchema,
   memoryTreeOutputSchema,
@@ -16,6 +17,20 @@ import {
 } from "@/app/api/_shared/mcp-tool-hints";
 
 export const PLAYBOOK_TOOLS: McpTool[] = [
+  {
+    name: "find_tools",
+    description: "Search this playbook's complete tool catalog by keyword: the built-in playbook tools (memory, skills, canvas, workflow runs, secrets) and every connected server's federated tools (names like supabase__execute_sql or cloudflare__search). Matches against tool names and descriptions; a name match ranks above a description match. Returns up to `limit` (default 10, max 25) entries with name, description, and full input schema. Every returned tool can be called directly by name even when it is absent from tools/list — the advertised list is a view, not a boundary, unless this connection was pinned with ?toolset=. Read-only and free of side effects. Use this when the tool you need is not in your current list, before concluding a capability is missing.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "Keywords to match against tool names and descriptions, e.g. 'sql tables' or 'archive memory'" },
+        limit: { type: "number", description: "Maximum matches to return (default 10, max 25)" },
+      },
+      required: ["query"],
+    },
+    outputSchema: findToolsOutputSchema,
+    annotations: READ_CLOSED,
+  },
   {
     name: "list_skills",
     description: "List every skill currently attached to this playbook, returning id, name, description, content, licence, and priority ordered by priority descending. Read-only; it does not create or change skills. Use this to discover skill_id values before get_skill, update_skill, or delete_skill. Do not use list_skill_versions, which lists historical revisions of a single skill, or get_playbook, which only summarizes skills.",

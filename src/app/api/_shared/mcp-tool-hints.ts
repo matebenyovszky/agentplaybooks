@@ -218,6 +218,25 @@ export const playbookListOutputSchema: Record<string, unknown> = {
   required: ["playbooks"],
 };
 
+export const findToolsOutputSchema: Record<string, unknown> = {
+  type: "object",
+  properties: {
+    matches: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Callable tool name" },
+          description: { type: "string" },
+          inputSchema: { type: "object" },
+        },
+        required: ["name", "description", "inputSchema"],
+      },
+    },
+  },
+  required: ["matches"],
+};
+
 /**
  * The property a list tool's rows are wrapped under, both in the schema above
  * and in the `structuredContent` the call returns. One table, used by both,
@@ -228,6 +247,7 @@ export const STRUCTURED_RESULT_KEYS: Record<string, string> = {
   list_canvas: "documents",
   list_secrets: "secrets",
   list_playbooks: "playbooks",
+  find_tools: "matches",
 };
 
 /**

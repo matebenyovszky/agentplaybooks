@@ -69,11 +69,13 @@ describe("playbook operation projections", () => {
 describe("hosted MCP tool definition quality", () => {
   const manageTools = [...ACCOUNT_TOOLS, ...projectPlaybookToolsForUser()];
 
-  it("keeps the 47-tool control-plane surface", () => {
+  it("keeps the 48-tool control-plane surface", () => {
+    // 41st playbook tool: find_tools, the catalog search that lets a client on
+    // a narrowed toolset view discover what it can call.
     expect(ACCOUNT_TOOLS).toHaveLength(7);
-    expect(PLAYBOOK_TOOLS).toHaveLength(40);
-    expect(manageTools).toHaveLength(47);
-    expect(new Set(manageTools.map((tool) => tool.name)).size).toBe(47);
+    expect(PLAYBOOK_TOOLS).toHaveLength(41);
+    expect(manageTools).toHaveLength(48);
+    expect(new Set(manageTools.map((tool) => tool.name)).size).toBe(48);
   });
 
   it("declares MCP annotations on every manage tool", () => {

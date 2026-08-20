@@ -45,6 +45,7 @@ import {
 } from "@/app/api/_shared/audit";
 import { PLAYBOOK_TOOLS } from "@/app/api/_shared/playbook-tools";
 import { structuredToolResult } from "@/app/api/_shared/mcp-tool-hints";
+import { resolveToolset, searchToolCatalog } from "@/app/api/_shared/toolsets";
 import {
   callFederatedTool,
   federatedCallPrefixes,
@@ -437,6 +438,18 @@ app.post("/", async (c) => {
     }, 404);
   }
 
+  // The toolset view narrows what tools/list advertises; a pinned view also
+  // refuses calls outside itself. A typo must fail loudly rather than silently
+  // widen back to `full` — the caller pinned the view to narrow it.
+  const toolsetView = resolveToolset(c.req.query("toolset"));
+  if ("error" in toolsetView) {
+    return c.json({
+      jsonrpc: "2.0",
+      id,
+      error: { code: -32602, message: toolsetView.error },
+    }, 400);
+  }
+
   // Handle MCP methods
   switch (method) {
     case "server/discover":
@@ -477,7 +490,12 @@ app.post("/", async (c) => {
       return c.json({
         jsonrpc: "2.0",
         id,
-        result: { tools: [...PLAYBOOK_TOOLS, ...tools] },
+        result: {
+          tools: [
+            ...PLAYBOOK_TOOLS.filter((tool) => toolsetView.includes(tool.name, false)),
+            ...tools.filter((tool) => toolsetView.includes(tool.name, true)),
+          ],
+        },
       });
     }
 
@@ -918,6 +936,16 @@ use_secret({
         return c.json({ jsonrpc: "2.0", id, error: { code: -32602, message: "Federated tool not found" } });
       }
 
+      // A pinned view is policy, not ergonomics: calls outside it are refused
+      // even though the tool exists and the credential would allow it.
+      if (toolsetView.enforced && !toolsetView.includes(toolName, Boolean(federatedServer))) {
+        return c.json({
+          jsonrpc: "2.0",
+          id,
+          error: { code: -32602, message: `Tool "${toolName}" is not in this connection's pinned toolset "${toolsetView.name}".` },
+        });
+      }
+
       if (federatedServer) {
         const server = federatedServer;
         const access = (server.transport_config as { access?: string } | null)?.access;
@@ -974,6 +1002,27 @@ use_secret({
         let result: unknown;
 
         switch (toolName) {
+          case "find_tools": {
+            const query = String(args.query ?? "");
+            const limit = typeof args.limit === "number" ? args.limit : 10;
+            const { data: catalogRows } = await serviceSupabase
+              .from("mcp_servers")
+              .select("*")
+              .eq("playbook_id", playbook.id);
+            const federated = await federatedTools(
+              (catalogRows || []) as MCPServer[],
+              playbook.id,
+              c.req.header("cf-ray") || c.req.header("x-request-id"),
+            );
+            // The searchable catalog respects the view: a pinned connection
+            // must not discover tools it would then be refused.
+            result = searchToolCatalog([
+              ...PLAYBOOK_TOOLS.filter((tool) => toolsetView.includes(tool.name, false)),
+              ...federated.filter((tool) => toolsetView.includes(tool.name, true)),
+            ], query, limit);
+            break;
+          }
+
           case "list_skills": {
             const { data } = await serviceSupabase
               .from("skills")
