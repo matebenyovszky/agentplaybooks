@@ -107,12 +107,9 @@ For bearer auth use `{"type":"bearer","token_secret":"token"}` and store `{"toke
 
 ### How secret names resolve
 
-The name in `token_secret`, `api_key_secret`, or `client_secret` is a **reference**, resolved at call time in two steps:
+The name in `token_secret`, `api_key_secret`, or `client_secret` is a **reference**, not a value. At call time it is matched by exact name against the playbook's Secrets vault — the same store the `use_secret` tool and the Secrets tab use. There is no second place to look: a per-server store existed once and was removed, because it kept the credentials most worth stealing under weaker crypto than the vault, with no rotation, expiry, or audit trail.
 
-1. **This server's own Encrypted secrets** — when the name is defined there, that value wins.
-2. **The playbook's Secrets vault** — the same store the `use_secret` tool and the Secrets tab use, matched by exact name.
-
-So a credential only needs to exist once. Store `SEARCH_TOKEN` on the Secrets tab, set `"auth": {"type": "bearer", "token_secret": "SEARCH_TOKEN"}` on any number of servers, and they all resolve it from the vault — the server editor autocompletes vault names and shows where each referenced name will come from. The per-server store remains useful as an override, or for a credential that should never be reachable by name from other servers.
+A credential therefore only needs to exist once. Store `SEARCH_TOKEN` on the Secrets tab, set `"auth": {"type": "bearer", "token_secret": "SEARCH_TOKEN"}` on any number of servers, and they all resolve it from the vault — the server editor autocompletes vault names and shows where each referenced name will come from.
 
 Vault resolution is proxy-style use: the decrypted value is injected into the outbound request server-side and is never returned to the caller, so it works regardless of the secret's reveal flag — exactly like `use_secret`. If the vault secret declares `allowed_hosts`, that list is enforced against every destination in the server's transport config (`url`, `spec_url`, `base_url`); a pinned-elsewhere secret stays unresolved and the call fails with `MISSING_SECRET` naming it, rather than sending the credential somewhere its owner excluded.
 
@@ -155,8 +152,6 @@ The generated OpenAPI export exposes the same operation at `POST /api/mcp/PLAYBO
 ## Secrets and deployment
 
 Store the credential on the playbook's **Secrets** tab, then reference it by name from the server's transport config (`auth.token_secret`, `auth.api_key_secret`, `auth.client_secret`). There is no separate MCP secret store and no separate encryption key: the vault holds it, encrypted with AES-256-GCM under a per-owner derived key, and never returns the plaintext. A secret's `allowed_hosts` list, if set, is enforced against every destination the server config can reach.
-
-Each server's credentials are encrypted with a key derived from that value via HKDF, salted with the server's id, and the id is authenticated as part of the ciphertext. One server's key material therefore cannot decrypt another's payload, and a payload copied into a different server row will not decrypt at all. Rows written before this change (no `v2:` prefix) are still readable and are upgraded the next time that server's secrets are saved.
 
 `access: "public"` allows anyone who can access the public playbook to incur upstream calls. Omitted access and `playbook_api_key` both require a playbook key with `tools:call` or `full` permission.
 
