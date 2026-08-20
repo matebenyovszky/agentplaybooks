@@ -152,3 +152,41 @@ export function readExchangeResponse(status: number, payload: unknown): Exchange
   }
   return { ok: true, refreshToken };
 }
+
+/**
+ * Find the client id the playbook is already configured with.
+ *
+ * `client_id` is not a secret — it is public by design, it travels in the
+ * authorize URL the user's browser opens — so it does not belong in the vault.
+ * Putting it there would mean encrypting a public value and then needing a
+ * `reveal` just to build a URL, which is the shape this flow exists to avoid.
+ *
+ * It already has a home: federation reads it from the MCP server's
+ * `transport_config.auth.client_id` at call time. So this reads the same field,
+ * which keeps one source of truth instead of adding a second.
+ *
+ * A template ships a placeholder there (`GOOGLE_CLIENT_ID`) to show the user
+ * what to fill in. A server still carrying the placeholder is unconfigured, not
+ * configured with a client id that happens to look like a name.
+ */
+export function resolveConfiguredClientId(
+  servers: Array<{ transport_config?: unknown } | null | undefined> | null | undefined,
+  template: ConnectionTemplate,
+): string | null {
+  const wantedTokenUrl = template.transport_config.auth?.token_url;
+  if (!wantedTokenUrl) return null;
+  const placeholder = template.transport_config.auth?.client_id ?? null;
+
+  for (const server of servers ?? []) {
+    const config = server?.transport_config;
+    if (!config || typeof config !== "object") continue;
+    const auth = (config as { auth?: unknown }).auth;
+    if (!auth || typeof auth !== "object") continue;
+    const { token_url: tokenUrl, client_id: clientId } = auth as Record<string, unknown>;
+    if (tokenUrl !== wantedTokenUrl) continue;
+    if (typeof clientId !== "string" || clientId.length === 0) continue;
+    if (clientId === placeholder) continue;
+    return clientId;
+  }
+  return null;
+}
