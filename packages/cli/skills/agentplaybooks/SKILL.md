@@ -36,7 +36,7 @@ Substitute your variant for `apb` in the commands below.
 | `apb doctor [path] [--json] [--strict]` | Health report: inventory, spec violations, likely hard-coded secrets, insecure MCP URLs, cross-platform drift, 0-100 score | Never |
 | `apb sync [path]` | Plan the canonical `agentplaybook.json` plus platform files missing from enabled targets (claude, cursor, codex, antigravity, hermes, grok) | Plan only |
 | `apb sync [path] --apply` | Write the manifest and missing platform files, with backups under `.agentplaybooks/backups/` | Yes |
-| `apb sync [path] --target=<types>` | Also enable targets the project does not have yet, e.g. `--target=claude,codex` | Plan only without `--apply` |
+| `apb sync [path] --target=<types>` | Write only those targets this run, e.g. `--target=claude,codex` | Plan only without `--apply` |
 | `apb sync --global [--include-vendored]` | Same plan across the user's home stores (`~/.cursor/skills`, `~/.claude/skills`, the Hermes profile) instead of one project. Skills only | Plan only without `--apply` |
 | `apb login [--url=<base>]` | Store a user API key (`apb_...`) for a remote; reads `AGENTPLAYBOOKS_API_KEY` first | `~/.agentplaybooks/credentials.json` |
 | `apb playbooks [--json]` | List remote playbooks the key can access | Never |

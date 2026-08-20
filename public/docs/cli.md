@@ -29,7 +29,7 @@ reports:
 ```bash
 apb sync .                       # plan only — shows what would be written
 apb sync . --apply               # write the manifest and missing platform files
-apb sync . --target=codex        # also enable a target the project lacks
+apb sync . --target=codex        # write only the named target(s) this run
 ```
 
 Sync normalizes what it finds into the canonical `agentplaybook.json`
@@ -45,8 +45,10 @@ target:
 | `grok` — Grok Bot (xAI) | `.agents/skills/<name>/SKILL.md` | — (account MCP Box; reported) | reads `AGENTS.md` natively |
 | `hermes` — Hermes Agent (Nous Research) | `.agents/skills/<name>/SKILL.md`, registered in `~/.hermes/config.yaml` | `mcp_servers:` in `~/.hermes/config.yaml` | reads `AGENTS.md` natively; persona → `~/.hermes/SOUL.md` |
 
-Detected platforms are enabled automatically; `antigravity` and `hermes` are
-opt-in — add an entry to `spec.targets` in `agentplaybook.json`:
+Without `--target`, detected platforms are enabled automatically. Passing
+`--target=<types>` writes only those named targets this run, not in addition
+to what was auto-detected. `antigravity` and `hermes` are opt-in — add an
+entry to `spec.targets` in `agentplaybook.json`:
 
 ```json
 { "id": "codex", "type": "codex", "enabled": true, "config": {} }

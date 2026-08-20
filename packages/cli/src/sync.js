@@ -62,9 +62,10 @@ async function planFrom(report, manifestPath, options = {}) {
   const manifest = existing?.apiVersion === discovered.apiVersion && existing?.kind === discovered.kind
     ? mergeExisting(discovered, existing)
     : discovered;
-  enableRequestedTargets(manifest, options.targets ?? []);
+  const requested = options.targets ?? [];
+  enableRequestedTargets(manifest, requested);
   const manifestChanged = !existing || JSON.stringify(comparableManifest(existing)) !== JSON.stringify(comparableManifest(manifest));
-  const adapters = await planAdapters(report, manifest.spec.targets, options);
+  const adapters = await planAdapters(report, adapterWriteTargets(manifest, requested), options);
 
   // A project pulled onto a fresh machine holds only the portable store, which
   // is not a deployment target — without a hint, sync would look broken.
@@ -111,6 +112,17 @@ function enableRequestedTargets(manifest, requested) {
     if (existingTarget) existingTarget.enabled = true;
     else manifest.spec.targets.push({ id: type, type, enabled: true, config: {} });
   }
+}
+
+/**
+ * `--target` is the write set for this run, not a bonus on top of platforms
+ * `createManifest` auto-enabled from what it found on disk. Omit the flag and
+ * those detected targets stay in the write set.
+ */
+function adapterWriteTargets(manifest, requested) {
+  if (requested.length === 0) return manifest.spec.targets;
+  const requestedTypes = new Set(requested);
+  return manifest.spec.targets.filter((target) => requestedTypes.has(target.type));
 }
 
 function mergeExisting(discovered, existing) {

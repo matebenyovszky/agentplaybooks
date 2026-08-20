@@ -62,8 +62,9 @@ Commands:
   sync       Plan or apply the canonical manifest and missing platform files
              for enabled targets (claude, cursor, codex, antigravity, hermes,
              grok).
-             --target=claude,codex enables targets a project does not have yet,
-             which is what a freshly pulled playbook needs.
+             --target=claude,codex writes only those targets this run, not in
+             addition to auto-detected ones, which is what a freshly pulled
+             playbook needs.
              --global works across your home-scoped stores (~/.cursor/skills,
              ~/.claude/skills, the Hermes profile) instead of one project. It
              moves skills only: a global MCP config holds credentials, so

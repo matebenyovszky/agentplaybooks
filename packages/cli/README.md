@@ -36,11 +36,13 @@ insecure MCP URLs, cross-platform drift, and a 0-100 health score.
    rather than a copy — one source of truth, nothing to drift. An existing
    `CLAUDE.md` without that import is reported, never rewritten.
 
-   Targets come from `spec.targets` in the manifest; detected platforms are
-   enabled automatically, and `--target=<types>` enables one the project does
-   not have yet (which is what a freshly pulled playbook needs). When no target
-   is enabled, `sync` lists the agent tools it detects for the current user
-   instead of quietly doing nothing.
+   Targets come from `spec.targets` in the manifest. Without `--target`, detected
+   platforms are enabled automatically. When `--target=<types>` is passed, that
+   list is the write set for this run — not added on top of auto-detected
+   targets — which is what a freshly pulled playbook needs to reach a tool it
+   does not have yet. `sync --target=cursor,claude` still writes both. When no
+   target is enabled, `sync` lists the agent tools it detects for the current
+   user instead of quietly doing nothing.
    Antigravity reads project skills from the portable `.agents/skills/` store.
    Grok Bot reads that same store — `.agents/skills/` is one of the roots it
    discovers skills from, and its system prompt loads `AGENTS.md` — so the
