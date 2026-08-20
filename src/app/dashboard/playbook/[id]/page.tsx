@@ -1541,6 +1541,36 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                     </pre>
                   </div>
 
+                  {/* claude.ai custom connector */}
+                  <div className="mb-4">
+                    <span className="text-sm font-medium text-neutral-700 dark:text-slate-300">Claude (web/desktop) — Add custom connector</span>
+                    <p className="mt-1 text-xs text-neutral-600 dark:text-slate-400">
+                      Settings → Connectors → Add custom connector, then fill in exactly these:
+                    </p>
+                    <dl className="mt-2 p-3 bg-neutral-100 dark:bg-slate-900/70 rounded-lg border border-neutral-200 dark:border-slate-700/50 text-xs space-y-1.5">
+                      <div className="flex gap-2">
+                        <dt className="w-28 shrink-0 text-neutral-500 dark:text-slate-500">URL</dt>
+                        <dd className="font-mono text-neutral-800 dark:text-slate-300 break-all">{`${getApiBaseUrl()}/api/mcp/${playbook?.guid}`}</dd>
+                      </div>
+                      <div className="flex gap-2">
+                        <dt className="w-28 shrink-0 text-neutral-500 dark:text-slate-500">Authentication</dt>
+                        <dd className="text-neutral-800 dark:text-slate-300"><strong>None</strong> — this endpoint uses an API key header, not OAuth</dd>
+                      </div>
+                      <div className="flex gap-2">
+                        <dt className="w-28 shrink-0 text-neutral-500 dark:text-slate-500">Request header</dt>
+                        <dd className="font-mono text-neutral-800 dark:text-slate-300 break-all">authorization: Bearer YOUR_API_KEY</dd>
+                      </div>
+                      <div className="flex gap-2">
+                        <dt className="w-28 shrink-0 text-neutral-500 dark:text-slate-500">Transport</dt>
+                        <dd className="text-neutral-800 dark:text-slate-300">Streamable HTTP</dd>
+                      </div>
+                    </dl>
+                    <p className="mt-2 text-xs text-neutral-500 dark:text-slate-500">
+                      Include the scheme in the header value: the field is sent exactly as entered, so <code className="px-1 rounded bg-neutral-200 dark:bg-slate-800">Bearer </code> has to be part of it.
+                      {playbook?.visibility === "public" ? " A public playbook needs no header for read access." : ""}
+                    </p>
+                  </div>
+
                   {/* Test connection */}
                   <div className="mb-2">
                     <div className="flex items-center justify-between mb-2">
