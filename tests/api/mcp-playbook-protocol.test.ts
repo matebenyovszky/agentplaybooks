@@ -75,7 +75,9 @@ describe("private playbook refusal", () => {
     const refusal = privateAccessRefusal(new Request("http://localhost/api/mcp/x"));
 
     expect(refusal.status).toBe(401);
-    expect(refusal.headers["WWW-Authenticate"]).toContain("Bearer");
+    // No challenge: a Bearer challenge is how OAuth resources announce
+    // themselves, and an OAuth-capable client would start a flow we do not have.
+    expect(refusal.headers["WWW-Authenticate"]).toBeUndefined();
     expect(refusal.message).toContain("private");
   });
 

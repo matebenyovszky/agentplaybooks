@@ -63,10 +63,16 @@ export function isNotification(method: unknown, id: unknown): boolean {
  * is 64 bits of the caller's own knowledge and the alternative breaks every
  * connector flow for private playbooks.
  *
+ * No `WWW-Authenticate` is sent, and that is deliberate. A `Bearer` challenge is
+ * how the MCP authorization spec announces an OAuth protected resource, so an
+ * OAuth-capable client reads it as "start an OAuth flow" — Claude's connector
+ * switched from "API key" to "Always required" and then failed, because there is
+ * no OAuth metadata endpoint here and never was. The 401 alone carries what we
+ * mean: the endpoint exists and needs a credential the operator configures.
+ *
  * A credential that was presented and rejected gets 403 instead, naming the
  * permission it lacks: with 401 the client would keep retrying the same key.
  */
-export const AUTH_CHALLENGE = { "WWW-Authenticate": 'Bearer realm="AgentPlaybooks"' } as const;
 
 export function privateAccessRefusal(request: Request): {
   status: 401 | 403;
@@ -83,6 +89,6 @@ export function privateAccessRefusal(request: Request): {
     : {
       status: 401,
       message: "This playbook is private. Send an API key as `Authorization: Bearer <key>`.",
-      headers: { ...AUTH_CHALLENGE },
+      headers: {},
     };
 }

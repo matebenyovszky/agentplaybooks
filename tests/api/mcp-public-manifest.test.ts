@@ -184,7 +184,7 @@ describe("GET /api/mcp/:guid — public manifest", () => {
     // This used to be 404, which told a client the server did not exist and
     // made a private playbook impossible to add as a connector.
     expect(res.status).toBe(401);
-    expect(res.headers.get("WWW-Authenticate")).toContain("Bearer");
+    expect(res.headers.get("WWW-Authenticate")).toBeNull();
   });
 
   it("still answers 404 when there is no such playbook at all", async () => {
