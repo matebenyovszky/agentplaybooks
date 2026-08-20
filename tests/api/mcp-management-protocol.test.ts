@@ -43,11 +43,19 @@ describe("AgentPlaybooks management MCP transport", () => {
     const payload = await response.json();
     const tools = payload.result.tools as Array<{
       name: string;
+      description?: string;
       inputSchema: { properties?: Record<string, unknown>; required?: string[] };
+      annotations?: {
+        readOnlyHint?: boolean;
+        destructiveHint?: boolean;
+        idempotentHint?: boolean;
+        openWorldHint?: boolean;
+      };
     }>;
     const names = tools.map((tool) => tool.name);
 
     expect(new Set(names).size).toBe(names.length);
+    expect(names).toHaveLength(47);
     expect(names).toEqual(expect.arrayContaining([
       "list_playbooks",
       "create_playbook",
@@ -60,6 +68,18 @@ describe("AgentPlaybooks management MCP transport", () => {
       const tool = tools.find((candidate) => candidate.name === name)!;
       expect(tool.inputSchema.properties).toHaveProperty("playbook_id");
       expect(tool.inputSchema.required).toContain("playbook_id");
+      expect(tool.description).not.toContain("Target a playbook with playbook_id.");
+      expect(tool.annotations?.readOnlyHint).toBe(false);
+    }
+    for (const tool of tools) {
+      expect(tool.annotations, `${tool.name} missing annotations in tools/list`).toEqual(
+        expect.objectContaining({
+          readOnlyHint: expect.any(Boolean),
+          destructiveHint: expect.any(Boolean),
+          idempotentHint: expect.any(Boolean),
+          openWorldHint: expect.any(Boolean),
+        }),
+      );
     }
   });
 
