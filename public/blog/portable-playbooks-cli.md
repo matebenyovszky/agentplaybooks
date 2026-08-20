@@ -100,7 +100,7 @@ The CLI package is itself a Claude Code / Claude Cowork plugin, with an
 `agentplaybooks` skill and slash commands:
 
 ```text
-/plugin marketplace add integrityauthority/agentplaybooks
+/plugin marketplace add matebenyovszky/agentplaybooks
 /plugin install agentplaybooks@agentplaybooks
 ```
 
@@ -111,7 +111,7 @@ safe workflow — plan, show you the diff, apply only after you approve.
 ## Get started
 
 ```bash
-git clone https://github.com/integrityauthority/agentplaybooks
+git clone https://github.com/matebenyovszky/agentplaybooks
 node agentplaybooks/packages/cli/bin/agentplaybooks.js doctor .
 ```
 

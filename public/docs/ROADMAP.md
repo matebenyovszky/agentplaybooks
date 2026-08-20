@@ -213,6 +213,120 @@ Open, in rough order of value:
   the encrypted store. This constraint is the sharpest single reason the
   platform exists, so the plugin cannot be the thing that violates it.
 
+### Discoverability: SEO & AI Search 🚧
+
+> **Why this matters:** this tool is found in two ways — a developer searching a
+> specific problem ("sync claude skills to cursor"), and someone asking a model.
+> Those audiences want different things from the same pages. A crawler wants
+> stable URLs and unambiguous facts; a model wants readable markdown and
+> explicit contrast. Most of the work below serves both, but the ordering
+> differs depending on which you optimise for.
+
+Shipped as a first pass:
+
+- [x] **Per-route metadata and canonicals** — every route declares its own
+  title, description and canonical URL. Previously the root layout pinned
+  `alternates.canonical` to the homepage, and the docs routes exported no
+  `generateMetadata` at all. Because Next.js shallow-merges metadata, every
+  `/docs/*` and `/blog/*` page emitted an identical title and a canonical
+  pointing at the front page — asking search engines to treat the entire
+  documentation corpus as duplicates of the homepage.
+- [x] **One canonical origin** — `src/lib/site-url.ts`. `agentplaybooks.ai` is
+  the brand and therefore the canonical host; `apbks.com` remains useful as a
+  short link domain and consolidates onto it, because canonical tags are built
+  from the constant rather than from the request host.
+- [x] **Complete sitemap, current `robots.ts`** — `/blog` and the missing doc
+  slugs added; paths that `robots.txt` disallows removed, since listing them
+  sent contradictory signals. Retired Anthropic crawler names replaced with
+  `ClaudeBot` / `Claude-User` / `Claude-SearchBot`, and `OAI-SearchBot` added.
+
+Open, in rough order of value:
+
+- [ ] **Locale-prefixed routing** — the highest-value item, because the content
+  already exists and simply cannot be reached. Locale comes from the
+  `NEXT_LOCALE` cookie, so every language lives at the same URL and a crawler
+  (arriving without a cookie) only ever sees English. The hu/de/es docs and blog
+  posts have no address to rank at, and the sitemap's hreflang entries are inert
+  because they all point at one URL. Prefixes like `/hu/docs/cli` turn 20
+  documents into 80 indexable URLs and make hreflang meaningful. The cost is a
+  routing change — `src/app/[locale]/`, middleware, and a link-based language
+  switcher replacing the cookie-based one — which makes this the most expensive
+  item as well as the most valuable.
+
+- [ ] **Server-rendered marketplace with a URL per skill** — `/explore` is a
+  client component that fetches in `useEffect`, so a crawler sees an empty shell
+  and none of the marketplace is indexable. This is the only content asset that
+  grows without anyone writing prose: every public skill is a page somebody
+  searches for. `src/lib/skill-markdown.ts` and the `/.well-known/skills/` route
+  already have the data-fetch shape; what is missing is a server-rendered
+  listing plus `/skills/<name>` detail pages with their own metadata, in the
+  sitemap.
+
+- [ ] **Comparison pages (`/compare/...`)** — "X vs Y" and "X alternative" are
+  the highest-intent, lowest-competition queries for a new developer tool, and
+  answer engines cite comparison pages disproportionately because they are
+  structured and explicitly contrastive. [Obsidian and
+  AgentPlaybooks](./obsidian.md) is the first one, but it is buried in the docs;
+  a `/compare` hub with short paths would rank better. Candidates: raw dotfiles,
+  Claude Code plugin marketplaces, Cursor rules alone, Notion, prompt
+  registries, the MCP registry. Non-negotiable rule: every page must contain
+  visible rows where the alternative wins. Without them both readers and models
+  discount the rest of the page.
+
+- [ ] **JSON-LD structured data** — there is none today.
+  `SoftwareApplication` and `Organization` (with `sameAs` to GitHub) so a model
+  receives the category, licence and brand identity as fact rather than
+  inference; `TechArticle` on docs and `BlogPosting` on posts; `BreadcrumbList`
+  so results read `agentplaybooks.ai › Docs › CLI` instead of a bare URL.
+  `FAQPage` is nearly free — the landing page's "Sound Familiar?" section is
+  already question/answer pairs under `landing.useCases.cases.*`. This is the
+  highest signal-to-noise channel an AI crawler has; everything else it must
+  infer from prose.
+
+- [ ] **`llms.txt` and raw markdown endpoints** — serve `/docs/<slug>.md` as
+  `text/markdown` so AI clients read the source instead of parsing a styled
+  shell, plus an `/llms.txt` index. Cheap here because the docs already *are*
+  markdown files and `serveWellKnownSkills` already implements exactly this
+  shape (markdown content type, cache headers, open CORS). Worth stating the
+  split honestly: the raw `.md` endpoints have clear immediate value, while
+  `llms.txt` is a convention with real adoption among developer docs but no
+  commitment from any major model vendor — treat it as cheap insurance and a
+  signal to developers evaluating the project, not a guaranteed traffic channel.
+
+### Obsidian Plugin 📋
+
+> **Why this matters:** a large share of the people who already keep a
+> `Prompts/` or `Skills/` folder keep it in an Obsidian vault, and the community
+> plugin directory reaches precisely that audience. Both sides speak markdown
+> with frontmatter, so this is unusually cheap for the distribution it buys.
+> The positioning is set out in [Obsidian and
+> AgentPlaybooks](./obsidian.md): Obsidian is optimised for humans and this
+> platform for machines, so the vault stays the authoring surface and is never
+> asked to become a runtime.
+
+- [ ] **Two-way sync for a `Skills/` folder** — a vault folder laid out as
+  `<name>/SKILL.md` is already exactly what `apb push` reads, so the plugin's
+  job is to make that a button instead of a terminal. Conflicts must behave the
+  way the CLI does: same-named definitions with differing content are reported
+  and skipped, never silently overwritten.
+- [ ] **"Publish this note as a skill" command** — the note's frontmatter
+  becomes the skill's `name` and `description`, with validation mirroring
+  `apb doctor` so a note that is not a valid Agent Skill explains why before
+  anything is uploaded.
+- [ ] **Pull canvas documents into the vault** — an agent's finished work
+  document arrives as an ordinary note, so deliverables are read where the
+  human reads everything else.
+- [ ] **Install from `/.well-known/skills/`** — already served with open CORS
+  and no credential, so the plugin can browse and install public skills without
+  an account. This is the one piece that needs no new backend work.
+- [ ] **Refuse to store secrets in the vault** — the plugin must not put a
+  credential in its own settings. That is exactly the failure mode a
+  vault-based AI setup falls into: plaintext in
+  `.obsidian/plugins/<name>/data.json`, then into Sync, then into git history if
+  the vault is versioned. The vault holds the *reference*; the value stays in
+  the encrypted store. This constraint is the sharpest single reason the
+  platform exists, so the plugin cannot be the thing that violates it.
+
 ### Code Quality 📋
 
 - [ ] **Open Source Cleanup**

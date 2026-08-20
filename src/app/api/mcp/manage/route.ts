@@ -1,7 +1,7 @@
 import { handle } from "hono/vercel";
 import { createApiApp } from "@/app/api/_shared/hono";
 import { getServiceSupabase } from "@/app/api/_shared/supabase";
-import type { UserApiKeysRow, Playbook } from "@/lib/supabase/types";
+import type { UserApiKeysRow, Playbook, PlaybooksUpdate } from "@/lib/supabase/types";
 import { validateUserApiKey } from "@/app/api/_shared/auth";
 import {
   isPlaybookTool,
@@ -396,7 +396,7 @@ async function executeManagementTool(
 
       if (!await checkPlaybookWriteAccess(userId, playbook_id)) throw new Error("Playbook not found");
 
-      const updateData: Record<string, unknown> = {};
+      const updateData: PlaybooksUpdate = {};
       if (updates.name !== undefined) updateData.persona_name = updates.name;
       if (updates.system_prompt !== undefined) updateData.persona_system_prompt = updates.system_prompt;
       if (updates.metadata !== undefined) updateData.persona_metadata = updates.metadata;

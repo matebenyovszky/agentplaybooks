@@ -2,7 +2,17 @@ import { Hono } from "hono";
 import type { Context } from "hono";
 import { handle } from "hono/vercel";
 import { cors } from "hono/cors";
-import type { Playbook, Skill, MCPServer, ProfilesRow, Persona } from "@/lib/supabase/types";
+import type {
+  Playbook,
+  Skill,
+  MCPServer,
+  ProfilesRow,
+  Persona,
+  PlaybooksUpdate,
+  SkillsUpdate,
+  MCPServersUpdate,
+  SkillAttachmentsUpdate,
+} from "@/lib/supabase/types";
 import { ATTACHMENT_LIMITS, ALLOWED_FILE_TYPES } from "@/lib/supabase/types";
 import {
   validateAttachment,
@@ -291,7 +301,7 @@ app.put("/playbooks/:id/personas/:pid", async (c) => {
 
   const supabase = getServiceSupabase();
 
-  const updateData: Record<string, unknown> = {};
+  const updateData: PlaybooksUpdate = {};
   if (name !== undefined) updateData.persona_name = name;
   if (system_prompt !== undefined) updateData.persona_system_prompt = system_prompt;
   if (metadata !== undefined) updateData.persona_metadata = metadata;
@@ -455,7 +465,7 @@ app.put("/playbooks/:id/skills/:sid", async (c) => {
 
   const supabase = getServiceSupabase();
 
-  const updateData: Record<string, unknown> = {};
+  const updateData: SkillsUpdate = {};
   if (name !== undefined) updateData.name = name;
   if (description !== undefined) updateData.description = description;
   if (content !== undefined) updateData.content = content;
@@ -1193,7 +1203,7 @@ app.put("/manage/playbooks/:id/personas/:pid", async (c) => {
   const body = await c.req.json();
   const supabase = getServiceSupabase();
 
-  const updateData: Record<string, unknown> = {};
+  const updateData: PlaybooksUpdate = {};
   if (body.name !== undefined) updateData.persona_name = body.name;
   if (body.system_prompt !== undefined) updateData.persona_system_prompt = body.system_prompt;
   if (body.metadata !== undefined) updateData.persona_metadata = body.metadata;
@@ -1316,7 +1326,7 @@ app.put("/manage/playbooks/:id/skills/:sid", async (c) => {
   }
 
   // Whitelist allowed fields to prevent mass-assignment
-  const updateData: Record<string, unknown> = {};
+  const updateData: SkillsUpdate = {};
   if (body.name !== undefined) updateData.name = body.name;
   if (body.description !== undefined) updateData.description = body.description;
   if (body.content !== undefined) updateData.content = body.content;
@@ -1472,7 +1482,7 @@ app.put("/manage/playbooks/:id/mcp-servers/:mid", async (c) => {
   }
 
   // Whitelist allowed fields to prevent mass-assignment
-  const updateData: Record<string, unknown> = {};
+  const updateData: MCPServersUpdate = {};
   if (body.name !== undefined) updateData.name = body.name;
   if (body.description !== undefined) updateData.description = body.description;
   if (body.tools !== undefined) updateData.tools = body.tools;
@@ -1724,7 +1734,7 @@ app.put("/manage/skills/:skillId/attachments/:attachmentId", async (c) => {
   }
 
   const body = await c.req.json();
-  const updates: Record<string, unknown> = {};
+  const updates: SkillAttachmentsUpdate = {};
 
   // Validate filename if provided
   if (body.filename) {

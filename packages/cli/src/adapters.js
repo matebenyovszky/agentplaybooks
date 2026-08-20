@@ -19,6 +19,20 @@ const TARGET_ADAPTERS = {
   cursor: { platforms: ["cursor"], skillsDir: ".cursor/skills", mcpPath: ".cursor/mcp.json", format: "json" },
   codex: { platforms: ["codex"], skillsDir: ".codex/skills", mcpPath: ".codex/config.toml", format: "toml" },
   antigravity: { platforms: ["antigravity", "portable"], skillsDir: ".agents/skills" },
+  // Grok Bot (xAI) discovers skills from a fixed set of roots that includes the
+  // portable `.agents/skills` store, and its system prompt loads `AGENTS.md`
+  // directly — so this target writes the portable store and needs no bridge
+  // file. Its MCP servers are the one thing a file cannot provision: the app
+  // keeps only an array of server *ids* in `~/.grokbot/settings.json`
+  // (`mcpBoxServers`), and the definitions behind those ids live in the
+  // account's MCP Box. `mcpUnsupported` is reported rather than skipped in
+  // silence, because a playbook whose MCP servers quietly did not arrive looks
+  // exactly like one that has none.
+  grok: {
+    platforms: ["grok", "portable"],
+    skillsDir: ".agents/skills",
+    mcpUnsupported: "Grok Bot's MCP servers live in the account's MCP Box, not in a project file. Add the playbook's own MCP endpoint (POST /api/mcp/<guid>) to the Box once, and its tools reach every Grok Bot session.",
+  },
   // Hermes Agent reads skills from its profile (`~/.hermes/skills`) *and* from
   // every directory listed under `skills.external_dirs` in its `config.yaml`.
   // Registering the portable store beats copying into the profile: nothing is
@@ -56,6 +70,7 @@ export const TARGET_HOME_MARKERS = {
   codex: ".codex",
   antigravity: ".gemini",
   hermes: ".hermes",
+  grok: ".grokbot",
 };
 
 function canonicalize(value) {
@@ -226,7 +241,15 @@ function mcpActions(report, targetIds, conflicts, { root }) {
 
   for (const target of targetIds) {
     const adapter = TARGET_ADAPTERS[target];
-    if (!adapter?.mcpPath) continue;
+    if (!adapter?.mcpPath) {
+      // A target that cannot receive MCP servers from a file says so, once,
+      // and only when there is actually something it would have received.
+      if (adapter?.mcpUnsupported && groups.size > 0) {
+        const names = [...groups.keys()].sort().join(", ");
+        conflicts.push(conflict(target, "mcp", names, adapter.mcpUnsupported, report.inventory.mcpConfigs.map((config) => config.source)));
+      }
+      continue;
+    }
 
     const additions = mcpAdditionsFor(adapter, groups, target, conflicts);
     if (Object.keys(additions).length === 0) continue;

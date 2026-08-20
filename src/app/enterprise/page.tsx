@@ -16,7 +16,6 @@ import {
   Code2,
   RefreshCw,
   Shield,
-  Github,
   Rocket,
   LayoutDashboard,
   Layers,
@@ -24,6 +23,7 @@ import {
   Eye,
   Wand2,
 } from "lucide-react";
+import { GithubIcon } from "@/components/ui/brand-icons";
 import Link from "next/link";
 import { FloatingNav } from "@/components/ui/floating-navbar";
 
@@ -141,7 +141,7 @@ export default function EnterprisePage() {
             className="text-center"
           >
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-500/10 border border-green-500/20 mb-6">
-              <Github className="w-4 h-4 text-green-600 dark:text-green-400" />
+              <GithubIcon className="w-4 h-4 text-green-600 dark:text-green-400" />
               <span className="text-sm text-green-700 dark:text-green-300">100% Open Source</span>
             </div>
 
@@ -175,7 +175,7 @@ export default function EnterprisePage() {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-8 py-4 bg-white dark:bg-blue-950/50 hover:bg-neutral-50 dark:hover:bg-blue-900/50 rounded-full font-semibold transition-colors border border-neutral-200 dark:border-blue-800/50"
               >
-                <Github className="w-5 h-5" />
+                <GithubIcon className="w-5 h-5" />
                 View on GitHub
               </a>
             </div>
@@ -426,7 +426,7 @@ export default function EnterprisePage() {
                 rel="noopener noreferrer"
                 className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white dark:bg-blue-950/50 hover:bg-neutral-50 dark:hover:bg-blue-900/50 rounded-full font-semibold transition-colors border border-neutral-200 dark:border-blue-800/50"
               >
-                <Github className="w-5 h-5" />
+                <GithubIcon className="w-5 h-5" />
                 Star on GitHub
               </a>
             </div>

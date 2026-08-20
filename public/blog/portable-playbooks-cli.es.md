@@ -109,7 +109,7 @@ El paquete de la CLI es en sí mismo un plugin de Claude Code / Claude Cowork,
 con el skill `agentplaybooks` y comandos slash:
 
 ```text
-/plugin marketplace add integrityauthority/agentplaybooks
+/plugin marketplace add matebenyovszky/agentplaybooks
 /plugin install agentplaybooks@agentplaybooks
 ```
 
@@ -121,7 +121,7 @@ muestra el diff y aplica solo tras tu aprobación.
 ## Empieza ya
 
 ```bash
-git clone https://github.com/integrityauthority/agentplaybooks
+git clone https://github.com/matebenyovszky/agentplaybooks
 node agentplaybooks/packages/cli/bin/agentplaybooks.js doctor .
 ```
 

@@ -7,7 +7,7 @@ name: Publish CLI
 # automatically, so `--provenance` is not passed.
 #
 # One-time setup on npmjs.com, under the package's Settings → Trusted publisher:
-#   Organization or user: integrityauthority
+#   Organization or user: matebenyovszky
 #   Repository:           agentplaybooks
 #   Workflow filename:    publish-cli.yml
 #   Allowed actions:      npm publish
@@ -56,7 +56,8 @@ jobs:
           fi
           echo "npm $npm_version"
 
-      # The CLI has no dependencies, so its tests run straight from the source.
+      # Install the CLI's runtime deps (currently yaml) so tests can import them.
+      - run: npm install
       - run: node --test
 
       - name: Verify the tag matches package.json

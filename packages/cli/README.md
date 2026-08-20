@@ -28,6 +28,7 @@ insecure MCP URLs, cross-platform drift, and a 0-100 health score.
    | `cursor` | `.cursor/skills/<name>/SKILL.md` | `.cursor/mcp.json` | — |
    | `codex` (ChatGPT / Codex CLI) | `.codex/skills/<name>/SKILL.md` | `.codex/config.toml` | reads `AGENTS.md` |
    | `antigravity` (Google Antigravity) | `.agents/skills/<name>/SKILL.md` | — (global config only) | — |
+   | `grok` (Grok Bot, xAI) | `.agents/skills/<name>/SKILL.md` | — (account MCP Box; reported, see below) | reads `AGENTS.md` natively |
    | `hermes` (Hermes Agent, Nous Research) | `.agents/skills/<name>/SKILL.md`, registered in `~/.hermes/config.yaml` | `mcp_servers:` in `~/.hermes/config.yaml` | reads `AGENTS.md`; persona → `~/.hermes/SOUL.md` |
 
    Claude Code reads `CLAUDE.md` and not `AGENTS.md`, but it supports `@`
@@ -41,6 +42,15 @@ insecure MCP URLs, cross-platform drift, and a 0-100 health score.
    is enabled, `sync` lists the agent tools it detects for the current user
    instead of quietly doing nothing.
    Antigravity reads project skills from the portable `.agents/skills/` store.
+   Grok Bot reads that same store — `.agents/skills/` is one of the roots it
+   discovers skills from, and its system prompt loads `AGENTS.md` — so the
+   target writes the portable store and nothing else. Its MCP servers are the
+   exception: Grok Bot keeps only an array of server *ids* in
+   `~/.grokbot/settings.json` (`mcpBoxServers`), with the definitions in the
+   account's MCP Box, so no project file can provision them. `sync` reports the
+   servers it therefore could not deliver instead of dropping them silently —
+   add the playbook's own MCP endpoint to the Box once and its tools reach
+   every session.
    Hermes keeps one profile in `~/.hermes` (or `$HERMES_HOME`): sync registers
    that same portable store under `skills.external_dirs` in its `config.yaml`
    instead of copying skills into the profile, merges MCP servers into that
@@ -142,7 +152,7 @@ skill plus `/agentplaybooks:doctor`, `:sync`, `:pull`, and `:push` commands
 that drive this CLI. Install from the repository root marketplace:
 
 ```text
-/plugin marketplace add integrityauthority/agentplaybooks
+/plugin marketplace add matebenyovszky/agentplaybooks
 /plugin install agentplaybooks@agentplaybooks
 ```
 

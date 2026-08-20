@@ -60,7 +60,8 @@ Usage:
 Commands:
   doctor     Audit agent instructions, skills, MCP configuration, secrets, and drift.
   sync       Plan or apply the canonical manifest and missing platform files
-             for enabled targets (claude, cursor, codex, antigravity, hermes).
+             for enabled targets (claude, cursor, codex, antigravity, hermes,
+             grok).
              --target=claude,codex enables targets a project does not have yet,
              which is what a freshly pulled playbook needs.
              --global works across your home-scoped stores (~/.cursor/skills,

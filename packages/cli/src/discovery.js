@@ -70,6 +70,16 @@ const VENDORED_DIRECTORIES = new Set([
 const MAX_FILES = 20_000;
 const MAX_TEXT_BYTES = 2 * 1024 * 1024;
 
+// Any unreadable directory can throw EPERM/EACCES from scandir: a Windows
+// drive-root folder such as System Volume Information or $Recycle.Bin, a
+// protected AppData path, or a POSIX mode-000 directory. Skip that directory
+// and keep walking. Other errors still fail the scan.
+const PERMISSION_CODES = new Set(["EPERM", "EACCES"]);
+
+export function isPermissionError(error) {
+  return PERMISSION_CODES.has(error?.code);
+}
+
 export function digest(value) {
   return `sha256:${createHash("sha256").update(value).digest("hex")}`;
 }
@@ -115,13 +125,19 @@ function isMcpConfig(relativePath) {
     || normalized.endsWith("/.hermes/config.yaml");
 }
 
-async function walk(root, ignored = IGNORED_DIRECTORIES) {
+async function walk(root, ignored = IGNORED_DIRECTORIES, listDir = readdir) {
   const files = [];
   const queue = [root];
 
   while (queue.length > 0) {
     const current = queue.shift();
-    const entries = await readdir(current, { withFileTypes: true });
+    let entries;
+    try {
+      entries = await listDir(current, { withFileTypes: true });
+    } catch (error) {
+      if (isPermissionError(error)) continue;
+      throw error;
+    }
 
     for (const entry of entries) {
       if (entry.isSymbolicLink()) continue;
@@ -177,13 +193,15 @@ async function readTextIfExists(absolutePath) {
  *   `config.yaml`, which is scanned as its own root.
  * @param {boolean} [options.skipVendored] Also skip installed plugin and
  *   extension caches, sessions, and logs. For scanning a tool's home directory.
+ * @param {typeof import("node:fs/promises").readdir} [options.readdir] Directory
+ *   reader, injected by the tests that cover unreadable directories.
  */
-export async function discover(root, { extraMcpPaths = [], skipVendored = false } = {}) {
+export async function discover(root, { extraMcpPaths = [], skipVendored = false, readdir: listDir } = {}) {
   const absoluteRoot = path.resolve(root);
   const ignored = skipVendored
     ? new Set([...IGNORED_DIRECTORIES, ...VENDORED_DIRECTORIES])
     : IGNORED_DIRECTORIES;
-  const files = await walk(absoluteRoot, ignored);
+  const files = await walk(absoluteRoot, ignored, listDir);
   const inventory = {
     root: absoluteRoot,
     instructions: [],

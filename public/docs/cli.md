@@ -4,7 +4,7 @@ The AgentPlaybooks CLI (`@agentplaybooks/cli`, binary `agentplaybooks` or
 `apb`) keeps your agent configuration — instruction files, Agent Skills, and
 MCP server definitions — healthy, consistent across AI coding tools, and
 shareable as a hosted playbook. It is a zero-dependency Node.js (>= 20)
-package that lives in [`packages/cli`](https://github.com/integrityauthority/agentplaybooks/tree/main/packages/cli).
+package that lives in [`packages/cli`](https://github.com/matebenyovszky/agentplaybooks/tree/main/packages/cli).
 
 ## Doctor: audit your agent configuration
 
@@ -42,6 +42,7 @@ target:
 | `cursor` — Cursor | `.cursor/skills/<name>/SKILL.md` | `.cursor/mcp.json` | — |
 | `codex` — ChatGPT / OpenAI Codex | `.codex/skills/<name>/SKILL.md` | `.codex/config.toml` | reads `AGENTS.md` natively |
 | `antigravity` — Google Antigravity | `.agents/skills/<name>/SKILL.md` | — (global config) | — |
+| `grok` — Grok Bot (xAI) | `.agents/skills/<name>/SKILL.md` | — (account MCP Box; reported) | reads `AGENTS.md` natively |
 | `hermes` — Hermes Agent (Nous Research) | `.agents/skills/<name>/SKILL.md`, registered in `~/.hermes/config.yaml` | `mcp_servers:` in `~/.hermes/config.yaml` | reads `AGENTS.md` natively; persona → `~/.hermes/SOUL.md` |
 
 Detected platforms are enabled automatically; `antigravity` and `hermes` are
@@ -226,7 +227,7 @@ The CLI package doubles as a Claude Code plugin with an `agentplaybooks`
 skill and `/agentplaybooks:doctor`, `:sync`, `:pull`, `:push` commands:
 
 ```text
-/plugin marketplace add integrityauthority/agentplaybooks
+/plugin marketplace add matebenyovszky/agentplaybooks
 /plugin install agentplaybooks@agentplaybooks
 ```
 
@@ -242,6 +243,18 @@ workflow (plan first, apply after your approval).
 - **Google Antigravity**: reads project skills from `.agents/skills/`, which
   is exactly AgentPlaybooks' portable store — a pulled playbook is
   Antigravity-ready with no extra step.
+- **Grok Bot (xAI)**: discovers skills from a fixed set of roots that already
+  includes the portable `.agents/skills/` store (alongside `.claude/skills/`,
+  `.codex/skills/` and `.cursor/skills/`), and its system prompt loads
+  `AGENTS.md` directly — so a synced project is Grok-ready with no bridge file.
+  Its **MCP servers are the exception**: Grok Bot stores only an array of server
+  *ids* in `~/.grokbot/settings.json` (`mcpBoxServers`), with the definitions
+  living in your account's MCP Box, so no project file can provision them.
+  `sync` reports the servers it could not deliver rather than dropping them
+  silently. The way around it is one entry, once: add the playbook's own MCP
+  endpoint (`POST /api/mcp/<guid>`) to the Box, and its skills, memory, canvas
+  and `use_secret` reach every Grok Bot session without any further per-server
+  setup.
 - **Hermes Agent**: everything for one profile lives in `~/.hermes` (or
   `$HERMES_HOME`). Rather than copying skills into that profile, sync registers
   the portable store under `skills.external_dirs` in `~/.hermes/config.yaml`, so

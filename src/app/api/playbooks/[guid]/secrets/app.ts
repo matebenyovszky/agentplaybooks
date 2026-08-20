@@ -10,7 +10,7 @@ import {
   auditActor,
   type AuditContext,
 } from "@/app/api/_shared/audit";
-import type { SecretCategory, SecretMetadata } from "@/lib/supabase/types";
+import type { SecretCategory, SecretMetadata, SecretsUpdate } from "@/lib/supabase/types";
 
 const app = createApiApp("/api/playbooks/:guid/secrets");
 
@@ -382,7 +382,7 @@ app.put("/:name", async (c) => {
     return c.json({ error: "Secret not found" }, 404);
   }
 
-  const updateData: Record<string, unknown> = {
+  const updateData: SecretsUpdate = {
     updated_by: user?.id || apiKey?.key_prefix || null,
   };
 

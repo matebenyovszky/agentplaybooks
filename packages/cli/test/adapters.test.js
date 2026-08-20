@@ -362,3 +362,58 @@ test("conflicting MCP definitions across platforms are skipped with a conflict",
   assert.ok(conflict);
   assert.equal(plan.fileActions.filter((action) => action.kind === "mcp-config").length, 0);
 });
+
+test("grok target writes the portable store and needs no instruction bridge", async () => {
+  const root = await fixture();
+  await put(root, ".claude/skills/release/SKILL.md", SKILL);
+  await put(root, "AGENTS.md", "# Project\nUse the release checklist.\n");
+  await manifestWithTargets(root, ["grok"]);
+
+  const plan = await planSync(root, { homedir: root });
+  const skillAction = plan.fileActions.find((action) => action.target === "grok");
+  // Grok Bot discovers `.agents/skills`, and loads AGENTS.md itself — so the
+  // only thing to write is the portable store.
+  assert.equal(skillAction.path, ".agents/skills/release/SKILL.md");
+  // No bridge file for this target — Grok Bot reads AGENTS.md natively. (The
+  // detected `claude` target still writes its own CLAUDE.md import; that is
+  // Claude Code's requirement, not Grok's.)
+  assert.equal(plan.fileActions.filter((action) => action.kind === "instructions" && action.target === "grok").length, 0);
+
+  await applySync(plan);
+  const followUp = await planSync(root, { homedir: root });
+  assert.equal(followUp.fileActions.filter((action) => action.target === "grok").length, 0);
+});
+
+test("grok reports MCP servers it cannot receive instead of dropping them silently", async () => {
+  const root = await fixture();
+  await put(root, ".mcp.json", JSON.stringify({ mcpServers: { deploy: { command: "npx", args: ["deploy-mcp"] } } }));
+  await manifestWithTargets(root, ["grok"]);
+
+  const plan = await planSync(root, { homedir: root });
+  const reported = plan.conflicts.find((item) => item.target === "grok" && item.kind === "mcp");
+  assert.ok(reported, "expected the MCP Box limitation to be reported");
+  assert.match(reported.reason, /MCP Box/);
+  assert.match(reported.name, /deploy/);
+  // Nothing is written for it: there is no project file to write.
+  assert.equal(plan.fileActions.filter((action) => action.kind === "mcp-config" && action.target === "grok").length, 0);
+});
+
+test("grok stays quiet about MCP when the playbook has no servers", async () => {
+  const root = await fixture();
+  await put(root, ".claude/skills/release/SKILL.md", SKILL);
+  await manifestWithTargets(root, ["grok"]);
+
+  const plan = await planSync(root, { homedir: root });
+  assert.equal(plan.conflicts.filter((item) => item.target === "grok").length, 0);
+});
+
+test("grok and antigravity together plan the shared portable store only once", async () => {
+  const root = await fixture();
+  await put(root, ".claude/skills/release/SKILL.md", SKILL);
+  await manifestWithTargets(root, ["grok", "antigravity"]);
+
+  const plan = await planSync(root, { homedir: root });
+  const skillActions = plan.fileActions.filter((action) => action.kind === "skill");
+  assert.equal(skillActions.length, 1);
+  assert.equal(skillActions[0].path, ".agents/skills/release/SKILL.md");
+});
