@@ -9,7 +9,7 @@ export type FederatedTransportConfig = {
   access?: "public" | "playbook_api_key";
   headers?: Record<string, string>;
   auth?: {
-    type?: "none" | "bearer" | "api_key" | "oauth2_client_credentials";
+    type?: "none" | "bearer" | "api_key" | "oauth2_client_credentials" | "oauth2_refresh_token";
     header?: string;
     prefix?: string;
     token_secret?: string;
@@ -19,6 +19,7 @@ export type FederatedTransportConfig = {
     client_secret?: string;
     scopes?: string[];
     audience?: string;
+    refresh_token_secret?: string;
   };
   openapi?: Record<string, unknown>;
 };
@@ -72,6 +73,18 @@ type OpenApiOperation = {
 const DEFAULT_TIMEOUT_MS = 15_000;
 const MAX_TIMEOUT_MS = 60_000;
 const oauthCache = new Map<string, { token: string; expiresAt: number }>();
+
+/**
+ * A short digest of a secret, for use as part of a cache key. The secret itself
+ * must never become one: this map is process-global and cache keys end up in
+ * logs and debugger views.
+ */
+async function fingerprint(value: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(digest).slice(0, 8))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
 const mcpSessions = new Map<string, string | null>();
 
 /**
@@ -550,7 +563,7 @@ async function buildHeaders(
   const headers = { ...(config.headers || {}), ...objectStringValues(options.secrets?.headers) };
   const auth = config.auth;
   if (!auth || !auth.type || auth.type === "none") return headers;
-  if (auth.type === "oauth2_client_credentials") {
+  if (auth.type === "oauth2_client_credentials" || auth.type === "oauth2_refresh_token") {
     const token = await getOAuthToken(server, config, options);
     headers.Authorization = `Bearer ${token}`;
     return headers;
@@ -571,16 +584,49 @@ async function getOAuthToken(server: MCPServer, config: FederatedTransportConfig
   const tokenUrl = auth.token_url;
   if (!tokenUrl) throw new FederationError("OAuth token URL is missing", "MISSING_OAUTH_CONFIG", 500);
   assertSafeRemoteUrl(tokenUrl, config.allow_insecure_http);
+  const isRefreshGrant = auth.type === "oauth2_refresh_token";
   const clientId = auth.client_id || stringValue(options.secrets?.client_id);
   const secretName = auth.client_secret || "client_secret";
   const clientSecret = stringValue(options.secrets?.[secretName]);
-  if (!clientId || !clientSecret) throw new FederationError("OAuth client credentials are missing", "MISSING_SECRET", 500);
-  const cacheKey = `${server.id}:${tokenUrl}:${clientId}`;
+
+  // A refresh token carries a user's consent, granted once outside this app.
+  // There is nowhere here to host a redirect and consent screen, so the token is
+  // obtained out of band and stored in the vault. Renewal from then on is an
+  // ordinary POST, which is all this does.
+  const refreshTokenName = auth.refresh_token_secret || "refresh_token";
+  const refreshToken = isRefreshGrant
+    ? stringValue(options.secrets?.[refreshTokenName])
+    : undefined;
+
+  if (isRefreshGrant) {
+    // Public clients (PKCE) legitimately have no client secret, so only the
+    // refresh token itself is mandatory.
+    if (!refreshToken) {
+      throw new FederationError(`Missing secret: ${refreshTokenName}`, "MISSING_SECRET", 500);
+    }
+  } else if (!clientId || !clientSecret) {
+    throw new FederationError("OAuth client credentials are missing", "MISSING_SECRET", 500);
+  }
+
+  // Providers may rotate a refresh token on use, so it forms part of the cache
+  // identity: a renewed token must not read an entry keyed to the old one. Only
+  // a digest goes into the key, never the token.
+  const cacheKey = isRefreshGrant
+    ? `${server.id}:${tokenUrl}:refresh:${await fingerprint(refreshToken as string)}`
+    : `${server.id}:${tokenUrl}:${clientId}`;
   const cached = oauthCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now() + 10_000) return cached.token;
   const started = Date.now();
   try {
-    const body = new URLSearchParams({ grant_type: "client_credentials", client_id: clientId, client_secret: clientSecret });
+    const body = isRefreshGrant
+      ? new URLSearchParams({ grant_type: "refresh_token", refresh_token: refreshToken as string })
+      : new URLSearchParams({ grant_type: "client_credentials", client_id: clientId, client_secret: clientSecret });
+    if (isRefreshGrant) {
+      // Providers disagree about whether a refresh call should carry the client
+      // credentials, so send exactly what the config declares.
+      if (clientId) body.set("client_id", clientId);
+      if (clientSecret) body.set("client_secret", clientSecret);
+    }
     if (auth.scopes?.length) body.set("scope", auth.scopes.join(" "));
     if (auth.audience) body.set("audience", auth.audience);
     const response = await timedFetch(tokenUrl, {

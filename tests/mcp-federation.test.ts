@@ -117,6 +117,72 @@ describe("MCP federation", () => {
     expect(JSON.stringify(audit.mock.calls)).not.toContain("not-logged");
   });
 
+  it("renews an access token from a stored refresh token", async () => {
+    // The consent step happens once, outside this app; from here on renewal is
+    // an ordinary POST, which is what makes user-scoped APIs reachable at all.
+    const refreshServer = server({
+      transport_config: {
+        url: "https://mcp.example.com/rpc",
+        auth: {
+          type: "oauth2_refresh_token",
+          token_url: "https://auth.example.com/token",
+          client_id: "agentplaybooks",
+          refresh_token_secret: "GMAIL_REFRESH_TOKEN",
+        },
+      },
+    });
+    let tokenRequestBody = "";
+    const fetchMock = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
+      if (String(url).includes("auth.example.com")) {
+        tokenRequestBody = String(init?.body);
+        return jsonResponse({ access_token: "renewed-token", expires_in: 3600 });
+      }
+      expect(new Headers(init?.headers).get("Authorization")).toBe("Bearer renewed-token");
+      return jsonResponse({ jsonrpc: "2.0", id: "1", result: { tools: [] } });
+    });
+    const audit = vi.fn();
+
+    await listFederatedTools([refreshServer], {
+      fetch: fetchMock as typeof fetch,
+      secrets: { GMAIL_REFRESH_TOKEN: "refresh-value-not-logged" },
+      audit,
+    });
+
+    const sent = new URLSearchParams(tokenRequestBody);
+    expect(sent.get("grant_type")).toBe("refresh_token");
+    expect(sent.get("refresh_token")).toBe("refresh-value-not-logged");
+    // Declared in the config, so it goes along; a public PKCE client omits it.
+    expect(sent.get("client_id")).toBe("agentplaybooks");
+    expect(sent.get("client_secret")).toBeNull();
+    expect(JSON.stringify(audit.mock.calls)).not.toContain("refresh-value-not-logged");
+  });
+
+  it("names the missing refresh token instead of failing vaguely", async () => {
+    const refreshServer = server({
+      // A stored schema, so tool resolution succeeds and the failure comes from
+      // the token exchange rather than from name lookup.
+      tools: [{ name: "send", inputSchema: { type: "object" } }],
+      transport_config: {
+        url: "https://mcp.example.com/rpc",
+        auth: {
+          type: "oauth2_refresh_token",
+          token_url: "https://auth.example.com/token",
+          refresh_token_secret: "GMAIL_REFRESH_TOKEN",
+        },
+      },
+    });
+    const fetchMock = vi.fn(async () => jsonResponse({ jsonrpc: "2.0", id: "1", result: { tools: [] } }));
+
+    // The vault has nothing under that name, so the error should say which
+    // secret is missing rather than fail as a generic upstream error.
+    await expect(
+      callFederatedTool(refreshServer, federatedToolName(refreshServer, "send"), {}, {
+        fetch: fetchMock as typeof fetch,
+        secrets: {},
+      }),
+    ).rejects.toThrow(/GMAIL_REFRESH_TOKEN/);
+  });
+
   it("blocks private network upstreams", () => {
     expect(() => assertSafeRemoteUrl("http://127.0.0.1:3000/mcp", true)).toThrow(/Private upstream/);
     expect(() => assertSafeRemoteUrl("https://metadata.internal/mcp")).toThrow(/Private upstream/);

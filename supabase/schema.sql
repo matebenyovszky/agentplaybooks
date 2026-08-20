@@ -83,14 +83,6 @@ CREATE TABLE IF NOT EXISTS public.canvas (
   version integer DEFAULT 1 NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS public.mcp_server_secrets (
-  mcp_server_id uuid NOT NULL,
-  encrypted_payload text NOT NULL,
-  iv text NOT NULL,
-  created_at timestamp with time zone DEFAULT now() NOT NULL,
-  updated_at timestamp with time zone DEFAULT now() NOT NULL
-);
-
 CREATE TABLE IF NOT EXISTS public.mcp_servers (
   id uuid DEFAULT extensions.uuid_generate_v4() NOT NULL,
   playbook_id uuid NOT NULL,
@@ -303,8 +295,6 @@ ALTER TABLE public.audit_logs ADD CONSTRAINT mcp_proxy_audit_logs_pkey PRIMARY K
 
 ALTER TABLE public.canvas ADD CONSTRAINT canvas_pkey PRIMARY KEY (id);
 
-ALTER TABLE public.mcp_server_secrets ADD CONSTRAINT mcp_server_secrets_pkey PRIMARY KEY (mcp_server_id);
-
 ALTER TABLE public.mcp_servers ADD CONSTRAINT mcp_servers_pkey PRIMARY KEY (id);
 
 ALTER TABLE public.memories ADD CONSTRAINT memories_pkey PRIMARY KEY (id);
@@ -388,8 +378,6 @@ ALTER TABLE public.audit_logs ADD CONSTRAINT mcp_proxy_audit_logs_playbook_id_fk
 ALTER TABLE public.canvas ADD CONSTRAINT canvas_playbook_id_fkey FOREIGN KEY (playbook_id) REFERENCES playbooks(id) ON DELETE CASCADE;
 
 ALTER TABLE public.canvas ADD CONSTRAINT canvas_run_playbook_fk FOREIGN KEY (run_id, playbook_id) REFERENCES playbook_runs(id, playbook_id) ON DELETE CASCADE;
-
-ALTER TABLE public.mcp_server_secrets ADD CONSTRAINT mcp_server_secrets_mcp_server_id_fkey FOREIGN KEY (mcp_server_id) REFERENCES mcp_servers(id) ON DELETE CASCADE;
 
 ALTER TABLE public.mcp_servers ADD CONSTRAINT mcp_servers_playbook_id_fkey FOREIGN KEY (playbook_id) REFERENCES playbooks(id) ON DELETE CASCADE;
 
@@ -720,8 +708,6 @@ ALTER TABLE public.api_keys ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE public.canvas ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.mcp_server_secrets ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE public.mcp_servers ENABLE ROW LEVEL SECURITY;
 

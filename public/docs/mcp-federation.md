@@ -21,6 +21,31 @@ The endpoint discovers upstream tools, namespaces them as `ext__SERVER_ID__TOOL`
 
 Private, loopback, link-local, `.local`, and `.internal` targets are blocked. HTTPS is required unless `allow_insecure_http` is explicitly enabled for development.
 
+## Starting from a template
+
+`GET /api/connections` returns a curated catalogue of connection templates, so
+adding a well-known service is picking a name rather than writing transport JSON
+from scratch. Filter with `?category=` or fetch one with `?id=`.
+
+A template is not a credential. Every entry references its secrets **by name**
+and expects those names on the playbook's Secrets tab — the same resolution a
+federated call uses at runtime. The endpoint is public because there is nothing
+in it to protect.
+
+Each entry carries:
+
+| Field | Meaning |
+|---|---|
+| `transport_type`, `transport_config` | Paste-ready, with secret *names* in the auth block |
+| `secrets[]` | Every name the config references, with where to get the value |
+| `placeholders[]` | Values you must fill in first, such as a project ref |
+| `requiresConsent` | True when the credential needs a one-time OAuth consent |
+| `source` | `live-config` if taken from a server already working in production, `provider-docs` otherwise |
+
+The catalogue is checked against the real resolver in CI: a template cannot
+declare a secret federation would never look up, or reference one it forgot to
+document. That is what keeps the data from rotting quietly.
+
 ## MCP configuration
 
 Select **MCP Servers → Connection → MCP Streamable HTTP**:
@@ -40,11 +65,43 @@ Select **MCP Servers → Connection → MCP Streamable HTTP**:
 }
 ```
 
-Save the sensitive value separately in **Encrypted secrets**:
+Store the sensitive value on the playbook's **Secrets** tab under the name the
+config references — here `client_secret` — and it resolves at call time. The
+value never appears in the transport config.
+
+### User-scoped APIs: `oauth2_refresh_token`
+
+`client_credentials` covers machine-to-machine APIs. Services that act *as a
+user* — Gmail, LinkedIn, X, Facebook — need a token obtained with that user's
+consent, and consent needs a browser redirect and a callback URL that a playbook
+has nowhere to host.
+
+The way through is that consent is a **one-time** step. Obtain a refresh token
+out of band, store it in the vault, and renewal from then on is an ordinary POST
+that federation makes for you:
 
 ```json
-{ "client_secret": "replace-me" }
+{
+  "url": "https://gmail.example.com/mcp",
+  "auth": {
+    "type": "oauth2_refresh_token",
+    "token_url": "https://oauth2.googleapis.com/token",
+    "client_id": "your-app.apps.googleusercontent.com",
+    "client_secret": "GOOGLE_CLIENT_SECRET",
+    "refresh_token_secret": "GMAIL_REFRESH_TOKEN"
+  }
+}
 ```
+
+`refresh_token_secret` and `client_secret` are **secret names**, not values;
+store both on the Secrets tab. A public client using PKCE has no client secret —
+omit `client_secret` and only the refresh token is required.
+
+Access tokens are cached until shortly before they expire. Because some
+providers rotate the refresh token on each use, the cache key includes a digest
+of the token rather than the token itself, so a renewed token cannot read a stale
+entry. If the named secret is absent, the error names it (`Missing secret:
+GMAIL_REFRESH_TOKEN`) instead of failing as a generic upstream error.
 
 For bearer auth use `{"type":"bearer","token_secret":"token"}` and store `{"token":"..."}`. For an API key, configure `type`, `header`, `prefix`, and `api_key_secret`.
 
