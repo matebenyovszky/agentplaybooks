@@ -6,7 +6,7 @@ AgentPlaybooks speichert externe MCP- oder OpenAPI-Verbindungen im Playbook und 
 https://agentplaybooks.ai/api/mcp/PLAYBOOK_GUID
 ```
 
-Der Endpunkt entdeckt Upstream-Werkzeuge, versieht sie mit `ext__SERVER_ID__TOOL` und leitet Aufrufe an den richtigen Server weiter. MCP-Ressourcen erhalten reversible `mcp-proxy://`-URIs.
+Der Endpunkt entdeckt Upstream-Werkzeuge, versieht sie mit `SERVERNAME__TOOL` (z. B. `supabase__execute_sql`; zwei gleichnamige Server erhalten beide ein kurzes Id-Fragment) und leitet Aufrufe an den richtigen Server weiter. Die ältere Schreibweise `ext__SERVER_ID__TOOL` wird bei Aufrufen weiterhin akzeptiert. MCP-Ressourcen erhalten reversible `mcp-proxy://`-URIs.
 
 ## Unterstützte Funktionen
 

@@ -6,7 +6,7 @@ AgentPlaybooks can store an external MCP or OpenAPI connection inside a playbook
 https://agentplaybooks.ai/api/mcp/PLAYBOOK_GUID
 ```
 
-The endpoint discovers upstream tools, namespaces them as `ext__SERVER_ID__TOOL`, and proxies calls to the correct upstream. MCP resources use reversible `mcp-proxy://` URIs.
+The endpoint discovers upstream tools, namespaces them as `SERVER_NAME__TOOL` (e.g. `supabase__execute_sql`; two same-named servers both get a short id fragment), and proxies calls to the correct upstream. The older `ext__SERVER_ID__TOOL` spelling is still accepted on calls. MCP resources use reversible `mcp-proxy://` URIs.
 
 ## Supported connections
 
@@ -194,7 +194,7 @@ Every OpenAPI `operationId` becomes a namespaced MCP tool. Path, query, and head
   "id": 2,
   "method": "tools/call",
   "params": {
-    "name": "ext__SERVER_ID__search",
+    "name": "SERVER_NAME__search",
     "arguments": { "query": "federated MCP" }
   }
 }

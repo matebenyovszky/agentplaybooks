@@ -45,10 +45,46 @@ describe("MCP federation", () => {
     });
     const audit = vi.fn();
     const [tool] = await listFederatedTools([server()], { fetch: fetchMock as typeof fetch, audit });
-    expect(tool.name).toBe("ext__123456781234__search");
+    // The name leads with the server's own name, because that is the part of a
+    // tools/list a reader keeps — an id fragment tells them nothing.
+    expect(tool.name).toBe("research__search");
     const result = await callFederatedTool(server(), tool.name, { query: "MCP" }, { fetch: fetchMock as typeof fetch, audit });
     expect(result).toEqual({ content: [{ type: "text", text: "found" }] });
     expect(audit).toHaveBeenCalledWith(expect.objectContaining({ operation: "tools/call", status: "success" }));
+  });
+
+  it("still answers a call made under the legacy ext__<id> name", async () => {
+    // Saved sessions, generated OpenAPI exports, and third-party configs hold
+    // the old spelling; a rename that breaks them is a worse bug than the one
+    // it fixed.
+    const fetchMock = vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
+      const request = JSON.parse(String(init?.body)) as { method: string };
+      if (request.method === "tools/list") {
+        return jsonResponse({ jsonrpc: "2.0", id: "1", result: { tools: [{ name: "search", inputSchema: { type: "object" } }] } });
+      }
+      return jsonResponse({ jsonrpc: "2.0", id: "2", result: { content: [{ type: "text", text: "found" }] } });
+    });
+    const result = await callFederatedTool(server(), "ext__123456781234__search", { query: "MCP" }, { fetch: fetchMock as typeof fetch });
+    expect(result).toEqual({ content: [{ type: "text", text: "found" }] });
+  });
+
+  it("disambiguates every member of a slug collision, not just the newcomer", async () => {
+    const first = server({ id: "11111111-1111-1111-1111-111111111111", name: "Search" });
+    const second = server({ id: "22222222-2222-2222-2222-222222222222", name: "search!" });
+    const fetchMock = vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
+      const request = JSON.parse(String(init?.body)) as { method: string };
+      if (request.method === "tools/list") {
+        return jsonResponse({ jsonrpc: "2.0", id: "1", result: { tools: [{ name: "go", inputSchema: { type: "object" } }] } });
+      }
+      return jsonResponse({ jsonrpc: "2.0", id: "2", result: { content: [] } });
+    });
+
+    const tools = await listFederatedTools([first, second], { fetch: fetchMock as typeof fetch });
+    expect(tools.map((tool) => tool.name).sort()).toEqual(["search_1111__go", "search_2222__go"]);
+    // If only the second server were suffixed, its calls would silently land on
+    // the first — both carrying the fragment keeps the routing honest.
+    await expect(callFederatedTool(first, "search_1111__go", {}, { fetch: fetchMock as typeof fetch }))
+      .resolves.toEqual({ content: [] });
   });
 
   it("proxies MCP resources through reversible namespaced URIs", async () => {

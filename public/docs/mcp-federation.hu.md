@@ -6,7 +6,7 @@ Az AgentPlaybooks a külső MCP- vagy OpenAPI-kapcsolatot magában a playbookban
 https://agentplaybooks.ai/api/mcp/PLAYBOOK_GUID
 ```
 
-A végpont élőben felderíti az upstream eszközöket, `ext__SERVER_ID__TOOL` névtérbe helyezi őket, és a hívást a megfelelő szerverhez proxyzza. Az MCP-erőforrások visszafejthető `mcp-proxy://` URI-t kapnak.
+A végpont élőben felderíti az upstream eszközöket, `SZERVERNÉV__TOOL` névtérbe helyezi őket (pl. `supabase__execute_sql`; két azonos nevű szerver mindegyike rövid azonosító-töredéket kap), és a hívást a megfelelő szerverhez proxyzza. A régi `ext__SERVER_ID__TOOL` írásmódot híváskor továbbra is elfogadja. Az MCP-erőforrások visszafejthető `mcp-proxy://` URI-t kapnak.
 
 ## Támogatott kapcsolatok
 

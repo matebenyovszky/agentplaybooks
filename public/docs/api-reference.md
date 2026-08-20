@@ -249,7 +249,7 @@ Returns Anthropic-compatible federated tool definitions, instructional skills, a
   "system_prompt": "## Coder\n\nYou are a helpful...",
   "tools": [
     {
-      "name": "ext__SERVER_ID__code_review",
+      "name": "SERVER_NAME__code_review",
       "description": "Review code for issues",
       "input_schema": { ... }
     }
