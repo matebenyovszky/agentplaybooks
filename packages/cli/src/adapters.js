@@ -333,8 +333,20 @@ function mergedHermesConfig(existingContent, additions, externalDir, { conflicts
     servers.push(name);
   }
 
+  // `connect` writes one server and nothing else: a null externalDir means
+  // "leave skills.external_dirs alone", which is sync's business, not this
+  // command's.
   const externalDirs = [];
-  const configured = document.getIn(["skills", "external_dirs"], true);
+  const configured = externalDir === null ? null : document.getIn(["skills", "external_dirs"], true);
+  if (externalDir === null) {
+    if (servers.length === 0) return { content: null, servers, externalDirs };
+    const serialized = document.toString({ lineWidth: 0 });
+    return {
+      content: serialized.endsWith("\n") ? serialized : `${serialized}\n`,
+      servers: servers.sort(),
+      externalDirs,
+    };
+  }
   const configuredList = configured === undefined
     ? []
     : (typeof configured?.toJSON === "function" ? configured.toJSON() : configured);
@@ -558,3 +570,84 @@ export async function applyAdapters(actions, backupDirectory) {
 // Exported for reuse by remote pull, which compares fetched content against
 // local files using the same canonical comparison rules.
 export { canonicalJson };
+
+/**
+ * Plan one MCP server entry into a target's config file.
+ *
+ * `connect` writes a single server — the playbook's own hosted endpoint — rather
+ * than syncing an inventory, but it must land in the file the same way sync
+ * would: merged into whatever is already there, backed up before a rewrite, and
+ * refused rather than mangled when the target's format cannot hold the
+ * definition. So it reuses the same writers instead of growing a second
+ * implementation that drifts.
+ *
+ * Returns null when there is nothing to write, which the caller reports along
+ * with the conflicts it collected.
+ */
+/**
+ * The same, for Hermes Agent, whose MCP servers live in its profile
+ * `config.yaml` rather than in a project file — so the path comes from the
+ * profile, not from the project root. Only the server is written: the skill
+ * store registration belongs to sync.
+ */
+export async function planHermesMcpServerAction({
+  name,
+  definition,
+  conflicts = [],
+  homedir = os.homedir(),
+  env = process.env,
+  platform = process.platform,
+}) {
+  const profile = await hermesProfile({ homedir, env, platform });
+  const configPath = path.join(profile.directory, "config.yaml");
+  const display = `${profile.display}/config.yaml`;
+  const existingContent = await readIfExists(configPath);
+  const merged = mergedHermesConfig(existingContent, { [name]: definition }, null, {
+    conflicts,
+    display,
+    homedir,
+    env,
+  });
+  if (merged.content === null || merged.servers.length === 0) return null;
+
+  return {
+    kind: "mcp-config",
+    target: "hermes",
+    name: display,
+    action: existingContent === null ? "create" : "merge",
+    path: display,
+    absolutePath: configPath,
+    servers: merged.servers,
+    content: merged.content,
+  };
+}
+
+export function planMcpServerAction({ root, target, name, definition, existingContent = null, conflicts = [] }) {
+  const adapter = TARGET_ADAPTERS[target];
+  if (!adapter?.mcpPath) {
+    conflicts.push(conflict(
+      target,
+      "mcp",
+      name,
+      adapter?.mcpUnsupported ?? `${target} cannot receive MCP servers from a config file.`,
+      [],
+    ));
+    return null;
+  }
+
+  const merged = adapter.format === "toml"
+    ? mergedTomlContent(existingContent, { [name]: definition }, target, conflicts, adapter.mcpPath)
+    : mergedJsonContent(existingContent, { [name]: definition }, target, conflicts, adapter.mcpPath);
+  if (merged.content === null || merged.added.length === 0) return null;
+
+  return {
+    kind: "mcp-config",
+    target,
+    name: adapter.mcpPath,
+    action: existingContent === null ? "create" : "merge",
+    path: adapter.mcpPath,
+    absolutePath: path.join(root, ...adapter.mcpPath.split("/")),
+    servers: merged.added,
+    content: merged.content,
+  };
+}

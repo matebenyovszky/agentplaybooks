@@ -13,7 +13,7 @@
       "name": "agentplaybooks",
       "source": "./packages/cli",
       "description": "Audit, sync, pull, and push portable agent playbooks: instructions, Agent Skills, and MCP configuration.",
-      "version": "0.2.0-alpha.1",
+      "version": "0.3.0-beta.0",
       "author": {
         "name": "AgentPlaybooks",
         "url": "https://agentplaybooks.ai"

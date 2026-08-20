@@ -11,6 +11,7 @@ import {
   planConsent,
 } from "./auth-command.js";
 import { applySync, planGlobalSync, planSync, printSyncPlan } from "./sync.js";
+import { applyConnect, planConnect, printConnectPlan } from "./connect.js";
 import {
   applyPull,
   applyPush,
@@ -53,6 +54,8 @@ Usage:
   agentplaybooks doctor [path] [--json] [--strict] [--global] [--include-vendored]
   agentplaybooks sync [path] [--apply] [--json] [--target=<types>]
   agentplaybooks sync --global [--apply] [--json] [--target=<types>] [--include-vendored]
+  agentplaybooks connect <guid> [path] [--apply] [--json] [--target=<types>]
+                                [--name=<entry>] [--key-env=<VAR>] [--key-header=<H>]
   agentplaybooks login [--url=<base>]
   agentplaybooks logout [--url=<base>]
   agentplaybooks playbooks [--url=<base>] [--json]
@@ -82,6 +85,14 @@ Commands:
              moves skills only: a global MCP config holds credentials, so
              copying it between clients would spread them. Skills the clients
              ship with themselves are left out unless --include-vendored.
+  connect    Point an agent tool at a hosted playbook's own MCP endpoint, so it
+             reaches memory, skills, and every federated tool through one
+             connection instead of a local copy. The key is never written: the
+             config carries \${VAR}, which the tool expands at launch — so set
+             the variable before starting it, since a variable added afterwards
+             is invisible to a running process and looks like a rejected key.
+             The credential goes in X-API-Key by default; a client that reserves
+             Authorization for itself would otherwise drop it silently.
   login      Store an AgentPlaybooks user API key (apb_...) for a remote.
              Reads AGENTPLAYBOOKS_API_KEY, or prompts on stdin.
   logout     Remove the stored API key for a remote.
@@ -538,6 +549,43 @@ export async function run(args) {
         console.log(result.applied ? "Applied sync plan." : "No changes applied.");
         for (const written of result.written) console.log(`Wrote: ${written}`);
         if (result.backupPath) console.log(`Backup: ${result.backupPath}`);
+        for (const backup of result.backups) console.log(`Backup: ${backup}`);
+      }
+    }
+    return;
+  }
+
+  if (command === "connect") {
+    const requestedTargets = typeof flags.get("--target") === "string"
+      ? flags.get("--target").split(",").map((value) => value.trim()).filter(Boolean)
+      : [];
+    const plan = await planConnect(path.resolve(positional[1] ?? process.cwd()), {
+      playbook: positional[0],
+      targets: requestedTargets,
+      name: typeof flags.get("--name") === "string" ? flags.get("--name") : undefined,
+      keyEnvVar: typeof flags.get("--key-env") === "string" ? flags.get("--key-env") : undefined,
+      keyHeader: typeof flags.get("--key-header") === "string" ? flags.get("--key-header") : undefined,
+      url: typeof flags.get("--url") === "string" ? flags.get("--url") : undefined,
+    });
+    if (flags.has("--json")) {
+      console.log(JSON.stringify({
+        changed: plan.changed,
+        url: plan.url,
+        entryName: plan.entryName,
+        keyEnvVar: plan.keyEnvVar,
+        keyHeader: plan.keyHeader,
+        keyPresentInEnvironment: plan.keyPresentInEnvironment,
+        fileActions: plan.fileActions.map(withoutContent),
+        conflicts: plan.conflicts,
+      }, null, 2));
+    } else {
+      printConnectPlan(plan);
+    }
+    if (flags.has("--apply")) {
+      const result = await applyConnect(plan);
+      if (!flags.has("--json")) {
+        console.log(result.applied ? "\nApplied." : "\nNo changes applied.");
+        for (const written of result.written) console.log(`Wrote: ${written}`);
         for (const backup of result.backups) console.log(`Backup: ${backup}`);
       }
     }

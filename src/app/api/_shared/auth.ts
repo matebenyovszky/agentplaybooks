@@ -1,4 +1,5 @@
 import { hashApiKey } from "@/lib/utils";
+import { presentedApiKey } from "./api-key-header";
 import { getServiceSupabase, getSupabase } from "./supabase";
 import type { ApiKey, UserApiKeysRow } from "@/lib/supabase/types";
 import { getPlaybookAccessRole } from "./guards";
@@ -52,16 +53,19 @@ export async function requireAuth(request: Request): Promise<{ id: string } | nu
   return user || null;
 }
 
+// Which headers may carry a key, and in what forms, lives in one place — see
+// api-key-header.ts for why the `Bearer` prefix is optional.
+export { presentedApiKey };
+
 export async function validateApiKey(
   request: Request,
   requiredPermission: string
 ): Promise<ApiKeyWithPlaybook | null> {
-  const authHeader = request.headers.get("Authorization");
-  if (!authHeader?.startsWith("Bearer apb_")) {
+  const apiKey = presentedApiKey(request);
+  if (!apiKey) {
     return null;
   }
 
-  const apiKey = authHeader.replace("Bearer ", "");
   const keyHash = await hashApiKey(apiKey);
   const supabase = getServiceSupabase();
   const { data: apiKeyData, error } = await supabase
@@ -107,12 +111,11 @@ export async function validateUserApiKey(
   request: Request,
   requiredPermission?: string
 ): Promise<UserApiKeyData | null> {
-  const authHeader = request.headers.get("Authorization");
-  if (!authHeader?.startsWith("Bearer apb_")) {
+  const apiKey = presentedApiKey(request);
+  if (!apiKey) {
     return null;
   }
 
-  const apiKey = authHeader.replace("Bearer ", "");
   const keyHash = await hashApiKey(apiKey);
   const supabase = getServiceSupabase();
   const { data: userKeyData, error } = await supabase

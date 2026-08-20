@@ -221,11 +221,49 @@ credenciales literales nunca se escriben en el manifiesto ni se suben;
 `doctor` los señala y `push` se niega a ejecutarse hasta que se reemplacen por
 referencias.
 
+## Connect: llega al playbook en sí, no a una copia
+
+`sync` y `pull` mueven el *contenido* de un playbook a los archivos que leen
+tus herramientas. `connect` va en la dirección contraria: apunta la herramienta
+al propio endpoint MCP del playbook, de modo que la memoria, las skills y cada
+herramienta federada llegan en vivo por una sola conexión.
+
+```bash
+agentplaybooks connect 011d8a7fa0ec4016 --target=claude --name=apbks-dev --apply
+```
+
+Eso escribe exactamente esto:
+
+```json
+{
+  "mcpServers": {
+    "apbks-dev": {
+      "type": "http",
+      "url": "https://agentplaybooks.ai/api/mcp/011d8a7fa0ec4016",
+      "headers": { "X-API-Key": "${APBKS_KEY_APBKS_DEV}" }
+    }
+  }
+}
+```
+
+La clave nunca se escribe: la configuración lleva la referencia y la herramienta
+la expande al arrancar. Dos detalles que conviene saber, porque ambos fallan en
+silencio:
+
+- **Define la variable antes de iniciar la herramienta.** Una variable añadida
+  después es invisible para un proceso ya en marcha, y desde dentro eso es
+  indistinguible de una clave rechazada: la conexión se establece, no aparece
+  ninguna herramienta y la actualización falla.
+- **La credencial va por defecto en `X-API-Key`**, no en `Authorization`. Un
+  cliente puede reservarse `Authorization` para su propia autenticación y
+  descartar sin avisar lo que pongas ahí. El endpoint acepta ambas cabeceras; usa
+  `--key-header=Authorization` si la prefieres.
+
 ## Plugin para Claude Code y Claude Cowork
 
 El paquete de la CLI es a la vez un plugin de Claude Code con el skill
 `agentplaybooks` y los comandos `/agentplaybooks:doctor`, `:sync`, `:pull`,
-`:push`:
+`:push`, `:connect`:
 
 ```text
 /plugin marketplace add matebenyovszky/agentplaybooks
