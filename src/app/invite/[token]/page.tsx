@@ -2,12 +2,14 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Loader2, UsersRound } from "lucide-react";
 import { createBrowserClient } from "@/lib/supabase/client";
 import { authFetch } from "@/lib/auth-fetch";
 
 export default function CollaborationInvitePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
+  const router = useRouter();
   const [playbookName, setPlaybookName] = useState<string | null>(null);
   const [signedIn, setSignedIn] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -34,7 +36,7 @@ export default function CollaborationInvitePage({ params }: { params: Promise<{ 
     const response = await authFetch(`/api/collaboration-invites/${token}`, { method: "POST" });
     const data = await response.json().catch(() => null);
     if (response.ok && data?.playbook_id) {
-      window.location.href = `/dashboard/playbook/${data.playbook_id}`;
+      router.push(`/dashboard/playbook/${data.playbook_id}`);
       return;
     }
     setError(typeof data?.error === "string" ? data.error : "Could not accept invite");

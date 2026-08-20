@@ -126,6 +126,11 @@ export const FloatingNav = ({
     await supabase.auth.signOut();
     setUser(null);
     setUserMenuOpen(false);
+    // A full document load, deliberately — not `router.push`. Signing out has to
+    // leave nothing of the session behind, and a client-side transition keeps the
+    // React tree, every component's state, and the router cache of pages rendered
+    // for the signed-in user. `@next/next/no-location-assign-relative-destination`
+    // flags this line; it is the one place where the reload is the feature.
     window.location.href = "/";
   };
 

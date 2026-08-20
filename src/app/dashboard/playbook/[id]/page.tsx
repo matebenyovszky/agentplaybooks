@@ -3,6 +3,7 @@
 import { useEffect, useState, use, useCallback, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import JSZip from "jszip";
 import { createBrowserClient } from "@/lib/supabase/client";
@@ -73,6 +74,7 @@ function useDebounce<T>(value: T, delay: number): T {
 export default function PlaybookEditorPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const t = useTranslations();
+  const router = useRouter();
 
   // State
   const [playbook, setPlaybook] = useState<PlaybookWithAccess | null>(null);
@@ -467,7 +469,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
       setForkSuccess(true);
       setTimeout(() => {
         // Redirect to the new playbook
-        window.location.href = `/dashboard/playbook/${newPlaybook.id}`;
+        router.push(`/dashboard/playbook/${newPlaybook.id}`);
       }, 1500);
 
     } catch (error) {
@@ -2104,7 +2106,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                       if (!response.ok) {
                         return;
                       }
-                      window.location.href = "/dashboard";
+                      router.push("/dashboard");
                     }}
                     className="px-4 py-2 bg-red-600 text-white border border-red-700 rounded-lg hover:bg-red-700 dark:bg-red-500/15 dark:text-red-300 dark:border-red-400/30 dark:hover:bg-red-500/25 transition-colors font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/60 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#0a0f1a]"
                   >

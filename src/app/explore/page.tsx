@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { FloatingNav } from "@/components/ui/floating-navbar";
 import { createBrowserClient } from "@/lib/supabase/client";
@@ -75,6 +76,7 @@ import { FileText, Link as LinkIcon } from "lucide-react"; // Import missing ico
 
 export default function ExplorePage() {
   const t = useTranslations();
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabType>("playbooks");
 
   // Playbooks state
@@ -180,7 +182,7 @@ export default function ExplorePage() {
 
   const toggleStar = async (playbookId: string) => {
     if (!userId) {
-      window.location.href = "/login?redirect=/explore";
+      router.push("/login?redirect=/explore");
       return;
     }
 
