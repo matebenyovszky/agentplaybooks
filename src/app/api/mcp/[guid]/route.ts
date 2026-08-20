@@ -12,6 +12,7 @@ import {
 import {
   LATEST_PROTOCOL_VERSION,
   privateAccessRefusal,
+  isHandshakeMethod,
   isNotification,
   negotiateProtocolVersion,
   requestsEventStream,
@@ -396,6 +397,26 @@ app.post("/", async (c) => {
   }
 
   if (!playbook) {
+    // Establishing the connection is not reading the playbook. Refusing the
+    // handshake with 401 is what an OAuth-capable client reads as "start an
+    // authorization flow", so it hunts for metadata we do not serve and dies
+    // quietly; see isHandshakeMethod. Identity only — the playbook's name and
+    // instructions stay behind the key, and every data method below is still
+    // refused.
+    if (privateRowExists && isHandshakeMethod(method)) {
+      return c.json({
+        jsonrpc: "2.0",
+        id,
+        result: method === "server/discover"
+          ? discoverResult({ name: "AgentPlaybooks", version: "1.0.0" })
+          : {
+            protocolVersion: negotiateProtocolVersion(rpcParams?.protocolVersion),
+            serverInfo: { name: "AgentPlaybooks", version: "1.0.0" },
+            capabilities: { tools: {}, resources: {} },
+          },
+      });
+    }
+
     // The JSON-RPC error keeps the detail; the HTTP status is what a transport
     // acts on, and 200 told the client the call had succeeded.
     if (privateRowExists) {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { GET, POST } from "@/app/api/mcp/[guid]/route";
-import { privateAccessRefusal } from "@/app/api/_shared/mcp-protocol";
+import { isHandshakeMethod, privateAccessRefusal } from "@/app/api/_shared/mcp-protocol";
 
 /**
  * Transport-level conformance for the playbook MCP endpoint — the one people
@@ -94,5 +94,41 @@ describe("private playbook refusal", () => {
     expect(refusal.headers["WWW-Authenticate"]).toBeUndefined();
     expect(refusal.message).toContain("memory:read");
     expect(refusal.message).toContain("playbooks:read");
+  });
+});
+
+/**
+ * Dropping the `WWW-Authenticate` challenge was not enough: on an MCP endpoint
+ * the 401 itself is what the authorization spec defines as "OAuth protected
+ * resource, start the flow". Claude's connector proved it — the dialog showed
+ * "Always required — Detected" for a server with no OAuth at all, then failed
+ * silently whichever mode was chosen. The handshake therefore has to answer
+ * without a credential, while everything that returns data keeps refusing.
+ */
+describe("which methods may answer without a credential", () => {
+  it("lets the handshake through, in both eras", () => {
+    expect(isHandshakeMethod("initialize")).toBe(true);
+    expect(isHandshakeMethod("server/discover")).toBe(true);
+  });
+
+  it("keeps every method that returns playbook data behind the credential", () => {
+    for (const method of [
+      "tools/list",
+      "tools/call",
+      "resources/list",
+      "resources/read",
+      "prompts/list",
+    ]) {
+      expect(isHandshakeMethod(method), method).toBe(false);
+    }
+  });
+
+  it("does not treat a look-alike method name as a handshake", () => {
+    // A prefix match here would open `initialize_everything` or a namespaced
+    // `ext__x__initialize` to unauthenticated callers.
+    expect(isHandshakeMethod("initialize_everything")).toBe(false);
+    expect(isHandshakeMethod("ext__server__initialize")).toBe(false);
+    expect(isHandshakeMethod("server/discover_all")).toBe(false);
+    expect(isHandshakeMethod(undefined)).toBe(false);
   });
 });

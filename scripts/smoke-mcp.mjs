@@ -157,6 +157,7 @@ async function checkPrivatePlaybookChallenge() {
     console.log("skip  private playbook checks (set SMOKE_PRIVATE_GUID to enable)");
     return;
   }
+
   const { response } = await request(`/api/mcp/${PRIVATE_GUID}`);
   // 404 tells a client the server does not exist, so it never asks for a
   // credential. And a Bearer challenge claims OAuth we do not implement.
@@ -164,6 +165,36 @@ async function checkPrivatePlaybookChallenge() {
     "a private playbook answers 401 without an OAuth challenge",
     response.status === 401 && !response.headers.get("www-authenticate"),
     `HTTP ${response.status}, WWW-Authenticate: ${response.headers.get("www-authenticate") ?? "(none)"}`,
+  );
+
+  // A connector probes before it applies any header. If the handshake itself is
+  // refused, an OAuth-capable client reads the 401 as "OAuth protected
+  // resource" and gives up looking for metadata we never served.
+  const handshake = await request(
+    `/api/mcp/${PRIVATE_GUID}`,
+    rpc("initialize", { params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "smoke", version: "1" } }, version: "2025-06-18", modern: false }),
+  );
+  record(
+    "a private playbook completes the handshake without a credential",
+    handshake.response.status === 200 && typeof handshake.json?.result?.protocolVersion === "string",
+    `HTTP ${handshake.response.status}, ${handshake.json?.result?.protocolVersion ?? handshake.json?.error?.message ?? "no result"}`,
+  );
+
+  // …and the credential still decides what can be read.
+  const listing = await request(`/api/mcp/${PRIVATE_GUID}`, rpc("tools/list", { version: "2025-06-18", modern: false }));
+  record(
+    "a private playbook still refuses tools/list without a credential",
+    listing.response.status === 401,
+    `HTTP ${listing.response.status}`,
+  );
+
+  // The handshake must not leak the playbook's own identity to a caller that
+  // has not authenticated.
+  const info = handshake.json?.result?.serverInfo;
+  record(
+    "the unauthenticated handshake carries generic identity only",
+    info?.name === "AgentPlaybooks",
+    `serverInfo.name: ${info?.name ?? "(none)"}`,
   );
 }
 
