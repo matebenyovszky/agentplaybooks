@@ -388,21 +388,7 @@ JWT-bearing client performs table queries — the browser talks only to
 
 ## License
 
-This project is licensed under the PolyForm Noncommercial License 1.0.0.
+MIT — see [LICENSE](LICENSE).
 
-### What this means:
-
-You CAN:
-- Use the software for personal projects, learning, and experimentation
-- Use it internally within your organization for non-commercial purposes
-- Modify and adapt it for your own non-commercial use
-- Use it for research, education, and charitable purposes
-
-You CANNOT (without permission):
-- Sell the software or offer it as a paid service
-- Use it to provide commercial services to others
-- Monetize the software or concept in any way
-
-For commercial licensing, please contact the project maintainer.
-
-See the LICENSE file for full details.
+Use it for anything, including commercially. Keep the copyright notice and the
+permission notice in copies or substantial portions.
