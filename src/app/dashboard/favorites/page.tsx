@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -29,20 +29,14 @@ export default function FavoritesPage() {
   const [favorites, setFavorites] = useState<PublicPlaybook[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const supabase = createBrowserClient();
-
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) {
-        setUser(user);
-        loadFavorites();
-      } else {
-        setLoading(false);
-      }
-    });
-  }, []);
-
-  const loadFavorites = async () => {
+  // Declared above the effect that calls it, and listed in its dependencies —
+  // the same shape the other loaders in this codebase use. It used to sit below,
+  // which worked only because the call happens inside a promise callback: a
+  // `const` is in its temporal dead zone until the component body reaches it, so
+  // any path that reached the call synchronously would have thrown
+  // `ReferenceError`. Being outside the dependency list also meant the effect
+  // captured the first render's copy of the function for the page's lifetime.
+  const loadFavorites = useCallback(async () => {
     const response = await authFetch("/api/user/starred");
 
     if (!response.ok) {
@@ -71,7 +65,20 @@ export default function FavoritesPage() {
 
     setFavorites(formattedPlaybooks);
     setLoading(false);
-  };
+  }, []);
+
+  useEffect(() => {
+    const supabase = createBrowserClient();
+
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        setUser(user);
+        loadFavorites();
+      } else {
+        setLoading(false);
+      }
+    });
+  }, [loadFavorites]);
 
   const handleUnstar = async (playbookId: string) => {
     if (!user) return;

@@ -86,28 +86,7 @@ export default function DocsPageClient({ initialSlug = "readme", initialContent 
     }
   }, []);
 
-  useEffect(() => {
-    if (initialContent) {
-      setContent(initialContent);
-      setLoading(false);
-    } else {
-      loadContent(page);
-    }
-  }, [page, initialContent]);
-
-  // Handle hash changes for anchor links
-  useEffect(() => {
-    if (!loading) {
-      scrollToAnchor();
-    }
-
-    // Listen for hash changes
-    const handleHashChange = () => scrollToAnchor();
-    window.addEventListener("hashchange", handleHashChange);
-    return () => window.removeEventListener("hashchange", handleHashChange);
-  }, [loading, scrollToAnchor]);
-
-  const loadContent = async (slug: string) => {
+  const loadContent = useCallback(async (slug: string) => {
     setLoading(true);
     try {
       // Map slug to filename
@@ -127,7 +106,29 @@ export default function DocsPageClient({ initialSlug = "readme", initialContent 
       setContent("# Error loading documentation\n\nPlease try again later.");
     }
     setLoading(false);
-  };
+  }, []);
+
+  useEffect(() => {
+    if (initialContent) {
+      setContent(initialContent);
+      setLoading(false);
+    } else {
+      loadContent(page);
+    }
+  }, [page, initialContent, loadContent]);
+
+  // Handle hash changes for anchor links
+  useEffect(() => {
+    if (!loading) {
+      scrollToAnchor();
+    }
+
+    // Listen for hash changes
+    const handleHashChange = () => scrollToAnchor();
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, [loading, scrollToAnchor]);
+
 
   return (
     <div className="min-h-screen bg-background text-foreground">

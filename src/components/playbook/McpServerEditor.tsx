@@ -15,7 +15,6 @@ import {
   AlertCircle,
   Wrench,
   FolderOpen,
-  Shield,
   PlugZap,
 } from "lucide-react";
 import type { MCPServer } from "@/lib/supabase/types";

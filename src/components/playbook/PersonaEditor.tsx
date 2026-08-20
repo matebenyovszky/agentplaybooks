@@ -47,17 +47,21 @@ export function PersonaEditor({ persona, storage, onUpdate, onDelete, readOnly =
   const [metadata, setMetadata] = useState(JSON.stringify(persona.metadata || {}, null, 2));
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [hasChanges, setHasChanges] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Track changes
-  useEffect(() => {
-    const changed =
-      name !== persona.name ||
-      systemPrompt !== persona.system_prompt ||
-      metadata !== JSON.stringify(persona.metadata || {}, null, 2);
-    setHasChanges(changed);
-  }, [name, systemPrompt, metadata, persona]);
+  // Whether the editor holds unsaved edits is a comparison, not a fact worth
+  // storing: every input to it is already state or a prop. Computing it during
+  // render costs one comparison and removes a render — the effect version set
+  // state on every keystroke, so each character rendered twice — and removes the
+  // window where the flag disagreed with the fields it describes. Saving does
+  // not reset it either: `onUpdate` hands the saved persona back to the parent,
+  // the prop refreshes, and the comparison becomes false on its own. That also
+  // fixes the race the flag used to lose, where a save of the debounced values
+  // cleared the flag while the live fields already held newer text.
+  const hasChanges =
+    name !== persona.name ||
+    systemPrompt !== persona.system_prompt ||
+    metadata !== JSON.stringify(persona.metadata || {}, null, 2);
 
   // Debounced save
   const debouncedPrompt = useDebounce(systemPrompt, 1500);
@@ -86,7 +90,6 @@ export function PersonaEditor({ persona, storage, onUpdate, onDelete, readOnly =
 
         if (updated) {
           onUpdate(updated);
-          setHasChanges(false);
         }
       } finally {
         setSaving(false);

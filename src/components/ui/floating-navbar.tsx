@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { Home, ChevronDown, BookOpen, LogOut, Globe, Server, Star, Settings, LayoutDashboard, Rss, Sun, Moon, Laptop, UserCircle } from "lucide-react";
 import { locales, localeNames, localeFlags, type Locale } from "@/i18n/config";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { createBrowserClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
 import { useTheme } from "@/components/theme-provider";
@@ -30,7 +30,17 @@ export const FloatingNav = ({
   const [visible, setVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
-  const [currentLocale, setCurrentLocale] = useState<Locale>("en");
+  // The locale next-intl already resolved for this request. `src/i18n/request.ts`
+  // reads the `NEXT_LOCALE` cookie server-side, so the value is identical on the
+  // server and on the client — no state to hold, and nothing to hydrate around.
+  //
+  // This used to be `useState<Locale>("en")` seeded from the cookie in a mount
+  // effect, which meant the first paint always showed the default locale and
+  // then flipped to the real one. Reading the cookie in a lazy initializer would
+  // have removed the flash but introduced a hydration mismatch instead: the
+  // server has no `document`. Asking next-intl is the version with neither
+  // problem.
+  const currentLocale = useLocale() as Locale;
   const [user, setUser] = useState<User | null>(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
@@ -121,23 +131,12 @@ export const FloatingNav = ({
 
   const handleLocaleSelect = (newLocale: Locale) => {
     setLangMenuOpen(false);
-    setCurrentLocale(newLocale);
-    // Set cookie and reload to apply new locale
+    // Set cookie and reload to apply new locale. The reload is the point: the
+    // server re-resolves the locale from the cookie and re-renders with the new
+    // messages, so there is no local copy of the choice to keep in step.
     document.cookie = `NEXT_LOCALE=${newLocale};path=/;max-age=31536000`;
     window.location.reload();
   };
-
-  // Read locale from cookie on mount
-  useEffect(() => {
-    const cookieLocale = document.cookie
-      .split("; ")
-      .find((row) => row.startsWith("NEXT_LOCALE="))
-      ?.split("=")[1] as Locale | undefined;
-
-    if (cookieLocale && locales.includes(cookieLocale)) {
-      setCurrentLocale(cookieLocale);
-    }
-  }, []);
 
 
 
