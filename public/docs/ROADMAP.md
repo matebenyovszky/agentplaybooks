@@ -384,6 +384,50 @@ Open, in rough order of value:
   - Load balancing across MCP servers
   - Caching layer for performance
 
+### Tool Surface Economy 🚧
+
+> **Why this matters:** a connected client pays for every advertised tool on
+> every call — this playbook's own surface measured ~11.7k tokens across 63
+> tools (45% schemas, 32% descriptions, 3% names), and registry reviews grade
+> raw tool count. The fix is not removing capability; it is controlling what is
+> *advertised* separately from what is *callable*.
+
+- [x] **Readable federated names** — `supabase__execute_sql`, not
+  `ext__f8755c97da23__execute`. Slug from the server's display name; slug
+  collisions disambiguate every member; legacy `ext__` names stay callable.
+- [x] **Toolset views** — `?toolset=runtime|memory|admin|full` on the MCP URL.
+  The view narrows `tools/list`; a *pinned* view also refuses calls outside
+  itself (policy), while the default view only advertises (ergonomics), so one
+  connection is enough — the agent discovers the rest through `find_tools`.
+  `runtime` excludes the 12 playbook-administration tools, so an agent applying
+  a playbook cannot delete a skill it was supposed to read.
+- [x] **`find_tools`** — keyword search over the full catalog (built-in +
+  federated) returning name, description, and input schema; every result is
+  callable directly even when absent from `tools/list`. A pinned view's catalog
+  is limited to the view: no discovering what would then be refused.
+- [ ] **Flip the default view** to `runtime` once real sessions confirm nothing
+  relies on admin tools being advertised (calls would still work — the default
+  view is not enforced).
+- [ ] **Per-playbook custom toolsets** — named views defined in playbook
+  config, so an operator can hand out `?toolset=support-bot` with exactly the
+  tools that role needs.
+- [ ] **Skills as MCP prompts** — serve `prompts/list`/`prompts/get` (today:
+  -32601), mapping skills to user-invoked prompts: task-level hierarchy at zero
+  token cost until used.
+- [ ] **Compact/meta-tool view** — `?toolset=compact`: `find_tools` +
+  `describe_tool` + `call_tool` only. Experiment, not default: models handle
+  the search→inspect→call chain, but every call costs an extra round trip.
+- [ ] **Schema diet** — trim per-property prose in the most expensive schemas
+  (`write_memory` alone is ~270 schema tokens); move long guidance from
+  descriptions (paid every call) into resources (paid when read).
+- [ ] **Cost visibility** — per-tool and per-server token estimates on the
+  dashboard next to 30-day usage, so curation decisions are informed. A
+  per-call counter was considered and rejected as too expensive.
+- [ ] **Skill scanning & evaluation** — run NVIDIA SkillSpector on skill
+  push/import and surface a risk badge (prerequisite for marketplace sharing);
+  longer term, SkillEvaluator-style with/without runs to measure whether a
+  skill earns its context.
+
 ### MCP Proxy & API Gateway 📋
 
 > **Why this matters:** MCP protocol can be token-inefficient for simple operations. Sometimes a plain webhook, curl command, or standard REST/OpenAPI call is more efficient and costs fewer tokens. We want to support the best tool for each job.

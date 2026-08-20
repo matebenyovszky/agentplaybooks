@@ -223,10 +223,36 @@ The MCP server exposes built-in tools for interacting with the playbook. Skills 
 | **Connected MCP/OpenAPI** | `list_mcp_servers`, `create_mcp_server`, `update_mcp_server`, `delete_mcp_server`, `call_connected_tool` |
 | **Secrets** | `list_secrets`, `use_secret`, `store_secret`, `rotate_secret`, `delete_secret` |
 | **Playbook** | `update_playbook` |
+| **Discovery** | `find_tools` |
 
 Canvas documents are isolated by workflow run. Pass `run_id` to document-level
 canvas tools; create one first with `create_run`. The control plane additionally
 requires `playbook_id`, while the direct endpoint gets the playbook from its URL.
+
+### Toolsets: advertise less, keep everything callable
+
+A connected client pays tokens for every advertised tool on every call. The
+`toolset` query parameter narrows what `tools/list` returns:
+
+```text
+https://agentplaybooks.ai/api/mcp/YOUR_GUID?toolset=runtime
+```
+
+| Toolset | Advertises | Calls outside it |
+|---------|-----------|------------------|
+| *(none)* / `full` | everything, plus `find_tools` | allowed — the default view is ergonomics, not policy |
+| `runtime` | everything except the 12 playbook-administration tools (skill/server/secret/playbook CUD), plus `find_tools` | **refused** |
+| `memory` | the 9 memory tools only | **refused** |
+| `admin` | the 12 administration tools only | **refused** |
+
+One connection is enough. On an unpinned connection the agent discovers what it
+needs with `find_tools(query)` — keyword search over the full catalog, built-in
+and federated alike, returning name, description, and input schema — and then
+calls the result directly, whether or not it was advertised. Add the same
+playbook twice only when you *want* differently scoped connections: a pinned
+toolset is a deliberate boundary, and `find_tools` on a pinned connection
+searches only within it. An unknown toolset name is a 400, never a silent
+fallback to `full`.
 
 ## Available Resources
 
