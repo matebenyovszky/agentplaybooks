@@ -68,6 +68,30 @@ export function isNotification(method: unknown, id: unknown): boolean {
 }
 
 /**
+ * The methods that establish a connection rather than return anything from the
+ * playbook: the legacy handshake and its modern-era replacement.
+ *
+ * These must answer without a credential, even for a private playbook. A client
+ * probes the URL before it applies any header, and on an MCP endpoint a 401 is
+ * the authorization spec's way of saying "this is an OAuth protected resource,
+ * start the flow" — so refusing the handshake makes an OAuth-capable client go
+ * looking for metadata we do not serve. Claude's connector dialog shows the
+ * result: it labels the server "Always required — Detected", then fails with no
+ * message, whichever authentication mode the operator picks.
+ *
+ * Both answers carry static identity only — our name, version, protocol
+ * versions, and capability list — never the playbook's name or instructions. The
+ * methods that return data are still refused, so the credential still decides
+ * what a caller can read; it no longer decides whether the connection can be
+ * established.
+ */
+const HANDSHAKE_METHODS = new Set(["initialize", "server/discover"]);
+
+export function isHandshakeMethod(method: unknown): boolean {
+  return typeof method === "string" && HANDSHAKE_METHODS.has(method);
+}
+
+/**
  * How an MCP endpoint should refuse a private playbook.
  *
  * These endpoints used to answer 404 "Playbook not found" whether the playbook
