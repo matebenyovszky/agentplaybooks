@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { createBrowserClient } from "@/lib/supabase/client";
@@ -48,20 +48,13 @@ export default function SettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
 
-  useEffect(() => {
-    const supabase = createBrowserClient();
-
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) {
-        setUser(user);
-        loadApiKeys();
-      } else {
-        setLoading(false);
-      }
-    });
-  }, []);
-
-  const loadApiKeys = async () => {
+  // Declared above the effect that calls it, and listed in its dependencies —
+  // the same shape the other loaders in this codebase use. It used to sit below
+  // the effect, which worked only because the call happens inside a promise
+  // callback: a `const` is in its temporal dead zone until the component body
+  // reaches it, so any path reaching the call synchronously would have thrown
+  // `ReferenceError`.
+  const loadApiKeys = useCallback(async () => {
     setLoading(true);
     try {
       const supabase = createBrowserClient();
@@ -79,7 +72,20 @@ export default function SettingsPage() {
       console.error("Failed to load API keys:", e);
     }
     setLoading(false);
-  };
+  }, []);
+
+  useEffect(() => {
+    const supabase = createBrowserClient();
+
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        setUser(user);
+        loadApiKeys();
+      } else {
+        setLoading(false);
+      }
+    });
+  }, [loadApiKeys]);
 
   const handleCreateKey = async () => {
     setCreating(true);

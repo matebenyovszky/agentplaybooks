@@ -41,7 +41,6 @@ export function SkillEditor({ skill, storage, onUpdate, onDelete, readOnly = fal
   const [content, setContent] = useState(skill.content || "");
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [hasChanges, setHasChanges] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
   // Determine if this is a content-based skill
@@ -192,15 +191,17 @@ export function SkillEditor({ skill, storage, onUpdate, onDelete, readOnly = fal
     return <File className="h-4 w-4" />;
   };
 
-  // Track changes
-  useEffect(() => {
-    const changed =
-      name !== skill.name ||
-      description !== (skill.description || "") ||
-      content !== (skill.content || "") ||
-      licence !== (skill.licence || "");
-    setHasChanges(changed);
-  }, [name, description, content, licence, skill]);
+  // Unsaved edits are a comparison between the fields and the skill they came
+  // from, so they are computed rather than stored: the effect that mirrored this
+  // into state made every keystroke render twice, and left the flag one render
+  // behind the fields it describes. Saving needs no reset either — `onUpdate`
+  // hands the saved skill back to the parent, the prop refreshes, and the
+  // comparison goes false by itself.
+  const hasChanges =
+    name !== skill.name ||
+    description !== (skill.description || "") ||
+    content !== (skill.content || "") ||
+    licence !== (skill.licence || "");
 
   const handleSave = useCallback(async () => {
     const error = validateAgentSkillName(name) || validateAgentSkillDescription(description);
@@ -220,7 +221,6 @@ export function SkillEditor({ skill, storage, onUpdate, onDelete, readOnly = fal
 
       if (updated) {
         onUpdate(updated);
-        setHasChanges(false);
       }
     } catch (e) {
       console.error("Save error:", e);
