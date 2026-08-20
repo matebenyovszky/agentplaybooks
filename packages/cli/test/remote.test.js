@@ -157,7 +157,11 @@ test("global push uploads this machine's skills and never its MCP configuration"
   }));
   const { fetchImpl, calls } = fakeApi({ playbooks: [] });
 
-  const plan = await planGlobalPush({ url: URL_BASE, apiKey: API_KEY, fetchImpl, homedir: home });
+  // `env: {}` alongside `homedir` is how this suite isolates global scans: a
+  // real HERMES_HOME (or %LOCALAPPDATA%) overrides the profile location by
+  // design, so without it a developer's own Hermes skills leak into the fixture
+  // and this assertion fails on their machine but passes in CI.
+  const plan = await planGlobalPush({ url: URL_BASE, apiKey: API_KEY, fetchImpl, homedir: home, env: {} });
 
   assert.equal(plan.scope, "global");
   assert.deepEqual(plan.skills.map((skill) => skill.name).sort(), ["review", "task-admin"]);
