@@ -15,7 +15,6 @@ import {
   AlertCircle,
   Wrench,
   FolderOpen,
-  ExternalLink,
   Shield,
   PlugZap,
 } from "lucide-react";
@@ -47,6 +46,37 @@ interface Resource {
   mimeType?: string;
 }
 
+/**
+ * Key order and whitespace are not differences. Unparseable text counts as a
+ * change so the editor still offers to save while the author is mid-edit.
+ */
+function parses(text: string): boolean {
+  try {
+    JSON.parse(text);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+  if (value && typeof value === "object") {
+    const entries = Object.keys(value as Record<string, unknown>).sort()
+      .map((key) => `${JSON.stringify(key)}:${canonicalJson((value as Record<string, unknown>)[key])}`);
+    return `{${entries.join(",")}}`;
+  }
+  return JSON.stringify(value ?? null);
+}
+
+function sameJsonValue(text: string, stored: unknown): boolean {
+  try {
+    return canonicalJson(JSON.parse(text)) === canonicalJson(stored);
+  } catch {
+    return false;
+  }
+}
+
 const DEFAULT_TRANSPORT_CONFIG = { url: "", timeout_ms: 15000 };
 
 export function McpServerEditor({ mcpServer, playbookGuid, storage, onUpdate, onDelete, readOnly = false }: McpServerEditorProps) {
@@ -73,41 +103,38 @@ export function McpServerEditor({ mcpServer, playbookGuid, storage, onUpdate, on
   const [hasStoredSecrets, setHasStoredSecrets] = useState(false);
   const [vaultSecretNames, setVaultSecretNames] = useState<string[]>([]);
   const [vaultReferenceName, setVaultReferenceName] = useState("");
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<
+    { ok: true; tools: string[]; resources: string[] } | { ok: false; error: string; code?: string } | null
+  >(null);
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [hasChanges, setHasChanges] = useState(false);
-  const [jsonError, setJsonError] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState<"connection" | "tools" | "resources">("connection");
 
   // Parse tools and resources
   const tools: Tool[] = Array.isArray(mcpServer.tools) ? mcpServer.tools as Tool[] : [];
   const resources: Resource[] = Array.isArray(mcpServer.resources) ? mcpServer.resources as Resource[] : [];
 
-  // Validate JSON
-  useEffect(() => {
-    try {
-      JSON.parse(toolsJson);
-      JSON.parse(resourcesJson);
-      JSON.parse(transportConfigJson);
-      JSON.parse(secretsJson);
-      setJsonError(null);
-    } catch {
-      setJsonError("Invalid JSON");
-    }
-  }, [toolsJson, resourcesJson, transportConfigJson, secretsJson]);
+  // Derived, not stored: as state written from an effect this lagged a render,
+  // so Save was briefly enabled on invalid JSON and disabled just after it
+  // became valid again.
+  const jsonError = [toolsJson, resourcesJson, transportConfigJson, secretsJson]
+    .every((text) => parses(text)) ? null : "Invalid JSON";
 
-  // Track changes
-  useEffect(() => {
-    const changed =
-      name !== mcpServer.name ||
-      description !== (mcpServer.description || "") ||
-      toolsJson !== JSON.stringify(mcpServer.tools || [], null, 2) ||
-      resourcesJson !== JSON.stringify(mcpServer.resources || [], null, 2) ||
-      transportType !== (mcpServer.transport_type || "http") ||
-      transportConfigJson !== JSON.stringify(mcpServer.transport_config || DEFAULT_TRANSPORT_CONFIG, null, 2) ||
-      secretsChanged;
-    setHasChanges(changed);
-  }, [name, description, toolsJson, resourcesJson, transportType, transportConfigJson, secretsChanged, mcpServer]);
+  // Whether anything actually differs from what is stored. Derived rather than
+  // pushed into state from an effect: an effect ran a render late, and the JSON
+  // fields were compared as *text* against a re-serialized copy of the stored
+  // value. Paste `"auth": { "type": "bearer" }` on one line, save it, and the
+  // pretty-printer expands it — so the editor kept reporting unsaved changes for
+  // a server that had saved perfectly. Formatting is not a change; values are.
+  const hasChanges =
+    name !== mcpServer.name ||
+    description !== (mcpServer.description || "") ||
+    transportType !== (mcpServer.transport_type || "http") ||
+    !sameJsonValue(toolsJson, mcpServer.tools || []) ||
+    !sameJsonValue(resourcesJson, mcpServer.resources || []) ||
+    !sameJsonValue(transportConfigJson, mcpServer.transport_config || DEFAULT_TRANSPORT_CONFIG) ||
+    secretsChanged;
 
   useEffect(() => {
     if (readOnly) return;
@@ -181,6 +208,30 @@ export function McpServerEditor({ mcpServer, playbookGuid, storage, onUpdate, on
     }
   }, [vaultReferenceName, transportConfigJson]);
 
+  // Asks the server to reach the upstream with the credential a real call would
+  // use, so a wrong URL or an unresolved secret is visible here instead of at
+  // the moment an agent tries to use the playbook.
+  const handleTest = useCallback(async () => {
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const supabase = createBrowserClient();
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error("Sign in again to test the connection.");
+      const response = await fetch(`/api/mcp/config/${mcpServer.id}/test`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const payload = await response.json();
+      setTestResult(response.ok ? payload : { ok: false, error: payload.error || `HTTP ${response.status}` });
+    } catch (error) {
+      setTestResult({ ok: false, error: error instanceof Error ? error.message : String(error) });
+    } finally {
+      setTesting(false);
+    }
+  }, [mcpServer.id]);
+
   const handleSave = useCallback(async () => {
     if (jsonError) return;
 
@@ -217,7 +268,6 @@ export function McpServerEditor({ mcpServer, playbookGuid, storage, onUpdate, on
           setHasStoredSecrets(true);
         }
         onUpdate(updated);
-        setHasChanges(false);
       }
     } catch (e) {
       console.error("Save error:", e);
@@ -572,12 +622,51 @@ export function McpServerEditor({ mcpServer, playbookGuid, storage, onUpdate, on
                       </p>
                     </div>
                   )}
+                  {!isReadOnly && (
+                    <div className="pt-1">
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={handleTest}
+                          disabled={testing || hasChanges}
+                          title={hasChanges ? "Save first — the test uses the stored configuration" : undefined}
+                          className="px-3 py-1.5 rounded-lg text-xs bg-slate-700/60 text-slate-200 hover:bg-slate-600/60 disabled:opacity-40"
+                        >
+                          {testing ? "Testing..." : "Test connection"}
+                        </button>
+                        {hasChanges && (
+                          <span className="text-xs text-slate-500">Save first — the test uses the stored configuration.</span>
+                        )}
+                      </div>
+                      {testResult?.ok === true && (
+                        <p className="mt-2 text-xs text-emerald-400">
+                          Reached the upstream: {testResult.tools.length} tool(s), {testResult.resources.length} resource(s).
+                          {testResult.tools.length > 0 && <span className="text-slate-400"> {testResult.tools.slice(0, 8).join(", ")}{testResult.tools.length > 8 ? "…" : ""}</span>}
+                        </p>
+                      )}
+                      {testResult?.ok === false && (
+                        <p className="mt-2 text-xs text-amber-400">
+                          {testResult.error}{testResult.code ? ` (${testResult.code})` : ""}
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
               {/* Tools Section */}
               {activeSection === "tools" && (
                 <div className="space-y-3">
+                  {/* A federated server answers tools/list itself, so these lists
+                      stay empty for one and that is correct — not a setup step
+                      someone forgot. */}
+                  <p className="text-xs text-slate-500">
+                    This server is reached over {transportType === "openapi" ? "OpenAPI" : "MCP"}, so its
+                    {" "}tools and resources are discovered from the upstream every time an agent lists
+                    them — nothing needs to be entered here. Use <strong>Test connection</strong> on the
+                    {" "}Connection tab to see what it offers. The lists below are only for tools this
+                    {" "}playbook declares itself.
+                  </p>
                   <div className="flex items-center justify-between">
                     <label className="text-sm font-medium text-slate-400">
                       MCP Tools
@@ -667,6 +756,16 @@ export function McpServerEditor({ mcpServer, playbookGuid, storage, onUpdate, on
               {/* Resources Section */}
               {activeSection === "resources" && (
                 <div className="space-y-3">
+                  {/* A federated server answers tools/list itself, so these lists
+                      stay empty for one and that is correct — not a setup step
+                      someone forgot. */}
+                  <p className="text-xs text-slate-500">
+                    This server is reached over {transportType === "openapi" ? "OpenAPI" : "MCP"}, so its
+                    {" "}tools and resources are discovered from the upstream every time an agent lists
+                    them — nothing needs to be entered here. Use <strong>Test connection</strong> on the
+                    {" "}Connection tab to see what it offers. The lists below are only for tools this
+                    {" "}playbook declares itself.
+                  </p>
                   <div className="flex items-center justify-between">
                     <label className="text-sm font-medium text-slate-400">
                       MCP Resources
@@ -777,21 +876,6 @@ export function McpServerEditor({ mcpServer, playbookGuid, storage, onUpdate, on
                 </div>
               )}
 
-              {/* MCP Info */}
-              <div className="flex items-start gap-2 p-3 rounded-lg bg-pink-500/5 border border-pink-500/10">
-                <ExternalLink className="h-4 w-4 text-pink-400 mt-0.5 flex-shrink-0" />
-                <p className="text-sm text-pink-200/70">
-                  Learn more about MCP at{" "}
-                  <a
-                    href="https://modelcontextprotocol.io/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-pink-400 hover:underline"
-                  >
-                    modelcontextprotocol.io
-                  </a>
-                </p>
-              </div>
             </div>
           </motion.div>
         )}
