@@ -2730,8 +2730,23 @@ app.get("/public/mcp/:id", async (c) => {
 
   // Explicit projection for the same reason as `/public/skills/:id`.
   // `transport_config` is deliberately included: the marketplace lets people
-  // copy a shared MCP server into their own playbook. Upstream credentials are
-  // never here — they live in `mcp_server_secrets`, which is service-role only.
+  // copy a shared MCP server into their own playbook.
+  //
+  // Its `auth` fields hold secret *names*, not values — `token_secret`,
+  // `api_key_secret`, `client_secret`, `refresh_token_secret` are looked up in
+  // the calling playbook's own vault at call time (see
+  // `_shared/federation-secrets.ts` and `lib/mcp/secret-references.ts`). So a
+  // shared server arrives as a template: it states which credential it needs,
+  // and the copier supplies their own.
+  //
+  // `headers`, however, is free-form and nothing validates it against literals.
+  // A token typed directly into a header on a *public* playbook would be
+  // published by this endpoint. The editor steers people to vault references
+  // for exactly that reason; if that ever needs enforcing, it belongs here in
+  // the projection, not in a comment.
+  //
+  // (This used to say credentials "live in `mcp_server_secrets`, which is
+  // service-role only". That table was dropped — there is one vault now.)
   const { data, error } = await supabase
     .from("mcp_servers")
     .select(`
