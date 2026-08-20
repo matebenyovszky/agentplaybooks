@@ -6,13 +6,12 @@ Deploy AgentPlaybooks on your own infrastructure.
 >
 > *Last verified: 2026-08-01.*
 >
-> **1. There is no baseline migration.** `supabase/migrations/` contains only
-> incremental changes. No `CREATE TABLE` exists for `playbooks`, `skills`,
-> `skill_attachments`, `mcp_servers`, `memories`, `api_keys`, `user_api_keys`,
-> `profiles`, or `playbook_stars`, and no `ENABLE ROW LEVEL SECURITY` for them
-> either. Running the migrations against an empty database fails. Until a
-> baseline lands, take a `supabase db dump --schema-only` from an existing
-> project — it captures the tables, triggers and RLS policies together.
+> **1. Start a new project from `supabase/schema.sql`, not from
+> `supabase/migrations/`.** The migrations folder is incremental only — it has
+> no `CREATE TABLE` for the core tables and never did, so applying it to an
+> empty database fails on the first statement. `supabase/schema.sql` is a
+> snapshot of the whole current schema and is all a new project needs; the
+> migrations are the forward history from that snapshot onward.
 >
 > **2. "Self-hosted" means running your own Supabase, not just your own
 > Postgres.** Every API route queries the Supabase Data API and authentication

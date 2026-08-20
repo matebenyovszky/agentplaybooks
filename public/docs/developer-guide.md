@@ -146,21 +146,25 @@ npm run dev
 ### Database Setup
 
 1. Create a Supabase project at [supabase.com](https://supabase.com)
-2. Apply the schema (see the caveat below)
+
+2. Apply `supabase/schema.sql` in the SQL Editor — that is the whole schema in
+   one file: types, tables, constraints, indexes, functions, triggers, RLS and
+   policies
 3. Enable Auth providers (Email, Google, GitHub) in Authentication settings
 
-> **There is no baseline migration yet.** `supabase/migrations/` holds only
-> incremental changes — no `CREATE TABLE` for `playbooks`, `skills`,
-> `mcp_servers`, `memories`, `api_keys`, `profiles` and friends, and no
-> `ENABLE ROW LEVEL SECURITY` for them. Running the migrations against an empty
-> database fails on the first one.
->
-> Until a baseline lands, take a schema-only dump from a project that already
-> works — it captures the tables, indexes, triggers and RLS policies together:
->
-> ```bash
-> supabase db dump --db-url "$CONNECTION_STRING" --schema-only -f baseline.sql
-> ```
+`supabase/schema.sql` is a snapshot of the current schema, not a replay of the
+migrations that produced it, so it is the only file a new project needs.
+`supabase/migrations/` remains the forward history from that snapshot onward —
+do not apply the older ones on top of it, since the snapshot already contains
+their result.
+
+The guide used to point at `supabase/migrations/20260102_initial_schema.sql`.
+That file never existed in this repository, and neither did any other
+`CREATE TABLE` for the core tables — every migration here is incremental, so
+following the old step against an empty project failed on the first statement.
+
+> The schema references `auth.users` and its policies call `auth.uid()`, so it
+> needs the Supabase stack. A bare PostgreSQL server will reject it.
 
 ### Inspecting the database from an AI editor (optional)
 
@@ -195,6 +199,7 @@ Then set two variables in your shell — never in a committed file:
 `--read-only` is deliberate: the token grants account-wide access, so the
 server should not be able to write. Drop the flag only when you actually intend
 to apply a migration through it, and put it back afterwards.
+
 
 ## Key Concepts
 
