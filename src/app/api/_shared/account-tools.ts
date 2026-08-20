@@ -1,18 +1,27 @@
 import type { McpTool } from "@/lib/supabase/types";
+import {
+  DESTRUCTIVE_CLOSED,
+  IDEMPOTENT_WRITE_CLOSED,
+  playbookListOutputSchema,
+  READ_CLOSED,
+  WRITE_CLOSED,
+} from "@/app/api/_shared/mcp-tool-hints";
 
 /** Account lifecycle tools. Playbook-scoped tools live in playbook-tools.ts. */
 export const ACCOUNT_TOOLS: McpTool[] = [
   {
     name: "list_playbooks",
-    description: "List playbooks owned by or shared with the authenticated user, including access role and content counts.",
+    description: "List playbooks owned by or shared with the authenticated user, including access role and content counts. Read-only; it does not create or modify playbooks. Use get_playbook when you need the singleton persona, skills, connected servers, and memory for one playbook. Requires playbooks:read or full permission.",
     inputSchema: {
       type: "object",
       properties: {},
     },
+    outputSchema: playbookListOutputSchema,
+    annotations: READ_CLOSED,
   },
   {
     name: "create_playbook",
-    description: "Create a new playbook. A playbook is a container for personas (AI personalities), skills (capabilities), and memory (persistent storage).",
+    description: "Create a new playbook container for a singleton persona, skills, and memory. Each call inserts a new playbook; it does not upsert by name. Requires playbooks:write or full permission. Use update_playbook to change an existing playbook, not this tool.",
     inputSchema: {
       type: "object",
       properties: {
@@ -27,10 +36,11 @@ export const ACCOUNT_TOOLS: McpTool[] = [
       },
       required: ["name"],
     },
+    annotations: WRITE_CLOSED,
   },
   {
     name: "get_playbook",
-    description: "Get a playbook with its singleton persona, skills, connected MCP servers, and memory.",
+    description: "Get a playbook with its singleton persona, skills, connected MCP servers, and memory. This is the only persona retrieval tool; there is no get_persona. Read-only. Requires playbooks:read or full permission. Use list_playbooks to discover IDs first, and get_skill when you need one skill's full content rather than the playbook summary.",
     inputSchema: {
       type: "object",
       properties: {
@@ -38,10 +48,11 @@ export const ACCOUNT_TOOLS: McpTool[] = [
       },
       required: ["playbook_id"],
     },
+    annotations: READ_CLOSED,
   },
   {
     name: "delete_playbook",
-    description: "Delete a playbook and all its contents (personas, skills, memory, API keys). This action cannot be undone!",
+    description: "Permanently delete a playbook and all of its contents (persona, skills, memory, API keys, canvas, and secrets). This cannot be undone. Requires playbooks:write or full permission, and only the owner may delete. Do not use this to reset a persona (delete_persona) or remove a single skill or memory; those have dedicated tools.",
     inputSchema: {
       type: "object",
       properties: {
@@ -49,10 +60,11 @@ export const ACCOUNT_TOOLS: McpTool[] = [
       },
       required: ["playbook_id"],
     },
+    annotations: DESTRUCTIVE_CLOSED,
   },
   {
     name: "create_persona",
-    description: "Set the singleton persona (AI identity and system prompt) for a playbook. Backward-compatible alias for updating persona fields.",
+    description: "Set the playbook's singleton persona name and system prompt. This does not add a second persona; it is a backward-compatible alias that overwrites those fields. Requires personas:write or full permission. Prefer update_persona to change a subset of fields. Use update_playbook only when you also need playbook name, visibility, config, or project instructions. Do not use delete_persona unless you intend to reset to the default Assistant.",
     inputSchema: {
       type: "object",
       properties: {
@@ -63,32 +75,35 @@ export const ACCOUNT_TOOLS: McpTool[] = [
       },
       required: ["playbook_id", "name", "system_prompt"],
     },
+    annotations: DESTRUCTIVE_CLOSED,
   },
   {
     name: "update_persona",
-    description: "Update a persona's name, system prompt, or metadata.",
+    description: "Update the singleton persona's name, system prompt, or metadata without resetting to defaults. persona_id must equal playbook_id because the persona is stored on the playbook row. Requires personas:write or full permission. Use create_persona to replace name and system prompt together, delete_persona to reset to the default Assistant, and update_playbook when changing playbook-level fields as well.",
     inputSchema: {
       type: "object",
       properties: {
         playbook_id: { type: "string", description: "UUID of the playbook" },
-        persona_id: { type: "string", description: "UUID of the persona" },
+        persona_id: { type: "string", description: "Must equal playbook_id; the persona is a singleton stored on the playbook" },
         name: { type: "string", description: "New name" },
         system_prompt: { type: "string", description: "New system prompt" },
         metadata: { type: "object", description: "New metadata" },
       },
       required: ["playbook_id", "persona_id"],
     },
+    annotations: IDEMPOTENT_WRITE_CLOSED,
   },
   {
     name: "delete_persona",
-    description: "Reset the singleton persona to the default assistant. The playbook always retains one logical persona.",
+    description: "Reset the playbook's singleton persona to the default Assistant name and system prompt. Despite the delete_* name, this is not a hard delete: each playbook always keeps exactly one logical persona, so the fields are overwritten rather than removed. persona_id must equal playbook_id because the persona is stored on the playbook row. Custom name, system prompt, and metadata are permanently replaced and cannot be undone. Requires personas:write or full permission. Use update_persona to change fields without resetting, create_persona to set a new identity, and delete_playbook only when the entire playbook should be removed.",
     inputSchema: {
       type: "object",
       properties: {
         playbook_id: { type: "string", description: "UUID of the playbook" },
-        persona_id: { type: "string", description: "UUID of the persona to delete" },
+        persona_id: { type: "string", description: "Must equal playbook_id; the persona is a singleton stored on the playbook" },
       },
       required: ["playbook_id", "persona_id"],
     },
+    annotations: DESTRUCTIVE_CLOSED,
   },
 ];

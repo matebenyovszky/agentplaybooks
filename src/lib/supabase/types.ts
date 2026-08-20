@@ -1,10 +1,21 @@
 // Auto-generated types will be here
 // For now, define manually based on our schema
 
+/** MCP tool annotation hints introspected by clients and Glama TDQS. */
+export type McpToolAnnotations = {
+  title?: string;
+  readOnlyHint?: boolean;
+  destructiveHint?: boolean;
+  idempotentHint?: boolean;
+  openWorldHint?: boolean;
+};
+
 export type McpTool = {
   name: string;
   description?: string;
   inputSchema?: Record<string, unknown>;
+  outputSchema?: Record<string, unknown>;
+  annotations?: McpToolAnnotations;
 };
 
 export type McpResource = {
