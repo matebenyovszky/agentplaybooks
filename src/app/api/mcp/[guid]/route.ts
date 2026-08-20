@@ -46,6 +46,7 @@ import {
 import { PLAYBOOK_TOOLS } from "@/app/api/_shared/playbook-tools";
 import {
   callFederatedTool,
+  federatedCallPrefixes,
   federatedServerPrefix,
   listFederatedResources,
   listFederatedTools,
@@ -110,7 +111,8 @@ async function federatedResources(servers: MCPServer[], playbookId: string, requ
 }
 
 function serverForFederatedTool(servers: MCPServer[], toolName: string) {
-  return servers.find((server) => toolName.startsWith(federatedServerPrefix(server)));
+  return servers.find((server) =>
+    federatedCallPrefixes(server).some((prefix) => toolName.startsWith(prefix)));
 }
 
 function isMcpToolResult(value: unknown): value is { content: unknown[] } {
@@ -898,16 +900,25 @@ use_secret({
       const args = rpcParams?.arguments || {};
       const serviceSupabase = getServiceSupabase();
 
-      if (toolName?.startsWith("ext__")) {
-        const { data: mcpRows } = await serviceSupabase
-          .from("mcp_servers")
-          .select("*")
-          .eq("playbook_id", playbook.id);
-        const mcpServers = (mcpRows || []) as MCPServer[];
-        const server = serverForFederatedTool(mcpServers, toolName);
-        if (!server) {
-          return c.json({ jsonrpc: "2.0", id, error: { code: -32602, message: "Federated tool not found" } });
-        }
+      // Federated names lead with the server's slug (`supabase__execute_sql`),
+      // so "not a builtin" is the discriminator now, not an `ext__` marker —
+      // though legacy `ext__<id>__` names stay routable. A name that matches no
+      // server falls through to the builtin switch, whose default names the
+      // unknown tool.
+      const isBuiltinTool = PLAYBOOK_TOOLS.some((tool) => tool.name === toolName);
+      const federatedRows = isBuiltinTool
+        ? null
+        : (await serviceSupabase.from("mcp_servers").select("*").eq("playbook_id", playbook.id)).data;
+      const federatedServer = federatedRows
+        ? serverForFederatedTool(federatedRows as MCPServer[], toolName)
+        : null;
+
+      if (!federatedServer && toolName?.startsWith("ext__")) {
+        return c.json({ jsonrpc: "2.0", id, error: { code: -32602, message: "Federated tool not found" } });
+      }
+
+      if (federatedServer) {
+        const server = federatedServer;
         const access = (server.transport_config as { access?: string } | null)?.access;
         if (access !== "public") {
           const apiKey = await validateApiKey(c.req.raw, "tools:call");
@@ -2130,7 +2141,11 @@ use_secret({
               }
             }
 
-            const exposedName = connectedToolName.startsWith("ext__")
+            // A caller may pass the tool's original upstream name or an
+            // already-namespaced one (slug or legacy) — all three route the same.
+            const alreadyNamespaced = federatedCallPrefixes(server as MCPServer)
+              .some((prefix) => connectedToolName.startsWith(prefix));
+            const exposedName = alreadyNamespaced
               ? connectedToolName
               : `${federatedServerPrefix(server as MCPServer)}${connectedToolName}`;
             result = await callFederatedTool(

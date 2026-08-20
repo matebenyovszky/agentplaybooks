@@ -3,7 +3,7 @@ import { createApiApp } from "@/app/api/_shared/hono";
 import { validateApiKey } from "@/app/api/_shared/auth";
 import { getServiceSupabase, getSupabase } from "@/app/api/_shared/supabase";
 import { loadFederationSecrets } from "@/app/api/_shared/federation-secrets";
-import { callFederatedTool, federatedServerPrefix } from "@/lib/mcp/federation";
+import { callFederatedTool, federatedCallPrefixes } from "@/lib/mcp/federation";
 import { federationAuditWriter } from "@/app/api/_shared/audit";
 import type { ApiKey, MCPServer } from "@/lib/supabase/types";
 
@@ -34,7 +34,8 @@ app.post("/", async (c) => {
     .from("mcp_servers")
     .select("*")
     .eq("playbook_id", playbook.id);
-  const server = ((rows || []) as MCPServer[]).find((item) => toolName.startsWith(federatedServerPrefix(item)));
+  const server = ((rows || []) as MCPServer[]).find((item) =>
+    federatedCallPrefixes(item).some((prefix) => toolName.startsWith(prefix)));
   if (!server) return c.json({ error: "Federated tool not found" }, 404);
   const access = (server.transport_config as { access?: string } | null)?.access;
   if (access !== "public") {

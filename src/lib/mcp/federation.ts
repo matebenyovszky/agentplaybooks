@@ -174,12 +174,61 @@ export class FederationError extends Error {
   }
 }
 
-export function federatedToolName(server: Pick<MCPServer, "id">, originalName: string) {
-  return `${federatedServerPrefix(server)}${sanitizeName(originalName)}`;
+/**
+ * Federated tool names lead with the server's *name*, because the name is the
+ * one part of a tools/list a reader actually keeps: `supabase__execute_sql`
+ * says which system is about to act, `ext__f8755c97da23__execute` says nothing
+ * a human or a model can hold on to.
+ *
+ * The slug comes from the server's display name. When two servers in one
+ * playbook collapse to the same slug, every member of the collision gets a
+ * short id fragment — every member, deterministically, so that adding a second
+ * "search" server changes the first one's names visibly instead of silently
+ * re-routing calls addressed to it.
+ *
+ * The old `ext__<id12>__` names stay accepted on every call path. They live in
+ * saved agent sessions, generated OpenAPI exports, and third-party configs, and
+ * a rename that breaks an existing caller is a worse bug than the one it fixes.
+ */
+export function federatedToolName(
+  server: Pick<MCPServer, "id" | "name">,
+  originalName: string,
+  peers: Pick<MCPServer, "id" | "name">[] = [],
+) {
+  return `${federatedServerPrefix(server, peers)}${sanitizeName(originalName)}`;
 }
 
-export function federatedServerPrefix(server: Pick<MCPServer, "id">) {
+export function federatedServerPrefix(
+  server: Pick<MCPServer, "id" | "name">,
+  peers: Pick<MCPServer, "id" | "name">[] = [],
+) {
+  const slug = baseServerSlug(server);
+  const collided = peers.some((peer) => peer.id !== server.id && baseServerSlug(peer) === slug);
+  return collided ? `${slug}_${shortServerId(server)}__` : `${slug}__`;
+}
+
+export function legacyFederatedServerPrefix(server: Pick<MCPServer, "id">) {
   return `ext__${server.id.replace(/-/g, "").slice(0, 12)}__`;
+}
+
+/**
+ * Every prefix under which this server's tools may legitimately be addressed,
+ * longest first so the caller can strip the one that matched. The bare slug is
+ * accepted even when a collision forced the advertised names to carry an id
+ * fragment: by the time a call reaches one specific server, the router has
+ * already decided, and refusing the shorter spelling would help no one.
+ */
+export function federatedCallPrefixes(server: Pick<MCPServer, "id" | "name">): string[] {
+  const slug = baseServerSlug(server);
+  return [`${slug}_${shortServerId(server)}__`, `${slug}__`, legacyFederatedServerPrefix(server)];
+}
+
+function baseServerSlug(server: Pick<MCPServer, "name">) {
+  return sanitizeName(server.name || "").slice(0, 24).replace(/_+$/, "") || "server";
+}
+
+function shortServerId(server: Pick<MCPServer, "id">) {
+  return server.id.replace(/-/g, "").slice(0, 4);
 }
 
 export function federatedResourceUri(serverId: string, originalUri: string) {
@@ -201,10 +250,10 @@ export async function listFederatedTools(
       const tools = server.transport_type === "openapi"
         ? await discoverOpenApiTools(server, options)
         : await mcpListTools(server, options);
-      return tools.map((tool) => namespaceTool(server, tool));
+      return tools.map((tool) => namespaceTool(server, tool, servers));
     } catch {
       // Stored schemas are a safe discovery fallback when an upstream is temporarily unavailable.
-      return (server.tools || []).map((tool) => namespaceTool(server, tool));
+      return (server.tools || []).map((tool) => namespaceTool(server, tool, servers));
     }
   }));
   return results.flat();
@@ -543,14 +592,19 @@ function openApiInputSchema(operation: Record<string, unknown>): Record<string, 
 }
 
 async function resolveTool(server: MCPServer, namespacedName: string, options: FederationOptions) {
-  const expectedPrefix = federatedServerPrefix(server);
-  if (!namespacedName.startsWith(expectedPrefix)) {
+  const prefix = federatedCallPrefixes(server).find((candidate) => namespacedName.startsWith(candidate));
+  if (!prefix) {
     throw new FederationError(`Tool does not belong to ${server.name}`, "TOOL_NOT_FOUND", 404);
   }
+  const remainder = namespacedName.slice(prefix.length);
   const tools = server.transport_type === "openapi"
     ? await discoverOpenApiTools(server, options)
     : await mcpListTools(server, options).catch(() => server.tools || []);
-  const tool = tools.find((candidate) => federatedToolName(server, candidate.name) === namespacedName);
+  // The advertised names are sanitized, so match on the sanitized form — but an
+  // exact original name (`searchWeb`) is accepted too; a caller that already
+  // knows the upstream spelling should not be punished for using it.
+  const tool = tools.find((candidate) =>
+    sanitizeName(candidate.name) === remainder || candidate.name === remainder);
   if (!tool) throw new FederationError(`Federated tool not found: ${namespacedName}`, "TOOL_NOT_FOUND", 404);
   return { originalName: tool.name };
 }
@@ -740,10 +794,10 @@ function isPrivateIpv4Host(host: string) {
     /^172\.(1[6-9]|2\d|3[01])\./.test(host);
 }
 
-function namespaceTool(server: MCPServer, tool: McpTool): FederatedTool {
+function namespaceTool(server: MCPServer, tool: McpTool, peers: MCPServer[] = []): FederatedTool {
   return {
     ...tool,
-    name: federatedToolName(server, tool.name),
+    name: federatedToolName(server, tool.name, peers),
     description: `[${server.name}] ${tool.description || tool.name}`,
     inputSchema: tool.inputSchema || { type: "object", properties: {} },
     _meta: { serverId: server.id, serverName: server.name, originalName: tool.name, transport: server.transport_type || "http" },
