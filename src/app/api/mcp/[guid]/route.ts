@@ -5,6 +5,7 @@ import { getServiceSupabase, getSupabase } from "@/app/api/_shared/supabase";
 import { loadFederationSecrets } from "@/app/api/_shared/federation-secrets";
 import {
   LATEST_PROTOCOL_VERSION,
+  privateAccessRefusal,
   SUPPORTED_PROTOCOL_VERSIONS,
   isNotification,
   negotiateProtocolVersion,
@@ -217,16 +218,23 @@ app.get("/", async (c) => {
     .single();
 
   // If not found as public, try API key auth for private playbooks
+  let privateExists = false;
   if (!playbook) {
     let privateQuery = getServiceSupabase().from("playbooks").select("*");
     privateQuery = isUuid ? privateQuery.eq("id", guid) : privateQuery.eq("guid", guid);
     const { data: privatePlaybook } = await privateQuery.maybeSingle();
+    privateExists = Boolean(privatePlaybook);
     if (privatePlaybook && await canAccessPrivatePlaybook(c.req.raw, privatePlaybook.id)) {
       playbook = privatePlaybook;
     }
   }
 
   if (!playbook) {
+    // Protected and absent are different answers: see privateAccessRefusal.
+    if (privateExists) {
+      const refusal = privateAccessRefusal(c.req.raw);
+      return c.json({ error: refusal.message }, refusal.status, refusal.headers);
+    }
     return c.json({ error: "Playbook not found" }, 404);
   }
 
@@ -349,23 +357,35 @@ app.post("/", async (c) => {
     .single();
 
   // If not found as public, try API key auth for private playbooks
+  let privateRowExists = false;
   if (!playbook) {
     let privateQuery = getServiceSupabase()
       .from("playbooks")
       .select("id, user_id, persona_name, persona_system_prompt, persona_metadata, instructions");
     privateQuery = isUuid ? privateQuery.eq("id", guid) : privateQuery.eq("guid", guid);
     const { data: privatePlaybook } = await privateQuery.maybeSingle();
+    privateRowExists = Boolean(privatePlaybook);
     if (privatePlaybook && await canAccessPrivatePlaybook(c.req.raw, privatePlaybook.id)) {
       playbook = privatePlaybook;
     }
   }
 
   if (!playbook) {
+    // The JSON-RPC error keeps the detail; the HTTP status is what a transport
+    // acts on, and 200 told the client the call had succeeded.
+    if (privateRowExists) {
+      const refusal = privateAccessRefusal(c.req.raw);
+      return c.json({
+        jsonrpc: "2.0",
+        id,
+        error: { code: -32001, message: refusal.message },
+      }, refusal.status, refusal.headers);
+    }
     return c.json({
       jsonrpc: "2.0",
       id,
       error: { code: -32001, message: "Playbook not found" },
-    });
+    }, 404);
   }
 
   // Handle MCP methods

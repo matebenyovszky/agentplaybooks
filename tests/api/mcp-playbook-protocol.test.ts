@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { GET, POST } from "@/app/api/mcp/[guid]/route";
+import { privateAccessRefusal } from "@/app/api/_shared/mcp-protocol";
 
 /**
  * Transport-level conformance for the playbook MCP endpoint — the one people
@@ -59,5 +60,34 @@ describe("AgentPlaybooks playbook MCP transport", () => {
 
     expect(response.status).toBe(400);
     expect((await response.json()).error).toContain("Unsupported MCP protocol version");
+  });
+});
+
+/**
+ * A private playbook has to be distinguishable from a missing one. 404 tells a
+ * client "nothing here", so a connector reports the server as unreachable
+ * instead of asking for a credential — and a client probes the URL before it
+ * applies any header. The route wiring needs a database, so the decision itself
+ * is covered here and the wiring is verified against the deployed endpoint.
+ */
+describe("private playbook refusal", () => {
+  it("challenges a caller that sent no credential", () => {
+    const refusal = privateAccessRefusal(new Request("http://localhost/api/mcp/x"));
+
+    expect(refusal.status).toBe(401);
+    expect(refusal.headers["WWW-Authenticate"]).toContain("Bearer");
+    expect(refusal.message).toContain("private");
+  });
+
+  it("tells a rejected credential which permission it lacks, without a challenge", () => {
+    const refusal = privateAccessRefusal(new Request("http://localhost/api/mcp/x", {
+      headers: { Authorization: "Bearer apb_wrong" },
+    }));
+
+    // 401 would invite the client to retry the same key forever.
+    expect(refusal.status).toBe(403);
+    expect(refusal.headers["WWW-Authenticate"]).toBeUndefined();
+    expect(refusal.message).toContain("memory:read");
+    expect(refusal.message).toContain("playbooks:read");
   });
 });
