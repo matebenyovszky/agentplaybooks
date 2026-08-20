@@ -170,8 +170,7 @@ describe("GET /api/mcp/:guid — public manifest", () => {
     // Still available as its own field, unmerged.
     expect(manifest._playbook.instructions).toBe("# Project rules\n\nAlways run the tests.");
   });
-
-  it("falls back to API-key auth when the playbook is not public", async () => {
+  it("challenges an unauthenticated caller when the playbook exists but is private", async () => {
     vi.mocked(getSupabase).mockReturnValue(
       stubClient(null) as unknown as ReturnType<typeof getSupabase>,
     );
@@ -182,6 +181,22 @@ describe("GET /api/mcp/:guid — public manifest", () => {
     const res = await GET(new Request("http://localhost/api/mcp/private-guid"));
 
     expect(canAccessPrivatePlaybook).toHaveBeenCalledWith(expect.any(Request), "playbook-1");
+    // This used to be 404, which told a client the server did not exist and
+    // made a private playbook impossible to add as a connector.
+    expect(res.status).toBe(401);
+    expect(res.headers.get("WWW-Authenticate")).toContain("Bearer");
+  });
+
+  it("still answers 404 when there is no such playbook at all", async () => {
+    vi.mocked(getSupabase).mockReturnValue(
+      stubClient(null) as unknown as ReturnType<typeof getSupabase>,
+    );
+    vi.mocked(getServiceSupabase).mockReturnValue(
+      stubClient(null) as unknown as ReturnType<typeof getServiceSupabase>,
+    );
+
+    const res = await GET(new Request("http://localhost/api/mcp/absent-guid"));
+
     expect(res.status).toBe(404);
   });
 });
