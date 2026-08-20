@@ -1,0 +1,55 @@
+name: Smoke
+
+# The MCP surface is a contract with clients we do not control, and the bugs that
+# broke it were only ever visible against a deployed instance: a missing route
+# file, a protocol version rejected by an allowlist, a notification that got
+# answered. Unit tests call handlers directly, so none of that is reachable from
+# them. This runs the same checks against the real thing, on a schedule, so a
+# regression surfaces without anyone clicking a button to find it.
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: Base URL to check
+        required: false
+        default: https://agentplaybooks.ai
+  push:
+    branches: [main]
+  schedule:
+    # Every six hours. A broken connector is worth catching before a user does.
+    - cron: "17 */6 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: smoke-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SMOKE_URL: ${{ inputs.url || 'https://agentplaybooks.ai' }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - name: Smoke-check the deployed MCP surface
+        # On a push, the deploy is still building, so give it room to land
+        # before calling a failure a failure.
+        run: |
+          attempts=${SMOKE_ATTEMPTS:-1}
+          for i in $(seq 1 "$attempts"); do
+            if node scripts/smoke-mcp.mjs; then exit 0; fi
+            if [ "$i" -lt "$attempts" ]; then
+              echo "::notice::Attempt $i failed; the deploy may still be building. Retrying in 90s."
+              sleep 90
+            fi
+          done
+          exit 1
+        env:
+          SMOKE_ATTEMPTS: ${{ github.event_name == 'push' && '6' || '1' }}

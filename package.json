@@ -26,7 +26,8 @@
     "test:cli": "npm --prefix packages/cli test",
     "test:all": "vitest run && npm run test:cli",
     "test:watch": "vitest",
-    "audit:production": "node scripts/audit-production.mjs"
+    "audit:production": "node scripts/audit-production.mjs",
+    "smoke": "node scripts/smoke-mcp.mjs"
   },
   "dependencies": {
     "@opennextjs/cloudflare": "1.20.2",
