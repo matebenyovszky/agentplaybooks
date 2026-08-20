@@ -176,6 +176,27 @@ equivalent; `pull` reports them instead of writing a half-translated config.
 Secret values never move in either direction — see below. Use `--url=<base>`
 or `AGENTPLAYBOOKS_URL` for self-hosted deployments.
 
+## Which playbook a command works on
+
+The working directory decides. `pull --apply` and `push` write
+`.agentplaybooks/remote.json` in the project root, and every command that talks
+to a playbook reads the guid from there:
+
+```bash
+apb secrets status                     # the playbook linked to this directory
+apb secrets status ../other-project    # the playbook linked to that directory
+apb secrets status --playbook=<guid>   # ignore the link, name the playbook
+```
+
+The credential is resolved separately, and never from the link file:
+`AGENTPLAYBOOKS_PLAYBOOK_KEY` if it is set, otherwise the playbook-scoped key
+`secrets login` stored for that server and guid. One machine can hold keys for
+several playbooks without them being interchangeable, and a link to a playbook
+you have no key for is an error that names the command to run.
+
+Commands that write name their target first. Being one directory over is an easy
+mistake, and a credential in the wrong vault is a tedious one to undo.
+
 ## Secrets: no plaintext value ever touches the disk
 
 ```bash
@@ -204,6 +225,28 @@ If your agent talks to the hosted playbook as an MCP server, you need none of
 this: the `use_secret` tool makes the platform inject the credential server-side,
 so the value never enters the agent's context either.
 
+### Connecting an OAuth provider
+
+Some connections are authorized rather than pasted: they need a refresh token,
+and only a browser can obtain the first one. `auth` does that once.
+
+```bash
+apb secrets push GOOGLE_CLIENT_SECRET   # the exchange needs it
+apb auth gmail
+```
+
+It runs authorization-code + PKCE against a loopback redirect, then hands the
+code to the server, which performs the exchange and writes the refresh token
+straight to the vault. Neither the client secret nor the refresh token touches
+this machine.
+
+`client_id` is not a secret — it travels in the authorize URL your browser
+opens — so it is a literal value in the MCP server's
+`transport_config.auth.client_id`, which is also where federation reads it.
+`auth` reads the same field, so it need not be passed; `--client-id=…` and
+`AGENTPLAYBOOKS_OAUTH_CLIENT_ID` override it. Full detail in
+[Federated MCP & OpenAPI Tools](./mcp-federation.md).
+
 ## The playbook carries the contract, not the credential
 
 A playbook states which credentials it needs; the values stay where they
@@ -223,10 +266,48 @@ version is preserved on the next sync. Literal credential values are never
 written into the manifest and never uploaded; `doctor` flags them and `push`
 refuses to run until they are replaced with references.
 
+## Connect: reach the playbook itself, not a copy of it
+
+`sync` and `pull` move a playbook's *contents* into the files your tools read.
+`connect` does the other direction: it points a tool at the playbook's own MCP
+endpoint, so memory, skills, and every federated tool arrive live through one
+connection.
+
+```bash
+agentplaybooks connect 011d8a7fa0ec4016 --target=claude --name=apbks-dev --apply
+```
+
+That writes the entry and nothing else:
+
+```json
+{
+  "mcpServers": {
+    "apbks-dev": {
+      "type": "http",
+      "url": "https://agentplaybooks.ai/api/mcp/011d8a7fa0ec4016",
+      "headers": { "X-API-Key": "${APBKS_KEY_APBKS_DEV}" }
+    }
+  }
+}
+```
+
+The key is never written — the config carries the reference, and the tool
+expands it at launch. Two details worth knowing, because both fail silently:
+
+- **Set the variable before starting the tool.** A variable added afterwards is
+  invisible to a process already running, and from the inside that is
+  indistinguishable from a rejected key: the connection establishes, no tools
+  appear, and refreshing fails.
+- **The credential goes in `X-API-Key` by default**, not `Authorization`. A
+  client may reserve `Authorization` for its own authentication handling and
+  drop what you put there without reporting anything. The endpoint accepts
+  either header; use `--key-header=Authorization` if you prefer it.
+
 ## Claude Code & Claude Cowork plugin
 
 The CLI package doubles as a Claude Code plugin with an `agentplaybooks`
-skill and `/agentplaybooks:doctor`, `:sync`, `:pull`, `:push` commands:
+skill and `/agentplaybooks:doctor`, `:sync`, `:pull`, `:push`, `:connect`
+commands:
 
 ```text
 /plugin marketplace add matebenyovszky/agentplaybooks

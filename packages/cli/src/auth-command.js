@@ -133,3 +133,54 @@ export async function completeConsentViaServer(plan, {
     server.close();
   }
 }
+
+/**
+ * Ask the server what this playbook is already configured with.
+ *
+ * Two things come back that change what this command has to do: the client id
+ * from the MCP server's config, so it need not be supplied on every run, and
+ * whether the client secret is in the vault — which is worth knowing *before* a
+ * browser opens, because a consent flow that ends in "the secret is missing"
+ * wasted the user's trip to the provider.
+ */
+export async function fetchConnectionState(url, guid, playbookKey, templateId, { fetchImpl = fetch } = {}) {
+  const response = await fetchImpl(
+    `${url}/api/playbooks/${guid}/secrets/oauth-exchange?template_id=${encodeURIComponent(templateId)}`,
+    { headers: { Accept: "application/json", Authorization: `Bearer ${playbookKey}` } },
+  );
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(payload?.error || `Could not read the connection state (HTTP ${response.status}).`);
+  }
+  return payload;
+}
+
+/**
+ * Decide where the client id comes from, in the order that respects intent: an
+ * explicit flag first, then the environment, then what the playbook is already
+ * configured with, and only then a prompt.
+ *
+ * The configured value comes third rather than first so `--client-id` can still
+ * override it — testing a second OAuth app should not require editing the
+ * server config first.
+ */
+export function chooseClientId({ flagValue, envValue, configured }) {
+  const explicit = [flagValue, envValue].find((value) => typeof value === "string" && value.trim());
+  if (explicit) return { clientId: explicit.trim(), source: flagValue === explicit ? "flag" : "environment" };
+  if (typeof configured === "string" && configured.trim()) {
+    return { clientId: configured.trim(), source: "playbook" };
+  }
+  return { clientId: null, source: "prompt" };
+}
+
+/**
+ * A missing client secret is stated here rather than discovered by the server
+ * after consent, so the user runs one command instead of a browser round-trip.
+ */
+export function checkPrerequisites(state) {
+  if (state?.client_secret_secret && state.client_secret_present === false) {
+    return `'${state.client_secret_secret}' is not in this playbook's vault yet. `
+      + `The exchange needs it, so store it first:\n  agentplaybooks secrets push ${state.client_secret_secret}`;
+  }
+  return null;
+}

@@ -122,6 +122,28 @@ zu schreiben. Geheimniswerte bewegen sich in keiner der beiden Richtungen —
 siehe unten. Für Self-Hosting nutzen Sie `--url=<base>` oder
 `AGENTPLAYBOOKS_URL`.
 
+## Auf welchem Playbook ein Befehl arbeitet
+
+Das Arbeitsverzeichnis entscheidet. `pull --apply` und `push` schreiben
+`.agentplaybooks/remote.json` in das Projektverzeichnis, und jeder Befehl, der
+mit einem Playbook spricht, liest die GUID von dort:
+
+```bash
+apb secrets status                     # das mit diesem Verzeichnis verknüpfte Playbook
+apb secrets status ../anderes-projekt  # das mit jenem Verzeichnis verknüpfte Playbook
+apb secrets status --playbook=<guid>   # die Verknüpfung übergehen
+```
+
+Die Zugangsdaten werden getrennt aufgelöst, und niemals aus der Verknüpfungs-
+datei: `AGENTPLAYBOOKS_PLAYBOOK_KEY`, falls gesetzt, andernfalls der auf ein
+Playbook beschränkte Schlüssel, den `secrets login` für diesen Server und diese
+GUID gespeichert hat. Ein Rechner kann Schlüssel für mehrere Playbooks halten,
+ohne dass sie austauschbar sind.
+
+Schreibende Befehle nennen ihr Ziel zuerst. Ein Verzeichnis daneben zu liegen ist
+ein leichter Fehler, und Zugangsdaten im falschen Tresor sind mühsam zu
+korrigieren.
+
 ## Secrets: Kein Klartextwert berührt jemals die Festplatte
 
 ```bash
@@ -153,6 +175,29 @@ Spricht Ihr Agent mit dem gehosteten Playbook als MCP-Server, brauchen Sie davon
 nichts: Das Tool `use_secret` lässt die Plattform die Zugangsdaten serverseitig
 injizieren, sodass der Wert auch nicht in den Kontext des Agents gelangt.
 
+### Einen OAuth-Anbieter verbinden
+
+Manche Verbindungen werden autorisiert statt eingefügt: sie brauchen ein Refresh-
+Token, und das erste kann nur ein Browser beschaffen. Genau das macht `auth`
+einmalig.
+
+```bash
+apb secrets push GOOGLE_CLIENT_SECRET   # der Austausch braucht es
+apb auth gmail
+```
+
+Es führt Authorization Code + PKCE gegen eine Loopback-Weiterleitung aus und
+übergibt den Code dann dem Server, der den Austausch durchführt und das Refresh-
+Token direkt in den Tresor schreibt. Weder das Client-Secret noch das Refresh-
+Token berührt diesen Rechner.
+
+Die `client_id` ist kein Geheimnis — sie steht in der Authorize-URL, die der
+Browser öffnet — und liegt daher als literaler Wert in
+`transport_config.auth.client_id` des MCP-Servers, wo auch die Föderation sie
+liest. `auth` liest dasselbe Feld, muss also nicht übergeben werden;
+`--client-id=…` und `AGENTPLAYBOOKS_OAUTH_CLIENT_ID` überschreiben es. Details in
+[Federated MCP & OpenAPI Tools](./mcp-federation.md).
+
 ## Das Playbook trägt den Vertrag, nicht die Zugangsdaten
 
 Ein Playbook benennt, welche Zugangsdaten es braucht; die Werte bleiben dort,
@@ -173,11 +218,50 @@ Sync erhalten. Literale Zugangsdaten gelangen nie in das Manifest und werden
 nie hochgeladen; `doctor` meldet sie, und `push` verweigert die Ausführung,
 bis sie durch Referenzen ersetzt sind.
 
+## Connect: das Playbook selbst erreichen, nicht eine Kopie davon
+
+`sync` und `pull` bewegen den *Inhalt* eines Playbooks in die Dateien, die
+Ihre Tools lesen. `connect` geht die andere Richtung: Es richtet das Tool auf
+den eigenen MCP-Endpunkt des Playbooks, sodass Memory, Skills und jedes
+föderierte Tool live über eine einzige Verbindung ankommen.
+
+```bash
+agentplaybooks connect 011d8a7fa0ec4016 --target=claude --name=apbks-dev --apply
+```
+
+Geschrieben wird genau das:
+
+```json
+{
+  "mcpServers": {
+    "apbks-dev": {
+      "type": "http",
+      "url": "https://agentplaybooks.ai/api/mcp/011d8a7fa0ec4016",
+      "headers": { "X-API-Key": "${APBKS_KEY_APBKS_DEV}" }
+    }
+  }
+}
+```
+
+Der Schlüssel landet nie in der Datei — die Konfiguration enthält nur die
+Referenz, die das Tool beim Start auflöst. Zwei Details, die beide stumm
+scheitern:
+
+- **Setzen Sie die Variable, bevor das Tool startet.** Eine nachträglich
+  hinzugefügte Variable sieht ein laufender Prozess nicht, und von innen ist das
+  von einem abgelehnten Schlüssel nicht zu unterscheiden: Die Verbindung steht,
+  kein Tool erscheint, das Aktualisieren schlägt fehl.
+- **Die Zugangsdaten gehen standardmäßig in `X-API-Key`**, nicht in
+  `Authorization`. Ein Client kann `Authorization` für seine eigene
+  Authentifizierung beanspruchen und ohne Meldung verwerfen, was dort steht. Der
+  Endpunkt akzeptiert beide Header; mit `--key-header=Authorization` bleibt es
+  bei `Authorization`.
+
 ## Claude-Code- & Claude-Cowork-Plugin
 
 Das CLI-Paket ist zugleich ein Claude-Code-Plugin mit dem
 `agentplaybooks`-Skill und den Befehlen `/agentplaybooks:doctor`, `:sync`,
-`:pull`, `:push`:
+`:pull`, `:push`, `:connect`:
 
 ```text
 /plugin marketplace add matebenyovszky/agentplaybooks

@@ -1,6 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { completeConsentViaServer, fetchTemplate, planConsent } from "../src/auth-command.js";
+import {
+  checkPrerequisites,
+  chooseClientId,
+  completeConsentViaServer,
+  fetchConnectionState,
+  fetchTemplate,
+  planConsent,
+} from "../src/auth-command.js";
 
 const gmail = {
   id: "gmail",
@@ -195,4 +202,80 @@ test("a rotation is reported as such", async () => {
     fetchImpl: async () => jsonResponse({ stored: "GMAIL_REFRESH_TOKEN", rotated: true }),
   });
   assert.equal(result.rotated, true);
+});
+
+test("fetchConnectionState asks the server what the playbook is configured with", async () => {
+  const requests = [];
+  const state = await fetchConnectionState("https://apb.test", "guid-1", "apb_live_key", "gmail", {
+    fetchImpl: async (url, init) => {
+      requests.push({ url, init });
+      return jsonResponse({
+        template_id: "gmail",
+        client_id: "42-abc.apps.googleusercontent.com",
+        client_secret_secret: "GOOGLE_CLIENT_SECRET",
+        client_secret_present: true,
+        refresh_secret: "GMAIL_REFRESH_TOKEN",
+        refresh_secret_present: false,
+      });
+    },
+  });
+  assert.equal(
+    requests[0].url,
+    "https://apb.test/api/playbooks/guid-1/secrets/oauth-exchange?template_id=gmail",
+  );
+  assert.equal(requests[0].init.headers.Authorization, "Bearer apb_live_key");
+  assert.equal(state.client_id, "42-abc.apps.googleusercontent.com");
+});
+
+test("fetchConnectionState passes the server's error through", async () => {
+  await assert.rejects(
+    fetchConnectionState("https://apb.test", "g", "k", "gmail", {
+      fetchImpl: async () => jsonResponse({ error: "Playbook not found" }, 404),
+    }),
+    /Playbook not found/,
+  );
+});
+
+test("an explicit client id beats the configured one", async () => {
+  // Testing a second OAuth app should not mean editing the server config first.
+  const chosen = chooseClientId({ flagValue: "from-flag", envValue: "from-env", configured: "from-playbook" });
+  assert.deepEqual(chosen, { clientId: "from-flag", source: "flag" });
+});
+
+test("the environment is used when no flag was given", () => {
+  assert.deepEqual(
+    chooseClientId({ flagValue: null, envValue: "from-env", configured: "from-playbook" }),
+    { clientId: "from-env", source: "environment" },
+  );
+});
+
+test("the playbook's own configuration removes the need to pass anything", () => {
+  // This is the point of the whole change: `auth gmail` with no flags.
+  assert.deepEqual(
+    chooseClientId({ flagValue: null, envValue: undefined, configured: "42-abc.apps.googleusercontent.com" }),
+    { clientId: "42-abc.apps.googleusercontent.com", source: "playbook" },
+  );
+});
+
+test("nothing configured anywhere falls through to a prompt", () => {
+  assert.deepEqual(
+    chooseClientId({ flagValue: null, envValue: "", configured: "   " }),
+    { clientId: null, source: "prompt" },
+  );
+});
+
+test("a missing client secret is reported before the browser opens", () => {
+  // The failure the server would raise after consent, raised before it, so the
+  // trip to the provider is not wasted.
+  const message = checkPrerequisites({
+    client_secret_secret: "GOOGLE_CLIENT_SECRET",
+    client_secret_present: false,
+  });
+  assert.match(message, /secrets push GOOGLE_CLIENT_SECRET/);
+});
+
+test("a present secret, or a template that needs none, is not an obstacle", () => {
+  assert.equal(checkPrerequisites({ client_secret_secret: "S", client_secret_present: true }), null);
+  assert.equal(checkPrerequisites({ client_secret_secret: null, client_secret_present: null }), null);
+  assert.equal(checkPrerequisites(null), null);
 });

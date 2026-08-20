@@ -97,6 +97,13 @@ that federation makes for you:
 store both on the Secrets tab. A public client using PKCE has no client secret —
 omit `client_secret` and only the refresh token is required.
 
+`client_id`, by contrast, is a **literal value** and belongs here rather than in
+the vault. It is not a secret: it travels in the authorize URL that opens in the
+user's browser, and the OAuth spec treats it as public. Encrypting it would mean
+needing a `reveal` just to build a URL. This field is the single place it lives —
+federation reads it at call time, and `agentplaybooks auth` reads the same field
+so it need not be passed on every run.
+
 #### Getting the first refresh token
 
 Federation renews a refresh token forever, but it cannot obtain the first one:
@@ -104,8 +111,12 @@ that needs a browser and a redirect target, and a Worker has neither. The CLI
 does it once:
 
 ```bash
-agentplaybooks auth gmail --client-id=your-app.apps.googleusercontent.com
+agentplaybooks auth gmail
 ```
+
+The client id comes from the MCP server you configured above. Pass
+`--client-id=…` (or set `AGENTPLAYBOOKS_OAUTH_CLIENT_ID`) to override it, or when
+the server config still carries the catalogue's placeholder.
 
 It reads the template from `/api/connections` and runs authorization-code + PKCE
 against a loopback redirect on `127.0.0.1`. What it does **not** do is exchange
@@ -123,10 +134,11 @@ Store the client secret in the vault first:
 
 ```bash
 agentplaybooks secrets push GOOGLE_CLIENT_SECRET
-agentplaybooks auth gmail --client-id=your-app.apps.googleusercontent.com
+agentplaybooks auth gmail
 ```
 
-Running `auth` without it says so and names the command. A public PKCE client
+Running `auth` without it says so and names the command — before the browser
+opens, so the trip to the provider is not wasted. A public PKCE client
 has no secret and needs none.
 
 The refresh token is stored under the name the template declares, pinned to the

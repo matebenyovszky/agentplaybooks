@@ -2,8 +2,16 @@ import os from "node:os";
 import path from "node:path";
 import readline from "node:readline";
 import { printDoctor, publicReport, runDoctor, runGlobalDoctor } from "./doctor.js";
-import { completeConsentViaServer, fetchTemplate, planConsent } from "./auth-command.js";
+import {
+  checkPrerequisites,
+  chooseClientId,
+  completeConsentViaServer,
+  fetchConnectionState,
+  fetchTemplate,
+  planConsent,
+} from "./auth-command.js";
 import { applySync, planGlobalSync, planSync, printSyncPlan } from "./sync.js";
+import { applyConnect, planConnect, printConnectPlan } from "./connect.js";
 import {
   applyPull,
   applyPush,
@@ -46,6 +54,8 @@ Usage:
   agentplaybooks doctor [path] [--json] [--strict] [--global] [--include-vendored]
   agentplaybooks sync [path] [--apply] [--json] [--target=<types>]
   agentplaybooks sync --global [--apply] [--json] [--target=<types>] [--include-vendored]
+  agentplaybooks connect <guid> [path] [--apply] [--json] [--target=<types>]
+                                [--name=<entry>] [--key-env=<VAR>] [--key-header=<H>]
   agentplaybooks login [--url=<base>]
   agentplaybooks logout [--url=<base>]
   agentplaybooks playbooks [--url=<base>] [--json]
@@ -53,6 +63,8 @@ Usage:
   agentplaybooks push [path] [--apply|--yes] [--json] [--url=<base>]
   agentplaybooks push --global [--apply|--yes] [--json] [--include-vendored]
   agentplaybooks auth <provider> [path] [--client-id=<id>] [--url=<base>]
+      --client-id is only needed when the playbook's MCP server for that
+      provider has no client_id configured.
   agentplaybooks secrets login <guid> [--url=<base>]
   agentplaybooks secrets status [path] [--json] [--url=<base>]
   agentplaybooks secrets push <NAME> [--from-env=<VAR>] [--yes] [--url=<base>]
@@ -73,6 +85,14 @@ Commands:
              moves skills only: a global MCP config holds credentials, so
              copying it between clients would spread them. Skills the clients
              ship with themselves are left out unless --include-vendored.
+  connect    Point an agent tool at a hosted playbook's own MCP endpoint, so it
+             reaches memory, skills, and every federated tool through one
+             connection instead of a local copy. The key is never written: the
+             config carries \${VAR}, which the tool expands at launch — so set
+             the variable before starting it, since a variable added afterwards
+             is invisible to a running process and looks like a rejected key.
+             The credential goes in X-API-Key by default; a client that reserves
+             Authorization for itself would otherwise drop it silently.
   login      Store an AgentPlaybooks user API key (apb_...) for a remote.
              Reads AGENTPLAYBOOKS_API_KEY, or prompts on stdin.
   logout     Remove the stored API key for a remote.
@@ -267,7 +287,22 @@ async function resolveVaultAccess(url, root, flags) {
   if (!playbookKey) {
     throw new Error(`No playbook key for ${guid}. Run 'agentplaybooks secrets login ${guid}', or set AGENTPLAYBOOKS_PLAYBOOK_KEY.`);
   }
-  return { guid, playbookKey };
+  // The name only exists when the guid came from the link file; --playbook names
+  // a playbook this directory knows nothing about.
+  const name = guid === link?.guid ? (link?.name ?? null) : null;
+  return { guid, playbookKey, name };
+}
+
+/**
+ * Which playbook a command is about to write to, said out loud.
+ *
+ * The playbook is decided by the working directory, which is convenient until
+ * it is wrong: run this one directory over and the credential lands in a
+ * different vault. Naming the target before acting makes that visible while it
+ * can still be stopped.
+ */
+function describeTarget({ guid, name }) {
+  return name ? `${name} (${guid})` : guid;
 }
 
 async function runSecrets(url, flags, positional, rest) {
@@ -520,6 +555,43 @@ export async function run(args) {
     return;
   }
 
+  if (command === "connect") {
+    const requestedTargets = typeof flags.get("--target") === "string"
+      ? flags.get("--target").split(",").map((value) => value.trim()).filter(Boolean)
+      : [];
+    const plan = await planConnect(path.resolve(positional[1] ?? process.cwd()), {
+      playbook: positional[0],
+      targets: requestedTargets,
+      name: typeof flags.get("--name") === "string" ? flags.get("--name") : undefined,
+      keyEnvVar: typeof flags.get("--key-env") === "string" ? flags.get("--key-env") : undefined,
+      keyHeader: typeof flags.get("--key-header") === "string" ? flags.get("--key-header") : undefined,
+      url: typeof flags.get("--url") === "string" ? flags.get("--url") : undefined,
+    });
+    if (flags.has("--json")) {
+      console.log(JSON.stringify({
+        changed: plan.changed,
+        url: plan.url,
+        entryName: plan.entryName,
+        keyEnvVar: plan.keyEnvVar,
+        keyHeader: plan.keyHeader,
+        keyPresentInEnvironment: plan.keyPresentInEnvironment,
+        fileActions: plan.fileActions.map(withoutContent),
+        conflicts: plan.conflicts,
+      }, null, 2));
+    } else {
+      printConnectPlan(plan);
+    }
+    if (flags.has("--apply")) {
+      const result = await applyConnect(plan);
+      if (!flags.has("--json")) {
+        console.log(result.applied ? "\nApplied." : "\nNo changes applied.");
+        for (const written of result.written) console.log(`Wrote: ${written}`);
+        for (const backup of result.backups) console.log(`Backup: ${backup}`);
+      }
+    }
+    return;
+  }
+
   const url = resolveBaseUrl(typeof flags.get("--url") === "string" ? flags.get("--url") : undefined);
 
   if (command === "secrets") {
@@ -648,21 +720,44 @@ export async function run(args) {
 
     const template = await fetchTemplate(url, provider);
     const plan = planConsent(template);
-    const { guid, playbookKey } = await resolveVaultAccess(url, root, flags);
+    const vault = await resolveVaultAccess(url, root, flags);
+    const { guid, playbookKey } = vault;
+
+    // Stated before anything is obtained or stored: this command ends in a
+    // credential being written, and the directory chose the destination.
+    console.log(`Connecting ${template.name} to ${describeTarget(vault)}.`);
+
+    // What the playbook already knows: the client id from its MCP server
+    // config, and whether the client secret is in the vault. Both are worth
+    // having before a browser opens.
+    const state = await fetchConnectionState(url, guid, playbookKey, plan.templateId);
+    const blocked = checkPrerequisites(state);
+    if (blocked) throw new Error(blocked);
 
     // The client id names an OAuth app the person registered themselves — the
     // catalogue holds only a placeholder, because there is no shared app to
-    // point at. It is not a secret, so a flag or the environment is fine.
-    const clientId = (typeof flags.get("--client-id") === "string" ? flags.get("--client-id") : null)
-      || process.env.AGENTPLAYBOOKS_OAUTH_CLIENT_ID
+    // point at. It is not a secret, so a flag or the environment is fine, and
+    // the configured value means it need not be given at all.
+    const chosen = chooseClientId({
+      flagValue: typeof flags.get("--client-id") === "string" ? flags.get("--client-id") : null,
+      envValue: process.env.AGENTPLAYBOOKS_OAUTH_CLIENT_ID,
+      configured: state.client_id,
+    });
+    const clientId = chosen.clientId
       || await promptForKey(`Client ID for your ${template.name} OAuth app: `);
     if (!clientId) throw new Error("A client ID is required.");
+    if (chosen.source === "playbook") {
+      console.log(`Using the client ID configured on this playbook's ${template.name} server.`);
+    }
 
     // The client secret is never handled here. It lives in the vault and the
     // server reads it to complete the exchange, so it does not transit this
     // machine at all — and neither does the refresh token that comes back.
-    if (plan.clientSecretName) {
-      console.log(`${plan.clientSecretName} will be read from the vault of ${guid}; it is not needed here.`);
+    if (state.client_secret_secret) {
+      console.log(`${state.client_secret_secret} will be read from the vault of ${guid}; it is not needed here.`);
+    }
+    if (state.refresh_secret_present) {
+      console.log(`${state.refresh_secret} already exists and will be replaced.`);
     }
 
     const result = await completeConsentViaServer(plan, {

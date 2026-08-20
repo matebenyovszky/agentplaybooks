@@ -122,6 +122,28 @@ konfigot ír a helyükre. Secret-értékek egyik irányban sem mozdulnak — lá
 lentebb. Self-hosted telepítéshez használd a `--url=<base>` kapcsolót vagy az
 `AGENTPLAYBOOKS_URL` változót.
 
+## Melyik playbookon dolgozik egy parancs
+
+A munkakönyvtár dönti el. A `pull --apply` és a `push` létrehozza a
+`.agentplaybooks/remote.json`-t a projekt gyökerében, és minden playbookkal
+beszélő parancs onnan olvassa a guid-ot:
+
+```bash
+apb secrets status                     # az ehhez a könyvtárhoz linkelt playbook
+apb secrets status ../masik-projekt    # az ahhoz a könyvtárhoz linkelt playbook
+apb secrets status --playbook=<guid>   # a linket figyelmen kívül hagyva
+```
+
+A hitelesítőadat külön oldódik fel, és soha nem a link fájlból: az
+`AGENTPLAYBOOKS_PLAYBOOK_KEY`, ha be van állítva, egyébként a `secrets login`
+által az adott szerverhez és guid-hoz elmentett, playbookra szűkített kulcs. Egy
+gépen több playbook kulcsa is ott lehet anélkül, hogy felcserélhetők lennének, és
+ha olyan playbookra van link, amihez nincs kulcs, a hiba megnevezi a futtatandó
+parancsot.
+
+Az író parancsok előbb megnevezik a célt. Egy könyvtárral arrébb lenni könnyű
+hiba, egy rossz széfbe került hitelesítőadatot pedig fárasztó visszacsinálni.
+
 ## Secretek: egyetlen plaintext érték sem kerül a lemezre
 
 ```bash
@@ -153,6 +175,28 @@ Ha az ügynököd MCP-szerverként beszél a hosztolt playbookkal, mindebből se
 nincs szükséged: a `use_secret` eszközzel a platform szerveroldalon injektálja a
 hitelesítőadatot, így az érték az ügynök kontextusába sem kerül be.
 
+### OAuth szolgáltató bekötése
+
+Néhány kapcsolatot nem beilleszteni kell, hanem engedélyezni: refresh token kell
+hozzá, és az elsőt csak böngésző tudja megszerezni. Ezt teszi meg egyszer az
+`auth`.
+
+```bash
+apb secrets push GOOGLE_CLIENT_SECRET   # a csere ehhez kell
+apb auth gmail
+```
+
+Authorization code + PKCE folyamatot futtat loopback átirányítással, majd a
+kódot átadja a szervernek, ami elvégzi a cserét és a refresh tokent egyenesen a
+széfbe írja. Sem a client secret, sem a refresh token nem érinti ezt a gépet.
+
+A `client_id` nem titok — benne van az authorize URL-ben, amit a böngésződ
+megnyit —, ezért literál értékként az MCP szerver
+`transport_config.auth.client_id` mezőjében van, ahonnan a federation is
+olvassa. Az `auth` ugyanezt a mezőt olvassa, tehát nem kell megadni; a
+`--client-id=…` és az `AGENTPLAYBOOKS_OAUTH_CLIENT_ID` felülírja. Részletek:
+[Federált MCP és OpenAPI eszközök](./mcp-federation.md).
+
 ## A playbook a szerződést hordozza, nem a hitelesítőadatot
 
 A playbook kimondja, milyen hitelesítőadatokra van szüksége; az értékek ott
@@ -174,10 +218,49 @@ Literál hitelesítőadatok sosem íródnak a manifestbe és sosem kerülnek fel
 `doctor` megjelöli őket, a `push` pedig megtagadja a futást, amíg nem cserélted
 le őket hivatkozásra.
 
+## Connect: magát a playbookot érd el, ne egy másolatát
+
+A `sync` és a `pull` a playbook *tartalmát* mozgatja azokba a fájlokba, amiket
+az eszközeid olvasnak. A `connect` az ellenkező irány: az eszközt a playbook
+saját MCP-végpontjára állítja, így a memória, a skillek és minden föderált eszköz
+élőben, egyetlen kapcsolaton érkezik.
+
+```bash
+agentplaybooks connect 011d8a7fa0ec4016 --target=claude --name=apbks-dev --apply
+```
+
+Ez pontosan ennyit ír ki:
+
+```json
+{
+  "mcpServers": {
+    "apbks-dev": {
+      "type": "http",
+      "url": "https://agentplaybooks.ai/api/mcp/011d8a7fa0ec4016",
+      "headers": { "X-API-Key": "${APBKS_KEY_APBKS_DEV}" }
+    }
+  }
+}
+```
+
+A kulcs soha nem kerül a fájlba — a konfiguráció csak a hivatkozást tartalmazza,
+amit az eszköz indításkor bont fel. Két részlet, amit érdemes tudni, mert
+mindkettő némán hibázik:
+
+- **A változót az eszköz indítása előtt állítsd be.** Egy utólag hozzáadott
+  változót a már futó folyamat nem lát, és ez belülről megkülönböztethetetlen az
+  elutasított kulcstól: a kapcsolat létrejön, eszköz egy sem jelenik meg, a
+  frissítés pedig elhasal.
+- **A hitelesítőadat alapból az `X-API-Key` fejlécbe kerül**, nem az
+  `Authorization`-be. Egy kliens fenntarthatja magának az `Authorization`-t a
+  saját hitelesítéséhez, és jelzés nélkül eldobja, amit oda írtál. A végpont
+  mindkét fejlécet elfogadja; ha az `Authorization`-t szeretnéd, add meg a
+  `--key-header=Authorization` opciót.
+
 ## Claude Code és Claude Cowork plugin
 
 A CLI-csomag egyben Claude Code plugin is: `agentplaybooks` skillel és
-`/agentplaybooks:doctor`, `:sync`, `:pull`, `:push` parancsokkal:
+`/agentplaybooks:doctor`, `:sync`, `:pull`, `:push`, `:connect` parancsokkal:
 
 ```text
 /plugin marketplace add matebenyovszky/agentplaybooks
