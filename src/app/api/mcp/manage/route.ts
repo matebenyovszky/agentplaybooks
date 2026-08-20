@@ -11,6 +11,12 @@ import { POST as handleScopedPlaybookMcpPost } from "@/app/api/mcp/[guid]/route"
 import { createPlaybook, listAccessiblePlaybooks } from "@/lib/repositories/playbooks";
 import { ACCOUNT_TOOLS } from "@/app/api/_shared/account-tools";
 import {
+  LATEST_PROTOCOL_VERSION,
+  SUPPORTED_PROTOCOL_VERSIONS,
+  negotiateProtocolVersion,
+  requestsEventStream,
+} from "@/app/api/_shared/mcp-protocol";
+import {
   checkPlaybookOwnership,
   checkPlaybookWriteAccess,
   getPlaybookAccessRole,
@@ -47,17 +53,10 @@ const MCP_TOOLS = [
 ];
 
 const app = createApiApp("/api/mcp/manage");
-const LATEST_PROTOCOL_VERSION = "2025-11-25";
-const SUPPORTED_PROTOCOL_VERSIONS = new Set([
-  "2024-11-05",
-  "2025-03-26",
-  "2025-06-18",
-  LATEST_PROTOCOL_VERSION,
-]);
 
 // GET /api/mcp/manage - Return MCP server manifest
 app.get("/", async (c) => {
-  if (c.req.header("Accept")?.includes("text/event-stream")) {
+  if (requestsEventStream(c.req.header("Accept"))) {
     return c.body(null, 405, { Allow: "POST" });
   }
   const userKey = await validateUserApiKey(c.req.raw);
@@ -107,9 +106,7 @@ app.post("/", async (c) => {
         jsonrpc: "2.0",
         id,
         result: {
-          protocolVersion: requestedVersion && SUPPORTED_PROTOCOL_VERSIONS.has(requestedVersion)
-            ? requestedVersion
-            : LATEST_PROTOCOL_VERSION,
+          protocolVersion: negotiateProtocolVersion(requestedVersion),
           serverInfo: {
             name: "agentplaybooks-management",
             title: "AgentPlaybooks Management",

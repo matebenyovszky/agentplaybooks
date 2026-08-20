@@ -3,6 +3,13 @@ import { createApiApp } from "@/app/api/_shared/hono";
 import { canAccessPrivatePlaybook, validatePlaybookCredential } from "@/app/api/_shared/auth";
 import { getServiceSupabase, getSupabase } from "@/app/api/_shared/supabase";
 import { loadFederationSecrets } from "@/app/api/_shared/federation-secrets";
+import {
+  LATEST_PROTOCOL_VERSION,
+  SUPPORTED_PROTOCOL_VERSIONS,
+  isNotification,
+  negotiateProtocolVersion,
+  requestsEventStream,
+} from "@/app/api/_shared/mcp-protocol";
 import type {
   McpResource,
   McpTool,
@@ -176,6 +183,16 @@ app.get("/", async (c) => {
   if (!guid) {
     return c.json({ error: "Missing playbook GUID" }, 400);
   }
+
+  // GET on an MCP endpoint means "open a server-to-client SSE stream". This
+  // endpoint does not offer one, and the spec requires 405 in that case. It
+  // used to answer with the manifest below, so a client opening a stream got
+  // JSON where it expected `text/event-stream`. The manifest is still served
+  // for anything that asks for JSON — curl, a browser, the docs — because only
+  // a stream request names text/event-stream without also accepting JSON.
+  if (requestsEventStream(c.req.header("Accept"))) {
+    return c.body(null, 405, { Allow: "POST" });
+  }
   const supabase = getSupabase();
 
   // Check if it's a UUID or GUID
@@ -250,7 +267,7 @@ app.get("/", async (c) => {
 
   // MCP Server manifest
   const manifest = {
-    protocolVersion: "2025-03-26",
+    protocolVersion: LATEST_PROTOCOL_VERSION,
     serverInfo: {
       name: playbook.name,
       version: "1.0.0",
@@ -293,6 +310,23 @@ app.post("/", async (c) => {
   const body = await c.req.json();
 
   const { method, params: rpcParams, id } = body;
+
+  // A JSON-RPC notification carries no `id` and MUST NOT be answered; the
+  // Streamable HTTP transport spells that as 202 with an empty body. Clients
+  // send `notifications/initialized` right after the handshake, and a strict
+  // one treats any response to it — even a well-formed error — as a failed
+  // connection, which is why the server looked unreachable while every
+  // request/response method worked.
+  // An explicit `id: null` is not treated as a notification: the spec forbids it
+  // in a request, but a client that sends it is still waiting for an answer.
+  const protocolHeader = c.req.header("MCP-Protocol-Version");
+  if (protocolHeader && !SUPPORTED_PROTOCOL_VERSIONS.has(protocolHeader)) {
+    return c.json({ error: `Unsupported MCP protocol version: ${protocolHeader}` }, 400);
+  }
+
+  if (isNotification(method, id)) {
+    return c.body(null, 202);
+  }
 
   const supabase = getSupabase();
 
@@ -341,7 +375,7 @@ app.post("/", async (c) => {
         jsonrpc: "2.0",
         id,
         result: {
-          protocolVersion: "2025-03-26",
+          protocolVersion: negotiateProtocolVersion(rpcParams?.protocolVersion),
           serverInfo: { name: "AgentPlaybooks", version: "1.0.0" },
           capabilities: { tools: {}, resources: {} },
         },
