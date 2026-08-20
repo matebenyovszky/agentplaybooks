@@ -129,6 +129,24 @@ async function checkUnknownVersionIsNotRejected() {
   );
 }
 
+async function checkToolSchemasAreStrictClientSafe() {
+  // Hermes validates the whole ListToolsResult with pydantic: one tool whose
+  // outputSchema is a top-level array and the client rejects everything —
+  // "3 validation errors", connection parked, zero tools.
+  const { response, json } = await request(`/api/mcp/${PUBLIC_GUID}`, rpc("tools/list", { version: "2025-06-18", modern: false }));
+  const tools = json?.result?.tools ?? [];
+  const offenders = tools
+    .filter((tool) =>
+      tool.inputSchema?.type !== "object"
+      || (tool.outputSchema !== undefined && tool.outputSchema?.type !== "object"))
+    .map((tool) => tool.name);
+  record(
+    "every advertised tool schema survives a strict client",
+    response.status === 200 && tools.length > 0 && offenders.length === 0,
+    offenders.length ? `offenders: ${offenders.slice(0, 5).join(", ")}` : `${tools.length} tools clean`,
+  );
+}
+
 async function checkUnknownMethod() {
   const { response, json } = await request(`/api/mcp/${PUBLIC_GUID}`, rpc("does/not/exist"));
   record(
@@ -240,6 +258,7 @@ for (const check of [
   checkModernDiscovery,
   checkLegacyHandshakeStillNegotiates,
   checkUnknownVersionIsNotRejected,
+  checkToolSchemasAreStrictClientSafe,
   checkUnknownMethod,
   checkConnectionTestRouteIsReachable,
   checkPrivatePlaybookChallenge,

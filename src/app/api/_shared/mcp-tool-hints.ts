@@ -44,20 +44,36 @@ export const OPEN_WORLD_CALL: McpToolAnnotations = {
 
 const stringOrNull = { type: ["string", "null"] as const };
 
+/**
+ * Every output schema here MUST be `type: "object"` at the top level. The MCP
+ * spec types `structuredContent` as an object, and a strict client validates
+ * the whole listing against that: three top-level `type: "array"` schemas were
+ * enough for Hermes Agent to reject the entire ListToolsResult — "3 validation
+ * errors", connection parked, no tools at all. List results are therefore
+ * wrapped under a named property (see STRUCTURED_RESULT_KEYS below), and the
+ * call path returns the same wrapped value as `structuredContent` — a schema we
+ * declare but never deliver would be the same lie one layer down.
+ */
 export const skillListOutputSchema: Record<string, unknown> = {
-  type: "array",
-  items: {
-    type: "object",
-    properties: {
-      id: { type: "string", description: "Skill UUID" },
-      name: { type: "string" },
-      description: stringOrNull,
-      content: stringOrNull,
-      licence: stringOrNull,
-      publisher_id: stringOrNull,
-      priority: { type: ["number", "null"] },
+  type: "object",
+  properties: {
+    skills: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          id: { type: "string", description: "Skill UUID" },
+          name: { type: "string" },
+          description: stringOrNull,
+          content: stringOrNull,
+          licence: stringOrNull,
+          publisher_id: stringOrNull,
+          priority: { type: ["number", "null"] },
+        },
+      },
     },
   },
+  required: ["skills"],
 };
 
 export const skillRecordOutputSchema: Record<string, unknown> = {
@@ -80,7 +96,9 @@ export const memoryRecordOutputSchema: Record<string, unknown> = {
   type: "object",
   properties: {
     key: { type: "string" },
-    value: { type: "object" },
+    // A memory value is arbitrary JSON — a string or number stored via
+    // write_memory must not make the declared schema refute the real result.
+    value: {},
     tags: { type: "array", items: { type: "string" } },
     description: stringOrNull,
     tier: { type: "string", enum: ["working", "contextual", "longterm"] },
@@ -112,19 +130,25 @@ export const memoryTreeOutputSchema: Record<string, unknown> = {
 };
 
 export const canvasListOutputSchema: Record<string, unknown> = {
-  type: "array",
-  items: {
-    type: "object",
-    properties: {
-      run_id: { type: "string" },
-      slug: { type: "string" },
-      name: { type: "string" },
-      sort_order: { type: "number" },
-      version: { type: "number" },
-      updated_at: { type: "string" },
-      metadata: { type: "object" },
+  type: "object",
+  properties: {
+    documents: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          run_id: { type: "string" },
+          slug: { type: "string" },
+          name: { type: "string" },
+          sort_order: { type: "number" },
+          version: { type: "number" },
+          updated_at: { type: "string" },
+          metadata: { type: "object" },
+        },
+      },
     },
   },
+  required: ["documents"],
 };
 
 export const canvasTocOutputSchema: Record<string, unknown> = {
@@ -149,35 +173,80 @@ export const canvasTocOutputSchema: Record<string, unknown> = {
 };
 
 export const secretListOutputSchema: Record<string, unknown> = {
-  type: "array",
-  items: {
-    type: "object",
-    properties: {
-      id: { type: "string" },
-      name: { type: "string" },
-      description: stringOrNull,
-      category: { type: "string" },
-      rotated_at: stringOrNull,
-      expires_at: stringOrNull,
-      last_used_at: stringOrNull,
-      use_count: { type: "number" },
-      created_at: { type: "string" },
-      updated_at: { type: "string" },
+  type: "object",
+  properties: {
+    secrets: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          id: { type: "string" },
+          name: { type: "string" },
+          description: stringOrNull,
+          category: { type: "string" },
+          rotated_at: stringOrNull,
+          expires_at: stringOrNull,
+          last_used_at: stringOrNull,
+          use_count: { type: "number" },
+          created_at: { type: "string" },
+          updated_at: { type: "string" },
+        },
+      },
     },
   },
+  required: ["secrets"],
 };
 
 export const playbookListOutputSchema: Record<string, unknown> = {
-  type: "array",
-  items: {
-    type: "object",
-    properties: {
-      id: { type: "string" },
-      guid: { type: "string" },
-      name: { type: "string" },
-      current_user_role: { type: "string" },
-      persona_count: { type: "number" },
+  type: "object",
+  properties: {
+    playbooks: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          id: { type: "string" },
+          guid: { type: "string" },
+          name: { type: "string" },
+          current_user_role: { type: "string" },
+          persona_count: { type: "number" },
+        },
+        additionalProperties: true,
+      },
     },
-    additionalProperties: true,
   },
+  required: ["playbooks"],
 };
+
+/**
+ * The property a list tool's rows are wrapped under, both in the schema above
+ * and in the `structuredContent` the call returns. One table, used by both,
+ * so the promise and the delivery cannot drift apart.
+ */
+export const STRUCTURED_RESULT_KEYS: Record<string, string> = {
+  list_skills: "skills",
+  list_canvas: "documents",
+  list_secrets: "secrets",
+  list_playbooks: "playbooks",
+};
+
+/**
+ * The `structuredContent` for a tool result, or null when the tool declares no
+ * output schema (declaring nothing is honest; declaring and not delivering is
+ * not). List results are wrapped under their named property; object results
+ * pass through; anything that cannot honour the declared shape yields null
+ * rather than an object the schema would refute.
+ */
+export function structuredToolResult(
+  tools: ReadonlyArray<{ name: string; outputSchema?: unknown }>,
+  toolName: string,
+  result: unknown,
+): Record<string, unknown> | null {
+  const tool = tools.find((candidate) => candidate.name === toolName);
+  if (!tool?.outputSchema) return null;
+  const key = STRUCTURED_RESULT_KEYS[toolName];
+  if (key) return { [key]: Array.isArray(result) ? result : [] };
+  return typeof result === "object" && result !== null && !Array.isArray(result)
+    ? result as Record<string, unknown>
+    : null;
+}
