@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { connectionTemplate } from "@/lib/connection-catalogue";
 import {
   buildExchangeBody,
+  resolveConfiguredClientId,
   isLoopbackRedirect,
   isPlanFailure,
   planExchange,
@@ -153,6 +155,56 @@ describe("readExchangeResponse", () => {
   it("survives a body that is not an object", () => {
     for (const payload of [null, undefined, "nope", 42]) {
       expect(readExchangeResponse(500, payload).ok).toBe(false);
+    }
+  });
+});
+
+describe("resolveConfiguredClientId", () => {
+  const gmail = connectionTemplate("gmail")!;
+  const tokenUrl = gmail.transport_config.auth!.token_url!;
+  const placeholder = gmail.transport_config.auth!.client_id!;
+
+  it("reads the client id from the server configured against that token endpoint", () => {
+    const servers = [
+      { transport_config: { auth: { type: "bearer", token_secret: "CF" } } },
+      { transport_config: { auth: { token_url: tokenUrl, client_id: "42-abc.apps.googleusercontent.com" } } },
+    ];
+    expect(resolveConfiguredClientId(servers, gmail)).toBe("42-abc.apps.googleusercontent.com");
+  });
+
+  it("treats the catalogue placeholder as not configured", () => {
+    // A template ships `client_id: "GOOGLE_CLIENT_ID"` to show what to fill in.
+    // Handing that to the authorize URL would send the user to a Google error
+    // page; saying "not configured" sends them to the flag instead.
+    const servers = [{ transport_config: { auth: { token_url: tokenUrl, client_id: placeholder } } }];
+    expect(resolveConfiguredClientId(servers, gmail)).toBeNull();
+  });
+
+  it("does not take a client id from a server for a different provider", () => {
+    const servers = [{
+      transport_config: { auth: { token_url: "https://login.microsoftonline.com/x/oauth2/v2.0/token", client_id: "ms-client" } },
+    }];
+    expect(resolveConfiguredClientId(servers, gmail)).toBeNull();
+  });
+
+  it("survives whatever is actually in the column", () => {
+    // transport_config is free-form JSON edited by hand, so every shape here is
+    // reachable from the UI.
+    for (const servers of [
+      null,
+      undefined,
+      [],
+      [null],
+      [{}],
+      [{ transport_config: null }],
+      [{ transport_config: "bearer" }],
+      [{ transport_config: { auth: null } }],
+      [{ transport_config: { auth: [] } }],
+      [{ transport_config: { auth: { token_url: tokenUrl } } }],
+      [{ transport_config: { auth: { token_url: tokenUrl, client_id: "" } } }],
+      [{ transport_config: { auth: { token_url: tokenUrl, client_id: 42 } } }],
+    ]) {
+      expect(resolveConfiguredClientId(servers as never, gmail)).toBeNull();
     }
   });
 });
