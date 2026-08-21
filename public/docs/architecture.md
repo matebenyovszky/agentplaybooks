@@ -220,7 +220,7 @@ CREATE POLICY "Owner access memories" ON memories
 - Master key stored as `SECRETS_ENCRYPTION_KEY` environment variable
 - Per-user encryption keys derived via HKDF (HMAC-based Key Derivation Function)
 - AES-256-GCM with random IVs — ciphertext, IV, and auth tag stored separately
-- Proxy pattern: agents call `use_secret` → server decrypts → injects into HTTP request → returns only the response
+- Proxy pattern: agents call `use_secret` (reads) or `use_secret_write` (writes) → server decrypts → injects into HTTP request → returns only the response
 - RLS policies restrict secret access to playbook owner and service role
 
 ## Deployment

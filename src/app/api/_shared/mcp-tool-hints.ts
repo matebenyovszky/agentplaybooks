@@ -42,6 +42,19 @@ export const OPEN_WORLD_CALL: McpToolAnnotations = {
   openWorldHint: true,
 };
 
+/**
+ * Reaches the open internet but only with safe verbs, so it reads rather than
+ * changes: a GET or HEAD through `use_secret`. Read-only is what lets a client
+ * run it without prompting per call, which is the point of separating it from
+ * the write tool — a tool that could also POST cannot honestly claim this.
+ */
+export const OPEN_WORLD_READ: McpToolAnnotations = {
+  readOnlyHint: true,
+  destructiveHint: false,
+  idempotentHint: true,
+  openWorldHint: true,
+};
+
 const stringOrNull = { type: ["string", "null"] as const };
 
 /**

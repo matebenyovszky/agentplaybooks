@@ -697,21 +697,25 @@ Secrets are encrypted credentials (API keys, passwords, tokens) stored with AES-
 | Tool | Use When |
 |------|----------|
 | \`list_secrets\` | See available secret names and metadata (never values) |
-| \`use_secret\` | Make an HTTP request with a secret injected as a header |
+| \`use_secret\` | Read from an API with a secret injected as a header (GET, HEAD) |
+| \`use_secret_write\` | Change something in an API with that secret (POST, PUT, PATCH, DELETE) |
 | \`store_secret\` | Save a new encrypted secret |
 | \`rotate_secret\` | Replace an existing secret with a new value |
 | \`delete_secret\` | Permanently remove a secret |
 
 ### use_secret Examples
+Reads and writes are separate tools, so a read can run without asking and a
+write always prompts. Passing a mutating method to \`use_secret\` fails and names
+the other tool.
 \`\`\`
-// Call OpenAI API with stored key
+// Read: call OpenAI API with stored key
 use_secret({
   secret_name: "OPENAI_API_KEY",
   url: "https://api.openai.com/v1/models"
 })
 
-// POST to an API with custom headers
-use_secret({
+// Write: POST to an API with custom headers
+use_secret_write({
   secret_name: "WEBHOOK_TOKEN",
   url: "https://api.example.com/data",
   method: "POST",
@@ -2417,7 +2421,24 @@ use_secret({
             break;
           }
 
-          case "use_secret": {
+          // Two tools, one implementation. The split is the surface, not the
+          // code: a single tool whose `method` spans safe and unsafe verbs is
+          // rejected by the Connectors Directory outright, and describing the
+          // difference in prose does not count. Separate tools also let Claude
+          // auto-permit the read and always prompt for the write, which is the
+          // behaviour we want anyway.
+          //
+          // Keeping the read on the original name is deliberate: `use_secret`
+          // already defaulted to GET, so every existing caller keeps working,
+          // and the ones passing a mutating method get an error naming the tool
+          // to use instead.
+          case "use_secret":
+          case "use_secret_write": {
+            const isWriteCall = toolName === "use_secret_write";
+            const allowedMethods = isWriteCall
+              ? ["POST", "PUT", "PATCH", "DELETE"]
+              : ["GET", "HEAD"];
+
             // Proxy pattern: decrypt secret server-side, inject into HTTP request,
             // return only the response. The agent NEVER sees the secret value.
             secretAudit = beginSecretAudit("secret.use");
@@ -2492,7 +2513,16 @@ use_secret({
             }, playbook.user_id, { playbookId: playbook.id, secretName: useSecretData.name });
 
             // Build the outgoing request
-            const method = (args.method as string || "GET").toUpperCase();
+            const method = (args.method as string || allowedMethods[0]).toUpperCase();
+            if (!allowedMethods.includes(method)) {
+              // Name the other tool rather than just refusing: the caller asked
+              // for something this server does support, under another name.
+              const other = isWriteCall ? "use_secret" : "use_secret_write";
+              secretAudit.reason = "method_not_allowed";
+              throw new Error(
+                `${toolName} accepts ${allowedMethods.join(", ")}. For ${method}, call ${other}.`,
+              );
+            }
             const headerName = (args.header_name as string) || "Authorization";
             const headerPrefix = args.header_prefix !== undefined ? (args.header_prefix as string) : "Bearer ";
             const timeoutMs = Math.min((args.timeout_ms as number) || 30000, 60000);
