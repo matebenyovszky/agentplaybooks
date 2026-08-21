@@ -12,6 +12,18 @@ export type McpToolAnnotations = {
 
 export type McpTool = {
   name: string;
+  /**
+   * Human-readable label, shown wherever a client lists tools for a person
+   * rather than for a model. The MCP spec has clients prefer `title`, fall back
+   * to `annotations.title`, then to `name` — so setting this one field covers
+   * every client that knows about titles at all, and older ones keep showing
+   * `name` exactly as before.
+   *
+   * The Claude Connectors Directory requires it: a tool without a title is
+   * flagged in the submission portal and has to be fixed on the server before
+   * the connector can be submitted.
+   */
+  title?: string;
   description?: string;
   inputSchema?: Record<string, unknown>;
   outputSchema?: Record<string, unknown>;
