@@ -108,3 +108,52 @@ describe("connectors directory requirements", () => {
     }
   });
 });
+
+/**
+ * The read/write split on the secret proxy.
+ *
+ * "A single tool that accepts both safe HTTP methods (GET, HEAD, OPTIONS) and
+ * unsafe methods (POST, PUT, PATCH, DELETE) is rejected. Do not ship a
+ * catch-all `api_request` tool with a `method` parameter." Documenting the
+ * difference in the description explicitly does not satisfy it, which is what
+ * the single `use_secret` used to do.
+ */
+describe("secret proxy read/write split", () => {
+  const SAFE = ["GET", "HEAD", "OPTIONS"];
+
+  function methodsOf(name: string): string[] {
+    const tool = ALL_TOOLS.find((candidate) => candidate.name === name);
+    expect(tool, `${name} must exist`).toBeDefined();
+    const schema = tool!.inputSchema as { properties?: { method?: { enum?: string[] } } };
+    return schema.properties?.method?.enum ?? [];
+  }
+
+  it("offers only safe methods on the read tool", () => {
+    const methods = methodsOf("use_secret");
+    expect(methods.length).toBeGreaterThan(0);
+    for (const method of methods) expect(SAFE, `use_secret offers ${method}`).toContain(method);
+  });
+
+  it("offers only unsafe methods on the write tool", () => {
+    const methods = methodsOf("use_secret_write");
+    expect(methods.length).toBeGreaterThan(0);
+    for (const method of methods) expect(SAFE, `use_secret_write offers ${method}`).not.toContain(method);
+  });
+
+  it("shares no method between the two, so neither is a catch-all", () => {
+    const overlap = methodsOf("use_secret").filter((method) => methodsOf("use_secret_write").includes(method));
+    expect(overlap).toEqual([]);
+  });
+
+  it("annotates the read as read-only and the write as destructive", () => {
+    const read = ALL_TOOLS.find((tool) => tool.name === "use_secret")!;
+    const write = ALL_TOOLS.find((tool) => tool.name === "use_secret_write")!;
+    expect(read.annotations?.readOnlyHint).toBe(true);
+    expect(read.annotations?.destructiveHint).toBe(false);
+    expect(write.annotations?.readOnlyHint).toBe(false);
+    expect(write.annotations?.destructiveHint).toBe(true);
+    // Both reach the open internet; that is orthogonal to whether they mutate.
+    expect(read.annotations?.openWorldHint).toBe(true);
+    expect(write.annotations?.openWorldHint).toBe(true);
+  });
+});

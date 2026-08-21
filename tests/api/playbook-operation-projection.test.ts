@@ -69,13 +69,13 @@ describe("playbook operation projections", () => {
 describe("hosted MCP tool definition quality", () => {
   const manageTools = [...ACCOUNT_TOOLS, ...projectPlaybookToolsForUser()];
 
-  it("keeps the 48-tool control-plane surface", () => {
-    // 41st playbook tool: find_tools, the catalog search that lets a client on
-    // a narrowed toolset view discover what it can call.
+  it("keeps the 49-tool control-plane surface", () => {
+    // 42nd playbook tool: use_secret_write, the mutating half of use_secret —
+    // the Connectors Directory rejects one tool spanning safe and unsafe verbs.
     expect(ACCOUNT_TOOLS).toHaveLength(7);
-    expect(PLAYBOOK_TOOLS).toHaveLength(41);
-    expect(manageTools).toHaveLength(48);
-    expect(new Set(manageTools.map((tool) => tool.name)).size).toBe(48);
+    expect(PLAYBOOK_TOOLS).toHaveLength(42);
+    expect(manageTools).toHaveLength(49);
+    expect(new Set(manageTools.map((tool) => tool.name)).size).toBe(49);
   });
 
   it("declares MCP annotations on every manage tool", () => {
@@ -135,6 +135,7 @@ describe("hosted MCP tool definition quality", () => {
     expect(openWorld.map((tool) => tool.name).sort()).toEqual([
       "call_connected_tool",
       "use_secret",
+      "use_secret_write",
     ]);
   });
 

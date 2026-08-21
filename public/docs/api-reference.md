@@ -762,7 +762,7 @@ DELETE /api/playbooks/:id/api-keys/:kid
 
 Encrypted credential storage for playbook tools and integrations. Values are AES-256-GCM encrypted with per-user derived keys.
 
-**Security model:** Secret values are AES-256-GCM encrypted. By default, agents reference secrets by name and use the `use_secret` MCP tool or `/proxy` REST endpoint to inject secrets into HTTP requests server-side. Agents can only access the raw secret value if the `allow_api_key_reveal` flag is set to true for that specific secret.
+**Security model:** Secret values are AES-256-GCM encrypted. By default, agents reference secrets by name and use the `use_secret` (GET, HEAD) and `use_secret_write` (POST, PUT, PATCH, DELETE) MCP tools, or the `/proxy` REST endpoint, to inject secrets into HTTP requests server-side. Agents can only access the raw secret value if the `allow_api_key_reveal` flag is set to true for that specific secret.
 
 > 📘 **Python integration guide:** See [Python Examples](./secrets-python-examples.md) for ready-to-use code covering proxy, reveal, store, rotate, and delete operations.
 
