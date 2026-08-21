@@ -19,6 +19,7 @@ import {
 export const PLAYBOOK_TOOLS: McpTool[] = [
   {
     name: "find_tools",
+    title: "Find tools",
     description: "Search this playbook's complete tool catalog by keyword: the built-in playbook tools (memory, skills, canvas, workflow runs, secrets) and every connected server's federated tools (names like supabase__execute_sql or cloudflare__search). Matches against tool names and descriptions; a name match ranks above a description match. Returns up to `limit` (default 10, max 25) entries with name, description, and full input schema. Every returned tool can be called directly by name even when it is absent from tools/list — the advertised list is a view, not a boundary, unless this connection was pinned with ?toolset=. Read-only and free of side effects. Use this when the tool you need is not in your current list, before concluding a capability is missing.",
     inputSchema: {
       type: "object",
@@ -33,6 +34,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   },
   {
     name: "list_skills",
+    title: "List skills",
     description: "List every skill currently attached to this playbook, returning id, name, description, content, licence, and priority ordered by priority descending. Read-only; it does not create or change skills. Use this to discover skill_id values before get_skill, update_skill, or delete_skill. Do not use list_skill_versions, which lists historical revisions of a single skill, or get_playbook, which only summarizes skills.",
     inputSchema: { type: "object", properties: {} },
     outputSchema: skillListOutputSchema,
@@ -40,6 +42,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   },
   {
     name: "get_skill",
+    title: "Get skill",
     description: "Return the full definition of one skill in this playbook, including name, description, content, priority, and attachments. Identify the skill with skill_id, which may be a UUID or the skill's kebab-case name. This lookup does not modify the skill. Use list_skills first to discover IDs and names. Do not use list_skill_versions (historical revisions) or get_playbook (persona and summaries, not full skill content).",
     inputSchema: {
       type: "object",
@@ -53,6 +56,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   },
   {
     name: "read_memory",
+    title: "Read memory",
     description: "Read one memory entry by key and return its value, tags, tier, summary, and metadata. This is not a pure read: it increments access_count and updates last_accessed_at as a side effect, without changing the stored value. There is no update_memory; use write_memory to overwrite a key. Use search_memory to find keys, get_memory_context for a tiered summary, or get_memory_tree for hierarchical task graphs. Do not pass memory_type; that filter belongs to search_memory.",
     inputSchema: {
       type: "object",
@@ -66,6 +70,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   },
   {
     name: "search_memory",
+    title: "Search memory",
     description: "Search memories by text, tags, tier, or type. Returns summaries for large memories. Use tags for categorical search; use tier to focus on active vs archived data; use memory_type to find task graphs. Read-only aside from returning matches; it does not write entries. Use read_memory for one key, get_memory_context for a compact tiered view, and get_memory_tree for parent-child task graphs.",
     inputSchema: {
       type: "object",
@@ -82,6 +87,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   },
   {
     name: "write_memory",
+    title: "Write memory",
     description: "Create or overwrite a memory entry by key. There is no separate update_memory; a second write to the same key replaces the previous value and cannot be undone. Use tier='working' for active tasks, 'contextual' for background context, 'longterm' for completed work. Set memory_type='hierarchical' and parent_key to build task graphs. Requires memory:write or full permission. Use delete_memory to remove a key, archive_memories to move it to longterm without deleting, and read_memory to fetch without replacing.",
     inputSchema: {
       type: "object",
@@ -104,6 +110,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   },
   {
     name: "delete_memory",
+    title: "Delete memory",
     description: "Permanently delete one memory entry by key from this playbook. The row is removed from storage, not moved to another tier, and cannot be recovered. Requires a credential with memory:write or full permission. Use archive_memories to keep the entry in the longterm tier, or consolidate_memories to retain child detail under a parent summary. Do not call this when you only want to hide completed work.",
     inputSchema: {
       type: "object",
@@ -116,6 +123,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   },
   {
     name: "consolidate_memories",
+    title: "Consolidate memories",
     description: "Consolidate related memories under a new parent memory with a summary. Child rows stay readable; by default they are archived to the longterm tier rather than deleted. Requires memory:write or full permission. Use delete_memory only when a key should be destroyed, and archive_memories to move entries to longterm without creating a parent.",
     inputSchema: {
       type: "object",
@@ -132,6 +140,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   },
   {
     name: "promote_memory",
+    title: "Promote memory",
     description: "Promote a memory to a higher tier or boost its priority for active use. This tool cannot demote; use archive_memories to move working or contextual entries to longterm. Repeating the call with priority_boost increases priority again. Requires memory:write or full permission.",
     inputSchema: {
       type: "object",
@@ -146,6 +155,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   },
   {
     name: "get_memory_context",
+    title: "Get memory context",
     description: "Get a context-optimized view of memories: full working memory, summaries for contextual, and keys only for longterm. Read-only. Use this to pack a prompt; use read_memory for one key, search_memory to filter, and get_memory_tree for parent-child task graphs.",
     inputSchema: {
       type: "object",
@@ -165,6 +175,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   },
   {
     name: "archive_memories",
+    title: "Archive memories",
     description: "Archive memories from the working or contextual tier into longterm. Entries are kept, not deleted; filters (keys, tags, from_tier, older_than_hours) combine as AND. Requires memory:write or full permission. Use delete_memory for irreversible removal, promote_memory to move a key the other way, and consolidate_memories when you also want a parent summary.",
     inputSchema: {
       type: "object",
@@ -180,6 +191,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   },
   {
     name: "get_memory_tree",
+    title: "Get memory tree",
     description: "Get a hierarchical tree of memories showing parent-child relationships and per-node status. Read-only. Use this to visualize task graphs; use search_memory to filter flat lists, get_memory_context for a tiered prompt view, and read_memory for a single key's full value.",
     inputSchema: {
       type: "object",
@@ -194,6 +206,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   },
   {
     name: "create_task_graph",
+    title: "Create task graph",
     description: "Create a hierarchical task plan in one call: a parent plan memory plus a child node per subtask. Upserts by key, so repeating the same plan_key overwrites the previous graph. Requires memory:write or full permission. Use write_memory for a single node, update_task_status to move a node through pending/running/completed, and get_memory_tree to inspect the graph.",
     inputSchema: {
       type: "object",
@@ -223,6 +236,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   },
   {
     name: "update_task_status",
+    title: "Update task status",
     description: "Update the status of a task node in a hierarchical plan. When all children of a parent are completed, the parent is auto-updated. Returns the current subtree state. Requires memory:write or full permission. Use create_task_graph to build the plan, not this tool.",
     inputSchema: {
       type: "object",
@@ -238,6 +252,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   },
   {
     name: "list_canvas",
+    title: "List canvas documents",
     description: "List canvas documents in a workflow run. Canvas documents are collaborative markdown files that multiple agents can edit in parallel. Omit run_id to list documents across all runs. Read-only. Use read_canvas for content and get_canvas_toc for section IDs. There is no get_run; list_runs returns run records.",
     inputSchema: {
       type: "object",
@@ -250,6 +265,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   },
   {
     name: "read_canvas",
+    title: "Read canvas document",
     description: "Read a canvas document. Returns full content, sections structure, and metadata. Optionally read a specific section by ID. Read-only. Use get_canvas_toc to discover section IDs before patch_canvas_section, and list_canvas to find slugs.",
     inputSchema: {
       type: "object",
@@ -264,6 +280,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   },
   {
     name: "write_canvas",
+    title: "Write canvas document",
     description: "Create or fully replace a canvas document. Markdown headings are auto-parsed into sections for parallel editing. A replace overwrites prior content and cannot be undone. Requires canvas:write or full permission. Use patch_canvas_section for partial updates and lock_canvas_section before multi-agent edits.",
     inputSchema: {
       type: "object",
@@ -280,6 +297,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   },
   {
     name: "patch_canvas_section",
+    title: "Patch canvas section",
     description: "Edit a specific section of a canvas document. Parallel-safe: only the targeted section is updated. Requires canvas:write or full permission. Lock the section first in multi-agent scenarios. Use write_canvas only when replacing the whole document, and get_canvas_toc to obtain section_id.",
     inputSchema: {
       type: "object",
@@ -296,6 +314,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   },
   {
     name: "get_canvas_toc",
+    title: "Canvas table of contents",
     description: "Get the table of contents for a canvas document. Returns section IDs, headings, and levels for navigation and patch_canvas_section. Read-only. Use read_canvas for full markdown and list_canvas to discover slugs.",
     inputSchema: {
       type: "object",
@@ -310,6 +329,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   },
   {
     name: "lock_canvas_section",
+    title: "Lock canvas section",
     description: "Lock a section for exclusive editing so other agents cannot modify it. Requires canvas:write or full permission. Always unlock_canvas_section when finished. Do not use this to edit content; pair it with patch_canvas_section.",
     inputSchema: {
       type: "object",
@@ -325,6 +345,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   },
   {
     name: "unlock_canvas_section",
+    title: "Unlock canvas section",
     description: "Unlock a previously locked canvas section so other agents can edit it. Requires canvas:write or full permission. Use lock_canvas_section to take the lock; this tool does not change section content.",
     inputSchema: {
       type: "object",
@@ -339,6 +360,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   },
   {
     name: "create_skill",
+    title: "Create skill",
     description: "Create a new skill for this playbook. Use this to expand capabilities. Requires full or skills:write permission. Use update_skill to change an existing skill and list_skills to check for name collisions first.",
     inputSchema: {
       type: "object",
@@ -354,6 +376,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   },
   {
     name: "update_skill",
+    title: "Update skill",
     description: "Update an existing skill in this playbook. Requires full or skills:write permission. Use create_skill to add a skill, list_skill_versions before a risky edit, and rollback_skill to restore a previous version. Do not use this to delete a skill.",
     inputSchema: {
       type: "object",
@@ -370,6 +393,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   },
   {
     name: "delete_skill",
+    title: "Delete skill",
     description: "Permanently delete a skill from this playbook. This cannot be undone except by recreating the skill. Requires full or skills:write permission. Use rollback_skill to restore a previous version instead of deleting, and update_skill to change content in place.",
     inputSchema: {
       type: "object",
@@ -382,6 +406,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   },
   {
     name: "list_skill_versions",
+    title: "List skill versions",
     description: "List historical versions of a skill for auditing or rollback. Read-only. Use this before rollback_skill; use get_skill for the current definition and list_skills for every skill in the playbook.",
     inputSchema: {
       type: "object",
@@ -395,6 +420,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   },
   {
     name: "rollback_skill",
+    title: "Roll back skill",
     description: "Rollback a skill to a previous version recorded by list_skill_versions. The current definition is replaced and cannot be recovered except by rolling forward to another stored version. Requires full or skills:write permission. Do not use delete_skill when you only need to revert.",
     inputSchema: {
       type: "object",
@@ -407,6 +433,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   },
   {
     name: "update_playbook",
+    title: "Update playbook",
     description: "Update this playbook's name, description, visibility, tags, config, singleton persona fields, or always-on project instructions. Replacement fields overwrite previous values. Handle with extreme care. Requires full or playbooks:write permission. Changing persona_system_prompt here overlaps with update_persona and create_persona; use those when only the persona should change. There is no separate get_persona: read the persona via get_playbook.",
     inputSchema: {
       type: "object",
@@ -427,12 +454,14 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   // ===== Connected MCP Servers =====
   {
     name: "list_mcp_servers",
+    title: "List MCP servers",
     description: "List the MCP and OpenAPI servers connected to this playbook, including transport metadata and discovered capability counts. Read-only. There is no get_mcp_server; this list is the detail view. Do not use this to invoke a connected tool—use call_connected_tool.",
     inputSchema: { type: "object", properties: {} },
     annotations: READ_CLOSED,
   },
   {
     name: "call_connected_tool",
+    title: "Call a connected tool",
     description: "Call a tool on one of this playbook's connected MCP or OpenAPI servers. Arguments are forwarded as-is and the result mirrors the connected tool, including any side effects that tool has in the outside world. Requires tools:call or full permission. Use list_mcp_servers to discover server_id and tool_name. Do not use this to manage connection records; use create_mcp_server, update_mcp_server, or delete_mcp_server.",
     inputSchema: {
       type: "object",
@@ -447,6 +476,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   },
   {
     name: "create_mcp_server",
+    title: "Add MCP server",
     description: "Connect an MCP or OpenAPI server to this playbook by storing its transport configuration. This writes playbook state; it does not by itself invoke remote tools. Requires playbooks:write or full permission. Use call_connected_tool to invoke a discovered tool, and list_mcp_servers to inspect connections.",
     inputSchema: {
       type: "object",
@@ -464,6 +494,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   },
   {
     name: "update_mcp_server",
+    title: "Update MCP server",
     description: "Update a connected MCP or OpenAPI server's stored name, description, tools, resources, or transport. Requires playbooks:write or full permission. Use call_connected_tool to invoke a tool, and delete_mcp_server to disconnect.",
     inputSchema: {
       type: "object",
@@ -482,6 +513,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   },
   {
     name: "delete_mcp_server",
+    title: "Remove MCP server",
     description: "Disconnect an MCP or OpenAPI server from this playbook. The remote server is not shut down; only this playbook's connection record is removed. Requires playbooks:write or full permission. Use update_mcp_server to change configuration without disconnecting.",
     inputSchema: {
       type: "object",
@@ -495,12 +527,14 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   // ===== Workflow Runs =====
   {
     name: "list_runs",
+    title: "List runs",
     description: "List workflow runs for this playbook. Runs isolate canvas artifacts and execution context. Read-only. There is no get_run; this list returns the run records. Use create_run to start isolated canvas context and list_canvas to see documents in a run.",
     inputSchema: { type: "object", properties: {} },
     annotations: READ_CLOSED,
   },
   {
     name: "create_run",
+    title: "Create run",
     description: "Create a workflow run so this playbook can be applied immediately with isolated context and canvas artifacts. Requires canvas:write or full permission. Use list_runs to inspect existing runs (there is no get_run) and update_run to change status.",
     inputSchema: {
       type: "object",
@@ -514,6 +548,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   },
   {
     name: "update_run",
+    title: "Update run",
     description: "Update a workflow run's name, status, or context. Requires canvas:write or full permission. Use list_runs to find run_id (there is no get_run) and delete_run to remove the run and its canvas artifacts.",
     inputSchema: {
       type: "object",
@@ -529,6 +564,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   },
   {
     name: "delete_run",
+    title: "Delete run",
     description: "Permanently delete a workflow run and its isolated canvas artifacts. This cannot be undone. Requires canvas:write or full permission. Use update_run with status=archived to keep artifacts, and delete_playbook only when the whole playbook should go.",
     inputSchema: {
       type: "object",
@@ -544,6 +580,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   // and use_secret injects them server-side into HTTP requests.
   {
     name: "list_secrets",
+    title: "List secrets",
     description: "List all secret names and metadata in this playbook. Does not return values — secret values are never exposed to agents. Requires secrets:read or full permission. Use use_secret to make an authenticated HTTP request, store_secret to add a value, and rotate_secret to replace one. Do not use this tool expecting plaintext credentials.",
     inputSchema: {
       type: "object",
@@ -556,6 +593,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   },
   {
     name: "use_secret",
+    title: "Use a secret in a request",
     description: "Make an outbound HTTP request with a secret injected as a header. The secret value is never returned to the agent — it is decrypted and used server-side only. Side effects match the HTTP method (GET is typically safe; POST/PUT/PATCH/DELETE mutate the remote API). Requires secrets:read or full permission. Example: use_secret({secret_name: 'OPENAI_API_KEY', url: 'https://api.openai.com/v1/models'}) sends GET with 'Authorization: Bearer <key>'. Use list_secrets to discover names. Do not use store_secret or rotate_secret to make the request.",
     inputSchema: {
       type: "object",
@@ -575,6 +613,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   },
   {
     name: "store_secret",
+    title: "Store secret",
     description: "Store a new encrypted secret. The value is encrypted with AES-256-GCM using a per-user derived key and never stored or returned in plaintext. Requires secrets:write or full permission. Use rotate_secret to replace an existing value and list_secrets to confirm the name. Do not use this to send an authenticated request; use use_secret.",
     inputSchema: {
       type: "object",
@@ -591,6 +630,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   },
   {
     name: "rotate_secret",
+    title: "Rotate secret",
     description: "Rotate an existing secret with a new value. The old value is permanently replaced and cannot be recovered. Requires secrets:write or full permission. Use store_secret to create a name that does not exist yet, and delete_secret to remove the secret entirely.",
     inputSchema: {
       type: "object",
@@ -604,6 +644,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   },
   {
     name: "delete_secret",
+    title: "Delete secret",
     description: "Permanently delete a secret. Cannot be undone. Requires secrets:write or full permission. Use rotate_secret to replace the value without removing the name, and list_secrets to confirm the name first. This does not revoke the credential at the upstream provider.",
     inputSchema: {
       type: "object",
