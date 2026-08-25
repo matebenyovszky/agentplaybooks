@@ -743,6 +743,10 @@ export default function LandingPageClient() {
             <div className="text-neutral-500 dark:text-slate-500 text-sm">
               © {new Date().getFullYear()} AgentPlaybooks. All rights reserved.
             </div>
+            <div className="flex gap-4 text-sm text-neutral-500 dark:text-slate-500">
+              <Link href="/privacy" className="hover:text-amber-600 dark:hover:text-amber-400 transition-colors">Privacy</Link>
+              <Link href="/terms" className="hover:text-amber-600 dark:hover:text-amber-400 transition-colors">Terms</Link>
+            </div>
             <div className="text-xs text-neutral-400 dark:text-slate-600">
               Agent Skills • MCP Servers • Project Instructions • Agent Memory • Secrets
             </div>
