@@ -1,0 +1,15 @@
+{
+  "name": "agentplaybooks",
+  "description": "Portable agent playbooks: audit, sync, pull, and push skills, instructions, and MCP configuration across Claude Code, Cursor, Codex, and agentplaybooks.ai.",
+  "version": "0.3.0-beta.0",
+  "author": {
+    "name": "AgentPlaybooks",
+    "url": "https://agentplaybooks.ai"
+  },
+  "homepage": "https://agentplaybooks.ai",
+  "repository": "https://github.com/matebenyovszky/agentplaybooks",
+  "license": "MIT",
+  "keywords": ["playbooks", "skills", "mcp", "audit", "sync", "portability"],
+  "skills": "./skills",
+  "commands": "./commands"
+}
