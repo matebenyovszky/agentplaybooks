@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
+import { LEGAL_REDIRECTS } from "./src/lib/legal-routes";
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
@@ -21,6 +22,10 @@ const nextConfig: NextConfig = {
   // Cloudflare Pages compatible settings
   output: "standalone",
   poweredByHeader: false,
+
+  async redirects() {
+    return [...LEGAL_REDIRECTS];
+  },
 
   async headers() {
     return [

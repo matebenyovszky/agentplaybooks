@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { locales } from "@/i18n/config";
 import { getBlogPosts, type BlogPost } from "@/lib/blog-server";
+import { LEGAL_CANONICAL_PATHS } from "@/lib/legal-routes";
 import { SITE_URL } from "@/lib/site-url";
 
 export const dynamic = "force-static";
@@ -16,6 +17,7 @@ const paths = [
   "/blog",
   "/explore",
   "/enterprise",
+  ...LEGAL_CANONICAL_PATHS,
 ];
 
 // This list is updated by scripts/sync-sitemap-docs.ts
