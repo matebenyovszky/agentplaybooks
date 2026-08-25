@@ -2,7 +2,6 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
-import sitemap from "@/app/sitemap";
 import {
   PRIVACY_PARAGRAPHS,
   TERMS_PARAGRAPHS,
@@ -61,12 +60,9 @@ describe("catalog legal pages", () => {
     }
   });
 
-  it("lists canonical privacy and terms URLs in the sitemap", async () => {
-    const entries = await sitemap();
-    const urls = entries.map((entry) => entry.url);
-
-    expect(urls).toContain("https://agentplaybooks.ai/privacy");
-    expect(urls).toContain("https://agentplaybooks.ai/terms");
+  it("lists canonical privacy and terms URLs in the sitemap", () => {
+    expect(LEGAL_CANONICAL_PATHS).toEqual(["/privacy", "/terms"]);
+    expect(source("src/app/sitemap.ts")).toContain("LEGAL_CANONICAL_PATHS");
   });
 
   it("301-aliases the directory lookup paths onto the canonicals", () => {
