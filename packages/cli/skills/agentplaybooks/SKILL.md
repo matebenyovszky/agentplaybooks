@@ -40,6 +40,8 @@ Substitute your variant for `apb` in the commands below.
 | `apb sync --global [--include-vendored]` | Same plan across the user's home stores (`~/.cursor/skills`, `~/.claude/skills`, the Hermes profile) instead of one project. Skills only | Plan only without `--apply` |
 | `apb login [--url=<base>]` | Store a user API key (`apb_...`) for a remote; reads `AGENTPLAYBOOKS_API_KEY` first | `~/.agentplaybooks/credentials.json` |
 | `apb playbooks [--json]` | List remote playbooks the key can access | Never |
+| `apb connect --account [path] [--target=<types>]` | Connect an agent to the account-management MCP endpoint using `${AGENTPLAYBOOKS_API_KEY}` | Plan only without `--apply` |
+| `apb connect <guid>[,<guid>...] [path]` | Connect one or more scoped playbook MCP endpoints in one config update | Plan only without `--apply` |
 | `apb pull <id\|guid> [path] [--apply]` | Download a playbook's instructions into `AGENTS.md`, skills into `.agents/skills/`, and MCP servers into `.agents/mcp.json`, then link the project | With `--apply` |
 | `apb push [path] [--apply]` | Upload local instructions, skills, MCP servers, and the manifest to the linked (or a new) remote playbook | With `--apply` |
 | `apb push --global [--apply]` | Upload this machine's own skills as a workstation playbook. MCP configuration is never uploaded | With `--apply` |
@@ -76,6 +78,13 @@ Substitute your variant for `apb` in the commands below.
 - **"Set this machine up from our team playbook"** → `apb pull <guid> --apply`,
   then `apb sync --apply`. If the project has no target yet, sync lists the
   agent tools it detected for this user; pass them via `--target`.
+- **"Connect my whole AgentPlaybooks account"** → run
+  `apb connect --account --target=<type>`, show the plan, then run it with
+  `--apply`. The generated config contains `${AGENTPLAYBOOKS_API_KEY}`, never
+  the key. Set that variable before starting or restarting the agent.
+- **"Connect these playbooks only"** → pass a comma-separated GUID list to
+  `apb connect`. The CLI creates a separate, stable MCP entry for each and
+  merges them into the target configuration atomically.
 - **"Which credentials does this playbook need?"** → run
   `apb secrets status --json` (or read `spec.secrets` in `agentplaybook.json` if
   the project has no playbook key). It reports names and state only. Tell the

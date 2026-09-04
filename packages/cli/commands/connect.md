@@ -1,13 +1,15 @@
 ---
-description: Connect this project to a hosted playbook's MCP endpoint — plan first, apply on approval
-argument-hint: "<playbook-guid> [path] [--target=claude,cursor] [--key-env=VAR]"
+description: Connect an agent to an AgentPlaybooks account or one or more hosted playbooks — plan first, apply on approval
+argument-hint: "<guid>[,<guid>...] [path] | --account [path] [--target=claude,hermes]"
 ---
 
-Point the agent tool at a hosted playbook's own MCP endpoint, so memory, skills,
-and every federated tool arrive through one connection instead of a local copy.
+Point the agent tool at either a whole AgentPlaybooks account or one or more
+hosted playbooks. `--account` uses the account-management MCP endpoint and a
+user API key; GUIDs use the scoped playbook endpoints. A user API key can also
+authenticate those scoped endpoints when the account has access.
 
 1. Run: `node "${CLAUDE_PLUGIN_ROOT}/bin/agentplaybooks.js" connect $ARGUMENTS --json`
-2. Report the plan: the endpoint URL, the config entry name, which files would be
+2. Report the plan: the scope, endpoint URL(s), config entry name(s), which files would be
    created or merged, and the environment variable the key will be read from.
    The key itself is never written to disk — the config carries `${VAR}`.
 3. If `keyPresentInEnvironment` is false, say so before applying. A variable set
@@ -20,5 +22,5 @@ and every federated tool arrive through one connection instead of a local copy.
 5. Only after the user confirms, run the same command with `--apply` and report
    what was written (backups land in `.agentplaybooks/backups/`).
 
-The playbook GUID is the last path segment of its MCP endpoint URL, which the
-playbook's MCP tab shows.
+For the whole account use `connect --account`. For several playbooks use a
+comma-separated list of GUIDs. A GUID is the last path segment of the MCP URL.

@@ -1,7 +1,7 @@
 # AgentPlaybooks CLI
 
 Local-first CLI for auditing, synchronizing, and sharing portable agent
-configuration. Zero runtime dependencies, Node.js >= 20.
+configuration. The published/plugin CLI is self-contained, Node.js >= 20.
 
 ```bash
 node ./bin/agentplaybooks.js doctor ../my-project
@@ -96,6 +96,25 @@ node ./bin/agentplaybooks.js push --apply           # local -> remote playbook
 - `pull` and `push` are plan-only unless `--apply` is supplied. Use
   `--url=<base>` or `AGENTPLAYBOOKS_URL` for self-hosted deployments.
 
+## Connect account or playbooks as MCP
+
+```bash
+# Every playbook the user key can access
+export AGENTPLAYBOOKS_API_KEY=<your-user-api-key>
+apb connect --account --target=hermes
+apb connect --account --target=hermes --apply
+
+# One or more selected playbooks
+apb connect 011d8a7fa0ec4016,111d8a7fa0ec4016 --target=claude
+apb connect 011d8a7fa0ec4016,111d8a7fa0ec4016 --target=claude --apply
+```
+
+`--account` points to `/api/mcp/manage` and uses
+`${AGENTPLAYBOOKS_API_KEY}`. Selected GUIDs become separate MCP entries and may
+use a user API key or a playbook-scoped key through `--key-env`. Configuration
+is always planned first and merged in one update. Only an environment-variable
+reference is written; the credential value is never stored in the agent config.
+
 ## Secrets
 
 **A plaintext secret value never touches the disk.** Not in the manifest, not in
@@ -169,7 +188,7 @@ public, not a vault secret — and `--client-id=…` overrides it.
 ## Claude Code / Claude Cowork plugin
 
 This package doubles as a Claude Code plugin: it ships an `agentplaybooks`
-skill plus `/agentplaybooks:doctor`, `:sync`, `:pull`, and `:push` commands
+skill plus `/agentplaybooks:doctor`, `:sync`, `:login`, `:connect`, `:pull`, and `:push` commands
 that drive this CLI. Install from the repository root marketplace:
 
 ```text

@@ -54,8 +54,9 @@ Usage:
   agentplaybooks doctor [path] [--json] [--strict] [--global] [--include-vendored]
   agentplaybooks sync [path] [--apply] [--json] [--target=<types>]
   agentplaybooks sync --global [--apply] [--json] [--target=<types>] [--include-vendored]
-  agentplaybooks connect <guid> [path] [--apply] [--json] [--target=<types>]
+  agentplaybooks connect <guid>[,<guid>...] [path] [--apply] [--json] [--target=<types>]
                                 [--name=<entry>] [--key-env=<VAR>] [--key-header=<H>]
+  agentplaybooks connect --account [path] [--apply] [--json] [--target=<types>]
   agentplaybooks login [--url=<base>]
   agentplaybooks logout [--url=<base>]
   agentplaybooks playbooks [--url=<base>] [--json]
@@ -85,9 +86,9 @@ Commands:
              moves skills only: a global MCP config holds credentials, so
              copying it between clients would spread them. Skills the clients
              ship with themselves are left out unless --include-vendored.
-  connect    Point an agent tool at a hosted playbook's own MCP endpoint, so it
-             reaches memory, skills, and every federated tool through one
-             connection instead of a local copy. The key is never written: the
+  connect    Point an agent tool at one or more hosted playbooks, or use
+             --account to manage every playbook the user key can access. The
+             key is never written: the
              config carries \${VAR}, which the tool expands at launch — so set
              the variable before starting it, since a variable added afterwards
              is invisible to a running process and looks like a rejected key.
@@ -559,8 +560,11 @@ export async function run(args) {
     const requestedTargets = typeof flags.get("--target") === "string"
       ? flags.get("--target").split(",").map((value) => value.trim()).filter(Boolean)
       : [];
-    const plan = await planConnect(path.resolve(positional[1] ?? process.cwd()), {
-      playbook: positional[0],
+    const account = flags.has("--account");
+    const requestedPlaybooks = account ? [] : (positional[0]?.split(",") ?? []);
+    const plan = await planConnect(path.resolve(positional[account ? 0 : 1] ?? process.cwd()), {
+      account,
+      playbooks: requestedPlaybooks,
       targets: requestedTargets,
       name: typeof flags.get("--name") === "string" ? flags.get("--name") : undefined,
       keyEnvVar: typeof flags.get("--key-env") === "string" ? flags.get("--key-env") : undefined,
@@ -570,6 +574,8 @@ export async function run(args) {
     if (flags.has("--json")) {
       console.log(JSON.stringify({
         changed: plan.changed,
+        scope: plan.scope,
+        entries: plan.entries,
         url: plan.url,
         entryName: plan.entryName,
         keyEnvVar: plan.keyEnvVar,

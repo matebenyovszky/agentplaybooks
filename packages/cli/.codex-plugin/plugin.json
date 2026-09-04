@@ -1,0 +1,50 @@
+{
+  "name": "agentplaybooks",
+  "description": "Portable agent playbooks: audit, sync, pull, push, and connect account or playbook MCP access across AI agents.",
+  "version": "0.3.0-beta.1+codex.20260904174125",
+  "author": {
+    "name": "AgentPlaybooks",
+    "url": "https://agentplaybooks.ai"
+  },
+  "homepage": "https://agentplaybooks.ai",
+  "repository": "https://github.com/matebenyovszky/agentplaybooks",
+  "license": "MIT",
+  "keywords": [
+    "playbooks",
+    "skills",
+    "mcp",
+    "audit",
+    "sync",
+    "portability"
+  ],
+  "skills": "./skills/",
+  "mcpServers": {
+    "agentplaybooks-account": {
+      "type": "http",
+      "url": "https://agentplaybooks.ai/api/mcp/manage",
+      "headers": {
+        "X-API-Key": "${AGENTPLAYBOOKS_API_KEY}"
+      }
+    }
+  },
+  "interface": {
+    "displayName": "AgentPlaybooks",
+    "shortDescription": "Portable agent configuration and account MCP access",
+    "longDescription": "Audit, synchronize, share, and connect portable playbooks across Codex, Claude, Cursor, Hermes Agent, and other AI clients.",
+    "developerName": "AgentPlaybooks",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "websiteURL": "https://agentplaybooks.ai",
+    "privacyPolicyURL": "https://agentplaybooks.ai/privacy",
+    "termsOfServiceURL": "https://agentplaybooks.ai/terms",
+    "defaultPrompt": [
+      "Check my agent configuration for drift.",
+      "Connect my AgentPlaybooks account.",
+      "Sync this project to Hermes Agent."
+    ],
+    "brandColor": "#7C3AED"
+  }
+}

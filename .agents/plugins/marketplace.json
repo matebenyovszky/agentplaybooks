@@ -1,0 +1,20 @@
+{
+  "name": "agentplaybooks-local",
+  "interface": {
+    "displayName": "AgentPlaybooks Local Development"
+  },
+  "plugins": [
+    {
+      "name": "agentplaybooks",
+      "source": {
+        "source": "local",
+        "path": "./packages/cli"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

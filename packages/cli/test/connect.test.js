@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { applyConnect, defaultKeyEnvVar, planConnect, serverDefinition } from "../src/connect.js";
+import { accountEndpoint, applyConnect, defaultKeyEnvVar, planConnect, serverDefinition } from "../src/connect.js";
 
 // `connect` points a local tool at a hosted playbook's own MCP endpoint. The
 // rule it must never break: the key stays in the environment, and only a
@@ -180,4 +180,39 @@ test("does not write anything while only planning", async () => {
   await planConnect(root, { playbook: GUID, env: {} });
 
   await assert.rejects(() => readFile(path.join(root, ".mcp.json"), "utf8"), /ENOENT/);
+});
+
+test("connects the whole account through the management endpoint", async () => {
+  const root = await fixture();
+  const plan = await planConnect(root, { account: true, env: {} });
+
+  assert.equal(plan.scope, "account");
+  assert.equal(plan.keyEnvVar, "AGENTPLAYBOOKS_API_KEY");
+  assert.equal(plan.entries[0].url, accountEndpoint("https://agentplaybooks.ai"));
+  await applyConnect(plan);
+
+  const document = JSON.parse(await readFile(path.join(root, ".mcp.json"), "utf8"));
+  assert.equal(document.mcpServers["agentplaybooks-account"].url, "https://agentplaybooks.ai/api/mcp/manage");
+  assert.equal(document.mcpServers["agentplaybooks-account"].headers["X-API-Key"], "${AGENTPLAYBOOKS_API_KEY}");
+});
+
+test("connects multiple playbooks in one atomic config update", async () => {
+  const root = await fixture();
+  const second = "111d8a7fa0ec4016";
+  const plan = await planConnect(root, { playbooks: [GUID, second], env: {} });
+
+  assert.equal(plan.entries.length, 2);
+  assert.equal(plan.keyEnvVar, "AGENTPLAYBOOKS_API_KEY");
+  assert.equal(plan.fileActions.length, 1);
+  await applyConnect(plan);
+
+  const document = JSON.parse(await readFile(path.join(root, ".mcp.json"), "utf8"));
+  assert.equal(document.mcpServers[`agentplaybooks-${GUID.slice(0, 8)}`].url, `https://agentplaybooks.ai/api/mcp/${GUID}`);
+  assert.equal(document.mcpServers[`agentplaybooks-${second.slice(0, 8)}`].url, `https://agentplaybooks.ai/api/mcp/${second}`);
+});
+
+test("does not mix account and playbook scopes", async () => {
+  const root = await fixture();
+  await assert.rejects(() => planConnect(root, { account: true, playbook: GUID }), /either the whole account/i);
+  await assert.rejects(() => planConnect(root, { playbooks: [GUID, "111d8a7fa0ec4016"], name: "one-name" }), /single playbook/i);
 });

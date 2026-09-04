@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { applyAdapters, planHermesMcpServerAction, planMcpServerAction } from "./adapters.js";
+import { applyAdapters, planHermesMcpServersAction, planMcpServersAction } from "./adapters.js";
 import { resolveBaseUrl } from "./remote.js";
 
 /**
@@ -40,6 +40,10 @@ export function playbookEndpoint(playbook, baseUrl) {
   return `${baseUrl}/api/mcp/${playbook}`;
 }
 
+export function accountEndpoint(baseUrl) {
+  return `${baseUrl}/api/mcp/manage`;
+}
+
 /** `apbks-dev` → `APBKS_KEY_APBKS_DEV`, so the variable names itself after the entry. */
 export function defaultKeyEnvVar(entryName) {
   return `APBKS_KEY_${entryName.replace(/[^A-Za-z0-9]+/g, "_").toUpperCase()}`;
@@ -71,19 +75,37 @@ async function readIfPresent(absolutePath) {
 }
 
 export async function planConnect(root, options = {}) {
-  const playbook = options.playbook?.trim();
-  if (!playbook) {
-    throw new Error("Which playbook? Pass its GUID, e.g. `agentplaybooks connect 011d8a7fa0ec4016`.");
+  const playbooks = [...new Set([
+    ...(Array.isArray(options.playbooks) ? options.playbooks : []),
+    ...(options.playbook ? [options.playbook] : []),
+  ].flatMap((value) => String(value).split(",")).map((value) => value.trim()).filter(Boolean))];
+  const account = Boolean(options.account);
+  if (account && playbooks.length > 0) {
+    throw new Error("Choose either the whole account (--account) or one or more playbook GUIDs, not both.");
   }
-  if (!GUID_PATTERN.test(playbook) && !UUID_PATTERN.test(playbook)) {
-    throw new Error(`"${playbook}" is not a playbook GUID. Copy it from the playbook's MCP endpoint URL.`);
+  if (!account && playbooks.length === 0) {
+    throw new Error("Which playbook? Pass one or more GUIDs, or use --account for the whole account.");
+  }
+  for (const playbook of playbooks) {
+    if (!GUID_PATTERN.test(playbook) && !UUID_PATTERN.test(playbook)) {
+      throw new Error(`"${playbook}" is not a playbook GUID. Copy it from the playbook's MCP endpoint URL.`);
+    }
+  }
+  if (options.name?.trim() && playbooks.length > 1) {
+    throw new Error("--name can only be used with --account or a single playbook.");
   }
 
   const targets = options.targets?.length ? options.targets : ["claude"];
   const baseUrl = resolveBaseUrl(options.url, options.env ?? process.env);
-  const url = playbookEndpoint(playbook, baseUrl);
-  const entryName = options.name?.trim() || "agentplaybooks";
-  const keyEnvVar = options.keyEnvVar?.trim() || defaultKeyEnvVar(entryName);
+  const entries = account
+    ? [{ name: options.name?.trim() || "agentplaybooks-account", url: accountEndpoint(baseUrl), playbook: null }]
+    : playbooks.map((playbook) => ({
+        name: options.name?.trim() || (playbooks.length === 1 ? "agentplaybooks" : `agentplaybooks-${playbook.slice(0, 8)}`),
+        url: playbookEndpoint(playbook, baseUrl),
+        playbook,
+      }));
+  const keyEnvVar = options.keyEnvVar?.trim()
+    || (account || playbooks.length > 1 ? "AGENTPLAYBOOKS_API_KEY" : defaultKeyEnvVar(entries[0].name));
   if (!SAFE_ENV_NAME.test(keyEnvVar)) {
     throw new Error(`"${keyEnvVar}" is not a usable environment variable name.`);
   }
@@ -93,13 +115,15 @@ export async function planConnect(root, options = {}) {
   const fileActions = [];
 
   for (const target of targets) {
-    const definition = serverDefinition({ url, keyEnvVar, keyHeader, target });
+    const definitions = Object.fromEntries(entries.map((entry) => [
+      entry.name,
+      serverDefinition({ url: entry.url, keyEnvVar, keyHeader, target }),
+    ]));
 
     // Hermes keeps its MCP servers in the profile config, not in the project.
     if (target === "hermes") {
-      const action = await planHermesMcpServerAction({
-        name: entryName,
-        definition,
+      const action = await planHermesMcpServersAction({
+        definitions,
         conflicts,
         env: options.env,
         homedir: options.homedir,
@@ -109,21 +133,26 @@ export async function planConnect(root, options = {}) {
       continue;
     }
 
-    const probe = planMcpServerAction({ root, target, name: entryName, definition, conflicts: [] });
+    const probe = planMcpServersAction({ root, target, definitions, conflicts: [] });
     if (!probe) {
-      planMcpServerAction({ root, target, name: entryName, definition, conflicts });
+      planMcpServersAction({ root, target, definitions, conflicts });
       continue;
     }
     const existingContent = await readIfPresent(probe.absolutePath);
-    const action = planMcpServerAction({ root, target, name: entryName, definition, existingContent, conflicts });
+    const action = planMcpServersAction({ root, target, definitions, existingContent, conflicts });
     if (action) fileActions.push(action);
   }
 
   return {
     root,
-    playbook,
-    url,
-    entryName,
+    scope: account ? "account" : "playbooks",
+    account,
+    playbooks,
+    entries,
+    // Retain the old fields for callers that consume a single-playbook plan.
+    playbook: playbooks[0] ?? null,
+    url: entries.length === 1 ? entries[0].url : null,
+    entryName: entries.length === 1 ? entries[0].name : null,
     keyEnvVar,
     keyHeader,
     targets,
@@ -145,8 +174,8 @@ export async function applyConnect(plan) {
 }
 
 export function printConnectPlan(plan, log = console.log) {
-  log(`Playbook endpoint: ${plan.url}`);
-  log(`Config entry:      ${plan.entryName}`);
+  log(plan.account ? "Account connection:" : `Playbook connection${plan.entries.length === 1 ? "" : "s"}:`);
+  for (const entry of plan.entries) log(`  ${entry.name}: ${entry.url}`);
   log(`Credential:        ${plan.keyHeader}: \${${plan.keyEnvVar}} (read from the environment, never written)`);
 
   if (plan.fileActions.length === 0) {

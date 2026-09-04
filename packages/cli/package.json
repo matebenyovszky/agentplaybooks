@@ -1,6 +1,6 @@
 {
   "name": "@agentplaybooks/cli",
-  "version": "0.3.0-beta.0",
+  "version": "0.3.0-beta.1",
   "description": "Audit and synchronize vendor-neutral AI agent playbooks across Claude Code, Cursor, Codex, Antigravity, and Hermes Agent",
   "type": "module",
   "license": "MIT",
@@ -32,8 +32,9 @@
   },
   "files": [
     "bin",
-    "src",
+    "dist",
     ".claude-plugin",
+    ".codex-plugin",
     "commands",
     "skills",
     "LICENSE",
@@ -45,10 +46,13 @@
   "publishConfig": {
     "access": "public"
   },
-  "dependencies": {
+  "devDependencies": {
+    "esbuild": "^0.25.4",
     "yaml": "^2.9.0"
   },
   "scripts": {
+    "build": "node scripts/build.mjs",
+    "prepack": "npm run build",
     "test": "node --test"
   }
 }
