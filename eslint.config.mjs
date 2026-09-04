@@ -74,6 +74,14 @@ const eslintConfig = [
   },
   ...warnPendingRules(coreWebVitals),
   ...warnPendingRules(nextTypescript),
+  {
+    // eslint-plugin-react 7 still calls context.getFilename() when
+    // settings.react.version is the string "detect". ESLint 10 removed that
+    // method, which is why Dependabot's eslint 10 bump crashed in CI. Pinning
+    // the React major we already ship skips that branch. Harmless on ESLint 9:
+    // detect would resolve to 19 anyway.
+    settings: { react: { version: "19" } },
+  },
 ];
 
 export default eslintConfig;
