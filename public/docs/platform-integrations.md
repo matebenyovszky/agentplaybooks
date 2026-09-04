@@ -2,6 +2,11 @@
 
 This guide explains how to connect your AgentPlaybooks to various AI platforms, both through web interfaces and programmatic APIs.
 
+For persistent multi-agent teammates, see
+[Portable Bot Teams: Grok Bot and Hermes Bot Mode](./bot-platform-integrations.md).
+That guide distinguishes integrations available today from planned native
+deployment adapters.
+
 ## Prerequisites
 
 Before integrating, make sure you have:
@@ -297,17 +302,36 @@ For more control, use [aistudio.google.com](https://aistudio.google.com):
 
 ## xAI Grok
 
-### Using Grok Projects (Grok 2/3)
+### Grok Bot (early beta)
 
-#### Step 1: Create a Project
+[Grok Bot](https://x.ai/news/introducing-grok-bot) gives each Bot an always-on
+cloud computer and lets it work through websites and applications, including
+surfaces without an API or MCP server. Bots can learn demonstrated routines,
+work in parallel, message each other, and coordinate in group chats.
 
-1. Go to [grok.x.ai](https://grok.x.ai) or access via X (Twitter)
-2. Click **Projects** or **+** to create new
-3. Name your project
+As of August 18, 2026, xAI's launch material does not document a public Bot
+management API, MCP attachment point, or portable import/export format. The
+current bridge is therefore web/computer-use based, not a native connector.
 
-#### Step 2: Add System Instructions
+For a public, read-only playbook, give the Bot this URL:
 
-In the system prompt / project instructions:
+```text
+https://agentplaybooks.ai/api/playbooks/YOUR_GUID?format=markdown
+```
+
+Ask it to read the playbook before beginning the task and to treat the persona,
+instructions, and skills as its operating context. Because the Bot can work in
+web applications, it may also use the AgentPlaybooks dashboard like another
+site.
+
+Do not paste an account-wide API key into a Bot conversation. Private and
+write-back workflows should use a dedicated playbook-scoped credential through
+a secure credential flow, or the planned short-lived access grants.
+
+### Grok chat and model API
+
+For ordinary Grok chats or applications built with the xAI model API, fetch the
+playbook as Markdown and use it as system context:
 
 ```
 You are an AI assistant operating according to an AgentPlaybooks configuration.
@@ -331,18 +355,44 @@ https://apbks.com/api/playbooks/YOUR_GUID
 Check: https://apbks.com/api/playbooks/YOUR_GUID/memory
 ```
 
-#### Step 3: Model Settings
+Grok Bot and the xAI model API are separate integration surfaces. Do not assume
+that model API tools automatically become available to a Grok Bot.
 
-For optimal results:
-- Use **Grok 3** with **Thinking mode** enabled for complex reasoning
-- Enable **DeepSearch** for research-oriented playbooks
-- Consider **Big Brain** mode for analytical tasks
+---
 
-#### Step 4: Enable Tools
+## Nous Hermes Agent and Bot Mode
 
-If available:
-- Enable web search for playbooks requiring external data
-- Enable image analysis for vision-related skills
+[Hermes Bot Mode](https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/bot-mode.md)
+turns Hermes profiles into a roster of persistent Bots. Each profile can have
+its own model, `SOUL.md`, memory, skills, MCP servers, credentials, sessions,
+and routines.
+
+Current AgentPlaybooks support:
+
+```bash
+# Synchronize standard Agent Skills into the Hermes skill store
+apb sync --target=hermes --apply
+```
+
+Hermes can also connect to a hosted playbook as a remote HTTP MCP server by
+adding the playbook endpoint to the selected profile's `mcp_servers`
+configuration:
+
+```yaml
+mcp_servers:
+  agentplaybooks:
+    url: "https://agentplaybooks.ai/api/mcp/YOUR_GUID"
+    headers:
+      Authorization: "Bearer ${AGENTPLAYBOOKS_PLAYBOOK_KEY}"
+```
+
+The current CLI target synchronizes skills to the default Hermes store; it does
+not yet create or fully configure a named Bot Mode profile. The planned
+profile-aware adapter will map persona to `SOUL.md`, skills to the profile
+skill directory, MCP definitions to profile configuration, and secret names to
+an `.env.EXAMPLE` without copying values. See the
+[portable Bot team design](./bot-platform-integrations.md) for the exact status
+and roadmap.
 
 ---
 

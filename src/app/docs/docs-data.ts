@@ -21,6 +21,12 @@ export const docsEntries: DocEntry[] = [
     section: "guides",
   },
   {
+    slug: "bot-platform-integrations",
+    title: "Portable Bot Teams",
+    description: "Grok Bot, Hermes Bot Mode, deployments, and fleet design",
+    section: "guides",
+  },
+  {
     slug: "cli",
     title: "CLI & Editor Plugins",
     description: "Doctor, sync, pull/push, and the Claude Code plugin",

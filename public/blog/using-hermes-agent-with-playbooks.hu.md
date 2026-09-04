@@ -14,6 +14,13 @@ platform). Minden, amit tud, egyetlen profilkönyvtárban él — `~/.hermes`, v
 `$HERMES_HOME`, ha több profilt futtatsz —, és semmi nem hagyja el a gépet a
 modellhívásokon kívül, amiket te állítasz be.
 
+> **2026. augusztusi frissítés:** A Hermes Agent már profilalapú Bot Mode-ot
+> kínál tartós botokkal, rutinokkal, csoportos beszélgetésekkel, többgépes
+> peerekkel, Agent Skills és MCP támogatással. Az aktuális képességtérképet és a
+> profiltelepítési tervünket az
+> [A botod nem az agented](/blog/your-bot-is-not-your-agent) cikkben és a
+> [portolható botcsapat útmutatóban](/docs/bot-platform-integrations) találod.
+
 > **Két különböző dolgot hívnak Hermesnek.** Ez a bejegyzés a *Hermes Agentről*
 > szól, arról a kliensről, amit telepítesz. A *Hermes* modellek (Hermes 3,
 > Hermes 4) a Nous Research külön kiadása; bármelyiket futtathatod modellként

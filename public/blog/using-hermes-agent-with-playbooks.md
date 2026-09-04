@@ -14,6 +14,12 @@ lives in one profile directory — `~/.hermes`, or `$HERMES_HOME` if you run
 several profiles — and nothing leaves your machine except the model calls you
 configure.
 
+> **August 2026 update:** Hermes Agent now includes profile-based Bot Mode with
+> persistent bots, routines, group chats, cross-machine peers, Agent Skills,
+> and MCP. For the current capability map and our profile deployment plan, read
+> [Your Bot Is Not Your Agent](/blog/your-bot-is-not-your-agent) and the
+> [portable bot team guide](/docs/bot-platform-integrations).
+
 > **Two different things are called Hermes.** This post is about *Hermes Agent*,
 > the client you install. The *Hermes* models (Hermes 3, Hermes 4) are a separate
 > Nous Research release; you can run one as the model behind any MCP-capable
