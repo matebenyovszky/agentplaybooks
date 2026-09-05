@@ -1,8 +1,8 @@
 import { handle } from "hono/vercel";
 import { createApiApp } from "@/app/api/_shared/hono";
 import { getServiceSupabase } from "@/app/api/_shared/supabase";
-import type { UserApiKeysRow, Playbook, PlaybooksUpdate } from "@/lib/supabase/types";
-import { validateUserApiKey } from "@/app/api/_shared/auth";
+import type { Playbook, PlaybooksUpdate } from "@/lib/supabase/types";
+import { getAuthenticatedUser, validateUserApiKey } from "@/app/api/_shared/auth";
 import {
   isPlaybookTool,
   projectPlaybookToolsForUser,
@@ -23,7 +23,36 @@ import {
 } from "@/app/api/_shared/guards";
 
 // MCP Server for Playbook Management
-// Allows AI agents to create and manage playbooks via User API Key
+// Allows AI agents to create and manage playbooks via OAuth or User API Key.
+
+type ManagementActor = {
+  userId: string;
+  kind: "oauth" | "user_key";
+  permissions: string[];
+};
+
+const OAUTH_SCOPES = ["openid", "email", "profile"];
+
+function oauthChallenge(request: Request): string {
+  const metadata = new URL("/.well-known/oauth-protected-resource/api/mcp/manage", request.url);
+  return `Bearer resource_metadata="${metadata.toString()}"`;
+}
+
+async function getManagementActor(request: Request): Promise<ManagementActor | null> {
+  const userKey = await validateUserApiKey(request);
+  if (userKey) {
+    return {
+      userId: userKey.user_id,
+      kind: "user_key",
+      permissions: userKey.permissions,
+    };
+  }
+
+  const user = await getAuthenticatedUser(request);
+  return user
+    ? { userId: user.id, kind: "oauth", permissions: ["full"] }
+    : null;
+}
 
 type PersonaSource = Pick<
   Playbook,
@@ -31,8 +60,8 @@ type PersonaSource = Pick<
 >;
 
 // Check permission
-function hasPermission(userKey: UserApiKeysRow, permission: string): boolean {
-  return userKey.permissions.includes(permission) || userKey.permissions.includes("full");
+function hasPermission(actor: ManagementActor, permission: string): boolean {
+  return actor.permissions.includes(permission) || actor.permissions.includes("full");
 }
 
 // Helper: 1 Playbook = 1 Persona (persona stored on playbooks table)
@@ -50,7 +79,18 @@ function playbookToPersona(playbook: PersonaSource) {
 const MCP_TOOLS = [
   ...ACCOUNT_TOOLS,
   ...projectPlaybookToolsForUser(),
-];
+].map((tool) => {
+  const meta = (tool as { _meta?: Record<string, unknown> })._meta;
+  const securitySchemes = [{ type: "oauth2" as const, scopes: OAUTH_SCOPES }];
+  return {
+    ...tool,
+    securitySchemes,
+    _meta: {
+      ...(meta || {}),
+      securitySchemes,
+    },
+  };
+});
 
 const app = createApiApp("/api/mcp/manage");
 
@@ -59,7 +99,7 @@ app.get("/", async (c) => {
   if (requestsEventStream(c.req.header("Accept"))) {
     return c.body(null, 405, { Allow: "POST" });
   }
-  const userKey = await validateUserApiKey(c.req.raw);
+  const actor = await getManagementActor(c.req.raw);
 
   // Return manifest even without auth (for discovery)
   // But indicate that auth is required for tool execution
@@ -70,7 +110,7 @@ app.get("/", async (c) => {
       name: "agentplaybooks-management",
       title: "AgentPlaybooks Management",
       version: "1.0.0",
-      description: "MCP server for managing AgentPlaybooks. Create, update, and delete playbooks, personas, skills, and memory. Requires User API Key authentication.",
+      description: "MCP server for managing AgentPlaybooks. Create, update, and delete playbooks, personas, skills, and memory. Supports OAuth 2.1 and User API Keys.",
     },
     capabilities: {
       tools: {},
@@ -78,9 +118,9 @@ app.get("/", async (c) => {
     tools: MCP_TOOLS,
     _auth: {
       required: true,
-      type: "bearer",
-      description: "User API Key starting with apb_live_",
-      authenticated: !!userKey,
+      type: "oauth2_or_bearer_api_key",
+      description: "OAuth 2.1 account login, or a User API Key starting with apb_live_",
+      authenticated: !!actor,
     },
   };
 
@@ -89,7 +129,7 @@ app.get("/", async (c) => {
 
 // POST /api/mcp/manage - Handle MCP JSON-RPC requests
 app.post("/", async (c) => {
-  const userKey = await validateUserApiKey(c.req.raw);
+  const actor = await getManagementActor(c.req.raw);
 
   const body = await c.req.json();
   const { method, params, id } = body;
@@ -118,7 +158,7 @@ app.post("/", async (c) => {
             version: "1.0.0",
           },
           capabilities: { tools: {} },
-          instructions: "Manage the authenticated user's AgentPlaybooks, skills, MCP servers, and memory. Use an AgentPlaybooks user API key as a Bearer token.",
+          instructions: "Manage the authenticated user's AgentPlaybooks, skills, MCP servers, and memory. Authenticate with AgentPlaybooks OAuth 2.1 or a User API Key.",
         },
       });
 
@@ -140,13 +180,19 @@ app.post("/", async (c) => {
       const args = params?.arguments || {};
 
       // All tool calls require authentication
-      if (!userKey) {
+      if (!actor) {
         return c.json({
           jsonrpc: "2.0",
           id,
-          error: {
-            code: -32001,
-            message: "Authentication required. Provide User API Key in Authorization header.",
+          result: {
+            content: [{
+              type: "text",
+              text: "Authentication required. Sign in to AgentPlaybooks, or provide a User API Key.",
+            }],
+            isError: true,
+            _meta: {
+              "mcp/www_authenticate": [oauthChallenge(c.req.raw)],
+            },
           },
         });
       }
@@ -194,7 +240,7 @@ app.post("/", async (c) => {
           return handleScopedPlaybookMcpPost(scopedRequest);
         }
 
-        const result = await executeManagementTool(toolName, args, userKey);
+        const result = await executeManagementTool(toolName, args, actor);
         // A declared outputSchema is honoured with matching structuredContent;
         // see mcp-tool-hints.ts for why the two must never drift apart.
         const structured = structuredToolResult(ACCOUNT_TOOLS, toolName, result);
@@ -241,14 +287,14 @@ export const OPTIONS = handle(app);
 async function executeManagementTool(
   toolName: string,
   args: Record<string, unknown>,
-  userKey: UserApiKeysRow
+  actor: ManagementActor
 ): Promise<unknown> {
   const supabase = getServiceSupabase();
-  const userId = userKey.user_id;
+  const userId = actor.userId;
 
   switch (toolName) {
     case "list_playbooks": {
-      if (!hasPermission(userKey, "playbooks:read")) {
+      if (!hasPermission(actor, "playbooks:read")) {
         throw new Error("Permission denied: playbooks:read required");
       }
 
@@ -260,7 +306,7 @@ async function executeManagementTool(
     }
 
     case "create_playbook": {
-      if (!hasPermission(userKey, "playbooks:write")) {
+      if (!hasPermission(actor, "playbooks:write")) {
         throw new Error("Permission denied: playbooks:write required");
       }
 
@@ -290,7 +336,7 @@ async function executeManagementTool(
     }
 
     case "get_playbook": {
-      if (!hasPermission(userKey, "playbooks:read")) {
+      if (!hasPermission(actor, "playbooks:read")) {
         throw new Error("Permission denied: playbooks:read required");
       }
 
@@ -327,7 +373,7 @@ async function executeManagementTool(
     }
 
     case "delete_playbook": {
-      if (!hasPermission(userKey, "playbooks:write")) {
+      if (!hasPermission(actor, "playbooks:write")) {
         throw new Error("Permission denied: playbooks:write required");
       }
 
@@ -347,7 +393,7 @@ async function executeManagementTool(
     }
 
     case "create_persona": {
-      if (!hasPermission(userKey, "personas:write")) {
+      if (!hasPermission(actor, "personas:write")) {
         throw new Error("Permission denied: personas:write required");
       }
 
@@ -380,7 +426,7 @@ async function executeManagementTool(
     }
 
     case "update_persona": {
-      if (!hasPermission(userKey, "personas:write")) {
+      if (!hasPermission(actor, "personas:write")) {
         throw new Error("Permission denied: personas:write required");
       }
 
@@ -419,7 +465,7 @@ async function executeManagementTool(
     }
 
     case "delete_persona": {
-      if (!hasPermission(userKey, "personas:write")) {
+      if (!hasPermission(actor, "personas:write")) {
         throw new Error("Permission denied: personas:write required");
       }
 

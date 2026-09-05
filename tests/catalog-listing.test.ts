@@ -120,7 +120,7 @@ describe("Cursor plugin catalog manifests", () => {
 });
 
 describe("ChatGPT directory reviewer notes", () => {
-  it("documents Bearer auth, the 49-tool surface, and that this is not OAuth or a listing", () => {
+  it("documents OAuth, Bearer fallback, the 49-tool surface, and listing status", () => {
     const notes = source("docs/chatgpt-directory-notes.md");
     expect(notes).toMatch(/Streamable HTTP/i);
     expect(notes).toContain("https://agentplaybooks.ai/api/mcp/manage");
@@ -128,7 +128,9 @@ describe("ChatGPT directory reviewer notes", () => {
     expect(notes).toContain("49");
     expect(notes).toContain("use_secret_write");
     expect(notes).toContain("find_tools");
-    expect(notes).toMatch(/not.*OAuth/i);
+    expect(notes).toContain("oauth-protected-resource/api/mcp/manage");
+    expect(notes).toMatch(/OAuth 2\.1 account login/i);
+    expect(notes).toMatch(/OAuth server is still disabled/i);
     expect(notes).toMatch(/does \*\*not\*\* claim a listing/i);
     expect(notes).not.toContain("outlook.com");
   });
