@@ -116,6 +116,58 @@ export type CreatePlaybookInput = {
   instructions?: string | null;
 };
 
+/** Parse the canonical create payload used by REST, MCP, and the dashboard. */
+export function parseCreatePlaybookInput(body: unknown):
+  | { input: CreatePlaybookInput }
+  | { error: string } {
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return { error: "Name is required" };
+  }
+
+  const value = body as Record<string, unknown>;
+  if (typeof value.name !== "string" || value.name.trim().length === 0) {
+    return { error: "Name is required" };
+  }
+
+  const visibility = value.visibility
+    ?? (typeof value.is_public === "boolean"
+      ? value.is_public ? "public" : "private"
+      : "private");
+  if (visibility !== "public" && visibility !== "private" && visibility !== "unlisted") {
+    return { error: "Invalid visibility" };
+  }
+
+  if (value.instructions !== undefined
+    && value.instructions !== null
+    && typeof value.instructions !== "string") {
+    return { error: "Invalid instructions" };
+  }
+
+  return {
+    input: {
+      name: value.name.trim(),
+      description: typeof value.description === "string" ? value.description : null,
+      visibility,
+      config: value.config && typeof value.config === "object" && !Array.isArray(value.config)
+        ? value.config as Record<string, unknown>
+        : {},
+      tags: Array.isArray(value.tags)
+        ? value.tags.filter((tag): tag is string => typeof tag === "string")
+        : [],
+      persona_name: typeof value.persona_name === "string" ? value.persona_name : null,
+      persona_system_prompt: typeof value.persona_system_prompt === "string"
+        ? value.persona_system_prompt
+        : null,
+      persona_metadata: value.persona_metadata
+        && typeof value.persona_metadata === "object"
+        && !Array.isArray(value.persona_metadata)
+        ? value.persona_metadata as Record<string, unknown>
+        : {},
+      instructions: typeof value.instructions === "string" ? value.instructions : null,
+    },
+  };
+}
+
 export async function createPlaybook(
   userId: string,
   input: CreatePlaybookInput,

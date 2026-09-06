@@ -291,6 +291,7 @@ PUT    /api/user/profile
 
 GET    /api/user/api-keys
 POST   /api/user/api-keys
+PUT    /api/user/api-keys/:kid/rotate
 DELETE /api/user/api-keys/:kid
 ```
 

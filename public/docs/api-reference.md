@@ -403,6 +403,19 @@ Content-Type: application/json
 }
 ```
 
+The dashboard provides eye and copy controls for the newly created key. Full
+plaintext keys are intentionally not recoverable later because the server stores
+only one-way hashes. Use rotation when a key has been lost or should be replaced.
+
+### Rotate User API Key
+
+```http
+PUT /api/user/api-keys/:kid/rotate
+```
+
+The old key is invalidated immediately. The response contains the new plaintext
+key once, with the existing permissions and expiry settings.
+
 ### Update Playbook
 
 ```http
@@ -1297,6 +1310,7 @@ versioned limits are documented here.
 | `GET` | `/api/user/api-keys` | JWT | List user API keys |
 | `POST` | `/api/user/api-keys` | JWT | Create user API key |
 | `DELETE` | `/api/user/api-keys/:kid` | JWT | Delete user API key |
+| `PUT` | `/api/user/api-keys/:kid/rotate` | JWT | Rotate user API key |
 
 ### Human Collaboration
 

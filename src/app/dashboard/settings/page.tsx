@@ -4,15 +4,16 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { createBrowserClient } from "@/lib/supabase/client";
+import { ApiKeyReveal } from "@/components/ApiKeyReveal";
 import {
   Key,
   Plus,
   Trash2,
-  Copy,
   Check,
   AlertCircle,
   Shield,
-  Settings
+  Settings,
+  RotateCw,
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import {
@@ -44,9 +45,9 @@ export default function SettingsPage() {
   const [newKeyName, setNewKeyName] = useState("");
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([...DEFAULT_USER_API_KEY_PERMISSIONS]);
   const [createdKey, setCreatedKey] = useState<NewKeyResponse | null>(null);
-  const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [rotatingKeyId, setRotatingKeyId] = useState<string | null>(null);
 
   // Declared above the effect that calls it, and listed in its dependencies —
   // the same shape the other loaders in this codebase use. It used to sit below
@@ -141,10 +142,40 @@ export default function SettingsPage() {
     }
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleRotateKey = async (keyId: string) => {
+    if (!confirm("Rotate this API key? The current key will stop working immediately.")) return;
+
+    setRotatingKeyId(keyId);
+    setError(null);
+    try {
+      const supabase = createBrowserClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await fetch(`/api/user/api-keys/${keyId}/rotate`, {
+        method: "PUT",
+        headers: { "Authorization": `Bearer ${session?.access_token}` },
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(typeof data?.error === "string" ? data.error : "Failed to rotate API key");
+      }
+      const rotatedMetadata: UserApiKey = {
+        id: data.id,
+        key_prefix: data.key_prefix,
+        name: data.name ?? null,
+        permissions: data.permissions,
+        last_used_at: data.last_used_at ?? null,
+        expires_at: data.expires_at ?? null,
+        is_active: data.is_active,
+        created_at: data.created_at,
+      };
+      setApiKeys((keys) => keys.map((key) => key.id === keyId ? rotatedMetadata : key));
+      setCreatedKey(data);
+      setShowCreateModal(true);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to rotate API key");
+    } finally {
+      setRotatingKeyId(null);
+    }
   };
 
   const closeModal = () => {
@@ -291,13 +322,25 @@ export default function SettingsPage() {
                       )}
                     </div>
                   </div>
-                  <button
-                    onClick={() => handleDeleteKey(key.id)}
-                    className="p-2 text-slate-400 hover:text-red-400 transition-colors"
-                    title="Delete key"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => void handleRotateKey(key.id)}
+                      disabled={rotatingKeyId === key.id}
+                      className="rounded p-2 text-slate-400 transition-colors hover:text-amber-400 disabled:opacity-50"
+                      title="Rotate key and copy the new value"
+                      aria-label="Rotate key and copy the new value"
+                    >
+                      <RotateCw className={`h-4 w-4 ${rotatingKeyId === key.id ? "animate-spin" : ""}`} />
+                    </button>
+                    <button
+                      onClick={() => void handleDeleteKey(key.id)}
+                      className="rounded p-2 text-slate-400 transition-colors hover:text-red-400"
+                      title="Delete key"
+                      aria-label="Delete key"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -345,21 +388,11 @@ export default function SettingsPage() {
                   </p>
                 </div>
 
-                <div className="bg-slate-800 rounded-lg p-4 mb-4">
-                  <div className="flex items-center justify-between gap-2">
-                    <code className="text-sm text-amber-400 break-all">{createdKey.key}</code>
-                    <button
-                      onClick={() => copyToClipboard(createdKey.key)}
-                      className="p-2 hover:bg-slate-700 rounded transition-colors flex-shrink-0"
-                    >
-                      {copied ? (
-                        <Check className="h-4 w-4 text-green-400" />
-                      ) : (
-                        <Copy className="h-4 w-4 text-slate-400" />
-                      )}
-                    </button>
-                  </div>
-                </div>
+                <ApiKeyReveal
+                  value={createdKey.key}
+                  className="mb-4 rounded-lg bg-slate-800 p-3 text-slate-400"
+                  codeClassName="text-sm text-amber-400"
+                />
 
                 <div className="flex items-center gap-2 p-3 bg-yellow-500/10 rounded-lg border border-yellow-500/20 mb-4">
                   <AlertCircle className="h-5 w-5 text-yellow-400 flex-shrink-0" />

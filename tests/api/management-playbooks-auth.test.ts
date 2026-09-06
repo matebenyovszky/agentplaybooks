@@ -1,16 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { NextRequest } from "next/server";
 
-const { getUserFromAuthOrApiKey, listAccessiblePlaybooks, createPlaybook } = vi.hoisted(() => ({
+const {
+  getUserFromAuthOrApiKey,
+  listAccessiblePlaybooks,
+  createPlaybook,
+  parseCreatePlaybookInput,
+} = vi.hoisted(() => ({
   getUserFromAuthOrApiKey: vi.fn(),
   listAccessiblePlaybooks: vi.fn(),
   createPlaybook: vi.fn(),
+  parseCreatePlaybookInput: vi.fn((body: unknown) => ({ input: body })),
 }));
 
 vi.mock("@/app/api/_shared/auth", () => ({ getUserFromAuthOrApiKey }));
 vi.mock("@/lib/repositories/playbooks", () => ({
   listAccessiblePlaybooks,
   createPlaybook,
+  parseCreatePlaybookInput,
 }));
 
 import { GET, POST } from "@/app/api/manage/playbooks/route";

@@ -60,6 +60,12 @@ For a shared playbook, the User API Key inherits the account's editor boundaries
    - `full` - All permissions
 4. Copy the key immediately (it won't be shown again!)
 
+The dashboard includes an eye button and a copy button while a key is being
+created or rotated. Existing plaintext values cannot be recovered because only
+one-way hashes are stored. If a key was lost, use **Rotate** next to that key;
+the old value stops working immediately and the new value can be viewed/copied
+once.
+
 ### API Key Format
 
 ```
@@ -141,6 +147,16 @@ POST /api/control/create_run
   "context": { "customer": "Acme" }
 }
 ```
+
+### Rotating a User API Key
+
+```http
+PUT /api/user/api-keys/:kid/rotate
+Authorization: Bearer <jwt_token>
+```
+
+Rotation invalidates the old key and returns a new plaintext key once, with the
+same name, permissions, and expiry settings.
 
 The equivalent direct route binds the identity instead:
 

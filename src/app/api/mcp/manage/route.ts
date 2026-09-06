@@ -8,7 +8,11 @@ import {
   projectPlaybookToolsForUser,
 } from "@/app/api/_shared/playbook-tools";
 import { POST as handleScopedPlaybookMcpPost } from "@/app/api/mcp/[guid]/route";
-import { createPlaybook, listAccessiblePlaybooks } from "@/lib/repositories/playbooks";
+import {
+  createPlaybook,
+  listAccessiblePlaybooks,
+  parseCreatePlaybookInput,
+} from "@/lib/repositories/playbooks";
 import { ACCOUNT_TOOLS } from "@/app/api/_shared/account-tools";
 import { structuredToolResult } from "@/app/api/_shared/mcp-tool-hints";
 import {
@@ -310,29 +314,9 @@ async function executeManagementTool(
         throw new Error("Permission denied: playbooks:write required");
       }
 
-      const { name, description, visibility, tags, persona_name, persona_system_prompt, persona_metadata, instructions } = args as {
-        name: string;
-        description?: string;
-        visibility?: 'public' | 'private' | 'unlisted';
-        tags?: string[];
-        persona_name?: string;
-        persona_system_prompt?: string;
-        persona_metadata?: Record<string, unknown>;
-        instructions?: string;
-      };
-
-      if (!name) throw new Error("name is required");
-
-      return createPlaybook(userId, {
-        name,
-        description: description || null,
-        visibility: visibility || "private",
-        tags: tags || [],
-        persona_name: persona_name || null,
-        persona_system_prompt: persona_system_prompt || null,
-        persona_metadata: persona_metadata || {},
-        instructions: instructions || null,
-      });
+      const parsed = parseCreatePlaybookInput(args);
+      if ("error" in parsed) throw new Error(parsed.error);
+      return createPlaybook(userId, parsed.input);
     }
 
     case "get_playbook": {
