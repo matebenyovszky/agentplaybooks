@@ -16,9 +16,10 @@ Do not submit from this PR. Verified identity (Mate) is outside this change.
   `/.well-known/oauth-protected-resource` and
   `/.well-known/oauth-protected-resource/api/mcp/manage`.
 - The authorization server is the configured Supabase Auth issuer. Before a
-  hosted submission, enable Supabase's OAuth 2.1 server, configure the consent
-  screen, and verify its discovery document returns HTTP 200. The resource
-  code alone does not enable the authorization server.
+  hosted submission, enable Supabase's OAuth 2.1 server, set its authorization
+  path to `https://agentplaybooks.ai/oauth/consent`, and verify its discovery
+  document returns HTTP 200. The application consent page is implemented, but
+  the resource code alone does not enable the authorization server.
 
 Playbook-scoped MCP (`/api/mcp/<guid>`) uses the same Bearer key pattern.
 
@@ -65,6 +66,9 @@ Use a valid user API key with at least `playbooks:read`, `skills:read`, and
 - Supabase OAuth discovery must be live at
   `/.well-known/oauth-authorization-server/auth/v1` on the configured Supabase
   project. A 404 means the OAuth server is still disabled.
+- Supabase's authorization path must point to the deployed `/oauth/consent`
+  page, and dynamic client registration must be enabled (or the submitting
+  client must be registered explicitly).
 - Complete one authorization-code + PKCE login against the deployed management
   MCP and confirm the returned access token resolves to the signed-in Supabase
   user.

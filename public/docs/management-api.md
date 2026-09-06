@@ -261,6 +261,17 @@ not support the login flow can send a User API Key in `Authorization` or
 `X-API-Key`. The server advertises OAuth per tool and returns the MCP
 `mcp/www_authenticate` challenge when linking is required.
 
+The three access styles are deliberately equivalent at the account level:
+
+- The browser dashboard calls `/api/manage/...` with its Supabase session.
+- CLI, curl, and headless automation call the same REST routes with a User API Key.
+- Interactive MCP clients call `/api/mcp/manage` and sign in through OAuth 2.1;
+  clients without OAuth support may use that endpoint with the same User API Key.
+
+They resolve to the same AgentPlaybooks user and permissions. A playbook API key
+is different: it remains limited to one playbook and cannot administer the whole
+account.
+
 #### For Claude Desktop
 
 Add to your `claude_desktop_config.json`:
