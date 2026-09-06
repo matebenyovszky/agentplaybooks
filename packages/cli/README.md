@@ -98,6 +98,13 @@ node ./bin/agentplaybooks.js push --apply           # local -> remote playbook
 
 ## Connect account or playbooks as MCP
 
+The packaged Codex plugin registers the account endpoint without a static
+credential header so Codex can start the server's OAuth 2.1 account-linking
+flow. No `AGENTPLAYBOOKS_API_KEY` is required for that interactive login.
+
+For Hermes, headless automation, and clients without OAuth account linking,
+the CLI can write an environment-variable reference instead:
+
 ```bash
 # Every playbook the user key can access
 export AGENTPLAYBOOKS_API_KEY=<your-user-api-key>

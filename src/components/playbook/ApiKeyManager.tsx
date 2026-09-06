@@ -4,11 +4,10 @@ import { authFetch } from "@/lib/auth-fetch";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { ApiKeyReveal } from "@/components/ApiKeyReveal";
 import {
   Key,
   Trash2,
-  Copy,
-  Check,
   Plus,
   Shield,
   Clock,
@@ -43,7 +42,6 @@ export function ApiKeyManager({ playbook_id, apiKeys, onUpdate }: ApiKeyManagerP
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [creating, setCreating] = useState(false);
   const [rotatingKeyId, setRotatingKeyId] = useState<string | null>(null);
-  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   // Create form state
   const [keyName, setKeyName] = useState("");
@@ -130,12 +128,6 @@ export function ApiKeyManager({ playbook_id, apiKeys, onUpdate }: ApiKeyManagerP
     }
   };
 
-  const copyToClipboard = (text: string, id: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedKey(id);
-    setTimeout(() => setCopiedKey(null), 2000);
-  };
-
   const hasExpired = (key: ApiKey) => key.expires_at && new Date(key.expires_at) < new Date();
 
   return (
@@ -185,31 +177,11 @@ export function ApiKeyManager({ playbook_id, apiKeys, onUpdate }: ApiKeyManagerP
                 <p className="text-sm text-amber-200/70 mb-3">
                   This is the only time you will see this key. Store it securely.
                 </p>
-                <div className="flex items-center gap-2">
-                  <code className={cn(
-                    "flex-1 p-3 rounded-lg overflow-x-auto",
-                    "bg-slate-900/70 border border-slate-700",
-                    "text-sm font-mono text-slate-200"
-                  )}>
-                    {newApiKey}
-                  </code>
-                  <button
-                    onClick={() => {
-                      copyToClipboard(newApiKey, "new");
-                      setTimeout(() => setNewApiKey(null), 500);
-                    }}
-                    className={cn(
-                      "p-3 rounded-lg transition-colors",
-                      "bg-amber-600 text-white hover:bg-amber-500"
-                    )}
-                  >
-                    {copiedKey === "new" ? (
-                      <Check className="h-5 w-5" />
-                    ) : (
-                      <Copy className="h-5 w-5" />
-                    )}
-                  </button>
-                </div>
+                <ApiKeyReveal
+                  value={newApiKey}
+                  className="rounded-lg border border-slate-700 bg-slate-900/70 p-2 text-slate-200"
+                  codeClassName="p-1 text-sm"
+                />
               </div>
               <button
                 onClick={() => setNewApiKey(null)}

@@ -14,7 +14,7 @@ SECRETS_ENCRYPTION_KEY=your-64-char-hex-key
 NEXT_PUBLIC_APP_URL=https://apbks.com
 ```
 
-## OAuth Configuration (CRITICAL)
+## Sign-in Provider Configuration (CRITICAL)
 
 OAuth redirect URLs **must be configured in the Supabase Dashboard**, not in code.
 
@@ -69,6 +69,30 @@ OAuth redirect URLs **must be configured in the Supabase Dashboard**, not in cod
 
 3. Copy credentials to Supabase:
    - Supabase Dashboard → Authentication → Providers → LinkedIn (OIDC)
+
+## OAuth 2.1 Server for MCP Account Linking
+
+This is separate from the Google, GitHub, and LinkedIn sign-in providers above.
+It lets Codex, ChatGPT, Cursor, and other interactive MCP clients link a complete
+AgentPlaybooks account without copying an API key.
+
+1. Open **Supabase Dashboard → Authentication → OAuth Server**.
+2. Enable the OAuth 2.1 server.
+3. Set the authorization/consent path to:
+   ```
+   https://apbks.com/oauth/consent
+   ```
+4. Enable dynamic client registration for clients that register themselves, or
+   register each supported MCP client explicitly.
+5. Prefer asymmetric JWT signing keys, especially when requesting `openid`.
+6. Verify that the Supabase authorization-server discovery document returns
+   HTTP 200, then complete an authorization-code + PKCE login against
+   `https://apbks.com/api/mcp/manage`.
+
+The application provides `/oauth/consent`. It asks the signed-in user to approve
+or deny the client and returns the resulting authorization code to that client.
+The MCP protected-resource metadata is provided under
+`/.well-known/oauth-protected-resource` and the endpoint-specific variant.
 
 ## Cloudflare Pages Deployment
 

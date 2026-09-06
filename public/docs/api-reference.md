@@ -25,11 +25,11 @@ This mirrors the same reliability principle used in modern context systems: fres
 
 ## Authentication
 
-AgentPlaybooks supports two authentication methods:
+AgentPlaybooks supports three credential scopes/transports:
 
 ### 1. User Authentication (JWT)
 
-For dashboard and management endpoints. Pass Supabase JWT token:
+For the dashboard and the REST management endpoints. Pass a Supabase JWT token:
 
 ```http
 Authorization: Bearer <supabase_jwt_token>
@@ -51,7 +51,7 @@ For programmatic access to ALL your playbooks (used by AI agents for management)
 Authorization: Bearer apb_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
-User API Keys work with the Management API (`/api/manage/*`) and Management MCP Server (`/api/mcp/manage`).
+User API Keys work with the Management API (`/api/manage/*`) and Management MCP Server (`/api/mcp/manage`). The Management MCP also supports OAuth 2.1 account login for interactive clients.
 
 See [Management API & MCP](./management-api.md) for details.
 
@@ -402,6 +402,19 @@ Content-Type: application/json
   "updated_at": "2024-01-15T10:00:00Z"
 }
 ```
+
+The dashboard provides eye and copy controls for the newly created key. Full
+plaintext keys are intentionally not recoverable later because the server stores
+only one-way hashes. Use rotation when a key has been lost or should be replaced.
+
+### Rotate User API Key
+
+```http
+PUT /api/user/api-keys/:kid/rotate
+```
+
+The old key is invalidated immediately. The response contains the new plaintext
+key once, with the existing permissions and expiry settings.
 
 ### Update Playbook
 
@@ -962,9 +975,12 @@ DELETE /api/user/api-keys/:kid
 
 ---
 
-## Management API (User API Key)
+## Management API and MCP (one account, multiple transports)
 
-For programmatic playbook management by AI agents. See [Management API Documentation](./management-api.md) for details.
+The browser uses the REST routes with its Supabase session, scripts use the same
+REST routes with a User API Key, and MCP clients use the Management MCP with
+OAuth 2.1 or a User API Key. All resolve the same account. See
+[Management API Documentation](./management-api.md) for details.
 
 | Endpoint | Description |
 |----------|-------------|
@@ -1294,6 +1310,7 @@ versioned limits are documented here.
 | `GET` | `/api/user/api-keys` | JWT | List user API keys |
 | `POST` | `/api/user/api-keys` | JWT | Create user API key |
 | `DELETE` | `/api/user/api-keys/:kid` | JWT | Delete user API key |
+| `PUT` | `/api/user/api-keys/:kid/rotate` | JWT | Rotate user API key |
 
 ### Human Collaboration
 
@@ -1305,23 +1322,23 @@ versioned limits are documented here.
 | `GET` | `/api/collaboration-invites/:token` | Invite token | Preview valid invite |
 | `POST` | `/api/collaboration-invites/:token` | JWT + invite token | Accept invite |
 
-### Management API (AI Automation)
+### Account Management API and MCP
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| `GET` | `/api/manage/playbooks` | User Key | List all playbooks |
-| `POST` | `/api/manage/playbooks` | User Key | Create playbook |
-| `GET` | `/api/manage/playbooks/:id` | User Key | Get playbook with all contents |
-| `PUT` | `/api/manage/playbooks/:id` | User Key | Update playbook (incl. persona) |
-| `DELETE` | `/api/manage/playbooks/:id` | User Key | Delete playbook |
-| `POST` | `/api/manage/playbooks/:id/skills` | User Key | Add skill |
-| `PUT/DELETE` | `/api/manage/playbooks/:id/skills/:sid` | User Key | Update/Delete skill |
-| `GET` | `/api/manage/playbooks/:id/memory` | User Key | List/search memories |
-| `GET` | `/api/manage/playbooks/:id/memory/:key` | User Key | Get specific memory |
-| `PUT` | `/api/manage/playbooks/:id/memory/:key` | User Key | Write memory with tags |
-| `DELETE` | `/api/manage/playbooks/:id/memory/:key` | User Key | Delete memory |
+| `GET` | `/api/manage/playbooks` | Session JWT / User Key | List all playbooks |
+| `POST` | `/api/manage/playbooks` | Session JWT / User Key | Create playbook |
+| `GET` | `/api/manage/playbooks/:id` | Session JWT / User Key | Get playbook with all contents |
+| `PUT` | `/api/manage/playbooks/:id` | Session JWT / User Key | Update playbook (incl. persona) |
+| `DELETE` | `/api/manage/playbooks/:id` | Session JWT / User Key | Delete playbook |
+| `POST` | `/api/manage/playbooks/:id/skills` | Session JWT / User Key | Add skill |
+| `PUT/DELETE` | `/api/manage/playbooks/:id/skills/:sid` | Session JWT / User Key | Update/Delete skill |
+| `GET` | `/api/manage/playbooks/:id/memory` | Session JWT / User Key | List/search memories |
+| `GET` | `/api/manage/playbooks/:id/memory/:key` | Session JWT / User Key | Get specific memory |
+| `PUT` | `/api/manage/playbooks/:id/memory/:key` | Session JWT / User Key | Write memory with tags |
+| `DELETE` | `/api/manage/playbooks/:id/memory/:key` | Session JWT / User Key | Delete memory |
 | `GET` | `/api/manage/openapi.json` | None | OpenAPI specification |
-| `GET/POST` | `/api/mcp/manage` | User Key | Management MCP Server |
+| `GET/POST` | `/api/mcp/manage` | OAuth 2.1 / User Key | Management MCP Server |
 
 ### Skill Attachments
 

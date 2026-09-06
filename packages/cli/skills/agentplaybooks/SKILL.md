@@ -109,6 +109,10 @@ Substitute your variant for `apb` in the commands below.
   environment over pasting keys into the terminal. `push` refuses to upload
   content that looks like it contains hard-coded credentials — fix the finding
   instead of working around it.
+- The packaged Codex plugin's built-in `agentplaybooks-account` MCP entry uses
+  OAuth 2.1 account linking and therefore has no static credential header.
+  Use `apb connect --account` only when the target needs the API-key fallback,
+  such as Hermes or unattended automation.
 - `apb secrets status` is safe to run. **Do not run `apb secrets push` for the
   user**: storing a credential is theirs to confirm, and the command needs a
   value on stdin that you must never hold or generate. Tell them the exact

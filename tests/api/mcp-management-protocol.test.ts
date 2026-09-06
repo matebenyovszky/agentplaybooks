@@ -51,6 +51,8 @@ describe("AgentPlaybooks management MCP transport", () => {
         idempotentHint?: boolean;
         openWorldHint?: boolean;
       };
+      securitySchemes?: Array<{ type: string; scopes?: string[] }>;
+      _meta?: { securitySchemes?: Array<{ type: string; scopes?: string[] }> };
     }>;
     const names = tools.map((tool) => tool.name);
 
@@ -80,7 +82,26 @@ describe("AgentPlaybooks management MCP transport", () => {
           openWorldHint: expect.any(Boolean),
         }),
       );
+      expect(tool.securitySchemes).toEqual([
+        { type: "oauth2", scopes: ["openid", "email", "profile"] },
+      ]);
+      expect(tool._meta?.securitySchemes).toEqual(tool.securitySchemes);
     }
+  });
+
+  it("returns an OAuth challenge from an unauthenticated tool call", async () => {
+    const response = await POST(mcpRequest({
+      id: 5,
+      method: "tools/call",
+      params: { name: "list_playbooks", arguments: {} },
+    }));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.result.isError).toBe(true);
+    expect(payload.result._meta["mcp/www_authenticate"]).toEqual([
+      'Bearer resource_metadata="http://localhost/.well-known/oauth-protected-resource/api/mcp/manage"',
+    ]);
   });
 
   it("serves a request whose protocol version it has never heard of", async () => {

@@ -4,13 +4,26 @@ This guide explains how to programmatically manage AgentPlaybooks using the Mana
 
 ## Overview
 
-AgentPlaybooks provides protocol projections over one shared operation model:
+AgentPlaybooks provides protocol projections over one shared account operation model:
 
 1. **REST/OpenAPI** - Standard resource endpoints plus operation endpoints
 2. **User MCP control plane** - Account lifecycle plus every playbook operation
 3. **Direct playbook MCP** - The same playbook operations with identity in the URL
 
-Both methods require a **User API Key** for authentication.
+The browser dashboard calls the REST API with its Supabase login session. Scripts,
+the CLI, and agents can call that same REST API with a **User API Key**. MCP clients
+use the Management MCP endpoint with AgentPlaybooks OAuth 2.1 account login or the
+same User API Key. In every case, the resolved AgentPlaybooks user and permission
+checks are identical; these are different transports, not different accounts.
+
+| Consumer | Endpoint | Authentication |
+| --- | --- | --- |
+| Browser dashboard | `/api/manage/playbooks...` | Supabase session JWT |
+| CLI, curl, automation | `/api/manage/playbooks...` | User API Key |
+| Cursor, Codex, ChatGPT, Hermes and other MCP clients | `/api/mcp/manage` | OAuth 2.1 account login or User API Key |
+
+A **Playbook API Key** is intentionally different: it is scoped to one playbook
+and must not grant account-wide management access.
 
 ---
 
@@ -46,6 +59,12 @@ For a shared playbook, the User API Key inherits the account's editor boundaries
    - `secrets:read` / `secrets:write` - Use or manage encrypted secrets (opt-in)
    - `full` - All permissions
 4. Copy the key immediately (it won't be shown again!)
+
+The dashboard includes an eye button and a copy button while a key is being
+created or rotated. Existing plaintext values cannot be recovered because only
+one-way hashes are stored. If a key was lost, use **Rotate** next to that key;
+the old value stops working immediately and the new value can be viewed/copied
+once.
 
 ### API Key Format
 
@@ -89,7 +108,8 @@ https://apbks.com/api/manage
 
 ### Authentication
 
-Include the User API Key in the Authorization header:
+The dashboard sends its Supabase session JWT automatically. For CLI, curl, and
+other unattended callers, include the User API Key in the Authorization header:
 
 ```http
 Authorization: Bearer apb_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -127,6 +147,16 @@ POST /api/control/create_run
   "context": { "customer": "Acme" }
 }
 ```
+
+### Rotating a User API Key
+
+```http
+PUT /api/user/api-keys/:kid/rotate
+Authorization: Bearer <jwt_token>
+```
+
+Rotation invalidates the old key and returns a new plaintext key once, with the
+same name, permissions, and expiry settings.
 
 The equivalent direct route binds the identity instead:
 
@@ -232,7 +262,7 @@ curl -X PUT https://apbks.com/api/manage/playbooks/$PLAYBOOK_ID \
 
 ## MCP Server
 
-The Management MCP Server allows AI agents using the Model Context Protocol to manage playbooks directly.
+The Management MCP Server allows AI agents using the Model Context Protocol to manage the same account and playbooks as the REST API.
 
 ### Server URL
 
@@ -241,6 +271,22 @@ https://apbks.com/api/mcp/manage
 ```
 
 ### Configuration
+
+Clients with interactive account linking should use OAuth 2.1. Clients that do
+not support the login flow can send a User API Key in `Authorization` or
+`X-API-Key`. The server advertises OAuth per tool and returns the MCP
+`mcp/www_authenticate` challenge when linking is required.
+
+The three access styles are deliberately equivalent at the account level:
+
+- The browser dashboard calls `/api/manage/...` with its Supabase session.
+- CLI, curl, and headless automation call the same REST routes with a User API Key.
+- Interactive MCP clients call `/api/mcp/manage` and sign in through OAuth 2.1;
+  clients without OAuth support may use that endpoint with the same User API Key.
+
+They resolve to the same AgentPlaybooks user and permissions. A playbook API key
+is different: it remains limited to one playbook and cannot administer the whole
+account.
 
 #### For Claude Desktop
 

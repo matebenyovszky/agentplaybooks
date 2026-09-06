@@ -5,9 +5,15 @@ import { spawnSync } from "node:child_process";
 const patchedBraceExpansionVersions = new Set(["2.1.4", "5.0.9"]);
 const braceExpansionAdvisory = "GHSA-mh99-v99m-4gvg";
 
+// npm exposes the JavaScript entry point while running package scripts. Invoke
+// that through the current Node process: spawning `npm.cmd` directly returns
+// EINVAL on some supported Windows/Node combinations before the audit starts.
+const npmExecPath = process.env.npm_execpath;
 const audit = spawnSync(
-  process.platform === "win32" ? "npm.cmd" : "npm",
-  ["audit", "--omit=dev", "--audit-level=high", "--json"],
+  npmExecPath ? process.execPath : process.platform === "win32" ? "npm.cmd" : "npm",
+  npmExecPath
+    ? [npmExecPath, "audit", "--omit=dev", "--audit-level=high", "--json"]
+    : ["audit", "--omit=dev", "--audit-level=high", "--json"],
   {
     cwd: process.cwd(),
     encoding: "utf8",
