@@ -323,7 +323,7 @@ GET  /api/mcp/:guid                    # MCP manifest
 POST /api/mcp/:guid                    # MCP JSON-RPC
 POST /api/mcp/:guid/tools/:tool        # Call one tool over plain HTTP
 
-POST /api/mcp/manage                   # MCP management server (user API key)
+POST /api/mcp/manage                   # Account MCP (OAuth 2.1 or user API key)
 
 GET    /api/mcp/config/:serverId       # Federated server config (owner)
 POST   /api/mcp/config/:serverId
@@ -369,12 +369,19 @@ Curated templates for wiring up a federated MCP server or OpenAPI service.
 Public, because a template is not a credential: every entry references the
 secrets it needs **by name only**, to be resolved from the playbook's vault.
 
-### Management
+### Account management transports
+
+The dashboard uses the REST routes with its Supabase session. CLI/curl clients
+may use those same routes with a User API Key. MCP clients use
+`POST /api/mcp/manage` with OAuth 2.1 account login or a User API Key. All three
+resolve the same AgentPlaybooks user and permissions. Playbook API keys remain
+scoped to one playbook and cannot manage the whole account.
 
 ```
 GET  /api/manage/openapi.json
 GET  /api/manage/playbooks
 POST /api/manage/playbooks
+POST /api/mcp/manage
 ```
 
 ### Health

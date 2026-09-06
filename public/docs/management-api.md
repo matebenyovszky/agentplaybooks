@@ -4,13 +4,26 @@ This guide explains how to programmatically manage AgentPlaybooks using the Mana
 
 ## Overview
 
-AgentPlaybooks provides protocol projections over one shared operation model:
+AgentPlaybooks provides protocol projections over one shared account operation model:
 
 1. **REST/OpenAPI** - Standard resource endpoints plus operation endpoints
 2. **User MCP control plane** - Account lifecycle plus every playbook operation
 3. **Direct playbook MCP** - The same playbook operations with identity in the URL
 
-Both methods require a **User API Key** for authentication.
+The browser dashboard calls the REST API with its Supabase login session. Scripts,
+the CLI, and agents can call that same REST API with a **User API Key**. MCP clients
+use the Management MCP endpoint with AgentPlaybooks OAuth 2.1 account login or the
+same User API Key. In every case, the resolved AgentPlaybooks user and permission
+checks are identical; these are different transports, not different accounts.
+
+| Consumer | Endpoint | Authentication |
+| --- | --- | --- |
+| Browser dashboard | `/api/manage/playbooks...` | Supabase session JWT |
+| CLI, curl, automation | `/api/manage/playbooks...` | User API Key |
+| Cursor, Codex, ChatGPT, Hermes and other MCP clients | `/api/mcp/manage` | OAuth 2.1 account login or User API Key |
+
+A **Playbook API Key** is intentionally different: it is scoped to one playbook
+and must not grant account-wide management access.
 
 ---
 
@@ -89,7 +102,8 @@ https://apbks.com/api/manage
 
 ### Authentication
 
-Include the User API Key in the Authorization header:
+The dashboard sends its Supabase session JWT automatically. For CLI, curl, and
+other unattended callers, include the User API Key in the Authorization header:
 
 ```http
 Authorization: Bearer apb_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -232,7 +246,7 @@ curl -X PUT https://apbks.com/api/manage/playbooks/$PLAYBOOK_ID \
 
 ## MCP Server
 
-The Management MCP Server allows AI agents using the Model Context Protocol to manage playbooks directly.
+The Management MCP Server allows AI agents using the Model Context Protocol to manage the same account and playbooks as the REST API.
 
 ### Server URL
 
@@ -241,6 +255,11 @@ https://apbks.com/api/mcp/manage
 ```
 
 ### Configuration
+
+Clients with interactive account linking should use OAuth 2.1. Clients that do
+not support the login flow can send a User API Key in `Authorization` or
+`X-API-Key`. The server advertises OAuth per tool and returns the MCP
+`mcp/www_authenticate` challenge when linking is required.
 
 #### For Claude Desktop
 
