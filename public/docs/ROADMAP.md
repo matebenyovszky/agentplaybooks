@@ -364,8 +364,8 @@ Open, in rough order of value:
 
 ### Memory Enhancements 📋
 
-- [x] **Memory time, archive and history** — implemented; requires the
-  `20260911042912_memory_time_and_history.sql` migration before release.
+- [x] **Memory time, archive and history** — implemented; production migration
+  `20260911042912_memory_time_and_history.sql` applied on 2026-09-11.
   - One optional writable `memory_at`; value writes default to save time.
   - Search full JSON values, keys, descriptions and summaries; filter by time
     and tags, with bounded pagination.

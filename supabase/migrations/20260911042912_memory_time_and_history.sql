@@ -49,9 +49,27 @@ WHERE is_archived;
 CREATE INDEX memory_history_parent_idx ON public.memory_history(memory_id, recorded_at DESC);
 CREATE INDEX memory_history_playbook_idx ON public.memory_history(playbook_id);
 CREATE INDEX memory_history_time_idx ON public.memory_history(playbook_id, memory_at DESC, id DESC);
-CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA extensions;
-CREATE INDEX memories_search_idx ON public.memories USING gin(search_text extensions.gin_trgm_ops);
-CREATE INDEX memory_history_search_idx ON public.memory_history USING gin(search_text extensions.gin_trgm_ops);
+-- Supabase OrioleDB currently supports B-tree indexes only. Keep its storage
+-- engine and use the playbook/time indexes there; add trigram acceleration on
+-- standard heap tables without making it a requirement for search correctness.
+DO $$
+DECLARE
+  target_table text;
+  trigram_schema text;
+BEGIN
+  FOR target_table IN
+    SELECT c.relname FROM pg_class c JOIN pg_am a ON a.oid = c.relam
+    WHERE c.oid IN ('public.memories'::regclass, 'public.memory_history'::regclass)
+      AND a.amname = 'heap'
+  LOOP
+    CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA extensions;
+    SELECT n.nspname INTO trigram_schema FROM pg_extension e
+      JOIN pg_namespace n ON n.oid = e.extnamespace WHERE e.extname = 'pg_trgm';
+    EXECUTE format('CREATE INDEX %I ON public.%I USING gin(search_text %I.gin_trgm_ops)',
+      target_table || '_search_idx', target_table, trigram_schema);
+  END LOOP;
+END;
+$$;
 
 -- A common, read-only projection keeps REST, MCP and the editor on the same search path.
 -- The invoker must have access to both underlying tables; only the server role does.

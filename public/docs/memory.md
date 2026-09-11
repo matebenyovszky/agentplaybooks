@@ -71,6 +71,8 @@ GET /api/playbooks/:guid/memory?after=2026-09-01T00:00:00Z&before=2026-09-30T23:
 
 Search covers keys, full JSON values, descriptions and summaries. It is case-insensitive and treats search text literally, including `%` and `_`. Tag filters match any requested tag. Results default to the latest 100 **current, non-archived** entries, ordered by `memory_at` descending; `limit` accepts 1–200 and `offset` enables pagination. `after` and `before` are inclusive bounds on `memory_at` and require an ISO timestamp with a timezone. REST includes children by default; MCP `search_memory` defaults to root entries (`include_children: true` includes children).
 
+The migration adds playbook/time indexes on both storage engines. Standard Postgres heap tables also get trigram search indexes; OrioleDB uses the same literal search semantics with the supported B-tree filters, without changing the existing storage engine.
+
 ### Via API (Specific Key)
 
 ```bash
