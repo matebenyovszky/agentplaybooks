@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import {
@@ -26,7 +26,10 @@ import {
   XCircle,
   Loader2,
   Ban,
+  History,
+  RotateCcw,
 } from "lucide-react";
+import type { MemoryEntry, MemoryScope } from "@/lib/memory";
 import type { Memory, MemoryTier, MemoryType, MemoryStatus } from "@/lib/supabase/types";
 import type { StorageAdapter } from "@/lib/storage";
 
@@ -59,7 +62,7 @@ function buildMemoryTree(memories: Memory[]): { roots: Memory[]; childrenMap: Ma
   const roots: Memory[] = [];
 
   for (const m of memories) {
-    if (m.parent_key) {
+    if (m.parent_key && memories.some(parent => parent.key === m.parent_key && parent.id !== m.id)) {
       const existing = childrenMap.get(m.parent_key) || [];
       existing.push(m);
       childrenMap.set(m.parent_key, existing);
@@ -105,6 +108,9 @@ function MemoryTreeNode({
   onToggle,
   onEdit,
   onDelete,
+  onArchive,
+  onHistory,
+  onRestore,
   onCopy,
   copiedKey,
   readOnly,
@@ -116,6 +122,9 @@ function MemoryTreeNode({
   onToggle: (key: string) => void;
   onEdit: (memory: Memory) => void;
   onDelete: (memory: Memory) => void;
+  onArchive: (memory: Memory) => void;
+  onHistory: (memory: Memory) => void;
+  onRestore: (memory: Memory) => void;
   onCopy: (text: string, key: string) => void;
   copiedKey: string | null;
   readOnly: boolean;
@@ -124,6 +133,7 @@ function MemoryTreeNode({
   const hasChildren = children.length > 0;
   const isExpanded = expandedKeys.has(memory.key);
   const isHierarchical = memory.memory_type === "hierarchical";
+  const isHistory = Boolean((memory as Partial<MemoryEntry>).history_id);
 
   return (
     <div style={{ marginLeft: depth > 0 ? depth * 20 : 0 }}>
@@ -134,13 +144,13 @@ function MemoryTreeNode({
         exit={{ opacity: 0, y: -10 }}
         className={cn(
           "rounded-xl border transition-all duration-200",
-          "bg-white dark:bg-gradient-to-br dark:from-slate-900/80 dark:to-slate-800/80",
+          "bg-white dark:bg-slate-900 dark:bg-gradient-to-br dark:from-slate-900/80 dark:to-slate-800/80",
           "border-neutral-200 dark:border-teal-900/30 hover:border-teal-500 dark:hover:border-teal-700/50",
           depth > 0 && "border-l-2 border-l-teal-500/30"
         )}
       >
         <div className="p-4">
-          <div className="flex items-start justify-between mb-2">
+          <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
             <div className="flex items-center gap-2 flex-wrap">
               {/* Expand/collapse for hierarchical */}
               {hasChildren ? (
@@ -158,6 +168,7 @@ function MemoryTreeNode({
 
               {/* Tier badge */}
               <TierBadge tier={memory.tier} />
+              {memory.is_archived && <span className="text-xs text-slate-400">{isHistory ? "Previous version" : "Archived"}</span>}
 
               {/* Type badge */}
               {isHierarchical && (
@@ -171,7 +182,7 @@ function MemoryTreeNode({
               {memory.status && <StatusBadge status={memory.status} />}
             </div>
 
-            <div className="flex items-center gap-1 shrink-0">
+            <div className="flex flex-wrap items-center gap-1">
               {memory.priority !== 50 && (
                 <span className="text-xs text-slate-500 mr-1" title="Priority">
                   P{memory.priority}
@@ -179,8 +190,12 @@ function MemoryTreeNode({
               )}
               <span className="flex items-center gap-1 text-xs text-slate-500 mr-1">
                 <Clock className="h-3 w-3" />
-                {new Date(memory.updated_at).toLocaleString()}
+                {new Date(memory.memory_at || memory.updated_at).toLocaleString()}
               </span>
+              {!isHistory && <button onClick={() => onHistory(memory)} className="p-1.5 text-slate-400 hover:text-teal-400" title="Memory history"><History className="h-4 w-4" /></button>}
+              {!readOnly && <button onClick={() => isHistory ? onRestore(memory) : onArchive(memory)} className="p-1.5 text-slate-400 hover:text-teal-400" title={isHistory ? "Restore this version" : memory.is_archived ? "Restore memory" : "Archive memory"}>
+                {memory.is_archived ? <RotateCcw className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
+              </button>}
               <button
                 onClick={() => onCopy(JSON.stringify(memory.value, null, 2), memory.id)}
                 className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors"
@@ -190,7 +205,7 @@ function MemoryTreeNode({
               </button>
               <button
                 onClick={() => onEdit(memory)}
-                disabled={readOnly}
+                disabled={readOnly || isHistory}
                 className="p-1.5 text-slate-400 hover:text-teal-400 hover:bg-teal-500/10 rounded-lg transition-colors"
                 title="Edit memory"
               >
@@ -198,7 +213,7 @@ function MemoryTreeNode({
               </button>
               <button
                 onClick={() => onDelete(memory)}
-                disabled={readOnly}
+                disabled={readOnly || isHistory}
                 className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
                 title="Delete memory"
               >
@@ -243,6 +258,9 @@ function MemoryTreeNode({
               onToggle={onToggle}
               onEdit={onEdit}
               onDelete={onDelete}
+              onArchive={onArchive}
+              onHistory={onHistory}
+              onRestore={onRestore}
               onCopy={onCopy}
               copiedKey={copiedKey}
               readOnly={readOnly}
@@ -256,6 +274,15 @@ function MemoryTreeNode({
 
 export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: MemoryEditorProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [entries, setEntries] = useState<Memory[]>(memories);
+  const [scope, setScope] = useState<MemoryScope>("active");
+  const [historyKey, setHistoryKey] = useState<string | null>(null);
+  const [after, setAfter] = useState("");
+  const [before, setBefore] = useState("");
+  const [offset, setOffset] = useState(0);
+  const [refreshId, setRefreshId] = useState(0);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const requestSerial = useRef(0);
   const [editingMemory, setEditingMemory] = useState<Memory | null>(null);
   const [editKey, setEditKey] = useState("");
   const [editValue, setEditValue] = useState("");
@@ -266,50 +293,53 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
   const [editMemoryType, setEditMemoryType] = useState<MemoryType>("flat");
   const [editStatus, setEditStatus] = useState<MemoryStatus | "">("");
   const [editTags, setEditTags] = useState("");
-  const [jsonError, setJsonError] = useState<string | null>(null);
+  const [editMemoryAt, setEditMemoryAt] = useState("");
+  const jsonError = useMemo(() => {
+    if (!editingMemory) return null;
+    try { JSON.parse(editValue); return null; }
+    catch { return "Invalid JSON"; }
+  }, [editValue, editingMemory]);
   const [saving, setSaving] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
   const [tierFilter, setTierFilter] = useState<MemoryTier | "all">("all");
   const [typeFilter, setTypeFilter] = useState<MemoryType | "all">("all");
 
-  // Filter memories
-  const filteredMemories = useMemo(() => {
-    return memories.filter((m) => {
-      const matchesSearch =
-        !searchQuery ||
-        m.key.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        JSON.stringify(m.value).toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (m.summary || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (m.description || "").toLowerCase().includes(searchQuery.toLowerCase());
+  useEffect(() => {
+    const serial = ++requestSerial.current;
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      setLoading(true);
+      setEntries([]);
+      storage.getMemories({
+        scope, search: searchQuery || undefined, history_key: historyKey ?? undefined,
+        tier: tierFilter === "all" ? undefined : tierFilter,
+        memory_type: typeFilter === "all" ? undefined : typeFilter,
+        after: after ? new Date(after + "T00:00:00").toISOString() : undefined,
+        before: before ? new Date(before + "T23:59:59.999").toISOString() : undefined,
+        limit: 100, offset,
+      }).then(data => {
+        if (!cancelled && serial === requestSerial.current) { setEntries(data); setLoadError(null); }
+      }).catch(error => {
+        if (!cancelled && serial === requestSerial.current) setLoadError(error instanceof Error ? error.message : "Could not load memories");
+      }).finally(() => {
+        if (!cancelled && serial === requestSerial.current) setLoading(false);
+      });
+    }, 200);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [storage, searchQuery, scope, historyKey, tierFilter, typeFilter, after, before, offset, refreshId]);
 
-      const matchesTier = tierFilter === "all" || m.tier === tierFilter;
-      const matchesType = typeFilter === "all" || m.memory_type === typeFilter;
-
-      return matchesSearch && matchesTier && matchesType;
-    });
-  }, [memories, searchQuery, tierFilter, typeFilter]);
+  // The server searches the entire memory store before applying pagination.
+  const filteredMemories = entries;
 
   // Build tree structure
-  const { roots, childrenMap } = useMemo(() => buildMemoryTree(filteredMemories), [filteredMemories]);
-
-  // Validate JSON when editing
-  useEffect(() => {
-    if (!editingMemory) return;
-    try {
-      JSON.parse(editValue);
-      setJsonError(null);
-    } catch {
-      setJsonError("Invalid JSON");
-    }
-  }, [editValue, editingMemory]);
+  const { roots, childrenMap } = useMemo(() => scope === "active" && !historyKey
+    ? buildMemoryTree(filteredMemories)
+    : { roots: filteredMemories, childrenMap: new Map<string, Memory[]>() }, [filteredMemories, scope, historyKey]);
 
   const handleRefresh = async () => {
-    setLoading(true);
-    const data = await storage.getMemories();
-    onUpdate(data);
-    setLoading(false);
+    setRefreshId(value => value + 1);
   };
 
   const toggleExpand = (key: string) => {
@@ -323,18 +353,18 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
 
   const handleAddMemory = async () => {
     if (readOnly) return;
-    let keyNum = memories.length + 1;
-    let key = `memory_key_${keyNum}`;
-    while (memories.some((m) => m.key === key)) {
-      keyNum++;
-      key = `memory_key_${keyNum}`;
-    }
+    // A paginated list cannot prove that a numbered key is unused.
+    const key = `memory_${crypto.randomUUID()}`;
 
     setSaving(true);
     try {
       const data = await storage.addMemory({ key, value: {} });
       if (data) {
         onUpdate([...memories, data]);
+        setScope("active");
+        setHistoryKey(null);
+        setOffset(0);
+        setRefreshId(value => value + 1);
         startEditing(data);
       }
     } catch (e) {
@@ -361,11 +391,13 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
         memory_type: editMemoryType,
         status: editStatus || null,
         tags: editTags.split(",").map((t) => t.trim()).filter(Boolean),
+        ...(editMemoryAt ? { memory_at: new Date(editMemoryAt).toISOString() } : {}),
       });
 
       if (updated) {
         onUpdate(memories.map((m) => (m.id === editingMemory.id ? updated : m)));
         setEditingMemory(null);
+        setRefreshId(value => value + 1);
       } else {
         alert("Failed to save memory. Please check your connection or permissions.");
       }
@@ -379,14 +411,38 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
 
   const handleDeleteMemory = async (memory: Memory) => {
     if (readOnly) return;
-    if (!confirm(`Delete memory "${memory.key}"?`)) return;
+    if (!confirm(`Permanently delete memory "${memory.key}" and its history? Use Archive to keep it.`)) return;
 
     const success = await storage.deleteMemory(memory.id);
     if (success) {
       onUpdate(memories.filter((m) => m.id !== memory.id));
+      setRefreshId(value => value + 1);
     } else {
       alert("Failed to delete memory. It might be already deleted or you don't have permission.");
     }
+  };
+
+  const handleArchive = async (memory: Memory) => {
+    if (readOnly) return;
+    const updated = await storage.updateMemory(memory.id, { is_archived: !memory.is_archived });
+    if (!updated) { alert("Could not update archive status"); return; }
+    onUpdate(updated.is_archived ? memories.filter(m => m.id !== memory.id) : [...memories.filter(m => m.id !== memory.id), updated]);
+    setRefreshId(value => value + 1);
+  };
+
+  const handleRestoreVersion = async (memory: Memory) => {
+    if (readOnly) return;
+    if (!confirm(`Restore this version of "${memory.key}"? The current contents will be kept in history.`)) return;
+    const memoryId = (memory as MemoryEntry).memory_id;
+    const updated = await storage.updateMemory(memoryId, {
+      value: memory.value, memory_at: memory.memory_at, is_archived: false,
+      tags: memory.tags, description: memory.description, summary: memory.summary,
+      tier: memory.tier, priority: memory.priority, parent_key: memory.parent_key,
+      memory_type: memory.memory_type, status: memory.status, metadata: memory.metadata,
+    });
+    if (!updated) { alert("Could not restore memory"); return; }
+    onUpdate([...memories.filter(m => m.id !== memoryId), updated]);
+    setRefreshId(value => value + 1);
   };
 
   const copyToClipboard = (text: string, key: string) => {
@@ -407,7 +463,8 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
     setEditMemoryType(memory.memory_type || "flat");
     setEditStatus(memory.status || "");
     setEditTags((memory.tags || []).join(", "));
-    setJsonError(null);
+    const date = new Date(memory.memory_at || memory.updated_at);
+    setEditMemoryAt(new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 23));
   };
 
   // Count stats
@@ -433,12 +490,12 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
 
       {/* Stats Bar */}
       {memories.length > 0 && (
-        <div className="flex items-center gap-3 text-xs text-slate-500">
-          <span>{stats.total} memories</span>
+        <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+          <span>{stats.total} loaded memories</span>
           <span className="text-slate-700">•</span>
           <span className="text-orange-400">{stats.working} working</span>
           <span className="text-blue-400">{stats.contextual} contextual</span>
-          <span className="text-slate-400">{stats.longterm} archived</span>
+          <span className="text-slate-400">{stats.longterm} long-term</span>
           {stats.hierarchical > 0 && (
             <>
               <span className="text-slate-700">•</span>
@@ -449,13 +506,13 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
       )}
 
       {/* Header Actions */}
-      <div className="flex items-center gap-3">
-        <div className="flex-1 relative">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex-1 min-w-48 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
           <input
             type="text"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => { setSearchQuery(e.target.value); setOffset(0); }}
             placeholder="Search memories..."
             className={cn(
               "w-full pl-10 pr-4 py-2 rounded-lg",
@@ -470,7 +527,7 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
         <div className="relative">
           <select
             value={tierFilter}
-            onChange={(e) => setTierFilter(e.target.value as MemoryTier | "all")}
+            onChange={(e) => { setTierFilter(e.target.value as MemoryTier | "all"); setOffset(0); }}
             className={cn(
               "appearance-none pl-7 pr-8 py-2 rounded-lg text-sm",
               "bg-neutral-50 dark:bg-slate-900/70 border border-neutral-200 dark:border-slate-700/50",
@@ -490,7 +547,7 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
         <div className="relative">
           <select
             value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value as MemoryType | "all")}
+            onChange={(e) => { setTypeFilter(e.target.value as MemoryType | "all"); setOffset(0); }}
             className={cn(
               "appearance-none pl-7 pr-8 py-2 rounded-lg text-sm",
               "bg-neutral-50 dark:bg-slate-900/70 border border-neutral-200 dark:border-slate-700/50",
@@ -532,8 +589,27 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
         </button>
       </div>
 
+      <div className="flex flex-wrap items-center gap-3 text-sm">
+        <label className="text-slate-400">Show
+          <select aria-label="Memory archive" value={historyKey ? "history" : scope} onChange={e => { if (e.target.value === "history") return; setScope(e.target.value as MemoryScope); setHistoryKey(null); setOffset(0); }}
+            className="ml-2 rounded-lg border border-slate-700 bg-slate-900 p-2 text-slate-200">
+            <option value="active">Current memories</option>
+            <option value="archived">Archive and previous versions</option>
+            <option value="all">Everything</option>
+            {historyKey && <option value="history">Previous versions of this memory</option>}
+          </select>
+        </label>
+        <label className="text-slate-400">From <input aria-label="Memory date from" type="date" value={after} onChange={e => { setAfter(e.target.value); setOffset(0); }} className="rounded border border-slate-700 bg-slate-900 p-2 text-slate-200" /></label>
+        <label className="text-slate-400">Until <input aria-label="Memory date until" type="date" value={before} onChange={e => { setBefore(e.target.value); setOffset(0); }} className="rounded border border-slate-700 bg-slate-900 p-2 text-slate-200" /></label>
+      </div>
+      {historyKey && <div className="flex items-center justify-between rounded-lg border border-teal-800 p-3 text-sm text-teal-400">
+        <span>Previous versions of <code>{historyKey}</code></span>
+        <button onClick={() => { setHistoryKey(null); setOffset(0); }} className="underline">Back to memories</button>
+      </div>}
+      {loadError && <p role="alert" className="text-sm text-red-400">{loadError}</p>}
+      {loading && <p role="status" className="text-sm text-slate-400">Loading memories…</p>}
       {/* Empty State */}
-      {memories.length === 0 && (
+      {entries.length === 0 && !historyKey && scope === "active" && !searchQuery && !after && !before && tierFilter === "all" && typeFilter === "all" && offset === 0 && !loading && !loadError && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -576,6 +652,9 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
                 onToggle={toggleExpand}
                 onEdit={startEditing}
                 onDelete={handleDeleteMemory}
+                onArchive={handleArchive}
+                onHistory={(memory) => { setHistoryKey(memory.key); setSearchQuery(""); setOffset(0); setAfter(""); setBefore(""); setTierFilter("all"); setTypeFilter("all"); }}
+                onRestore={handleRestoreVersion}
                 onCopy={copyToClipboard}
                 copiedKey={copiedKey}
                 readOnly={readOnly}
@@ -586,12 +665,17 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
       )}
 
       {/* No Results */}
-      {memories.length > 0 && filteredMemories.length === 0 && (
+      {filteredMemories.length === 0 && (historyKey || scope !== "active" || searchQuery || after || before || tierFilter !== "all" || typeFilter !== "all" || offset > 0) && !loading && !loadError && (
         <div className="p-6 text-center text-slate-500">
           No memories matching your filters
         </div>
       )}
 
+      <div className="flex items-center justify-end gap-3 text-sm text-slate-400">
+        <button disabled={offset === 0 || loading} onClick={() => setOffset(Math.max(0, offset - 100))} className="disabled:opacity-40">Previous page</button>
+        <span>Page {Math.floor(offset / 100) + 1}</span>
+        <button disabled={entries.length < 100 || loading} onClick={() => setOffset(offset + 100)} className="disabled:opacity-40">Next page</button>
+      </div>
       {/* Edit Modal */}
       <AnimatePresence>
         {editingMemory && (
@@ -634,6 +718,12 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
                   </div>
 
                   {/* Tier + Type + Priority row */}
+                  <div>
+                    <label htmlFor="memory-at" className="block text-sm font-medium text-slate-400 mb-2">Memory time (local time)</label>
+                    <input id="memory-at" type="datetime-local" step="0.001" value={editMemoryAt} onChange={e => setEditMemoryAt(e.target.value)}
+                      className="w-full p-3 rounded-lg bg-slate-900/70 border border-slate-700/50 text-slate-200" />
+                    <p className="text-xs text-slate-500 mt-1">Leave empty to use the time of saving.</p>
+                  </div>
                   <div className="grid grid-cols-3 gap-3">
                     <div>
                       <label className="block text-sm font-medium text-slate-400 mb-2">Tier</label>

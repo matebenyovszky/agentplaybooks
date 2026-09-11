@@ -364,6 +364,18 @@ Open, in rough order of value:
 
 ### Memory Enhancements 📋
 
+- [x] **Memory time, archive and history** — implemented; requires the
+  `20260911042912_memory_time_and_history.sql` migration before release.
+  - One optional writable `memory_at`; value writes default to save time.
+  - Search full JSON values, keys, descriptions and summaries; filter by time
+    and tags, with bounded pagination.
+  - Archive without deleting; exclude archives and previous versions from
+    default search and context.
+  - Atomic previous-version history per entry, explicit archive search and
+    restoration through the editor, REST and MCP.
+  - Keep confidence, provenance and additional time semantics in the memory
+    value; no extra mandatory memory structure.
+
 - [ ] **Structured Memory Types**
   - Facts (persistent knowledge)
   - Episodes (conversation history)

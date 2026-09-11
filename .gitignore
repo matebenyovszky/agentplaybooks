@@ -22,6 +22,7 @@
 .cloudflare/
 .cloudflare-pages/
 .tmp/
+.cache/npm-memory/
 
 # production
 /build
