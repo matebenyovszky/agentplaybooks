@@ -23,7 +23,6 @@ import type {
   MCPServer,
   Playbook,
   MemoryTier,
-  MemoryType,
   MemoryStatus,
   CanvasSection,
   SecretCategory,
@@ -57,6 +56,8 @@ import {
 } from "@/lib/mcp/federation";
 import { composePlaybookSystemPrompt } from "@/lib/playbook-prompt";
 import { validateAgentSkillDescription, validateAgentSkillName } from "@/lib/agent-skills";
+import { searchMemories } from "@/app/api/_shared/memory";
+import { memoryWriteFields } from "@/lib/memory";
 
 type PersonaSource = Pick<Playbook, "id" | "persona_name" | "persona_system_prompt" | "persona_metadata" | "instructions">;
 
@@ -626,7 +627,10 @@ Memory is persistent key-value storage with hierarchical capabilities.
 ### Memory Tiers
 - **working** — Active scratch pad for current tasks. Highest priority.
 - **contextual** — Background context (default). Recent but not urgent.
-- **longterm** — Archived knowledge. Low priority but permanent.
+- **longterm** — Durable knowledge. Lower context priority; independent of archive status.
+
+### Memory time, archive and history
+Supply optional \`memory_at\` (ISO timestamp with timezone), or omit it on value writes to use save time. Search supports \`after\` and \`before\` bounds. Default search and context exclude archived entries and previous versions. Use \`scope: "archived"\` to search them, \`get_memory_history\` for one key's earlier contents, and \`read_memory\` for its current contents even when archived. Every content update preserves the previous version. Restore it with \`write_memory\`, its original \`memory_at\`, and \`is_archived: false\`. Permanent deletion also removes history.
 
 ### Flat vs Hierarchical Memory
 - **flat** (default) — Simple key-value pairs for facts, preferences, state.
@@ -759,9 +763,10 @@ use_secret_write({
       if (uri?.match(/\/memory$/)) {
         const { data: memories } = await serviceSupabase
           .from("memories")
-          .select("key, value, tags, description, tier, priority, parent_key, summary, memory_type, status, metadata, updated_at")
+          .select("key, value, tags, description, tier, priority, parent_key, summary, memory_type, status, metadata, updated_at, memory_at, is_archived")
           .eq("playbook_id", playbook.id)
-          .order("updated_at", { ascending: false });
+          .eq("is_archived", false)
+          .order("memory_at", { ascending: false });
 
         return c.json({
           jsonrpc: "2.0",
@@ -1067,7 +1072,7 @@ use_secret_write({
             const key = args.key as string;
             const { data } = await serviceSupabase
               .from("memories")
-              .select("key, value, tags, description, tier, priority, parent_key, summary, access_count, updated_at")
+              .select("key, value, tags, description, tier, priority, parent_key, summary, access_count, updated_at, memory_at, is_archived")
               .eq("playbook_id", playbook.id)
               .eq("key", key)
               .single();
@@ -1088,50 +1093,13 @@ use_secret_write({
           }
 
           case "search_memory": {
-            const search = args.search as string | undefined;
-            const tags = args.tags as string[] | undefined;
-            const tier = args.tier as MemoryTier | undefined;
-            const memType = args.memory_type as MemoryType | undefined;
-            const memStatus = args.status as MemoryStatus | undefined;
-            const includeChildren = args.include_children as boolean | undefined;
+            result = await searchMemories(playbook.id, { ...args, include_children: args.include_children ?? false });
+            break;
+          }
 
-            let query = serviceSupabase
-              .from("memories")
-              .select("key, value, tags, description, tier, priority, parent_key, summary, memory_type, status, metadata, updated_at")
-              .eq("playbook_id", playbook.id);
-
-            if (search) {
-              // Sanitize search to prevent PostgREST filter injection
-              const sanitized = search.replace(/[,().]/g, " ").trim();
-              if (sanitized) {
-                query = query.or(`key.ilike.%${sanitized}%,description.ilike.%${sanitized}%,summary.ilike.%${sanitized}%`);
-              }
-            }
-
-            if (tags && tags.length > 0) {
-              query = query.overlaps("tags", tags);
-            }
-
-            if (tier) {
-              query = query.eq("tier", tier);
-            }
-
-            if (memType) {
-              query = query.eq("memory_type", memType);
-            }
-
-            if (memStatus) {
-              query = query.eq("status", memStatus);
-            }
-
-            if (!includeChildren) {
-              query = query.is("parent_key", null);
-            }
-
-            const { data } = await query
-              .order("priority", { ascending: false })
-              .order("updated_at", { ascending: false });
-            result = data || [];
+          case "get_memory_history": {
+            if (typeof args.key !== "string" || !args.key) throw new Error("Memory key is required");
+            result = await searchMemories(playbook.id, { ...args, key: undefined, history_key: args.key });
             break;
           }
 
@@ -1153,12 +1121,14 @@ use_secret_write({
             const memoryType = args.memory_type as string | undefined;
             const status = args.status as string | undefined;
             const metadata = args.metadata as Record<string, unknown> | undefined;
+            const memoryFields = memoryWriteFields(args);
 
             const upsertData: Record<string, unknown> = {
               playbook_id: playbook.id,
               key,
               value,
               updated_at: new Date().toISOString(),
+              ...memoryFields,
             };
             if (memTags !== undefined) upsertData.tags = memTags;
             if (description !== undefined) upsertData.description = description;
@@ -1173,7 +1143,7 @@ use_secret_write({
             const { data, error } = await serviceSupabase
               .from("memories")
               .upsert(upsertData, { onConflict: "playbook_id,key" })
-              .select("key, value, tags, description, tier, priority, parent_key, summary, memory_type, status, metadata, updated_at")
+              .select("key, value, tags, description, tier, priority, parent_key, summary, memory_type, status, metadata, updated_at, memory_at, is_archived")
               .single();
 
             if (error) throw new Error(error.message);
@@ -1243,6 +1213,8 @@ use_secret_write({
                 playbook_id: playbook.id,
                 key: parentKey,
                 value: consolidatedValue,
+                memory_at: new Date().toISOString(),
+                is_archived: false,
                 summary,
                 tags: Array.from(allTags),
                 tier: "contextual",
@@ -1261,6 +1233,7 @@ use_secret_write({
             };
             if (archiveChildren) {
               childUpdates.tier = "longterm";
+              childUpdates.is_archived = true;
             }
 
             await serviceSupabase
@@ -1300,6 +1273,7 @@ use_secret_write({
 
             const updates: MemoriesUpdate = {
               priority: Math.min(100, (current.priority || 50) + priorityBoost),
+              is_archived: false,
               access_count: 0, // Reset on promotion
               last_accessed_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
@@ -1320,7 +1294,7 @@ use_secret_write({
               .update(updates)
               .eq("playbook_id", playbook.id)
               .eq("key", key)
-              .select("key, tier, priority, updated_at")
+              .select("key, tier, priority, updated_at, memory_at, is_archived")
               .single();
 
             if (error) throw new Error(error.message);
@@ -1340,8 +1314,9 @@ use_secret_write({
             for (const tier of includeTiers) {
               let query = serviceSupabase
                 .from("memories")
-                .select("key, value, tags, description, summary, priority, parent_key")
+                .select("key, value, tags, description, summary, priority, parent_key, memory_at")
                 .eq("playbook_id", playbook.id)
+                .eq("is_archived", false)
                 .eq("tier", tier)
                 .order("priority", { ascending: false })
                 .order("updated_at", { ascending: false })
@@ -1358,6 +1333,7 @@ use_secret_write({
                   const shouldExpand = tier === "working" || expandKeys.includes(m.key);
                   return {
                     key: m.key,
+                    memory_at: m.memory_at,
                     ...(shouldExpand ? { value: m.value } : { summary: m.summary || `[${m.key}]` }),
                     tags: m.tags,
                     priority: m.priority,
@@ -1390,8 +1366,8 @@ use_secret_write({
               .from("memories")
               .select("key")
               .eq("playbook_id", playbook.id)
-              .neq("tier", "longterm") // Don't re-archive
-              .neq("retention_policy", "permanent"); // Respect retention policy
+              .eq("is_archived", false)
+              .or("retention_policy.is.null,retention_policy.neq.permanent");
 
             if (keys && keys.length > 0) {
               query = query.in("key", keys);
@@ -1399,7 +1375,7 @@ use_secret_write({
 
             if (olderThanHours) {
               const cutoff = new Date(Date.now() - olderThanHours * 60 * 60 * 1000).toISOString();
-              query = query.lt("updated_at", cutoff);
+              query = query.lt("memory_at", cutoff);
             }
 
             if (fromTier) {
@@ -1414,14 +1390,16 @@ use_secret_write({
             const keysToArchive = (toArchive || []).map(m => m.key);
 
             if (keysToArchive.length > 0) {
-              await serviceSupabase
+              const { error } = await serviceSupabase
                 .from("memories")
                 .update({
                   tier: "longterm",
+                  is_archived: true,
                   updated_at: new Date().toISOString(),
                 })
                 .eq("playbook_id", playbook.id)
                 .in("key", keysToArchive);
+              if (error) throw new Error(error.message);
             }
 
             result = {
@@ -1445,6 +1423,7 @@ use_secret_write({
               priority: number;
               memory_type?: string;
               status?: string | null;
+              memory_at: string;
               children?: MemoryNode[];
             };
 
@@ -1453,8 +1432,9 @@ use_secret_write({
 
               let query = serviceSupabase
                 .from("memories")
-                .select("key, value, summary, tier, priority, memory_type, status")
+                .select("key, value, summary, tier, priority, memory_type, status, memory_at")
                 .eq("playbook_id", playbook.id)
+                .eq("is_archived", false)
                 .order("priority", { ascending: false });
 
               if (parentKey === null) {
@@ -1470,6 +1450,7 @@ use_secret_write({
               for (const m of data) {
                 const node: MemoryNode = {
                   key: m.key,
+                  memory_at: m.memory_at,
                   tier: m.tier,
                   priority: m.priority,
                   memory_type: m.memory_type,
@@ -1522,6 +1503,8 @@ use_secret_write({
               .upsert({
                 playbook_id: playbook.id,
                 key: planKey,
+                memory_at: new Date().toISOString(),
+                is_archived: false,
                 value: {
                   task_count: tasks.length,
                   task_keys: tasks.map(t => `${planKey}/${t.key}`),
@@ -1549,6 +1532,8 @@ use_secret_write({
             const taskInserts = tasks.map(task => ({
               playbook_id: playbook.id,
               key: `${planKey}/${task.key}`,
+              memory_at: new Date().toISOString(),
+              is_archived: false,
               value: task.value || { description: task.description },
               description: task.description,
               tags: task.tags || [],
@@ -1592,6 +1577,7 @@ use_secret_write({
             // Update the task
             const updateData: MemoriesUpdate = {
               status: newStatus as MemoryStatus,
+              memory_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
             };
             if (taskSummary !== undefined) updateData.summary = taskSummary;
@@ -1632,6 +1618,7 @@ use_secret_write({
                   .from("memories")
                   .update({
                     status: "completed",
+                    memory_at: new Date().toISOString(),
                     metadata: {
                       type: "task_graph",
                       total_tasks: completedCount,

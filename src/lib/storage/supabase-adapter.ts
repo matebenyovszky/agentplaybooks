@@ -5,6 +5,7 @@
  */
 
 import { authFetch } from "@/lib/auth-fetch";
+import type { MemoryEntry, MemorySearch } from "@/lib/memory";
 import type { Persona, Skill, MCPServer, PlaybookRun, Canvas, Memory, Playbook, SecretMetadata, SecretCategory } from "@/lib/supabase/types";
 import type { StorageAdapter, PersonaInput, SkillInput, MCPServerInput, PlaybookRunInput, CanvasInput, MemoryInput, SecretInput } from "./types";
 
@@ -252,9 +253,14 @@ export function createSupabaseAdapter(playbookId: string, playbookGuid?: string)
     },
 
     // Memory
-    async getMemories(): Promise<Memory[]> {
-      const memories = await requestJson<Memory[]>(`/api/manage/playbooks/${playbookId}/memory`);
-      return memories || [];
+    async getMemories(options: MemorySearch = {}): Promise<MemoryEntry[]> {
+      const query = new URLSearchParams();
+      for (const [key, value] of Object.entries(options)) {
+        if (value !== undefined) query.set(key, Array.isArray(value) ? value.join(",") : String(value));
+      }
+      const data = await requestJson<MemoryEntry[]>(`/api/manage/playbooks/${playbookId}/memory?${query}`);
+      if (!data) throw new Error("Could not load memories. Please retry.");
+      return data;
     },
 
     async addMemory(input: MemoryInput): Promise<Memory | null> {
@@ -276,12 +282,14 @@ export function createSupabaseAdapter(playbookId: string, playbookGuid?: string)
           memory_type: input.memory_type,
           status: input.status,
           metadata: input.metadata,
+          memory_at: input.memory_at,
+          is_archived: input.is_archived,
         }),
       });
     },
 
     async updateMemory(id: string, updates: Partial<MemoryInput>): Promise<Memory | null> {
-      const memories = await requestJson<Memory[]>(`/api/manage/playbooks/${playbookId}/memory`);
+      const memories = await requestJson<Memory[]>(`/api/manage/playbooks/${playbookId}/memory?id=${encodeURIComponent(id)}`);
       if (!Array.isArray(memories)) {
         return null;
       }
@@ -299,7 +307,7 @@ export function createSupabaseAdapter(playbookId: string, playbookGuid?: string)
     },
 
     async deleteMemory(id: string): Promise<boolean> {
-      const memories = await requestJson<Memory[]>(`/api/manage/playbooks/${playbookId}/memory`);
+      const memories = await requestJson<Memory[]>(`/api/manage/playbooks/${playbookId}/memory?id=${encodeURIComponent(id)}`);
       if (!Array.isArray(memories)) {
         return false;
       }

@@ -220,6 +220,8 @@ export type MemoriesRow = {
   description: string | null;
   updated_at: string;
   // RLM (Recursive Language Model) fields for hierarchical memory
+  memory_at: string;
+  is_archived: boolean;
   tier: MemoryTier;                    // Memory hierarchy level
   parent_key: string | null;           // For hierarchical organization
   priority: number;                    // Importance (1-100)

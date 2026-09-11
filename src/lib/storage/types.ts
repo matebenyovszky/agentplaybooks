@@ -6,6 +6,7 @@
  */
 
 import type { Persona, Skill, MCPServer, Canvas, PlaybookRun, Memory, Playbook, MemoryTier, MemoryType, MemoryStatus, SecretMetadata, SecretCategory } from "@/lib/supabase/types";
+import type { MemoryEntry, MemorySearch } from "@/lib/memory";
 
 // Partial types for creating new items (without id, timestamps)
 export type PersonaInput = Omit<Persona, "id" | "playbook_id" | "created_at" | "updated_at">;
@@ -20,6 +21,8 @@ export type MemoryInput = {
   tags?: string[];
   description?: string | null;
   // RLM fields
+  memory_at?: string;
+  is_archived?: boolean;
   tier?: MemoryTier;
   priority?: number;
   parent_key?: string | null;
@@ -76,7 +79,7 @@ export interface StorageAdapter {
   deleteCanvas(id: string): Promise<boolean>;
 
   // Memory
-  getMemories(): Promise<Memory[]>;
+  getMemories(options?: MemorySearch): Promise<MemoryEntry[]>;
   addMemory(data: MemoryInput): Promise<Memory | null>;
   updateMemory(id: string, data: Partial<MemoryInput>): Promise<Memory | null>;
   deleteMemory(id: string): Promise<boolean>;

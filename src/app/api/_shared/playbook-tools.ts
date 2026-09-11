@@ -72,11 +72,16 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   {
     name: "search_memory",
     title: "Search memory",
-    description: "Search memories by text, tags, tier, or type. Returns summaries for large memories. Use tags for categorical search; use tier to focus on active vs archived data; use memory_type to find task graphs. Read-only aside from returning matches; it does not write entries. Use read_memory for one key, get_memory_context for a compact tiered view, and get_memory_tree for parent-child task graphs.",
+    description: "Search memory keys, JSON values, descriptions and summaries. Defaults to current, non-archived memories. scope='archived' searches archived entries and previous versions; scope='all' searches both. Results include memory_at and history_id (null for current entries). Use get_memory_history for one key's previous versions, or read_memory for its current value.",
     inputSchema: {
       type: "object",
       properties: {
-        search: { type: "string", description: "Search in keys, descriptions, and summaries" },
+        search: { type: "string", description: "Literal text in keys, JSON values, descriptions and summaries" },
+        scope: { type: "string", enum: ["active", "archived", "all"], default: "active" },
+        after: { type: "string", format: "date-time", description: "Inclusive lower bound on memory_at" },
+        before: { type: "string", format: "date-time", description: "Inclusive upper bound on memory_at" },
+        limit: { type: "integer", minimum: 1, maximum: 200, default: 100 },
+        offset: { type: "integer", minimum: 0, default: 0 },
         tags: { type: "array", items: { type: "string" }, description: "Filter by tags (any match)" },
         tier: { type: "string", enum: ["working", "contextual", "longterm"], description: "Filter by memory tier" },
         memory_type: { type: "string", enum: ["flat", "hierarchical"], description: "Filter by memory type" },
@@ -87,14 +92,32 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
     annotations: READ_CLOSED,
   },
   {
+    name: "get_memory_history",
+    title: "Memory history",
+    description: "Read previous versions of a memory by its current key, including original memory_at and saved contents. History is excluded from normal search. To restore a version, write its contents and memory_at with write_memory and is_archived=false. Read-only.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        key: { type: "string" },
+        search: { type: "string", description: "Optional text within this memory's history" },
+        limit: { type: "integer", minimum: 1, maximum: 200, default: 100 },
+        offset: { type: "integer", minimum: 0, default: 0 },
+      },
+      required: ["key"],
+    },
+    annotations: READ_CLOSED,
+  },
+  {
     name: "write_memory",
     title: "Write memory",
-    description: "Create or overwrite a memory entry by key. There is no separate update_memory; a second write to the same key replaces the previous value and cannot be undone. Use tier='working' for active tasks, 'contextual' for background context, 'longterm' for completed work. Set memory_type='hierarchical' and parent_key to build task graphs. Requires memory:write or full permission. Use delete_memory to remove a key, archive_memories to move it to longterm without deleting, and read_memory to fetch without replacing.",
+    description: "Create or update a memory by key; previous contents are saved automatically and readable with get_memory_history. memory_at is optional and defaults to this save's time; supply an ISO timestamp to preserve an earlier time. is_archived=true hides the entry from normal search/context; false restores it. Tier controls context priority independently of archiving. Requires memory:write or full permission.",
     inputSchema: {
       type: "object",
       properties: {
         key: { type: "string", description: "Memory key" },
-        value: { type: "object", description: "Value to store" },
+        value: { description: "JSON value to store" },
+        memory_at: { type: "string", format: "date-time", description: "Memory time including timezone; defaults to save time" },
+        is_archived: { type: "boolean", description: "Hide from normal search; false restores an archived entry" },
         tags: { type: "array", items: { type: "string" }, description: "Tags for categorization" },
         description: { type: "string", description: "Human-readable description" },
         tier: { type: "string", enum: ["working", "contextual", "longterm"], description: "Memory tier (default: contextual)" },
@@ -112,7 +135,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   {
     name: "delete_memory",
     title: "Delete memory",
-    description: "Permanently delete one memory entry by key from this playbook. The row is removed from storage, not moved to another tier, and cannot be recovered. Requires a credential with memory:write or full permission. Use archive_memories to keep the entry in the longterm tier, or consolidate_memories to retain child detail under a parent summary. Do not call this when you only want to hide completed work.",
+    description: "Permanently delete a memory and its saved history. Requires memory:write or full permission. To hide an entry while retaining its content, use archive_memories instead.",
     inputSchema: {
       type: "object",
       properties: {
@@ -142,7 +165,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   {
     name: "promote_memory",
     title: "Promote memory",
-    description: "Promote a memory to a higher tier or boost its priority for active use. This tool cannot demote; use archive_memories to move working or contextual entries to longterm. Repeating the call with priority_boost increases priority again. Requires memory:write or full permission.",
+    description: "Restore a memory's visibility, promote it to a higher tier or boost its priority for active use. This tool cannot demote; use archive_memories to archive entries. Repeating the call with priority_boost increases priority again. Requires memory:write or full permission.",
     inputSchema: {
       type: "object",
       properties: {
@@ -177,13 +200,13 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   {
     name: "archive_memories",
     title: "Archive memories",
-    description: "Archive memories from the working or contextual tier into longterm. Entries are kept, not deleted; filters (keys, tags, from_tier, older_than_hours) combine as AND. Requires memory:write or full permission. Use delete_memory for irreversible removal, promote_memory to move a key the other way, and consolidate_memories when you also want a parent summary.",
+    description: "Hide matching memories from normal search and context, retaining them in the longterm tier. Search scope='archived' to find them or read_memory by key. Filters combine as AND; older_than_hours uses memory_at. Permanent-retention entries are skipped. promote_memory restores visibility. Requires memory:write or full permission.",
     inputSchema: {
       type: "object",
       properties: {
         keys: { type: "array", items: { type: "string" }, description: "Specific keys to archive" },
         older_than_hours: { type: "number", description: "Archive memories older than X hours" },
-        from_tier: { type: "string", enum: ["working", "contextual"], description: "Only archive from this tier" },
+        from_tier: { type: "string", enum: ["working", "contextual", "longterm"], description: "Only archive from this tier" },
         tags: { type: "array", items: { type: "string" }, description: "Only archive memories with these tags" },
         generate_summaries: { type: "boolean", description: "Auto-generate summaries if missing", default: false },
       },

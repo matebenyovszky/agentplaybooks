@@ -2,6 +2,7 @@ import type { Playbook, Skill, MCPServer, Persona } from "@/lib/supabase/types";
 import { PLAYBOOK_TOOLS } from "@/app/api/_shared/playbook-tools";
 import { composePlaybookSystemPrompt } from "@/lib/playbook-prompt";
 import { operationPathsFromTools } from "@/app/api/_shared/operation-openapi";
+import { MEMORY_SEARCH_PARAMETERS } from "@/lib/memory";
 
 export type PlaybookWithExports = Playbook & {
     current_user_role?: "owner" | "editor" | "viewer";
@@ -59,20 +60,13 @@ export function formatAsOpenAPI(playbook: PlaybookWithExports) {
             [`/playbooks/${playbook.guid}/memory`]: {
                 get: {
                     summary: "Get or search memories",
-                    description: "Retrieve all memory entries, search by tags, or get a specific key",
+                    description: "Search current memories by default; use scope=archived for archived entries and previous versions, or history_key for one entry's history. key returns a single current entry, including archived entries.",
                     operationId: "getMemories",
-                    parameters: [
-                        { name: "key", in: "query", required: false, schema: { type: "string" }, description: "Get specific memory by key" },
-                        { name: "search", in: "query", required: false, schema: { type: "string" }, description: "Search in keys and descriptions" },
-                        { name: "tags", in: "query", required: false, schema: { type: "string" }, description: "Filter by tags (comma-separated)" },
-                        { name: "tier", in: "query", required: false, schema: { type: "string", enum: ["core", "working_memory", "episodic", "archival"] }, description: "Filter by RLM memory tier" },
-                        { name: "memory_type", in: "query", required: false, schema: { type: "string", enum: ["fact", "preference", "task", "observation", "summary"] }, description: "Filter by memory type" },
-                        { name: "status", in: "query", required: false, schema: { type: "string", enum: ["active", "completed", "archived", "failed"] }, description: "Filter by memory/task status" },
-                    ],
+                    parameters: MEMORY_SEARCH_PARAMETERS,
                     responses: {
                         "200": {
                             description: "Memory entries retrieved successfully",
-                            content: { "application/json": { schema: { type: "array", items: { $ref: "#/components/schemas/MemoryEntry" } } } },
+                            content: { "application/json": { schema: { oneOf: [{ type: "array", items: { $ref: "#/components/schemas/MemoryEntry" } }, { $ref: "#/components/schemas/MemoryEntry" }] } } },
                         },
                         "404": { description: "Playbook not found", content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } } },
                     },
@@ -103,7 +97,7 @@ export function formatAsOpenAPI(playbook: PlaybookWithExports) {
                 },
                 delete: {
                     summary: "Delete memory",
-                    description: "Delete a memory entry. Requires API key.",
+                    description: "Permanently delete a memory entry and its history. Requires API key. Use is_archived to retain it.",
                     operationId: "deleteMemory",
                     parameters: [{ name: "key", in: "path", required: true, schema: { type: "string" }, description: "Memory key to delete" }],
                     responses: {
@@ -219,15 +213,19 @@ export function formatAsOpenAPI(playbook: PlaybookWithExports) {
                     description: "A memory entry storing persistent data",
                     properties: {
                         key: { type: "string", description: "Unique key identifier" },
-                        value: { type: "object", description: "Stored value (any JSON)" },
+                        value: { description: "Stored value (any JSON)" },
+                        memory_at: { type: "string", format: "date-time", description: "Memory time" },
+                        is_archived: { type: "boolean", description: "Excluded from normal search and context" },
+                        memory_id: { type: "string", format: "uuid", description: "Original entry ID in search results" },
+                        history_id: { type: "string", nullable: true, description: "Revision ID in search results; null for current entries" },
                         tags: { type: "array", items: { type: "string" }, description: "Tags for categorization and search" },
                         description: { type: "string", description: "Human-readable description" },
-                        tier: { type: "string", description: "RLM memory tier (core, working_memory, episodic, archival)" },
+                        tier: { type: "string", enum: ["working", "contextual", "longterm"] },
                         priority: { type: "integer", description: "Priority level 1-100" },
                         parent_key: { type: "string", description: "Parent memory key for hierarchical storage/tasks" },
                         summary: { type: "string", description: "LLM-generated summary for large memories" },
-                        memory_type: { type: "string", description: "Type of memory (fact, preference, task, observation, summary)" },
-                        status: { type: "string", description: "Status for task memories (active, completed, archived, failed)" },
+                        memory_type: { type: "string", enum: ["flat", "hierarchical"] },
+                        status: { type: "string", nullable: true, enum: ["pending", "running", "completed", "failed", "blocked", null] },
                         metadata: { type: "object", description: "Additional custom metadata" },
                         updated_at: { type: "string", format: "date-time", description: "Last update timestamp" },
                     },
@@ -236,7 +234,9 @@ export function formatAsOpenAPI(playbook: PlaybookWithExports) {
                     type: "object",
                     description: "Data for creating/updating a memory entry",
                     properties: {
-                        value: { type: "object", description: "Value to store (any JSON object)" },
+                        value: { description: "Value to store (any JSON)" },
+                        memory_at: { type: "string", format: "date-time", description: "Optional memory time with timezone; defaults to save time" },
+                        is_archived: { type: "boolean", description: "Hide from normal search; false restores visibility" },
                         tags: { type: "array", items: { type: "string" }, description: "Optional tags for categorization" },
                         description: { type: "string", description: "Optional description" },
                         tier: { type: "string", description: "Optional RLM memory tier" },

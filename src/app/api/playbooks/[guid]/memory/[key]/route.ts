@@ -3,6 +3,7 @@ import { createApiApp } from "@/app/api/_shared/hono";
 import { getServiceSupabase } from "@/app/api/_shared/supabase";
 import { requireAuth, validateApiKey } from "@/app/api/_shared/auth";
 import { checkPlaybookWriteAccess, getPlaybookByGuid } from "@/app/api/_shared/guards";
+import { memoryWriteFields } from "@/lib/memory";
 
 const app = createApiApp("/api/playbooks/:guid/memory/:key");
 
@@ -35,6 +36,9 @@ app.put("/", async (c) => {
   }
 
   const body = await c.req.json();
+  let memoryFields;
+  try { memoryFields = memoryWriteFields(body); }
+  catch (error) { return c.json({ error: (error as Error).message }, 400); }
   const { value, tags, description, tier, priority, parent_key, summary, memory_type, status, metadata } = body;
 
   if (value === undefined) {
@@ -62,6 +66,7 @@ app.put("/", async (c) => {
     key,
     value,
     updated_at: new Date().toISOString(),
+    ...memoryFields,
   };
 
   if (tags !== undefined) upsertData.tags = tags;
@@ -79,7 +84,7 @@ app.put("/", async (c) => {
     .upsert(upsertData, {
       onConflict: "playbook_id,key",
     })
-    .select("key, value, tags, description, tier, priority, parent_key, summary, memory_type, status, metadata, updated_at")
+    .select("key, value, tags, description, tier, priority, parent_key, summary, memory_type, status, metadata, updated_at, memory_at, is_archived")
     .single();
 
   if (error) {

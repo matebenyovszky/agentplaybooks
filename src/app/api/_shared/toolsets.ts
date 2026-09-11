@@ -27,6 +27,7 @@ import type { McpTool } from "@/lib/supabase/types";
 
 const MEMORY_TOOL_NAMES = new Set([
   "read_memory",
+  "get_memory_history",
   "search_memory",
   "write_memory",
   "delete_memory",

@@ -12,6 +12,7 @@ import type {
   SkillsUpdate,
   MCPServersUpdate,
   SkillAttachmentsUpdate,
+  MemoriesUpdate,
 } from "@/lib/supabase/types";
 import { ATTACHMENT_LIMITS, ALLOWED_FILE_TYPES } from "@/lib/supabase/types";
 import {
@@ -36,6 +37,8 @@ import {
 import { projectPlaybookToolsForUser } from "@/app/api/_shared/playbook-tools";
 import { operationPathsFromTools } from "@/app/api/_shared/operation-openapi";
 import { ACCOUNT_TOOLS } from "@/app/api/_shared/account-tools";
+import { searchMemories } from "@/app/api/_shared/memory";
+import { MEMORY_SEARCH_PARAMETERS, memoryWriteFields, parseMemorySearch } from "@/lib/memory";
 
 /**
  * Roles a playbook API key can hold, mirroring the api_keys_role_check
@@ -1826,38 +1829,14 @@ app.get("/manage/playbooks/:id/memory", async (c) => {
   }
 
   const playbookId = c.req.param("id");
-  const search = c.req.query("search");
-  const tagsParam = c.req.query("tags");
-  const supabase = getServiceSupabase();
-
   if (!(await checkPlaybookWriteAccess(user.id, playbookId))) {
     return c.json({ error: "Playbook not found" }, 404);
   }
-
-  // Build query with optional filters
-  let query = supabase
-    .from("memories")
-    .select("*")
-    .eq("playbook_id", playbookId);
-
-  if (search) {
-    query = query.or(`key.ilike.%${search}%,description.ilike.%${search}%`);
-  }
-
-  if (tagsParam) {
-    const tags = tagsParam.split(",").map(t => t.trim()).filter(Boolean);
-    if (tags.length > 0) {
-      query = query.overlaps("tags", tags);
-    }
-  }
-
-  const { data, error } = await query.order("updated_at", { ascending: false });
-
-  if (error) {
-    return c.json({ error: error.message }, 500);
-  }
-
-  return c.json(data || []);
+  let options;
+  try { options = parseMemorySearch(c.req.query()); }
+  catch (error) { return c.json({ error: (error as Error).message }, 400); }
+  try { return c.json(await searchMemories(playbookId, options)); }
+  catch (error) { return c.json({ error: (error as Error).message }, 500); }
 });
 
 // GET /api/manage/playbooks/:id/memory/:key - Get specific memory
@@ -1924,6 +1903,9 @@ app.put("/manage/playbooks/:id/memory/:key", async (c) => {
     status,
     metadata,
   } = body;
+  let memoryFields;
+  try { memoryFields = memoryWriteFields(body); }
+  catch (error) { return c.json({ error: (error as Error).message }, 400); }
 
   if (
     value === undefined &&
@@ -1939,7 +1921,9 @@ app.put("/manage/playbooks/:id/memory/:key", async (c) => {
     retention_policy === undefined &&
     memory_type === undefined &&
     status === undefined &&
-    metadata === undefined
+    metadata === undefined &&
+    body.memory_at === undefined &&
+    body.is_archived === undefined
   ) {
     return c.json({ error: "No memory fields provided" }, 400);
   }
@@ -1953,6 +1937,7 @@ app.put("/manage/playbooks/:id/memory/:key", async (c) => {
     value,
     updated_at: new Date().toISOString(),
     key,
+    ...memoryFields,
   };
 
   if (value === undefined) {
@@ -2000,11 +1985,10 @@ app.put("/manage/playbooks/:id/memory/:key", async (c) => {
     upsertData.metadata = metadata;
   }
 
-  const { data, error } = await supabase
-    .from("memories")
-    .upsert(upsertData, { onConflict: "playbook_id,key" })
-    .select("*")
-    .single();
+  const mutation = value === undefined
+    ? supabase.from("memories").update(upsertData as MemoriesUpdate).eq("playbook_id", playbookId).eq("key", key)
+    : supabase.from("memories").upsert(upsertData, { onConflict: "playbook_id,key" });
+  const { data, error } = await mutation.select("*").single();
 
   if (error) {
     return c.json({ error: error.message }, 500);
@@ -2266,11 +2250,10 @@ app.get("/manage/openapi.json", (c) => {
         get: {
           operationId: "listMemories",
           summary: "List or search memories in a playbook",
-          description: "Get all memory entries, search by text, or filter by tags",
+          description: "Search current memories by default. scope=archived includes archived entries and previous versions; history_key selects the history of one current key. Supports text, tags, memory time and pagination.",
           parameters: [
             { name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" }, description: "Playbook ID" },
-            { name: "search", in: "query", schema: { type: "string" }, description: "Search in keys and descriptions" },
-            { name: "tags", in: "query", schema: { type: "string" }, description: "Filter by tags (comma-separated)" }
+            ...MEMORY_SEARCH_PARAMETERS,
           ],
           responses: {
             "200": {
@@ -2307,9 +2290,11 @@ app.get("/manage/openapi.json", (c) => {
               "application/json": {
                 schema: {
                   type: "object",
-                  required: ["value"],
+                  minProperties: 1,
                   properties: {
-                    value: { type: "object", description: "Any JSON value to store" },
+                    value: { description: "Any JSON value to store; required when creating a new entry" },
+                    memory_at: { type: "string", format: "date-time", description: "Optional memory time with timezone; defaults to save time when value is supplied" },
+                    is_archived: { type: "boolean", description: "Hide from normal search; false restores visibility. Can be updated without resending value." },
                     tags: { type: "array", items: { type: "string" }, description: "Tags for categorization" },
                     description: { type: "string", description: "Human-readable description" }
                   }
@@ -2363,7 +2348,11 @@ app.get("/manage/openapi.json", (c) => {
           description: "A memory entry storing persistent data with optional tags and description",
           properties: {
             key: { type: "string", description: "Unique key identifier" },
-            value: { type: "object", description: "Stored JSON value" },
+            value: { description: "Stored JSON value" },
+            memory_at: { type: "string", format: "date-time" },
+            is_archived: { type: "boolean" },
+            memory_id: { type: "string", format: "uuid", description: "Original entry ID in search results" },
+            history_id: { type: "string", nullable: true, description: "Revision ID in search results; null for current entries" },
             tags: { type: "array", items: { type: "string" }, description: "Tags for categorization and search" },
             description: { type: "string", description: "Human-readable description of this memory" },
             updated_at: { type: "string", format: "date-time" }

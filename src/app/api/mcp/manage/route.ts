@@ -311,7 +311,7 @@ async function executeManagementTool(
       const [skills, mcpServers, memories] = await Promise.all([
         supabase.from("skills").select("*").eq("playbook_id", playbook.id),
         supabase.from("mcp_servers").select("*").eq("playbook_id", playbook.id),
-        supabase.from("memories").select("*").eq("playbook_id", playbook.id),
+        supabase.from("memories").select("*").eq("playbook_id", playbook.id).eq("is_archived", false),
       ]);
 
       return {

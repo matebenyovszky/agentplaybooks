@@ -120,6 +120,8 @@ export const memoryRecordOutputSchema: Record<string, unknown> = {
     summary: stringOrNull,
     access_count: { type: "number" },
     updated_at: { type: "string" },
+    memory_at: { type: "string", format: "date-time" },
+    is_archived: { type: "boolean" },
   },
 };
 
