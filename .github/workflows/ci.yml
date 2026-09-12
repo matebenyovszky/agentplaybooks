@@ -28,8 +28,9 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - run: npm run prebuild
       - run: npm run lint
       - run: npm run test:all
-      - run: npm run prebuild && npx tsc --noEmit
+      - run: npx tsc --noEmit
       - run: npm run audit:production
       - run: npm run build
