@@ -362,7 +362,9 @@ AgentPlaybooks includes a built-in secrets vault for encrypted credential storag
 
 ### Security Design
 
-Secret values are **never exposed to AI agents**. Instead of reading secret values directly, agents use the `use_secret` tool which acts as a server-side proxy:
+By default, agents use the `use_secret` tool as a server-side proxy instead of reading secret values directly. Owners can separately opt a secret into API-key reveal access.
+
+For incremental model output, browsers and HTTP clients can bypass MCP using [`POST /api/playbooks/:guid/secrets/proxy` with `response_mode: "stream"`](./api-reference.md#streaming-without-mcp). The provider key is still injected server-side. MCP supports SSE transport, but APB's current secret tools buffer the upstream response into a final tool result; direct HTTP streaming avoids that buffering.
 
 1. Agent calls `use_secret` with a secret name and target URL
 2. Server decrypts the secret internally
