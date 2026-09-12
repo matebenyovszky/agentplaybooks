@@ -89,6 +89,42 @@ print(f"Models: {result['body']}")
 # The agent NEVER sees the actual API key!
 ```
 
+### Stream model output via HTTP (no MCP required)
+
+Use `response_mode: "stream"` to forward incremental output. Enable streaming in the provider payload too. Unlike the default proxy mode, the response has the provider's HTTP status and raw body, without a JSON wrapper.
+
+```python
+import os
+import sys
+
+with requests.post(
+    f"{BASE_URL}/api/playbooks/{PLAYBOOK_GUID}/secrets/proxy",
+    headers=HEADERS,
+    json={
+        "secret_name": "MODEL_API_KEY",
+        "url": os.environ["MODEL_ENDPOINT"],
+        "method": "POST",
+        "response_mode": "stream",
+        "timeout_ms": 300000,
+        "body": {
+            "model": os.environ["MODEL_ID"],
+            "messages": [{"role": "user", "content": "Hello!"}],
+            "stream": True,
+        },
+    },
+    stream=True,  # Tell requests not to buffer the response locally either.
+    timeout=(10, 310),
+) as response:
+    response.raise_for_status()
+    for chunk in response.iter_content(chunk_size=None, decode_unicode=False):
+        # Consume provider HTTP chunks without imposing a fixed local chunk size.
+        # Feed bytes into an incremental provider parser in production.
+        sys.stdout.buffer.write(chunk)
+        sys.stdout.buffer.flush()
+```
+
+Choose the endpoint, model and payload for your provider (for example xAI or MiniMax). Restrict the vault secret's `allowed_hosts` to that provider. Closing the response cancels the upstream stream. For browser usage and the full response contract, see [Streaming without MCP](./api-reference.md#streaming-without-mcp).
+
 ### Via MCP (`use_secret` tool)
 
 If your agent connects via MCP, use the `use_secret` tool:

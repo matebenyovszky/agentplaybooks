@@ -820,7 +820,56 @@ Content-Type: application/json
 }
 ```
 
-Makes an HTTP request with the secret injected as a header. The secret value never leaves the server. Returns only the HTTP response.
+Makes an HTTP request with the secret injected server-side into the request to the provider. The caller authenticates with the owner's session JWT or a playbook API key with `secrets:read` / `full` permission. The provider key is not included in the proxy response. Set `allowed_hosts` on the secret to trusted provider hosts; the provider controls its response body.
+
+By default (`response_mode: "json"`), the response is buffered and returned as `{ "status": 200, "status_text": "OK", "body": ... }`. Existing callers keep this format.
+
+#### Streaming without MCP
+
+For interactive model output, call this HTTP endpoint directly with **`response_mode: "stream"`**. APB forwards response bytes as they arrive, without assembling a JSON envelope, parsing SSE events, or truncating the output. This works with browser `fetch`, Python, curl, and other HTTP clients. Use the provider's own streaming option as well (often `body.stream: true`); the proxy cannot make a non-streaming provider generate incremental output.
+
+```javascript
+// In the APB frontend: authFetch uses the signed-in owner's session.
+import { authFetch } from "@/lib/auth-fetch";
+
+const abort = new AbortController();
+const response = await authFetch(`/api/playbooks/${guid}/secrets/proxy`, {
+  method: "POST",
+  signal: abort.signal, // Call abort.abort() from your Stop button.
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    secret_name: "MODEL_API_KEY",
+    url: providerEndpoint,
+    method: "POST",
+    response_mode: "stream",
+    body: { model: modelId, messages, stream: true },
+  }),
+});
+if (!response.ok) throw new Error(`Model request failed (${response.status})`);
+if (!response.body) throw new Error("Missing response stream");
+
+const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
+try {
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    // Raw provider text. Feed this into your provider's incremental SSE/NDJSON
+    // parser: one network chunk may contain partial or multiple events.
+    console.log(value);
+  }
+} finally {
+  await reader.cancel();
+  reader.releaseLock();
+}
+```
+
+External browser applications use `fetch` with an authorized APB credential and must be in the deployment's `ALLOWED_ORIGINS`. The provider key stays in the vault. CLI/backend callers can use a scoped APB API key; no MCP client or session initialization is required.
+
+Streaming mode preserves the upstream HTTP status, including JSON error responses such as 429. SSE, JSON, NDJSON and binary content types are retained; other content types are served as `application/octet-stream` with `nosniff`. Cookies, redirects and arbitrary provider headers are not forwarded. `Retry-After` is retained. APB validation errors before streaming remain JSON errors. An upstream failure or timeout after headers have been sent terminates the stream; consumers must handle read failures.
+
+`timeout_ms` covers the upstream request and response stream: streaming defaults to 300,000 ms with the same maximum; buffered mode defaults to 30,000 ms and is capped at 60,000 ms. Hosting infrastructure may impose a shorter limit. Cancelling the response or aborting the request cancels upstream work. Forwarding follows consumer demand, and usage/audit writes happen at stream completion or interruption, so they do not delay the first chunk. Responses disable caching and request that intermediaries avoid transformation/buffering.
+
+[MCP itself supports SSE transport](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports), but APB's `use_secret` / `use_secret_write` tools currently collect a response into one tool result. Use those tools for agent workflows; use direct HTTP streaming for incremental model output. The vault's server-side credential injection does not depend on MCP.
 
 ### Rotate Secret
 
