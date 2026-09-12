@@ -1,5 +1,25 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GET, POST } from "@/app/api/mcp/manage/route";
+import { validateUserApiKey } from "@/app/api/_shared/auth";
+
+vi.mock("@/app/api/_shared/auth", () => ({
+  validateUserApiKey: vi.fn(),
+}));
+
+const mockValidateUserApiKey = vi.mocked(validateUserApiKey);
+
+const authenticatedUserKey = {
+  id: "user-key-id",
+  user_id: "user-id",
+  key_hash: "hash",
+  key_prefix: "apb_live_test",
+  name: "test",
+  permissions: ["full"],
+  is_active: true,
+  expires_at: null,
+  last_used_at: null,
+  created_at: "2026-01-01T00:00:00.000Z",
+};
 
 function mcpRequest(body: Record<string, unknown>, headers: Record<string, string> = {}) {
   return new Request("http://localhost/api/mcp/manage", {
@@ -10,6 +30,21 @@ function mcpRequest(body: Record<string, unknown>, headers: Record<string, strin
 }
 
 describe("AgentPlaybooks management MCP transport", () => {
+  beforeEach(() => {
+    mockValidateUserApiKey.mockResolvedValue(authenticatedUserKey);
+  });
+
+  it("rejects unauthenticated keepalive requests", async () => {
+    mockValidateUserApiKey.mockResolvedValueOnce(null);
+
+    const response = await POST(mcpRequest({ id: 0, method: "ping" }));
+
+    expect(response.status).toBe(401);
+    expect(await response.json()).toMatchObject({
+      error: { code: -32001 },
+    });
+  });
+
   it("negotiates the current protocol version", async () => {
     const response = await POST(mcpRequest({
       id: 1,

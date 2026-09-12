@@ -58,11 +58,14 @@ import {
 } from "./blog-slugs.generated";
 
 /**
- * Fetch blog post content.
- * Matches the mechanism in docs-server.ts to correctly use the OpenNext file system 
- * interception for static assets on Cloudflare.
+ * Fetch blog post content from the browser or local filesystem.
+ *
+ * Production rendering uses the generated content index below. Fetching a
+ * missing file through the public site from inside the Worker re-enters the same
+ * Worker. A crawler requesting blog URLs could therefore multiply one incoming
+ * request into several billable invocations (and, for misses, recursive 404s).
  */
-async function fetchBlogContent(filename: string, baseUrl: string = ""): Promise<string | null> {
+async function fetchBlogContent(filename: string): Promise<string | null> {
     const isBrowser = typeof window !== 'undefined';
 
     // In Browser, use fetch relative
@@ -91,34 +94,7 @@ async function fetchBlogContent(filename: string, baseUrl: string = ""): Promise
         console.error(`Blog fs access failed for ${filename}:`, error);
     }
 
-    const fallbackBaseUrl =
-        baseUrl ||
-        process.env.NEXT_PUBLIC_SITE_URL ||
-        process.env.SITE_URL ||
-        process.env.CF_PAGES_URL ||
-        "";
-
-    if (!fallbackBaseUrl) {
-        return null;
-    }
-
-    try {
-        const url = new URL(`/blog/${filename}`, fallbackBaseUrl).toString();
-        const response = await fetch(url, { cache: "no-store" });
-        if (!response.ok) {
-            blogDebugLog("Blog content fetch fallback returned non-OK response.", {
-                filename,
-                url,
-                status: response.status,
-            });
-            return null;
-        }
-        blogDebugLog("Loaded blog content from fetch fallback.", { filename, url });
-        return await response.text();
-    } catch (error) {
-        console.error(`Blog fetch fallback failed for ${filename}:`, error);
-        return null;
-    }
+    return null;
 }
 
 function getGeneratedBlogContent(slug: string, locale: string): string | null {
@@ -135,28 +111,43 @@ function getGeneratedBlogContent(slug: string, locale: string): string | null {
  * Works in both build time (SSG) and runtime (Cloudflare Workers).
  */
 export async function getBlogPost(slug: string, locale: string = "en", baseUrl: string = ""): Promise<BlogPost | null> {
+    void baseUrl;
+    // The build embeds every published post. Production Workers must use this
+    // copy before touching the filesystem so rendering never fetches the public
+    // site recursively.
+    let content = getGeneratedBlogContent(slug, locale);
+
+    if (content) {
+        const { metadata, content: postContent } = parseFrontmatter(content);
+        return {
+            slug,
+            title: metadata.title || slug,
+            description: metadata.description || "",
+            date: metadata.date || new Date().toISOString(),
+            author: metadata.author,
+            content: postContent,
+        };
+    }
+
     // Try exact locale first: slug.locale.md
     let filename = `${slug}.${locale}.md`;
     blogDebugLog("Resolving blog post.", { slug, locale, filename, baseUrl });
-    let content = await fetchBlogContent(filename, baseUrl);
+    content = await fetchBlogContent(filename);
 
     if (!content) {
         // Try default: slug.md
         filename = `${slug}.md`;
-        content = await fetchBlogContent(filename, baseUrl);
+        content = await fetchBlogContent(filename);
     }
 
     // Handle case where default might be explicitly named slug.en.md
     if (!content && locale !== "en") {
         filename = `${slug}.en.md`;
-        content = await fetchBlogContent(filename, baseUrl);
+        content = await fetchBlogContent(filename);
     }
 
     if (!content) {
-        content = getGeneratedBlogContent(slug, locale);
-        if (!content) {
-            return null;
-        }
+        return null;
     }
 
     const { metadata, content: postContent } = parseFrontmatter(content);

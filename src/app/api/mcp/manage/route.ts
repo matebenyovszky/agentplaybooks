@@ -103,6 +103,20 @@ app.post("/", async (c) => {
   // reported the server as unreachable. Every future revision would have hit
   // the same wall.
 
+  // This is an account-control endpoint, including during the MCP handshake.
+  // Returning successful ping/initialize responses without a user key lets an
+  // unauthenticated keepalive loop consume Worker invocations indefinitely.
+  if (!userKey) {
+    return c.json({
+      jsonrpc: "2.0",
+      id,
+      error: {
+        code: -32001,
+        message: "Authentication required. Provide User API Key in Authorization header.",
+      },
+    }, 401);
+  }
+
   // Handle MCP methods
   switch (method) {
     case "initialize":
@@ -138,18 +152,6 @@ app.post("/", async (c) => {
     case "tools/call": {
       const toolName = params?.name as string;
       const args = params?.arguments || {};
-
-      // All tool calls require authentication
-      if (!userKey) {
-        return c.json({
-          jsonrpc: "2.0",
-          id,
-          error: {
-            code: -32001,
-            message: "Authentication required. Provide User API Key in Authorization header.",
-          },
-        });
-      }
 
       try {
         if (isPlaybookTool(toolName)) {
