@@ -226,7 +226,7 @@ app.get("/", async (c) => {
 
   let { data: playbook } = await query
     .eq("visibility", "public")
-    .single();
+    .maybeSingle();
 
   // If not found as public, try API key auth for private playbooks
   let privateExists = false;
@@ -385,7 +385,7 @@ app.post("/", async (c) => {
 
   let { data: playbook } = await query
     .eq("visibility", "public")
-    .single();
+    .maybeSingle();
 
   // If not found as public, try API key auth for private playbooks
   let privateRowExists = false;

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { GET } from "@/app/api/mcp/[guid]/route";
+import { GET, POST } from "@/app/api/mcp/[guid]/route";
 import { getSupabase, getServiceSupabase } from "@/app/api/_shared/supabase";
 import { canAccessPrivatePlaybook, validatePlaybookCredential } from "@/app/api/_shared/auth";
 
@@ -56,7 +56,10 @@ const publicPlaybook = {
 };
 
 /** Minimal chainable Supabase stub that records the columns requested. */
-function stubClient(playbook: unknown, capture?: { select?: string }) {
+function stubClient(
+  playbook: unknown,
+  capture?: { select?: string; singleCalls?: number; maybeSingleCalls?: number },
+) {
   const builder: Record<string, unknown> = {};
   const chain = () => builder;
 
@@ -68,8 +71,14 @@ function stubClient(playbook: unknown, capture?: { select?: string }) {
   builder.in = vi.fn(chain);
   builder.order = vi.fn(chain);
   builder.limit = vi.fn(chain);
-  builder.single = vi.fn().mockResolvedValue({ data: playbook, error: null });
-  builder.maybeSingle = vi.fn().mockResolvedValue({ data: playbook, error: null });
+  builder.single = vi.fn().mockImplementation(async () => {
+    if (capture) capture.singleCalls = (capture.singleCalls ?? 0) + 1;
+    return { data: playbook, error: null };
+  });
+  builder.maybeSingle = vi.fn().mockImplementation(async () => {
+    if (capture) capture.maybeSingleCalls = (capture.maybeSingleCalls ?? 0) + 1;
+    return { data: playbook, error: null };
+  });
   builder.then = undefined;
 
   return { from: vi.fn(() => builder) };
@@ -167,8 +176,9 @@ describe("GET /api/mcp/:guid — public manifest", () => {
     expect(manifest._playbook.instructions).toBe("# Project rules\n\nAlways run the tests.");
   });
   it("challenges an unauthenticated caller when the playbook exists but is private", async () => {
+    const anonLookup: { singleCalls?: number; maybeSingleCalls?: number } = {};
     vi.mocked(getSupabase).mockReturnValue(
-      stubClient(null) as unknown as ReturnType<typeof getSupabase>,
+      stubClient(null, anonLookup) as unknown as ReturnType<typeof getSupabase>,
     );
     vi.mocked(getServiceSupabase).mockReturnValue(
       stubClient({ ...publicPlaybook, guid: "private-guid", visibility: "private" }) as unknown as ReturnType<typeof getServiceSupabase>,
@@ -181,6 +191,36 @@ describe("GET /api/mcp/:guid — public manifest", () => {
     // made a private playbook impossible to add as a connector.
     expect(res.status).toBe(401);
     expect(res.headers.get("WWW-Authenticate")).toBeNull();
+    // A private playbook is a normal miss for the public query. single()
+    // turns that into a noisy PostgREST 406 before the authenticated fallback;
+    // maybeSingle() keeps the fallback while recording the expected miss as 200.
+    expect(anonLookup.maybeSingleCalls).toBe(1);
+    expect(anonLookup.singleCalls).toBeUndefined();
+  });
+
+  it("does not turn a private playbook POST lookup into a PostgREST 406", async () => {
+    const anonLookup: { singleCalls?: number; maybeSingleCalls?: number } = {};
+    vi.mocked(getSupabase).mockReturnValue(
+      stubClient(null, anonLookup) as unknown as ReturnType<typeof getSupabase>,
+    );
+    vi.mocked(getServiceSupabase).mockReturnValue(
+      stubClient({ ...publicPlaybook, guid: "private-guid", visibility: "private" }) as unknown as ReturnType<typeof getServiceSupabase>,
+    );
+
+    const res = await POST(new Request("http://localhost/api/mcp/private-guid", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "initialize",
+        params: { protocolVersion: "2025-11-25" },
+      }),
+    }));
+
+    expect(res.status).toBe(200);
+    expect(anonLookup.maybeSingleCalls).toBe(1);
+    expect(anonLookup.singleCalls).toBeUndefined();
   });
 
   it("still answers 404 when there is no such playbook at all", async () => {

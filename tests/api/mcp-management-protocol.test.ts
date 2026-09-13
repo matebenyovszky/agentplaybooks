@@ -40,9 +40,35 @@ describe("AgentPlaybooks management MCP transport", () => {
     const response = await POST(mcpRequest({ id: 0, method: "ping" }));
 
     expect(response.status).toBe(401);
+    expect(response.headers.get("Retry-After")).toBe("60");
     expect(await response.json()).toMatchObject({
+      id: null,
       error: { code: -32001 },
     });
+  });
+
+  it("rejects an unauthenticated body before attempting to parse it", async () => {
+    mockValidateUserApiKey.mockResolvedValueOnce(null);
+
+    const response = await POST(new Request("http://localhost/api/mcp/manage", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "not-json",
+    }));
+
+    expect(response.status).toBe(401);
+    expect(response.headers.get("Retry-After")).toBe("60");
+  });
+
+  it("does not build the management manifest without a user key", async () => {
+    mockValidateUserApiKey.mockResolvedValueOnce(null);
+
+    const response = await GET(new Request("http://localhost/api/mcp/manage", {
+      headers: { Accept: "application/json" },
+    }));
+
+    expect(response.status).toBe(401);
+    expect(response.headers.get("Retry-After")).toBe("60");
   });
 
   it("negotiates the current protocol version", async () => {

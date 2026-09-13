@@ -61,8 +61,17 @@ app.get("/", async (c) => {
   }
   const userKey = await validateUserApiKey(c.req.raw);
 
-  // Return manifest even without auth (for discovery)
-  // But indicate that auth is required for tool execution
+  // Do not serialize the full 50-tool manifest for unauthenticated probes.
+  // Misconfigured MCP clients retry this endpoint in bursts, so a small 401
+  // with a backoff hint keeps discovery from becoming a CPU amplification path.
+  if (!userKey) {
+    return c.json({
+      error: "Authentication required. Provide User API Key in Authorization or X-API-Key header.",
+    }, 401, {
+      "Cache-Control": "no-store",
+      "Retry-After": "60",
+    });
+  }
 
   const manifest = {
     protocolVersion: LATEST_PROTOCOL_VERSION,
@@ -80,7 +89,7 @@ app.get("/", async (c) => {
       required: true,
       type: "bearer",
       description: "User API Key starting with apb_live_",
-      authenticated: !!userKey,
+      authenticated: true,
     },
   };
 
@@ -90,6 +99,23 @@ app.get("/", async (c) => {
 // POST /api/mcp/manage - Handle MCP JSON-RPC requests
 app.post("/", async (c) => {
   const userKey = await validateUserApiKey(c.req.raw);
+
+  // Reject before parsing an attacker-controlled body. Authentication failures
+  // use a null JSON-RPC id because the request body has deliberately not been
+  // decoded; the HTTP 401 is the authoritative transport signal.
+  if (!userKey) {
+    return c.json({
+      jsonrpc: "2.0",
+      id: null,
+      error: {
+        code: -32001,
+        message: "Authentication required. Provide User API Key in Authorization or X-API-Key header.",
+      },
+    }, 401, {
+      "Cache-Control": "no-store",
+      "Retry-After": "60",
+    });
+  }
 
   const body = await c.req.json();
   const { method, params, id } = body;
@@ -102,20 +128,6 @@ app.post("/", async (c) => {
   // `data.supported`) to retry against — so the client had nowhere to go and
   // reported the server as unreachable. Every future revision would have hit
   // the same wall.
-
-  // This is an account-control endpoint, including during the MCP handshake.
-  // Returning successful ping/initialize responses without a user key lets an
-  // unauthenticated keepalive loop consume Worker invocations indefinitely.
-  if (!userKey) {
-    return c.json({
-      jsonrpc: "2.0",
-      id,
-      error: {
-        code: -32001,
-        message: "Authentication required. Provide User API Key in Authorization header.",
-      },
-    }, 401);
-  }
 
   // Handle MCP methods
   switch (method) {
