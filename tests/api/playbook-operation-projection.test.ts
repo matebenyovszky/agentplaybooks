@@ -4,7 +4,8 @@ import {
   projectPlaybookToolsForUser,
 } from "@/app/api/_shared/playbook-tools";
 import { ACCOUNT_TOOLS } from "@/app/api/_shared/account-tools";
-import { operationPathsFromTools } from "@/app/api/_shared/operation-openapi";
+import { formatAsOpenAPI } from "@/app/api/_shared/formatters";
+import { operationPathsFromTools, secretProxyOpenApiPath } from "@/app/api/_shared/operation-openapi";
 
 function schema(toolName: string, tools = PLAYBOOK_TOOLS) {
   const tool = tools.find((candidate) => candidate.name === toolName);
@@ -63,6 +64,35 @@ describe("playbook operation projections", () => {
     expect(Object.keys(paths)).toHaveLength(PLAYBOOK_TOOLS.length);
     expect(paths).toHaveProperty("/playbooks/demo/operations/create_run");
     expect(paths).toHaveProperty("/playbooks/demo/operations/store_secret");
+  });
+
+  it("advertises direct REST streaming separately from MCP tool envelopes", () => {
+    const paths = secretProxyOpenApiPath("/playbooks/demo/secrets/proxy", "apiKey") as Record<string, {
+      post: {
+        security: Array<Record<string, unknown>>;
+        requestBody: { content: { "application/json": { schema: { properties: Record<string, unknown> } } } };
+        responses: Record<string, { content?: Record<string, unknown> }>;
+        "x-streaming": boolean;
+      };
+    }>;
+    const operation = paths["/playbooks/demo/secrets/proxy"].post;
+    const responseMode = operation.requestBody.content["application/json"].schema.properties.response_mode;
+
+    expect(responseMode).toMatchObject({ enum: ["json", "stream"], default: "json" });
+    expect(operation.responses["200"].content).toHaveProperty("text/event-stream");
+    expect(operation.responses["200"].content).toHaveProperty("application/x-ndjson");
+    expect(operation.responses["200"].content).toHaveProperty("application/octet-stream");
+    expect(operation.security).toEqual([{ apiKey: [] }]);
+    expect(operation["x-streaming"]).toBe(true);
+
+    const document = formatAsOpenAPI({
+      guid: "demo",
+      name: "Demo",
+      description: "Demo playbook",
+      skills: [],
+      mcp_servers: [],
+    } as never) as { paths: Record<string, unknown> };
+    expect(document.paths).toHaveProperty("/playbooks/demo/secrets/proxy");
   });
 });
 

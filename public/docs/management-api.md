@@ -139,6 +139,18 @@ POST /api/playbooks/PLAYBOOK_GUID/operations/create_run
 }
 ```
 
+### Streaming REST/OpenAPI without MCP
+
+Incremental provider responses do not require an MCP connection. Use a scoped playbook API key with the direct vault proxy and set `response_mode` to `stream`:
+
+```http
+POST /api/playbooks/PLAYBOOK_GUID/secrets/proxy
+Authorization: Bearer apb_live_xxx
+Content-Type: application/json
+```
+
+This operation is published as `proxySecretRequest` by the playbook-specific OpenAPI document at `GET /api/playbooks/PLAYBOOK_GUID?format=openapi`. It forwards supported upstream SSE, NDJSON, JSON, and binary bodies incrementally while keeping the provider credential server-side. It is intentionally separate from the Management API's user-wide credential: use a playbook API key with `secrets:read` or `full` permission. See [Streaming REST/OpenAPI without MCP](./api-reference.md#streaming-restopenapi-without-mcp) for request examples and the full response contract.
+
 ### Endpoints
 
 | Method | Endpoint | Description |

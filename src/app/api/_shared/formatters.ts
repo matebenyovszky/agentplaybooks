@@ -1,7 +1,7 @@
 import type { Playbook, Skill, MCPServer, Persona } from "@/lib/supabase/types";
 import { PLAYBOOK_TOOLS } from "@/app/api/_shared/playbook-tools";
 import { composePlaybookSystemPrompt } from "@/lib/playbook-prompt";
-import { operationPathsFromTools } from "@/app/api/_shared/operation-openapi";
+import { operationPathsFromTools, secretProxyOpenApiPath } from "@/app/api/_shared/operation-openapi";
 import { MEMORY_SEARCH_PARAMETERS } from "@/lib/memory";
 
 export type PlaybookWithExports = Playbook & {
@@ -200,6 +200,10 @@ export function formatAsOpenAPI(playbook: PlaybookWithExports) {
                     },
                 },
             },
+            ...secretProxyOpenApiPath(
+                `/playbooks/${playbook.guid}/secrets/proxy`,
+                "apiKey",
+            ),
             ...operationPathsFromTools(
                 PLAYBOOK_TOOLS,
                 (tool) => `/playbooks/${playbook.guid}/operations/${tool.name}`,

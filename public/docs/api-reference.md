@@ -824,9 +824,31 @@ Makes an HTTP request with the secret injected server-side into the request to t
 
 By default (`response_mode: "json"`), the response is buffered and returned as `{ "status": 200, "status_text": "OK", "body": ... }`. Existing callers keep this format.
 
-#### Streaming without MCP
+#### Streaming REST/OpenAPI without MCP
 
 For interactive model output, call this HTTP endpoint directly with **`response_mode: "stream"`**. APB forwards response bytes as they arrive, without assembling a JSON envelope, parsing SSE events, or truncating the output. This works with browser `fetch`, Python, curl, and other HTTP clients. Use the provider's own streaming option as well (often `body.stream: true`); the proxy cannot make a non-streaming provider generate incremental output.
+
+The endpoint is also advertised as `proxySecretRequest` in each playbook's generated OpenAPI 3.1 document:
+
+```http
+GET /api/playbooks/:guid?format=openapi
+```
+
+The operation declares `response_mode`, the SSE, NDJSON, JSON, and binary response media types, and the `x-streaming: true` extension. Generated clients may still buffer responses by default, so configure the client to expose the raw response stream.
+
+```bash
+curl --no-buffer --request POST \
+  "https://agentplaybooks.ai/api/playbooks/$PLAYBOOK_GUID/secrets/proxy" \
+  --header "Authorization: Bearer $PLAYBOOK_API_KEY" \
+  --header "Content-Type: application/json" \
+  --data '{
+    "secret_name": "MODEL_API_KEY",
+    "url": "https://provider.example/v1/chat/completions",
+    "method": "POST",
+    "response_mode": "stream",
+    "body": {"model": "MODEL_ID", "messages": [{"role": "user", "content": "Hello"}], "stream": true}
+  }'
+```
 
 ```javascript
 // In the APB frontend: authFetch uses the signed-in owner's session.
