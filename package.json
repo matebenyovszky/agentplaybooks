@@ -31,16 +31,16 @@
   },
   "dependencies": {
     "@opennextjs/cloudflare": "1.20.6",
-    "@supabase/supabase-js": "^2.115.0",
+    "@supabase/supabase-js": "^2.116.0",
     "clsx": "^2.1.1",
     "framer-motion": "^13.2.0",
-    "hono": "^4.13.5",
-    "jszip": "^3.10.1",
-    "lucide-react": "^1.40.0",
+    "hono": "^4.13.7",
+    "jszip": "^3.10.2",
+    "lucide-react": "^1.44.0",
     "next": "16.3.4",
-    "next-intl": "^4.14.2",
-    "react": "19.2.8",
-    "react-dom": "19.2.8",
+    "next-intl": "^4.14.3",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
@@ -49,7 +49,7 @@
     "@eslint/js": "^9.39.2",
     "@swc/helpers": "^0.5.23",
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
+    "@types/node": "^24",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.1.1",
@@ -82,7 +82,7 @@
         }
       }
     },
-    "js-yaml": "4.3.1",
+    "js-yaml": "4.3.2",
     "@typescript-eslint/typescript-estree": {
       "brace-expansion": "5.0.9"
     }
