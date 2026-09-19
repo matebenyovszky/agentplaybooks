@@ -19,7 +19,13 @@ const skills = [
     content: "---\nname: release\ndescription: Prepare a release.\nversion: 2\n---\nUse the checklist.\n",
     licence: "MIT",
     created_at: "2026-02-01T00:00:00Z",
-    skill_attachments: [{ filename: "references/CHECKLIST.md", content: "1. Tag it.\n" }],
+    skill_attachments: [
+      { filename: "references/CHECKLIST.md", content: "1. Tag it.\n" },
+      { filename: "scripts/release.py", content: "def tag():\n    pass\n" },
+      // Stored under a name the serving rules reject: it must not reach a
+      // client, which would go on to write it to disk.
+      { filename: "../../escape.py", content: "nope\n" },
+    ],
     playbook: { guid: "team-guid", visibility: "public" },
   },
   {
@@ -75,7 +81,8 @@ describe("GET /.well-known/skills", () => {
     expect(res.headers.get("Content-Type")).toContain("application/json");
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
     expect(body.skills).toEqual([
-      { name: "release", description: "Prepare a release.", files: ["SKILL.md", "references/CHECKLIST.md"] },
+      // The unsafe stored name is absent: the index lists only what can be served.
+      { name: "release", description: "Prepare a release.", files: ["SKILL.md", "references/CHECKLIST.md", "scripts/release.py"] },
       { name: "triage", description: "Triage incoming bugs.", files: ["SKILL.md"] },
     ]);
     // The visibility filter is the whole access-control story on this path.
@@ -118,6 +125,23 @@ describe("GET /.well-known/skills", () => {
 
     expect(res.status).toBe(200);
     expect(await res.text()).toBe("1. Tag it.\n");
+  });
+
+  it("serves a bundled script as text, which is what a skill's instructions import", async () => {
+    vi.mocked(createServerClient).mockReturnValue(
+      stubClient(skills) as unknown as ReturnType<typeof createServerClient>,
+    );
+
+    const res = await siteGet(
+      new Request("https://apbks.test/.well-known/skills/release/scripts/release.py"),
+      params(["release", "scripts", "release.py"]),
+    );
+
+    // This is the whole point of a file under `scripts/`: a SKILL.md that tells
+    // the agent to import a module is useless if fetching it 404s.
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toContain("text/x-python");
+    expect(await res.text()).toBe("def tag():\n    pass\n");
   });
 
   it("refuses traversal and files the skill does not bundle", async () => {
