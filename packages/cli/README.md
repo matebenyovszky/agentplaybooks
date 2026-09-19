@@ -278,3 +278,23 @@ API-key header remains a fallback for non-interactive environments.
 The skill also works standalone: copy `skills/agentplaybooks/` into a
 project's `.claude/skills/` (or let `sync` do it once it is part of a
 playbook).
+
+## Licence
+
+MIT, as of `0.2.0-beta.0`. The `LICENSE` file next to this README is the
+authoritative text and ships inside the published tarball.
+
+Two earlier tarballs are wrong about this. `0.2.0-alpha.1` and `0.2.0-alpha.2`
+were published declaring `PolyForm-Noncommercial-1.0.0`, which is not and never
+was the licence of this project. A published npm version is immutable, so the
+metadata on those two cannot be corrected in place; they should be deprecated
+with a pointer to a current release:
+
+```bash
+npm deprecate @agentplaybooks/cli@0.2.0-alpha.1 "Mislabelled licence. This package is MIT; install 0.2.0-beta.0 or later."
+npm deprecate @agentplaybooks/cli@0.2.0-alpha.2 "Mislabelled licence. This package is MIT; install 0.2.0-beta.0 or later."
+```
+
+`tests/package-metadata.test.ts` in the repository root now fails the build if
+the licence or the version drifts between `package.json`, the plugin manifest
+and the marketplace listing, so this cannot recur unnoticed.
