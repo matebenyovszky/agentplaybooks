@@ -16,6 +16,7 @@ vi.mock("@/app/api/_shared/auth", () => ({ getUserFromAuthOrApiKey: vi.fn() }));
 vi.mock("@/lib/repositories/playbooks", () => ({
   listAccessiblePlaybooks: vi.fn(async () => [{ id: "p1", guid: "office-skills" }]),
   createPlaybook: vi.fn(async () => ({ id: "p2", guid: "new" })),
+  parseCreatePlaybookInput: vi.fn((body: unknown) => ({ input: body })),
 }));
 
 const { getUserFromAuthOrApiKey } = await import("@/app/api/_shared/auth");
