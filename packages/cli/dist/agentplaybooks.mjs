@@ -10368,7 +10368,8 @@ Safety:
   named environment variable and requires an explicit confirmation.
 `;
 function parse(args) {
-  const command = args[0];
+  const first = typeof args[0] === "string" ? args[0] : "";
+  const command = first === "--help" || first === "-h" ? "help" : args[0];
   const flags = /* @__PURE__ */ new Map();
   const positional = [];
   const separator = args.indexOf("--");

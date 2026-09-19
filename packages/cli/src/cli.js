@@ -148,7 +148,11 @@ Safety:
 `;
 
 function parse(args) {
-  const command = args[0];
+  // `apb --help` reads as a command to a person, so it is treated as one here.
+  // Without this the flag becomes an unknown command name and the user is told
+  // off before being shown the help they asked for.
+  const first = typeof args[0] === "string" ? args[0] : "";
+  const command = first === "--help" || first === "-h" ? "help" : args[0];
   const flags = new Map();
   const positional = [];
   // Everything after a bare `--` belongs to the child command, not to us.
