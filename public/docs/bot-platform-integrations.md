@@ -44,10 +44,38 @@ Bot Mode adds a roster, persistent Bot Chat, routines, direct mentions, group
 chats, and cross-machine peers. Hermes also supports standard Agent Skills and
 [local or remote MCP servers](https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/features/mcp.md).
 
-Hermes profiles can already be exported or published as Hermes-specific Git
-distributions. AgentPlaybooks should complement that format: a Hermes
-distribution is one deployment output, while the playbook remains portable to
-other runtimes.
+Hermes profiles can be exported or published as Hermes-specific Git
+distributions, and that is now how a playbook becomes a Bot. A Hermes
+distribution is one deployment output; the playbook remains portable to other
+runtimes.
+
+```bash
+apb pull <playbook-guid> --apply            # the playbook onto disk
+apb export hermes ./bots/research --apply   # as a Hermes distribution
+hermes profile install ./bots/research --name research
+apb sync --target=hermes --profile=research --apply
+```
+
+The first two commands are AgentPlaybooks', the third is Hermes' own installer,
+and the fourth gives the new Bot a working configuration. That last step is not
+optional: unlike `hermes profile create`, `profile install` copies no
+`config.yaml`, so a Bot installed from a distribution has no providers and no
+model until something seeds one. `sync --profile=<bot>` seeds it from the
+installation's own configuration and merges the playbook's MCP servers into it.
+
+A distribution deliberately carries no `config.yaml` of its own, because
+`profile install` replaces that file rather than merging it: shipping one would
+overwrite the providers the machine is configured for and pin the Bot's model
+to whatever was true when it was exported. Which model a Bot runs is a local
+decision.
+
+Later changes travel the same way. Re-run `pull` and `export hermes`, then
+`hermes profile update research`: the distribution's files are replaced, and
+the Bot's sessions, memories and configuration are not touched.
+
+Because a Bot is a playbook, sharing the playbook shares the Bot. A colleague
+who accepts a collaboration invite runs the same four commands and has the same
+agent, with their own memory and history.
 
 ## Integration status
 
@@ -55,9 +83,9 @@ other runtimes.
 |---|---|---|
 | Read a public playbook | Available through web/Markdown exports | Available through web exports or MCP |
 | Use hosted playbook MCP | No documented attachment point | Supported as remote HTTP MCP |
-| Use Agent Skills locally | No documented import surface | Current CLI syncs standard skills to `~/.hermes/skills/` |
-| Create a platform Bot/profile | Not available through a documented external API | Hermes CLI supports profiles; AgentPlaybooks does not automate this yet |
-| Full playbook deployment | Planned after a supported xAI surface exists | Planned profile-aware CLI adapter |
+| Use Agent Skills locally | No documented import surface | CLI syncs standard skills, with the files they bundle, to `~/.hermes/skills/` or into a Bot's own profile |
+| Create a platform Bot/profile | Not available through a documented external API | `apb export hermes` writes the distribution `hermes profile install` reads |
+| Full playbook deployment | Planned after a supported xAI surface exists | Available: persona, skills and their bundled files as a distribution, MCP servers and model through `sync --profile` |
 | Drift detection | Planned | Existing skill drift detection; full profile drift planned |
 
 ## Recommended product model

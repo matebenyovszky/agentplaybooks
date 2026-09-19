@@ -298,3 +298,27 @@ npm deprecate @agentplaybooks/cli@0.2.0-alpha.2 "Mislabelled licence. This packa
 `tests/package-metadata.test.ts` in the repository root now fails the build if
 the licence or the version drifts between `package.json`, the plugin manifest
 and the marketplace listing, so this cannot recur unnoticed.
+
+## One playbook, one Hermes bot
+
+`export hermes` writes the playbook this project is linked to as a Hermes Agent
+profile distribution — the directory `hermes profile install` reads:
+
+```bash
+apb pull <playbook-guid> --apply
+apb export hermes ./bots/research --apply
+hermes profile install ./bots/research --name research
+apb sync --target=hermes --profile=research --apply
+```
+
+The distribution holds `distribution.yaml`, `SOUL.md` and `skills/<name>/` with
+each skill's bundled files. It ships no `config.yaml`: `profile install`
+replaces that file rather than merging it, so one would overwrite the machine's
+providers and pin the bot's model. The fourth command covers that instead —
+unlike `profile create`, `profile install` copies no configuration at all, so a
+new bot has no model until `sync --profile=<bot>` seeds one from the
+installation's own and merges the playbook's MCP servers in.
+
+Later changes: re-run `pull` and `export hermes`, then `hermes profile update
+research`. Distribution files are replaced; sessions, memories and
+configuration are not.
