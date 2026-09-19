@@ -527,7 +527,13 @@ export async function run(args) {
     const requestedTargets = typeof flags.get("--target") === "string"
       ? flags.get("--target").split(",").map((value) => value.trim()).filter(Boolean)
       : [];
-    const options = { targets: requestedTargets, includeVendored: flags.has("--include-vendored") };
+    const options = {
+      targets: requestedTargets,
+      includeVendored: flags.has("--include-vendored"),
+      // `--profile <name>` writes into a Hermes bot or group profile instead of
+      // the main one. Ignored by every other target, which has no such concept.
+      hermesProfileName: typeof flags.get("--profile") === "string" ? flags.get("--profile") : "",
+    };
     const plan = flags.has("--global")
       ? await planGlobalSync(options)
       : await planSync(path.resolve(positional[0] ?? process.cwd()), options);

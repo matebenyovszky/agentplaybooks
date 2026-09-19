@@ -258,11 +258,30 @@ export function hermesProfileCandidates({ homedir = os.homedir(), env = process.
 }
 
 /**
- * The profile this machine actually uses: the first candidate that holds a
- * `config.yaml`, then the first that exists at all, and only then the
- * platform default (which is the right place to create one).
+ * The profile this machine actually uses.
+ *
+ * `profile` selects a named one instead — a Hermes bot or group, which is a
+ * self-contained home under `profiles/<name>/` of whichever installation is
+ * found. The installation is resolved first and the name appended after, so a
+ * bot is looked for beside the real install rather than under a path that
+ * merely might exist.
  */
 export async function hermesProfile(options = {}) {
+  const home = await hermesHome(options);
+  const named = typeof options.profile === "string" ? options.profile.trim() : "";
+  if (named.length === 0) return home;
+  return {
+    directory: path.join(home.directory, "profiles", named),
+    display: `${home.display}/profiles/${named}`,
+  };
+}
+
+/**
+ * The installation: the first candidate that holds a `config.yaml`, then the
+ * first that exists at all, and only then the platform default (which is the
+ * right place to create one).
+ */
+async function hermesHome(options = {}) {
   const candidates = hermesProfileCandidates(options);
   for (const candidate of candidates) {
     try {

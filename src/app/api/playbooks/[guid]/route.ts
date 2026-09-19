@@ -13,8 +13,12 @@ import {
 import { isSafeSkillFile } from "@/lib/skill-markdown";
 import type { Skill } from "@/lib/supabase/types";
 
-/** One bundled skill file, as a client needs it to rebuild the skill directory. */
-type AttachmentRow = { filename: string; content: string };
+/**
+ * One bundled skill file, as a client needs it to rebuild the skill directory.
+ * The id travels with it so a client that pushes back can update the file in
+ * place rather than trying to create one that already exists.
+ */
+type AttachmentRow = { id: string; filename: string; content: string };
 
 // Helper: Convert playbook to persona shape
 function playbookToPersona(playbook: {
@@ -82,7 +86,7 @@ export async function GET(
     const [skillsRes, mcpRes] = await Promise.all([
         supabase
             .from("skills")
-            .select("*, skill_attachments(filename, content)")
+            .select("*, skill_attachments(id, filename, content)")
             .eq("playbook_id", playbook.id),
         supabase.from("mcp_servers").select("*").eq("playbook_id", playbook.id),
     ]);

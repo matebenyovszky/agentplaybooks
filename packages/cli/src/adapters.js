@@ -377,9 +377,9 @@ function mergedHermesConfig(existingContent, additions, externalDir, { conflicts
  * `config.yaml` entries (MCP servers plus the portable skill store), and
  * `SOUL.md` from the playbook's persona.
  */
-async function hermesActions(report, targetIds, conflicts, { root, homedir, env, platform, skipMcp }) {
+async function hermesActions(report, targetIds, conflicts, { root, homedir, env, platform, skipMcp, hermesProfileName }) {
   if (!targetIds.includes("hermes")) return [];
-  const profile = await hermesProfile({ homedir, env, platform });
+  const profile = await hermesProfile({ homedir, env, platform, profile: hermesProfileName });
   const actions = [];
 
   const configPath = path.join(profile.directory, "config.yaml");
@@ -516,6 +516,10 @@ export async function planAdapters(report, targets, {
   env = process.env,
   platform = process.platform,
   skipMcp = false,
+  // A Hermes bot or group is its own profile directory. Naming one here points
+  // every hermes-target write at `profiles/<name>/` instead of the main
+  // profile, which is what makes one playbook drive one bot.
+  hermesProfileName = "",
 } = {}) {
   const root = report.inventory.root;
   const targetIds = targets
@@ -526,7 +530,7 @@ export async function planAdapters(report, targets, {
     ...await instructionActions(report, targetIds, conflicts, { root }),
     ...skillActions(report, targetIds, conflicts, { root }),
     ...(skipMcp ? [] : mcpActions(report, targetIds, conflicts, { root })),
-    ...await hermesActions(report, targetIds, conflicts, { root, homedir, env, platform, skipMcp }),
+    ...await hermesActions(report, targetIds, conflicts, { root, homedir, env, platform, skipMcp, hermesProfileName }),
   ];
   actions.sort((a, b) => a.path.localeCompare(b.path));
   return { actions, conflicts };

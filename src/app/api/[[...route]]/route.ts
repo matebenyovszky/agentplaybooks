@@ -20,6 +20,7 @@ import {
   validateFilename,
   validateContent
 } from "@/lib/attachment-validator";
+import { isSafeSkillFile } from "@/lib/skill-markdown";
 import { hashApiKey, generateApiKey, getKeyPrefix } from "@/lib/utils";
 import {
   getAuthenticatedUser as getAuthenticatedUserFromRequest,
@@ -1063,20 +1064,39 @@ app.get("/manage/playbooks/:id", async (c) => {
     return c.json({ error: "Playbook not found" }, 404);
   }
 
-  // Get related data
+  // Get related data. A skill's bundled files come with it: this is the
+  // endpoint `apb pull` and `apb push` read, and a skill backed by a script is
+  // only half a skill without them. The id travels too, so a push can update a
+  // file in place instead of trying to create one that already exists.
   const [skills, mcpServers] = await Promise.all([
-    supabase.from("skills").select("*").eq("playbook_id", playbook.id),
+    supabase
+      .from("skills")
+      .select("*, skill_attachments(id, filename, content)")
+      .eq("playbook_id", playbook.id),
     supabase.from("mcp_servers").select("*").eq("playbook_id", playbook.id),
   ]);
 
   const persona = playbookToPersona(playbook);
+
+  type SkillAttachmentRow = { id: string; filename: string; content: string };
+  type SkillWithAttachments = Record<string, unknown> & {
+    skill_attachments?: SkillAttachmentRow[] | null;
+  };
+  const skillsWithFiles = ((skills.data ?? []) as unknown as SkillWithAttachments[]).map(
+    ({ skill_attachments, ...skill }) => ({
+      ...skill,
+      // A stored name the serving rules would reject can never be written to
+      // disk safely, so it is not handed to a client either.
+      attachments: (skill_attachments ?? []).filter((file) => isSafeSkillFile(file.filename)),
+    }),
+  );
 
   return c.json({
     ...playbook,
     current_user_role: accessRole,
     persona,
     personas: [persona], // backward-compatible shape
-    skills: skills.data || [],
+    skills: skillsWithFiles,
     mcp_servers: mcpServers.data || [],
   });
 });
