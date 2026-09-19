@@ -11,6 +11,12 @@ import {
   planConsent,
 } from "./auth-command.js";
 import { applySync, planGlobalSync, planSync, printSyncPlan } from "./sync.js";
+import {
+  applyHermesExport,
+  hermesInstallHint,
+  planHermesExport,
+  printHermesExportPlan,
+} from "./hermes-distribution.js";
 import { applyConnect, planConnect, printConnectPlan } from "./connect.js";
 import {
   applyPull,
@@ -52,7 +58,7 @@ const HELP = `AgentPlaybooks CLI
 
 Usage:
   agentplaybooks doctor [path] [--json] [--strict] [--global] [--include-vendored]
-  agentplaybooks sync [path] [--apply] [--json] [--target=<types>]
+  agentplaybooks sync [path] [--apply] [--json] [--target=<types>] [--profile=<bot>]
   agentplaybooks sync --global [--apply] [--json] [--target=<types>] [--include-vendored]
   agentplaybooks connect <guid>[,<guid>...] [path] [--apply] [--json] [--target=<types>]
                                 [--name=<entry>] [--key-env=<VAR>] [--key-header=<H>]
@@ -63,6 +69,8 @@ Usage:
   agentplaybooks pull <id|guid> [path] [--apply] [--json] [--url=<base>]
   agentplaybooks push [path] [--apply|--yes] [--json] [--url=<base>]
   agentplaybooks push --global [--apply|--yes] [--json] [--include-vendored]
+  agentplaybooks export hermes <dir> [path] [--apply] [--json] [--name=<bot>]
+                                     [--version=<v>]
   agentplaybooks auth <provider> [path] [--client-id=<id>] [--url=<base>]
       --client-id is only needed when the playbook's MCP server for that
       provider has no client_id configured.
@@ -86,6 +94,15 @@ Commands:
              moves skills only: a global MCP config holds credentials, so
              copying it between clients would spread them. Skills the clients
              ship with themselves are left out unless --include-vendored.
+  export     Write the playbook this project is linked to as a Hermes Agent
+             profile distribution: one playbook, one bot. The directory is
+             what 'hermes profile install <dir> --name <bot>' expects, and
+             'hermes profile update <bot>' takes later changes without
+             touching the bot's sessions or memories.
+             config.yaml is deliberately not shipped: 'profile install'
+             replaces that file rather than merging it, so it would pin the
+             bot's model. Use 'sync --target=hermes --profile <bot>' for the
+             MCP servers and the bot's model instead.
   connect    Point an agent tool at one or more hosted playbooks, or use
              --account to manage every playbook the user key can access. The
              key is never written: the
@@ -640,6 +657,43 @@ export async function run(args) {
     }
     for (const playbook of playbooks) {
       console.log(`${playbook.guid}  ${playbook.name} (${playbook.visibility}, ${playbook.skill_count ?? 0} skill(s))`);
+    }
+    return;
+  }
+
+  if (command === "export") {
+    const kind = positional[0];
+    if (kind !== "hermes") throw new Error("Usage: agentplaybooks export hermes <dir> [path]");
+    const destination = positional[1];
+    if (!destination) throw new Error("Usage: agentplaybooks export hermes <dir> [path]");
+    const root = path.resolve(positional[2] ?? process.cwd());
+    const plan = await planHermesExport(root, path.resolve(destination), {
+      name: typeof flags.get("--name") === "string" ? flags.get("--name") : undefined,
+      version: typeof flags.get("--version") === "string" ? flags.get("--version") : undefined,
+    });
+
+    if (flags.has("--json")) {
+      console.log(JSON.stringify({
+        destination: plan.destination,
+        profileName: plan.profileName,
+        playbook: plan.playbook,
+        skills: plan.skills,
+        files: plan.files.map(({ path: filePath }) => filePath),
+      }, null, 2));
+    } else {
+      printHermesExportPlan(plan);
+    }
+
+    if (flags.has("--apply")) {
+      const result = await applyHermesExport(plan);
+      if (!flags.has("--json")) {
+        console.log(`Wrote ${result.written.length} file(s) to ${plan.destination}.`);
+        console.log("");
+        console.log("Install it as a bot:");
+        console.log(hermesInstallHint(plan));
+      }
+    } else if (!flags.has("--json")) {
+      console.log(`No files have been written. Run again with --apply to write these to ${plan.destination}.`);
     }
     return;
   }

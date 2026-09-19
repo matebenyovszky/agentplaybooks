@@ -384,7 +384,23 @@ async function hermesActions(report, targetIds, conflicts, { root, homedir, env,
 
   const configPath = path.join(profile.directory, "config.yaml");
   const configDisplay = `${profile.display}/config.yaml`;
-  const existingConfig = await readIfExists(configPath);
+  let existingConfig = await readIfExists(configPath);
+  let seededFrom = null;
+
+  // A bot installed with `hermes profile install` has no config.yaml at all:
+  // unlike `hermes profile create`, install does not copy one, so the profile
+  // starts with no providers and no model and `hermes -p <bot>` cannot resolve
+  // one. Writing a file that holds only MCP servers would leave it that way
+  // and look like this tool broke it, so a new named profile starts from the
+  // installation's own config -- the same thing `profile create` does -- and
+  // the merge below adds to that. The model can then be changed per bot, which
+  // is the point of having one.
+  if (existingConfig === null && hermesProfileName) {
+    const installation = await hermesProfile({ homedir, env, platform });
+    existingConfig = await readIfExists(path.join(installation.directory, "config.yaml"));
+    if (existingConfig !== null) seededFrom = `${installation.display}/config.yaml`;
+  }
+
   const additions = skipMcp
     ? {}
     : mcpAdditionsFor(TARGET_ADAPTERS.hermes, groupByName(report.inventory.mcpServers), "hermes", conflicts);
@@ -399,9 +415,10 @@ async function hermesActions(report, targetIds, conflicts, { root, homedir, env,
       kind: "hermes-config",
       target: "hermes",
       name: "config.yaml",
-      action: existingConfig === null ? "create" : "merge",
+      action: existingConfig === null ? "create" : (seededFrom ? "create" : "merge"),
       path: configDisplay,
       absolutePath: configPath,
+      seededFrom,
       servers: merged.servers,
       externalDirs: merged.externalDirs,
       content: merged.content,
