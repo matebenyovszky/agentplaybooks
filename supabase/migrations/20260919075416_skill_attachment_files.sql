@@ -15,6 +15,10 @@
 --    and would have broken the next time anyone added a function. 256 KB with
 --    ten files per skill is still a bounded row.
 --
+-- Applied to the production project on 2026-09-19 as version 20260919075416,
+-- which is why this file carries that timestamp: `supabase db push` matches on
+-- it and will not try to replay what is already there.
+--
 -- Both are CHECK constraints, so the ceiling is enforced here rather than only
 -- in the TypeScript validator. Keep this in step with
 -- `ATTACHMENT_LIMITS` in src/lib/supabase/types.ts, `isSafeSkillFile` in
