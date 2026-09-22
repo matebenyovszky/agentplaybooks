@@ -1,6 +1,6 @@
 {
   "name": "@agentplaybooks/cli",
-  "version": "0.3.0-beta.3",
+  "version": "0.3.0-beta.4",
   "description": "Sync vendor-neutral agent configuration and connect skills, MCP tools, memory, canvas, and secret-backed APIs",
   "type": "module",
   "license": "MIT",
@@ -33,6 +33,7 @@
   "files": [
     "bin",
     "dist",
+    "hermes-plugin",
     ".claude-plugin",
     ".codex-plugin",
     ".cursor-plugin",

@@ -11,10 +11,13 @@ node ./bin/agentplaybooks.js doctor ../my-project --strict
 node ./bin/agentplaybooks.js sync ../my-project
 node ./bin/agentplaybooks.js sync ../my-project --apply
 node ./bin/agentplaybooks.js sync ../my-project --target=claude,codex --apply
+
+node ./bin/agentplaybooks.js plugin export ../my-project --output=../my-plugin --apply
+node ./bin/agentplaybooks.js plugin import ../my-plugin ../my-project --apply
 ```
 
 `doctor` does not write files or use the network. It reports instruction
-files, Agent Skills, MCP server definitions, likely hard-coded credentials,
+files, Agent Skills, custom agents, MCP server definitions, likely hard-coded credentials,
 insecure MCP URLs, cross-platform drift, and a 0-100 health score.
 
 `sync` plans (and with `--apply`, writes) two things:
@@ -22,14 +25,16 @@ insecure MCP URLs, cross-platform drift, and a 0-100 health score.
 1. The canonical `agentplaybook.json` manifest.
 2. The platform files missing from enabled deployment targets:
 
-   | Target | Skills | MCP servers | Instructions |
-   |---|---|---|---|
-   | `claude` (Claude Code / Cowork) | `.claude/skills/<name>/SKILL.md` | `.mcp.json` | `CLAUDE.md` importing `AGENTS.md` |
-   | `cursor` | `.cursor/skills/<name>/SKILL.md` | `.cursor/mcp.json` | — |
-   | `codex` (ChatGPT / Codex CLI) | `.codex/skills/<name>/SKILL.md` | `.codex/config.toml` | reads `AGENTS.md` |
-   | `antigravity` (Google Antigravity) | `.agents/skills/<name>/SKILL.md` | — (global config only) | — |
-   | `grok` (Grok Bot, xAI) | `.agents/skills/<name>/SKILL.md` | — (account MCP Box; reported, see below) | reads `AGENTS.md` natively |
-   | `hermes` (Hermes Agent, Nous Research) | `.agents/skills/<name>/SKILL.md`, registered in `~/.hermes/config.yaml` | `mcp_servers:` in `~/.hermes/config.yaml` | reads `AGENTS.md`; persona → `~/.hermes/SOUL.md` |
+   | Target | Skills | Custom agents | MCP servers | Instructions |
+   |---|---|---|---|---|
+   | `claude` (Claude Code / Cowork) | `.claude/skills/<name>/SKILL.md` | `.claude/agents/<name>.md` | `.mcp.json` | `CLAUDE.md` importing `AGENTS.md` |
+   | `cursor` | `.cursor/skills/<name>/SKILL.md` | `.cursor/agents/<name>.md` | `.cursor/mcp.json` | — |
+   | `codex` (ChatGPT / Codex CLI) | `.codex/skills/<name>/SKILL.md` | `.codex/agents/<name>.toml` | `.codex/config.toml` | reads `AGENTS.md` |
+   | `copilot` (GitHub Copilot) | `.github/skills/<name>/SKILL.md` | `.github/agents/<name>.agent.md` | `.mcp.json` | — |
+   | `gemini` (Gemini CLI) | `.gemini/skills/<name>/SKILL.md` | `.gemini/agents/<name>.md` | only `mcpServers` in `.gemini/settings.json` | reads `GEMINI.md` |
+   | `antigravity` (Google Antigravity) | `.agents/skills/<name>/SKILL.md` | — | — (global config only) | — |
+   | `grok` (Grok Bot, xAI) | `.agents/skills/<name>/SKILL.md` | — | — (account MCP Box; reported, see below) | reads `AGENTS.md` natively |
+   | `hermes` (Hermes Agent, Nous Research) | `.agents/skills/<name>/SKILL.md`, registered in `~/.hermes/config.yaml` | — | `mcp_servers:` in `~/.hermes/config.yaml` | reads `AGENTS.md`; persona → `~/.hermes/SOUL.md` |
 
    Claude Code reads `CLAUDE.md` and not `AGENTS.md`, but it supports `@`
    imports, so the `claude` target writes a `CLAUDE.md` containing `@AGENTS.md`
@@ -43,6 +48,9 @@ insecure MCP URLs, cross-platform drift, and a 0-100 health score.
    does not have yet. `sync --target=cursor,claude` still writes both. When no
    target is enabled, `sync` lists the agent tools it detects for the current
    user instead of quietly doing nothing.
+   Global sync moves skills and custom agents between the user's client homes;
+   global MCP files are intentionally left alone because they may carry auth
+   headers.
    Antigravity reads project skills from the portable `.agents/skills/` store.
    Grok Bot reads that same store — `.agents/skills/` is one of the roots it
    discovers skills from, and its system prompt loads `AGENTS.md` — so the
@@ -64,6 +72,30 @@ insecure MCP URLs, cross-platform drift, and a 0-100 health score.
    and skipped — never overwritten. Replaced files are backed up under
    `.agentplaybooks/backups/`.
 
+## Agent Plugins 1.0
+
+`plugin export` creates a standards-compliant package with root `plugin.json`,
+`skills/`, and `mcp.json`. Complete skill directories are copied, including
+their scripts, references, and assets. Portable agents are kept under
+`ai.agentplaybooks/agents/` and also emitted as Copilot's standardized client
+extension under `com.github.copilot/agents/`.
+
+The portable custom-agent source is `.agents/agents/<name>.md`: common
+`name`, `description`, `tools`, `model`, and Markdown prompt fields, plus
+optional `extensions.<target>` frontmatter for native-only fields. Sync renders
+Claude/Cursor/Copilot/Gemini Markdown and Codex TOML without treating the
+vendor-specific overrides as cross-platform drift.
+
+Agent Plugins 1.0 intentionally has no portable secrets mechanism. The only
+manifest extension AgentPlaybooks adds is
+`extensions["ai.agentplaybooks"].secrets`: names, refs, and field-binding
+templates such as `Bearer ${TOKEN}`. Values never enter the package. Standard
+clients safely ignore this namespace; `plugin import` uses it to reconstruct
+the references in `.agents/mcp.json`, imports skills and agents into the
+portable `.agents/` store, and refreshes `agentplaybook.json`. Both directions
+are plan-only unless `--apply` is supplied, and differing existing files are
+reported instead of overwritten.
+
 ## Remote sync
 
 ```bash
@@ -73,19 +105,25 @@ node ./bin/agentplaybooks.js playbooks              # list accessible playbooks
 
 node ./bin/agentplaybooks.js pull <id|guid> --apply  # remote -> .agents/ store
 node ./bin/agentplaybooks.js push --apply           # local -> remote playbook
+node ./bin/agentplaybooks.js backups <guid>          # private backup revisions
+node ./bin/agentplaybooks.js pull <guid> --snapshot=<id> --apply
 ```
 
 - Keys are user API keys (`apb_...`) created in the dashboard, stored with
   `0600` permissions in `~/.agentplaybooks/credentials.json`.
-- Instructions, skills, MCP server definitions, and the manifest travel in both
-  directions.
+- A private, immutable portable snapshot accompanies each changed push. It
+  carries instructions, complete skill trees (including assets), custom agents,
+  MCP references, and the manifest; vault values are never fetched into it.
+  Review arbitrary skill assets for embedded credentials. The owner can
+  recover a snapshot by GUID even after the playbook is deleted. `pull` restores
+  the latest snapshot or the requested `--snapshot` revision. Legacy playbooks
+  without a snapshot still use the skill/MCP record path.
 - `push` uploads the project-root instruction file as the playbook's
   instructions. `AGENTS.md` wins if several exist; root files that disagree are
   a conflict, and nested instruction files stay local because they scope a
   subdirectory rather than the project.
-- `pull` writes the playbook's instructions to `AGENTS.md`, remote skills to
-  `.agents/skills/`, and remote MCP servers to `.agents/mcp.json`, then links
-  the project via `.agentplaybooks/remote.json`;
+- `pull` writes portable snapshot files to `AGENTS.md`, `.agents/`, and
+  `agentplaybook.json`, then links the project via `.agentplaybooks/remote.json`;
   a subsequent `sync --apply` propagates both to the enabled platform targets.
   OpenAPI federation servers are hosted-only and are reported, not translated.
 - `push` uploads skills, MCP servers, and the manifest to the linked playbook
@@ -278,3 +316,23 @@ API-key header remains a fallback for non-interactive environments.
 The skill also works standalone: copy `skills/agentplaybooks/` into a
 project's `.claude/skills/` (or let `sync` do it once it is part of a
 playbook).
+## Native Hermes memory
+
+Install and configure AgentPlaybooks as Hermes's native memory provider:
+
+```bash
+apb memory setup <private-playbook-guid> --target=hermes
+apb memory setup <private-playbook-guid> --target=hermes --apply
+hermes memory setup
+hermes memory status
+```
+
+The setup command honors `HERMES_HOME` or `--hermes-home=<directory>`, preserves
+existing configuration, and reports conflicting providers or plugin files. It
+never copies API keys. Hermes's wizard accepts a playbook-scoped key through
+`AGENTPLAYBOOKS_MEMORY_API_KEY`. Shared read-only sources use `--shared=<guids>`.
+
+The provider uses existing literal memory search, mirrors explicit memory writes,
+and supports read/write/archive/delete/history tools. See the
+[provider guide](../hermes-memory/agentplaybooks/README.md) for scope and installation
+details. It does not upload full conversations or add semantic search, caching or retries.

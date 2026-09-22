@@ -35,7 +35,7 @@ if you need this on-premise.
 
 ## A note on RLS
 
-18 tables have RLS enabled and there are 46 policies, but RLS is not the
+Sensitive tables have RLS enabled, but RLS is not the
 primary authorization mechanism: almost every API route queries with the
 service-role key, which bypasses it. Authorization lives in
 `src/app/api/_shared/guards.ts`.
@@ -49,3 +49,9 @@ apparently-dead code breaks those endpoints rather than merely tightening them.
 Policies written against `auth.uid()` are currently inert, because no
 JWT-bearing client queries tables directly — the browser talks only to
 `/api/*`.
+
+`playbook_snapshots` is intentionally private: RLS is enabled, `anon` and
+`authenticated` have no direct table grants, and only the management API's
+role-checked service client can read or write snapshots. The playbook FK is
+`ON DELETE SET NULL`, so the owner can recover a backup by GUID after deleting
+the playbook itself.

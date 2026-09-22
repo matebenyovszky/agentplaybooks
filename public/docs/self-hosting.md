@@ -44,13 +44,15 @@ Fork [github.com/matebenyovszky/agentplaybooks](https://github.com/matebenyovszk
 
 1. Go to [supabase.com](https://supabase.com) and create a new project
 2. Note your project URL and anon key from Settings > API
-3. Run the database migration:
+3. Initialize a new database from `supabase/schema.sql`. For an existing
+   deployment, apply only migrations newer than its current schema. The
+   portable-backup API requires
+   `20260922213700_portable_playbook_snapshots.sql` before the new CLI is
+   published or used for `push`:
 
 ```bash
-# Option A: Use Supabase CLI
-supabase db push
-
-# Option B: Copy from migrations folder and run in SQL editor
+# Fresh Supabase project: run supabase/schema.sql in the SQL editor.
+# Existing project: apply the pending forward migration(s), then deploy the API.
 ```
 
 ### Step 3: Connect to Cloudflare Pages

@@ -41,7 +41,7 @@ export async function planSync(target, options = {}) {
  *
  * Two deliberate differences from a project sync:
  *
- * - **Skills only.** A global MCP config carries credentials — the header a
+ * - **Skills and custom agents only.** A global MCP config carries credentials — the header a
  *   Cursor server authenticates with is sitting in `~/.cursor/mcp.json` in plain
  *   text. Copying that into two more files would spread the secret rather than
  *   fix it, so global sync reports MCP drift (doctor already does) and leaves
@@ -196,6 +196,7 @@ export function printSyncPlan(plan) {
     console.log(`Sync plan: ${plan.action} ${plan.manifestPath}`);
     console.log(`  ${plan.manifest.spec.instructions.length} instruction file(s)`);
     console.log(`  ${plan.manifest.spec.skills.length} skill(s)`);
+    console.log(`  ${plan.manifest.spec.agents.length} custom agent(s)`);
     console.log(`  ${plan.manifest.spec.connections.mcp.length} MCP server definition(s)`);
     console.log(`  ${plan.manifest.spec.targets.length} deployment target(s)`);
     if (plan.manifest.spec.secrets.length > 0) {

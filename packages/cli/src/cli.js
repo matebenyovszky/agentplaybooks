@@ -11,11 +11,14 @@ import {
   planConsent,
 } from "./auth-command.js";
 import { applySync, planGlobalSync, planSync, printSyncPlan } from "./sync.js";
+import { applyPluginPlan, planPluginExport, planPluginImport, printPluginPlan, publicPluginPlan } from "./agent-plugins.js";
 import { applyConnect, planConnect, printConnectPlan } from "./connect.js";
+import { applyHermesMemory, planHermesMemory, printHermesMemoryPlan } from "./hermes-memory.js";
 import {
   applyPull,
   applyPush,
   decidePush,
+  listBackups,
   listPlaybooks,
   planGlobalPush,
   planPull,
@@ -54,13 +57,18 @@ Usage:
   agentplaybooks doctor [path] [--json] [--strict] [--global] [--include-vendored]
   agentplaybooks sync [path] [--apply] [--json] [--target=<types>]
   agentplaybooks sync --global [--apply] [--json] [--target=<types>] [--include-vendored]
+  agentplaybooks plugin export [path] [--output=<directory>] [--apply] [--json]
+  agentplaybooks plugin import <plugin-directory> [path] [--apply] [--json]
   agentplaybooks connect <guid>[,<guid>...] [path] [--apply] [--json] [--target=<types>]
                                 [--name=<entry>] [--key-env=<VAR>] [--key-header=<H>]
   agentplaybooks connect --account [path] [--apply] [--json] [--target=<types>]
   agentplaybooks login [--url=<base>]
+  agentplaybooks memory setup <guid> --target=hermes [--hermes-home=<directory>]
+                             [--shared=<guids>] [--url=<base>] [--apply] [--json]
   agentplaybooks logout [--url=<base>]
   agentplaybooks playbooks [--url=<base>] [--json]
-  agentplaybooks pull <id|guid> [path] [--apply] [--json] [--url=<base>]
+  agentplaybooks backups <guid> [--url=<base>] [--json]
+  agentplaybooks pull <id|guid> [path] [--snapshot=<id>] [--apply] [--json] [--url=<base>]
   agentplaybooks push [path] [--apply|--yes] [--json] [--url=<base>]
   agentplaybooks push --global [--apply|--yes] [--json] [--include-vendored]
   agentplaybooks auth <provider> [path] [--client-id=<id>] [--url=<base>]
@@ -74,18 +82,23 @@ Usage:
                               [--prefix=<P>] [--json] [--yes]
 
 Commands:
+  memory     Install and configure the native Hermes memory provider for a private
+             playbook. Plan-only without --apply; credentials are never copied.
   doctor     Audit agent instructions, skills, MCP configuration, secrets, and drift.
   sync       Plan or apply the canonical manifest and missing platform files
-             for enabled targets (claude, cursor, codex, antigravity, hermes,
-             grok).
+             for enabled targets (claude, cursor, codex, copilot, gemini,
+             antigravity, hermes, grok), including portable custom agents.
              --target=claude,codex writes only those targets this run, not in
              addition to auto-detected ones, which is what a freshly pulled
              playbook needs.
              --global works across your home-scoped stores (~/.cursor/skills,
              ~/.claude/skills, the Hermes profile) instead of one project. It
-             moves skills only: a global MCP config holds credentials, so
+             moves skills and custom agents only: a global MCP config holds credentials, so
              copying it between clients would spread them. Skills the clients
              ship with themselves are left out unless --include-vendored.
+  plugin     Import or export an Agent Plugins 1.0 package. Core skills and MCP
+             stay standard; ai.agentplaybooks adds secret references/bindings,
+             never secret values. Plan-only unless --apply is supplied.
   connect    Point an agent tool at one or more hosted playbooks, or use
              --account to manage every playbook the user key can access. The
              key is never written: the
@@ -98,14 +111,18 @@ Commands:
              Reads AGENTPLAYBOOKS_API_KEY, or prompts on stdin.
   logout     Remove the stored API key for a remote.
   playbooks  List the playbooks the stored API key can access.
-  pull       Plan or apply downloading a remote playbook's skills into
-             .agents/skills and link the project to that playbook.
+  backups    List immutable central backup revisions by playbook GUID, even
+             after the playbook itself was deleted (owner only).
+  pull       Restore the latest portable snapshot (or --snapshot=<id>) into
+             .agents/ without overwriting conflicts. Legacy playbooks fall
+             back to skill/MCP records.
   auth       Run the one-time OAuth consent for a user-scoped connection
              (Gmail, LinkedIn, X, ...) and store the resulting refresh token in
              the playbook vault. Federation renews it from then on. See which
              providers need it: curl <url>/api/connections
-  push       Plan or apply uploading local skills and the manifest to the
-             linked (or a new) remote playbook. Secret values are never sent.
+  push       Plan or apply uploading skills/MCP for hosted use plus a private,
+             versioned portable backup with agents, skill resources, and manifest.
+             Secret values are never sent.
              --global uploads this machine's own skills instead of one project's,
              as a workstation playbook. MCP configuration stays local: a
              home-scoped MCP config is where auth headers live.
@@ -223,6 +240,10 @@ function printRemotePlan(kind, plan) {
   }
   for (const action of plan.actions) {
     console.log(`  ${action.action} ${action.kind} ${action.path ?? action.name}`);
+    if (action.kind === "snapshot" && Array.isArray(action.paths)) {
+      for (const file of action.paths.slice(0, 20)) console.log(`    ${file}`);
+      if (action.paths.length > 20) console.log(`    … ${action.paths.length - 20} more file(s); use --json for the full path list.`);
+    }
   }
   for (const item of plan.conflicts) {
     console.log(`  [conflict] ${item.kind} '${item.name}': ${item.reason}`);
@@ -511,6 +532,23 @@ export async function run(args) {
     return;
   }
 
+  if (command === "memory") {
+    if (positional[0] !== "setup" || flags.get("--target") !== "hermes") {
+      throw new Error("Usage: apb memory setup <guid> --target=hermes [--apply]");
+    }
+    const option = (name) => typeof flags.get(name) === "string" ? flags.get(name) : undefined;
+    const plan = await planHermesMemory({ playbook: positional[1], hermesHome: option("--hermes-home"),
+      sharedPlaybooks: option("--shared"), url: option("--url") });
+    if (flags.has("--json")) console.log(JSON.stringify({ ...plan, fileActions: plan.fileActions.map(withoutContent) }, null, 2));
+    else printHermesMemoryPlan(plan);
+    if (flags.has("--apply")) {
+      const result = await applyHermesMemory(plan);
+      if (!flags.has("--json")) for (const written of result.written) console.log(`Wrote: ${written}`);
+    }
+    if (plan.conflicts.length) process.exitCode = 2;
+    return;
+  }
+
   if (command === "doctor") {
     const report = flags.has("--global")
       ? await runGlobalDoctor({ includeVendored: flags.has("--include-vendored") })
@@ -553,6 +591,33 @@ export async function run(args) {
         for (const backup of result.backups) console.log(`Backup: ${backup}`);
       }
     }
+    return;
+  }
+
+  if (command === "plugin") {
+    const subcommand = positional[0];
+    let plan;
+    if (subcommand === "export") {
+      const root = path.resolve(positional[1] ?? process.cwd());
+      const output = typeof flags.get("--output") === "string" ? path.resolve(flags.get("--output")) : undefined;
+      plan = await planPluginExport(root, { output });
+    } else if (subcommand === "import") {
+      if (!positional[1]) throw new Error("Usage: agentplaybooks plugin import <plugin-directory> [path] [--apply]");
+      plan = await planPluginImport(path.resolve(positional[1]), path.resolve(positional[2] ?? process.cwd()));
+    } else {
+      throw new Error("Usage: agentplaybooks plugin <export|import> ...");
+    }
+    if (flags.has("--json")) console.log(JSON.stringify(publicPluginPlan(plan), null, 2));
+    else printPluginPlan(plan);
+    if (flags.has("--apply")) {
+      const result = await applyPluginPlan(plan);
+      if (!flags.has("--json")) {
+        console.log(result.applied ? "Applied Agent Plugins plan." : "No changes applied.");
+        for (const written of result.written) console.log(`Wrote: ${written}`);
+        for (const backup of result.backups) console.log(`Backup: ${backup}`);
+      }
+    }
+    if (plan.conflicts.length > 0) process.exitCode = 2;
     return;
   }
 
@@ -638,15 +703,28 @@ export async function run(args) {
     return;
   }
 
+  if (command === "backups") {
+    const guid = positional[0];
+    if (!guid) throw new Error("Usage: agentplaybooks backups <guid> [--json]");
+    const apiKey = await requireApiKey(url);
+    const backups = await listBackups(url, apiKey, guid);
+    if (flags.has("--json")) console.log(JSON.stringify(backups, null, 2));
+    else if (backups.length === 0) console.log(`No central backups for '${guid}'.`);
+    else for (const backup of backups) console.log(`${backup.id}  ${backup.created_at}  ${backup.file_count} files  ${backup.size_bytes} bytes`);
+    return;
+  }
+
   if (command === "pull") {
     const ref = positional[0];
     if (!ref) throw new Error("Usage: agentplaybooks pull <id|guid> [path]");
     const root = path.resolve(positional[1] ?? process.cwd());
     const apiKey = await requireApiKey(url);
-    const plan = await planPull(root, ref, { url, apiKey });
+    const snapshotId = typeof flags.get("--snapshot") === "string" ? flags.get("--snapshot") : undefined;
+    const plan = await planPull(root, ref, { url, apiKey, snapshotId });
     if (flags.has("--json")) {
       console.log(JSON.stringify({
         playbook: plan.playbook,
+        snapshot: plan.snapshot ?? null,
         actions: plan.actions.map(withoutContent),
         conflicts: plan.conflicts,
       }, null, 2));

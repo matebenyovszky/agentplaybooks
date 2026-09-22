@@ -34,7 +34,7 @@ export async function runGlobalDoctor(options = {}) {
  */
 export function platformPresence(inventory) {
   const found = new Set();
-  for (const collection of [inventory.instructions, inventory.skills, inventory.mcpConfigs, inventory.mcpServers]) {
+  for (const collection of [inventory.instructions, inventory.skills, inventory.agents, inventory.mcpConfigs, inventory.mcpServers]) {
     for (const item of collection ?? []) {
       if (NAMED_PLATFORMS.has(item.platform)) found.add(item.platform);
     }
@@ -59,6 +59,7 @@ export function publicReport(report) {
     summary: {
       instructions: report.inventory.instructions.length,
       skills: report.inventory.skills.length,
+      agents: report.inventory.agents.length,
       mcpConfigs: report.inventory.mcpConfigs.length,
       mcpServers: report.inventory.mcpServers.length,
       findings: report.findings.length,
@@ -79,10 +80,11 @@ export function publicReport(report) {
  * counts alone, which is exactly why it is stated.
  */
 export function pushableInventory(report) {
-  const { instructions, skills, mcpConfigs } = report.inventory;
+  const { instructions, skills, agents, mcpConfigs } = report.inventory;
   return {
     uploads: [
-      { kind: "skill", count: skills.length },
+      { kind: "skill tree", count: skills.length },
+      { kind: "custom agent", count: agents?.length ?? 0 },
       { kind: "instruction file", count: instructions.length },
     ].filter((item) => item.count > 0),
     excluded: mcpConfigs.length > 0
@@ -113,7 +115,7 @@ export function printDoctor(report) {
   }, {});
 
   console.log(`AgentPlaybooks Doctor — health ${report.score}/100`);
-  console.log(`Found ${report.inventory.instructions.length} instruction file(s), ${report.inventory.skills.length} skill(s), and ${report.inventory.mcpServers.length} MCP server definition(s).`);
+  console.log(`Found ${report.inventory.instructions.length} instruction file(s), ${report.inventory.skills.length} skill(s), ${report.inventory.agents.length} custom agent(s), and ${report.inventory.mcpServers.length} MCP server definition(s).`);
   console.log(formatPlatformLine(platformPresence(report.inventory)));
   console.log(`Findings: ${counts.critical ?? 0} critical, ${counts.high ?? 0} high, ${counts.medium ?? 0} medium, ${counts.low ?? 0} low.`);
 

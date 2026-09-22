@@ -23,7 +23,7 @@
     "spec": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["instructions", "skills", "connections", "memory", "secrets", "targets", "policies", "governance"],
+      "required": ["instructions", "skills", "agents", "connections", "memory", "secrets", "targets", "policies", "governance"],
       "properties": {
         "instructions": { "type": "array", "items": { "$ref": "#/$defs/sourceRef" } },
         "skills": {
@@ -38,6 +38,24 @@
               "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
               "name": { "type": "string" },
               "description": { "type": "string" }
+            }
+          }
+        },
+        "agents": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["source", "platform", "digest", "name", "description"],
+            "properties": {
+              "source": { "type": "string" },
+              "platform": { "type": "string" },
+              "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+              "name": { "type": "string", "pattern": "^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$" },
+              "description": { "type": "string" },
+              "tools": { "type": "array", "items": { "type": "string" } },
+              "model": { "type": "string" },
+              "extensions": { "type": "object" }
             }
           }
         },
@@ -96,7 +114,7 @@
             "properties": {
               "id": { "type": "string" },
               "type": {
-                "enum": ["codex", "claude", "cursor", "copilot", "gemini", "antigravity", "hermes", "generic-mcp", "ros2", "opcua", "edge-runtime", "enterprise-gateway"]
+                "enum": ["codex", "claude", "cursor", "copilot", "gemini", "antigravity", "hermes", "grok", "generic-mcp", "ros2", "opcua", "edge-runtime", "enterprise-gateway"]
               },
               "enabled": { "type": "boolean" },
               "config": { "type": "object" }

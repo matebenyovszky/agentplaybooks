@@ -56,6 +56,7 @@ export function createManifest(report, { displayName } = {}) {
   const platforms = new Set([
     ...report.inventory.instructions.map((item) => item.platform),
     ...report.inventory.skills.map((item) => item.platform),
+    ...(report.inventory.agents ?? []).map((item) => item.platform),
     ...report.inventory.mcpServers.map((item) => item.platform),
   ]);
 
@@ -76,9 +77,17 @@ export function createManifest(report, { displayName } = {}) {
     spec: {
       instructions: report.inventory.instructions.map(sourceRef).sort((a, b) => a.source.localeCompare(b.source)),
       skills: report.inventory.skills.map((item) => ({
-        ...sourceRef(item),
+        ...sourceRef({ ...item, digest: item.treeDigest ?? item.digest }),
         name: item.name,
         ...(item.description ? { description: item.description } : {}),
+      })).sort((a, b) => a.name.localeCompare(b.name) || a.source.localeCompare(b.source)),
+      agents: (report.inventory.agents ?? []).map((item) => ({
+        ...sourceRef(item),
+        name: item.name,
+        description: item.description,
+        ...(item.tools.length > 0 ? { tools: item.tools } : {}),
+        ...(item.model ? { model: item.model } : {}),
+        ...(item.extensions ? { extensions: item.extensions } : {}),
       })).sort((a, b) => a.name.localeCompare(b.name) || a.source.localeCompare(b.source)),
       connections: {
         mcp: report.inventory.mcpServers.map((server) => ({

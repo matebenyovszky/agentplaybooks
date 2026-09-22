@@ -1,0 +1,17 @@
+name: agentplaybooks
+version: 0.1.0
+description: "Private, portable memory with AgentPlaybooks: recall, explicit memory writes, archive and history."
+author: Mate Benyovszky
+kind: exclusive
+requires_hermes: ">=0.21.4"
+license: MIT
+homepage: https://agentplaybooks.ai
+# MemoryManager injects the six provider schemas only when selected. No general
+# tools or lifecycle hooks are registered by register(ctx).
+provides_tools: []
+provides_hooks: []
+requires_env:
+  - name: AGENTPLAYBOOKS_MEMORY_API_KEY
+    description: "Playbook-scoped API key with memory:read and memory:write permissions"
+    secret: true
+    url: https://agentplaybooks.ai/dashboard

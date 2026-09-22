@@ -1,6 +1,6 @@
 ---
 name: agentplaybooks
-description: Audit, synchronize, and share portable agent configuration (instructions, Agent Skills, MCP servers) with the AgentPlaybooks CLI. Use when the user wants to check agent-config health or drift, copy skills/MCP config between Claude Code, Cursor, Codex/ChatGPT, Google Antigravity, Grok Bot, or Hermes Agent, create an agentplaybook.json manifest, or pull/push a playbook from agentplaybooks.ai.
+description: Audit, migrate, back up, and restore portable agent configuration (instructions, Agent Skills, custom agents, MCP references) with the AgentPlaybooks CLI. Use for drift checks, Agent Plugins import/export, cross-platform sync among Claude Code, Cursor, Codex, Copilot, Gemini, Antigravity, Grok Bot, and Hermes, or hosted playbook backup and recovery.
 ---
 
 # AgentPlaybooks
@@ -15,7 +15,8 @@ A hosted playbook keeps two different things apart: the **persona** is who the
 agent is (identity, portable between projects), while **instructions** are the
 always-on rules of one project (`AGENTS.md` / `CLAUDE.md` content). `pull` writes
 instructions to `AGENTS.md` and the persona to `.agents/persona.md`; `push` sends
-instructions only — the hosted playbook owns the persona. From the portable store,
+instructions to the live hosted field, while its private snapshot also preserves
+an existing portable persona file. The hosted playbook owns the live persona. From the portable store,
 `sync` hands the persona to targets that have a place for an identity: Hermes
 reads it as `SOUL.md`.
 
@@ -34,17 +35,20 @@ Substitute your variant for `apb` in the commands below.
 | Command | What it does | Writes? |
 |---|---|---|
 | `apb doctor [path] [--json] [--strict]` | Health report: inventory, spec violations, likely hard-coded secrets, insecure MCP URLs, cross-platform drift, 0-100 score | Never |
-| `apb sync [path]` | Plan the canonical `agentplaybook.json` plus platform files missing from enabled targets (claude, cursor, codex, antigravity, hermes, grok) | Plan only |
+| `apb sync [path]` | Plan the canonical `agentplaybook.json` plus platform files missing from enabled targets (claude, cursor, codex, copilot, gemini, antigravity, hermes, grok) | Plan only |
 | `apb sync [path] --apply` | Write the manifest and missing platform files, with backups under `.agentplaybooks/backups/` | Yes |
 | `apb sync [path] --target=<types>` | Write only those targets this run, e.g. `--target=claude,codex` | Plan only without `--apply` |
-| `apb sync --global [--include-vendored]` | Same plan across the user's home stores (`~/.cursor/skills`, `~/.claude/skills`, the Hermes profile) instead of one project. Skills only | Plan only without `--apply` |
+| `apb sync --global [--include-vendored]` | Same plan across the user's home stores instead of one project. Skills and custom agents, not credential-bearing MCP config | Plan only without `--apply` |
+| `apb plugin export [path] [--output=<dir>]` | Package complete skill trees, MCP references, and custom-agent extensions as Agent Plugins 1.0 | Plan only without `--apply` |
+| `apb plugin import <dir> [path]` | Import an Agent Plugins 1.0 package into the portable store | Plan only without `--apply` |
 | `apb login [--url=<base>]` | Store a user API key (`apb_...`) for a remote; reads `AGENTPLAYBOOKS_API_KEY` first | `~/.agentplaybooks/credentials.json` |
 | `apb playbooks [--json]` | List remote playbooks the key can access | Never |
 | `apb connect --account [path] [--target=<types>]` | Connect an agent to the account-management MCP endpoint using `${AGENTPLAYBOOKS_API_KEY}` | Plan only without `--apply` |
 | `apb connect <guid>[,<guid>...] [path]` | Connect one or more scoped playbook MCP endpoints in one config update | Plan only without `--apply` |
-| `apb pull <id\|guid> [path] [--apply]` | Download a playbook's instructions into `AGENTS.md`, skills into `.agents/skills/`, and MCP servers into `.agents/mcp.json`, then link the project | With `--apply` |
-| `apb push [path] [--apply]` | Upload local instructions, skills, MCP servers, and the manifest to the linked (or a new) remote playbook | With `--apply` |
-| `apb push --global [--apply]` | Upload this machine's own skills as a workstation playbook. MCP configuration is never uploaded | With `--apply` |
+| `apb backups <guid>` | List private, immutable backup revisions by playbook GUID | Never |
+| `apb pull <id\|guid> [path] [--snapshot=<id>] [--apply]` | Restore latest or selected portable snapshot; legacy playbooks fall back to skill/MCP records | With `--apply` |
+| `apb push [path] [--apply]` | Upload live skills/MCP plus a complete private snapshot of instructions, skill trees, agents, MCP references, and manifest | With confirmation or `--apply` |
+| `apb push --global [--apply]` | Back up this machine's skills and custom agents; global MCP configuration stays local | With confirmation or `--apply` |
 | `apb secrets adopt [--global] [--apply] [--rewrite=<files>]` | Store a credential that is already hard-coded in an MCP config into the vault; rewrites the file to `${VAR}` only for files named in `--rewrite` | With `--apply` |
 
 ## Typical workflows
@@ -64,11 +68,11 @@ Substitute your variant for `apb` in the commands below.
 - **"Share this project's setup with my team"** → `apb login`, then `apb push`
   (review the plan), then `apb push --apply`. Give the team the playbook GUID;
   they run `apb pull <guid> --apply` followed by
-  `apb sync --target=<their tools> --apply`. Skills and MCP servers both make
-  the trip.
+  `apb sync --target=<their tools> --apply`. Full skill trees, custom agents,
+  instructions, and MCP references make the trip. Secret values do not.
 - **"My skills are scattered across my tools, not in a project"** → this is the
   global case: `apb sync --global --target=<their tools>`, show the plan, then
-  `--apply`. It moves **skills only**, on purpose: a global MCP config holds
+  `--apply`. It moves **skills and custom agents only**, on purpose: a global MCP config holds
   credentials (an auth header, a token), and copying it into two more files
   would spread the secret rather than fix it. Report MCP drift from
   `apb doctor --global` instead. Skills a client ships with itself (Cursor's
@@ -78,6 +82,10 @@ Substitute your variant for `apb` in the commands below.
 - **"Set this machine up from our team playbook"** → `apb pull <guid> --apply`,
   then `apb sync --apply`. If the project has no target yet, sync lists the
   agent tools it detected for this user; pass them via `--target`.
+- **"Recover an older setup or deleted playbook"** → `apb backups <guid>` to
+  find revision IDs, then `apb pull <guid> <new-directory> --snapshot=<id>`
+  to review the plan and re-run with `--apply`. Owner-only backups survive
+  deletion of the playbook record. Existing differing files are conflicts.
 - **"Connect my whole AgentPlaybooks account"** → run
   `apb connect --account --target=<type>`, show the plan, then run it with
   `--apply`. The generated config contains `${AGENTPLAYBOOKS_API_KEY}`, never
@@ -110,12 +118,11 @@ Substitute your variant for `apb` in the commands below.
 ## Rules
 
 - `doctor` is read-only and local-only; run it freely.
-- `sync`, `pull`, and `push` are plan-only by default. Always show or
-  summarize the plan for the user before running the same command with
-  `--apply`.
-- Conflicting definitions (same skill or MCP server, different content) are
-  reported and skipped — the CLI never overwrites them. Ask the user which
-  variant is canonical, align the files, then re-run.
+- `sync` and `pull` are plan-only by default; `push` asks before uploading in
+  an interactive terminal. Show or summarize the plan before `--apply`.
+- Conflicting definitions are reported and never overwritten. `push --apply`
+  refuses an incomplete backup; resolve drift before retrying. `pull` skips
+  differing local files and reports each conflict.
 - Never echo API keys. Prefer `AGENTPLAYBOOKS_API_KEY=<your-key>` in the
   environment over pasting keys into the terminal. `push` refuses to upload
   content that looks like it contains hard-coded credentials — fix the finding
@@ -149,6 +156,10 @@ Substitute your variant for `apb` in the commands below.
 - Secret values never belong in `agentplaybook.json` or in pushed content;
   only environment/vault references are allowed. `spec.secrets` records which
   variables the configuration references, never their values.
+- The private snapshot keeps full skill resources (including binary assets),
+  custom agents, instructions, and MCP references; it excludes `.local`
+  overrides, settings, hooks, worktrees, and arbitrary application data.
+  It does not guarantee identical behavior for client-specific features.
 - `push` treats local files as authoritative for an MCP server's connection
   (command, args, env, url, headers) and preserves hosted-only settings
   (timeouts, auth, access, curated tool lists, descriptions). Remote entries

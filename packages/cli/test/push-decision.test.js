@@ -113,7 +113,7 @@ test("doctor reports what a push would upload", () => {
     instructions: [{}],
   }));
   assert.deepEqual(uploads, [
-    { kind: "skill", count: 3 },
+    { kind: "skill tree", count: 3 },
     { kind: "instruction file", count: 1 },
   ]);
 });

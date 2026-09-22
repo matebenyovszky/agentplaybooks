@@ -33,6 +33,12 @@ export const docsEntries: DocEntry[] = [
     section: "guides",
   },
   {
+    slug: "portable-agent-backups",
+    title: "Cross-platform Agent Backups",
+    description: "Portable AI agent configuration, Agent Skills migration, and private versioned backups",
+    section: "guides",
+  },
+  {
     slug: "obsidian",
     title: "Obsidian and AgentPlaybooks",
     description: "Where they overlap, what each is better at, and how to use both",

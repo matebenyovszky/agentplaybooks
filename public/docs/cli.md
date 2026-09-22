@@ -41,6 +41,8 @@ target:
 | `claude` — Claude Code / Claude Cowork | `.claude/skills/<name>/SKILL.md` | `.mcp.json` | `CLAUDE.md` importing `AGENTS.md` |
 | `cursor` — Cursor | `.cursor/skills/<name>/SKILL.md` | `.cursor/mcp.json` | — |
 | `codex` — ChatGPT / OpenAI Codex | `.codex/skills/<name>/SKILL.md` | `.codex/config.toml` | reads `AGENTS.md` natively |
+| `copilot` — GitHub Copilot | `.github/skills/<name>/SKILL.md` | `.mcp.json` | project instructions / native agents |
+| `gemini` — Gemini CLI | `.gemini/skills/<name>/SKILL.md` | `.gemini/settings.json` MCP section | `GEMINI.md` / native agents |
 | `antigravity` — Google Antigravity | `.agents/skills/<name>/SKILL.md` | — (global config) | — |
 | `grok` — Grok Bot (xAI) | `.agents/skills/<name>/SKILL.md` | — (account MCP Box; reported) | reads `AGENTS.md` natively |
 | `hermes` — Hermes Agent (Nous Research) | `.agents/skills/<name>/SKILL.md`, registered in `~/.hermes/config.yaml` | `mcp_servers:` in `~/.hermes/config.yaml` | reads `AGENTS.md` natively; persona → `~/.hermes/SOUL.md` |
@@ -69,7 +71,7 @@ The portable store for the global scope is `~/.agents/skills`, and the manifest
 lives in `~/.agentplaybooks/agentplaybook.json` rather than in your home
 directory. Two deliberate limits:
 
-- **Skills only.** A global MCP config holds credentials — an auth header, a
+- **Skills and custom agents only.** A global MCP config holds credentials — an auth header, a
   token — and copying it into two more files on disk would spread the secret
   instead of fixing it. Run `apb doctor --global` to see MCP drift between your
   clients and decide what to do about it.
@@ -131,12 +133,18 @@ export AGENTPLAYBOOKS_API_KEY=<your-user-api-key>
 apb login               # verify and store the key (~/.agentplaybooks, 0600)
 apb playbooks           # list playbooks your key can access
 
-apb pull <guid> --apply # download skills into .agents/skills/
-apb push --apply        # upload local skills + manifest
+apb push --apply        # hosted records + private versioned portable backup
+apb backups <guid>      # list backup revision IDs
+apb pull <guid> --apply # restore the latest portable backup
+apb pull <guid> --snapshot=<id> --apply # restore an earlier revision
 ```
 
-Instructions, skills, MCP servers, and the manifest all travel in both
-directions:
+The private backup carries instructions, the full skill tree (including
+scripts/assets), custom agents, MCP references, and the manifest. It is
+immutable, survives deletion of the playbook record, and is owner-recoverable
+by GUID. Vault values are never fetched into it; review arbitrary skill assets
+for embedded credentials. The hosted playbook's separate skills
+and MCP records remain available for live use:
 
 - **Local → hosted** (`push`): the project's instruction file, the skills and
   MCP server definitions discovered in any platform folder, plus the canonical
@@ -148,11 +156,17 @@ directions:
   the hosted side — timeouts, auth, access, curated tool lists, descriptions —
   are preserved, not overwritten. Remote entries that no longer exist locally
   are left untouched.
-- **Hosted → local** (`pull` + `sync --apply`): the playbook's instructions land
-  in `AGENTS.md`, remote skills in `.agents/skills/`, and remote MCP servers in
-  `.agents/mcp.json`, and the project is linked via
-  `.agentplaybooks/remote.json`. The follow-up sync fans them out to every
-  enabled platform target, whichever editor your teammate uses.
+- **Hosted → local** (`pull` + `sync --apply`): a snapshot restores the
+  portable files into `AGENTS.md` and `.agents/`, then sync fans them out to
+  enabled platforms. Existing differing files are conflicts, never silently
+  overwritten. Older playbooks without a snapshot fall back to their legacy
+  instructions, SKILL.md content, and MCP server records.
+
+`push` refuses an incomplete upload if source definitions conflict. The backup
+is bounded to 1,000 files, 4 MiB total, and 1 MiB per file. See
+[Cross-platform Agent Backups](/docs/portable-agent-backups) for the exact
+scope and platform limits; local overrides, hooks, permission settings, and
+worktrees are deliberately not portable.
 
 Claude Code reads `CLAUDE.md` and does not read `AGENTS.md`, but it does support
 `@` imports. So the `claude` target does not copy your instructions — it writes a

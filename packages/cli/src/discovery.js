@@ -10,6 +10,7 @@ const IGNORED_DIRECTORIES = new Set([
   ".open-next",
   ".wrangler",
   ".agentplaybooks",
+  ".tmp",
   "node_modules",
   "dist",
   "build",
@@ -116,6 +117,8 @@ function isMcpConfig(relativePath) {
     || normalized.endsWith("/.cursor/mcp.json")
     || normalized === ".vscode/mcp.json"
     || normalized.endsWith("/.vscode/mcp.json")
+    || normalized === ".gemini/settings.json"
+    || normalized.endsWith("/.gemini/settings.json")
     || normalized === ".codex/config.toml"
     || normalized.endsWith("/.codex/config.toml")
     // Hermes keeps its MCP servers in the profile config, next to every other
@@ -123,6 +126,13 @@ function isMcpConfig(relativePath) {
     // project is not an MCP configuration.
     || normalized === ".hermes/config.yaml"
     || normalized.endsWith("/.hermes/config.yaml");
+}
+
+function isAgentDefinition(relativePath) {
+  const normalized = normalizePath(relativePath).toLowerCase();
+  return /(^|\/)\.(?:claude|cursor|gemini|agents)\/agents\/[^/]+\.md$/.test(normalized)
+    || /(^|\/)\.github\/agents\/[^/]+\.md$/.test(normalized)
+    || /(^|\/)\.codex\/agents\/[^/]+\.toml$/.test(normalized);
 }
 
 async function walk(root, ignored = IGNORED_DIRECTORIES, listDir = readdir) {
@@ -177,6 +187,29 @@ async function readText(absolutePath) {
   return normalizeText(buffer.toString("utf8"));
 }
 
+async function skillTreeDigest(skillFile, allFiles) {
+  const directory = path.dirname(skillFile);
+  const members = allFiles
+    .filter((file) => {
+      const relative = path.relative(directory, file);
+      return relative && relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative);
+    })
+    .sort((a, b) => normalizePath(path.relative(directory, a)).localeCompare(normalizePath(path.relative(directory, b))));
+  const hash = createHash("sha256");
+  for (const file of members) {
+    const relative = normalizePath(path.relative(directory, file));
+    const buffer = await readFile(file);
+    hash.update(relative);
+    hash.update("\0");
+    // Normalize checkout line endings for text resources, while hashing binary
+    // assets byte-for-byte. A NUL is a reliable conservative binary signal.
+    if (buffer.byteLength <= MAX_TEXT_BYTES && !buffer.includes(0)) hash.update(normalizeText(buffer.toString("utf8")));
+    else hash.update(buffer);
+    hash.update("\0");
+  }
+  return `sha256:${hash.digest("hex")}`;
+}
+
 async function readTextIfExists(absolutePath) {
   try {
     return await readText(absolutePath);
@@ -191,12 +224,14 @@ async function readTextIfExists(absolutePath) {
  * @param {string[]} [options.extraMcpPaths] Paths (relative to `root`) that hold
  *   MCP servers but are not recognizable from their name alone — Hermes' profile
  *   `config.yaml`, which is scanned as its own root.
+ * @param {string|null} [options.agentPlatform] Platform label when `root` is a
+ *   client home (for example `~/.claude`), where agents are relative `agents/*`.
  * @param {boolean} [options.skipVendored] Also skip installed plugin and
  *   extension caches, sessions, and logs. For scanning a tool's home directory.
  * @param {typeof import("node:fs/promises").readdir} [options.readdir] Directory
  *   reader, injected by the tests that cover unreadable directories.
  */
-export async function discover(root, { extraMcpPaths = [], skipVendored = false, readdir: listDir } = {}) {
+export async function discover(root, { extraMcpPaths = [], agentPlatform = null, skipVendored = false, readdir: listDir } = {}) {
   const absoluteRoot = path.resolve(root);
   const ignored = skipVendored
     ? new Set([...IGNORED_DIRECTORIES, ...VENDORED_DIRECTORIES])
@@ -206,6 +241,7 @@ export async function discover(root, { extraMcpPaths = [], skipVendored = false,
     root: absoluteRoot,
     instructions: [],
     skills: [],
+    agents: [],
     mcpConfigs: [],
   };
 
@@ -213,9 +249,12 @@ export async function discover(root, { extraMcpPaths = [], skipVendored = false,
     const relativePath = normalizePath(path.relative(absoluteRoot, absolutePath));
     const base = path.basename(absolutePath);
     const isSkill = base === "SKILL.md";
+    const rootAgentExtension = agentPlatform === "codex" ? "toml" : "md";
+    const rootAgent = agentPlatform && new RegExp(`^agents/[^/]+\\.${rootAgentExtension}$`, "i").test(relativePath);
+    const isAgent = isAgentDefinition(relativePath) || rootAgent;
     const isInstruction = INSTRUCTION_FILES.has(base);
     const isMcp = isMcpConfig(relativePath) || extraMcpPaths.includes(relativePath);
-    if (!isSkill && !isInstruction && !isMcp) continue;
+    if (!isSkill && !isAgent && !isInstruction && !isMcp) continue;
 
     const content = await readText(absolutePath);
     if (content === null) continue;
@@ -227,9 +266,27 @@ export async function discover(root, { extraMcpPaths = [], skipVendored = false,
       content,
     };
 
+    if (isSkill) item.treeDigest = await skillTreeDigest(absolutePath, files);
+
     if (isSkill) inventory.skills.push(item);
+    if (isAgent) inventory.agents.push(item);
     if (isInstruction) inventory.instructions.push(item);
     if (isMcp) inventory.mcpConfigs.push(item);
+  }
+
+  // `.mcp.json` is shared by Claude Code and GitHub Copilot CLI. Attribute it
+  // from the surrounding project files so syncing Copilot does not make a
+  // later run falsely auto-enable Claude (and vice versa).
+  const configuredPlatforms = new Set([
+    ...inventory.instructions,
+    ...inventory.skills,
+    ...inventory.agents,
+  ].map((item) => item.platform));
+  for (const config of inventory.mcpConfigs.filter((item) => item.source === ".mcp.json")) {
+    const claude = configuredPlatforms.has("claude");
+    const copilot = configuredPlatforms.has("copilot");
+    if (claude && copilot) config.platform = "shared-mcp";
+    else if (copilot) config.platform = "copilot";
   }
 
   return inventory;
@@ -383,7 +440,7 @@ export async function discoverGlobal({
   }
 
   const bundled = includeVendored ? new Set() : await hermesBundledSkillNames(profile.directory);
-  const combined = { root: homedir, instructions: [], skills: [], mcpConfigs: [] };
+  const combined = { root: homedir, instructions: [], skills: [], agents: [], mcpConfigs: [] };
   for (const entry of roots) {
     try {
       await access(entry.directory);
@@ -392,9 +449,10 @@ export async function discoverGlobal({
     }
     const inventory = await discover(entry.directory, {
       extraMcpPaths: entry.extraMcpPaths,
+      agentPlatform: entry.platform,
       skipVendored: true,
     });
-    for (const key of ["instructions", "skills", "mcpConfigs"]) {
+    for (const key of ["instructions", "skills", "agents", "mcpConfigs"]) {
       for (const item of inventory[key]) {
         const source = `${entry.label}/${item.source}`;
         if (key === "skills" && !includeVendored && isVendorSkill(source, bundled)) continue;

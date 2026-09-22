@@ -656,13 +656,27 @@ export default function LandingPageClient() {
               </p>
 
               <p>
-                One playbook, every agent: the same configuration deploys to <strong>Claude Code</strong>,
-                <strong> Cursor</strong>, <strong>ChatGPT and Codex</strong>, <strong>Google Antigravity</strong>,
-                <strong> Hermes Agent</strong>, and local models — each in the file layout that tool expects, with
-                drift between copies detected rather than discovered later. Credentials stay out of it: a playbook
-                declares which secrets it needs, and the values are injected server-side so they never reach an
-                agent&apos;s context or your disk.
+                Across supported coding agents, the same portable configuration can be rendered for
+                <strong> Claude Code</strong>, <strong>Cursor</strong>, <strong>Codex</strong>,
+                <strong> GitHub Copilot</strong>, <strong>Gemini CLI</strong>, and others. Drift is reported
+                before copies diverge. Backups carry secret references, not credential values; those stay
+                in your environment or the encrypted vault.
               </p>
+
+              <div>
+                <h3 className="text-xl font-semibold text-neutral-900 dark:text-white mb-2">
+                  How do you back up and migrate AI agent configuration?
+                </h3>
+                <p>
+                  Run <code>apb doctor</code> to audit, <code>apb push</code> to save a private,
+                  versioned portable snapshot, and <code>apb pull</code> plus <code>apb sync</code> to
+                  restore Agent Skills, custom agents, MCP references, and project instructions on another
+                  supported platform. Complete skill folders, including scripts and assets, are preserved.
+                  <Link href="/docs/portable-agent-backups" className="ml-1 underline underline-offset-4 text-blue-600 dark:text-blue-400">
+                    Read the backup and compatibility guide
+                  </Link>.
+                </p>
+              </div>
 
               <div className="grid md:grid-cols-2 gap-6 my-8">
                 <div className="p-4 bg-white dark:bg-blue-950/30 rounded-xl border border-blue-100 dark:border-blue-800/30 shadow-sm dark:shadow-none">

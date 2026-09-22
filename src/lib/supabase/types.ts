@@ -1,5 +1,6 @@
 // Auto-generated types will be here
 // For now, define manually based on our schema
+import type { PortableSnapshot } from "@/lib/portable-snapshot";
 
 /** MCP tool annotation hints introspected by clients and Glama TDQS. */
 export type McpToolAnnotations = {
@@ -63,6 +64,22 @@ export type PlaybooksRow = {
 
 export type PlaybooksInsert = Partial<PlaybooksRow>;
 export type PlaybooksUpdate = Partial<PlaybooksRow>;
+
+export type PlaybookSnapshotsRow = {
+  id: string;
+  playbook_id: string | null;
+  playbook_guid: string;
+  playbook_name: string;
+  owner_user_id: string;
+  created_by: string | null;
+  digest: string;
+  snapshot: PortableSnapshot;
+  file_count: number;
+  size_bytes: number;
+  created_at: string;
+};
+export type PlaybookSnapshotsInsert = Omit<PlaybookSnapshotsRow, "id" | "created_at">;
+export type PlaybookSnapshotsUpdate = never;
 
 export type PlaybookStarsRow = {
   id: string;
@@ -475,6 +492,12 @@ export interface Database {
         Row: PlaybookStarsRow;
         Insert: PlaybookStarsInsert;
         Update: PlaybookStarsUpdate;
+        Relationships: [];
+      };
+      playbook_snapshots: {
+        Row: PlaybookSnapshotsRow;
+        Insert: PlaybookSnapshotsInsert;
+        Update: PlaybookSnapshotsUpdate;
         Relationships: [];
       };
       playbook_collaborators: {

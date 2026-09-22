@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile, mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { snapshotDigest } from "../src/snapshot.js";
 import {
   applyPull,
   applyPush,
@@ -49,6 +50,40 @@ function fakeApi(state) {
         skill_count: playbook.skills.length,
       })));
     }
+    const latestMatch = pathname.match(/^\/api\/manage\/playbooks\/([^/]+)\/snapshots\/latest$/);
+    if (method === "GET" && latestMatch) {
+      const playbook = state.playbooks.find((item) => item.id === latestMatch[1]);
+      if (!playbook) return respond(404, { error: "Playbook not found" });
+      const latest = (state.backups ?? []).filter((item) => item.playbookId === playbook.id).at(-1);
+      return respond(200, latest
+        ? { id: latest.id, snapshot: latest.snapshot, digest: snapshotDigest(latest.snapshot), created_at: latest.createdAt }
+        : { snapshot: null });
+    }
+    const snapshotMatch = pathname.match(/^\/api\/manage\/playbooks\/([^/]+)\/snapshots\/([^/]+)$/);
+    if (method === "GET" && snapshotMatch) {
+      const saved = (state.backups ?? []).find((item) => item.playbookId === snapshotMatch[1] && item.id === snapshotMatch[2]);
+      return saved ? respond(200, { id: saved.id, snapshot: saved.snapshot, digest: snapshotDigest(saved.snapshot), created_at: saved.createdAt })
+        : respond(404, { error: "Snapshot not found" });
+    }
+    const snapshotsMatch = pathname.match(/^\/api\/manage\/playbooks\/([^/]+)\/snapshots$/);
+    if (method === "POST" && snapshotsMatch) {
+      const playbook = state.playbooks.find((item) => item.id === snapshotsMatch[1]);
+      if (!playbook) return respond(404, { error: "Playbook not found" });
+      state.backups ??= [];
+      const saved = { id: `backup-${state.backups.length + 1}`, playbookId: playbook.id, guid: playbook.guid,
+        name: playbook.name, snapshot: body.snapshot, createdAt: new Date().toISOString() };
+      state.backups.push(saved);
+      return respond(201, { id: saved.id, digest: snapshotDigest(body.snapshot) });
+    }
+    const backupMatch = pathname.match(/^\/api\/manage\/backups\/([^/]+)$/);
+    if (method === "GET" && backupMatch) {
+      const saved = (state.backups ?? []).filter((item) => item.guid === backupMatch[1]);
+      if (new URL(requestUrl).searchParams.has("list")) return respond(200, saved.map((item) => ({ id: item.id, digest: snapshotDigest(item.snapshot), created_at: item.createdAt, file_count: item.snapshot.files.length, size_bytes: 1 })));
+      const wanted = new URL(requestUrl).searchParams.get("snapshot");
+      const selected = wanted ? saved.find((item) => item.id === wanted) : saved.at(-1);
+      return selected ? respond(200, { id: selected.id, snapshot: selected.snapshot, digest: snapshotDigest(selected.snapshot), created_at: selected.createdAt, playbook_name: selected.name })
+        : respond(404, { error: "Backup not found" });
+    }
     const detailMatch = pathname.match(/^\/api\/manage\/playbooks\/([^/]+)$/);
     if (detailMatch) {
       const playbook = state.playbooks.find((item) => item.id === detailMatch[1]);
@@ -74,6 +109,23 @@ function fakeApi(state) {
       if (!skill) return respond(404, { error: "Skill not found" });
       Object.assign(skill, body);
       return respond(200, skill);
+    }
+    const mcpMatch = pathname.match(/^\/api\/manage\/playbooks\/([^/]+)\/mcp-servers$/);
+    if (method === "POST" && mcpMatch) {
+      const playbook = state.playbooks.find((item) => item.id === mcpMatch[1]);
+      if (!playbook) return respond(404, { error: "Playbook not found" });
+      playbook.mcp_servers ??= [];
+      const server = { id: `mcp-${playbook.mcp_servers.length + 1}`, ...body };
+      playbook.mcp_servers.push(server);
+      return respond(201, server);
+    }
+    const mcpItemMatch = pathname.match(/^\/api\/manage\/playbooks\/([^/]+)\/mcp-servers\/([^/]+)$/);
+    if (method === "PUT" && mcpItemMatch) {
+      const playbook = state.playbooks.find((item) => item.id === mcpItemMatch[1]);
+      const server = playbook?.mcp_servers?.find((item) => item.id === mcpItemMatch[2]);
+      if (!server) return respond(404, { error: "MCP server not found" });
+      Object.assign(server, body);
+      return respond(200, server);
     }
     if (method === "POST" && pathname === "/api/manage/playbooks") {
       const playbook = {
@@ -303,7 +355,7 @@ test("push creates a playbook with local skills and links the project", async ()
 
   const plan = await planPush(root, { url: URL_BASE, apiKey: API_KEY, fetchImpl });
   assert.equal(plan.remote, null);
-  assert.deepEqual(plan.actions.map((action) => `${action.kind}:${action.action}`), ["playbook:create", "skill:create"]);
+  assert.deepEqual(plan.actions.map((action) => `${action.kind}:${action.action}`), ["snapshot:create", "playbook:create", "skill:create"]);
 
   const result = await applyPush(root, plan, { apiKey: API_KEY, fetchImpl });
   assert.equal(state.playbooks.length, 1);
@@ -360,4 +412,49 @@ test("push refuses when a skill contains a likely hard-coded credential", async 
     planPush(root, { url: URL_BASE, apiKey: API_KEY, fetchImpl }),
     /Refusing to push/,
   );
+});
+
+test("central backup round-trips skill assets, agents, MCP references, and revision history", async () => {
+  const source = await fixture("agentplaybooks-backup-source-");
+  const target = await fixture("agentplaybooks-backup-target-");
+  const olderTarget = await fixture("agentplaybooks-backup-older-");
+  await put(source, "AGENTS.md", "# Project rules\nKeep changes small.\n");
+  await put(source, ".agents/skills/release/SKILL.md", "---\nname: release\ndescription: Prepare a release.\n---\nUse the checklist.\n");
+  const asset = Buffer.from([0, 1, 2, 255]);
+  await put(source, ".agents/skills/release/assets/logo.bin", asset);
+  await put(source, ".agents/agents/reviewer.md", "---\nname: reviewer\ndescription: Review code.\n---\nInspect changes.\n");
+  await put(source, ".agents/mcp.json", JSON.stringify({ mcpServers: { docs: { url: "https://example.com/mcp", headers: { Authorization: "Bearer ${DOCS_TOKEN}" } } } }));
+  const state = { playbooks: [] };
+  const { fetchImpl } = fakeApi(state);
+
+  const first = await planPush(source, { url: URL_BASE, apiKey: API_KEY, fetchImpl });
+  assert.equal(first.conflicts.length, 0);
+  assert.ok(first.actions.some((action) => action.kind === "snapshot"));
+  const pushed = await applyPush(source, first, { apiKey: API_KEY, fetchImpl });
+  assert.equal(state.backups.length, 1);
+  const originalId = state.backups[0].id;
+  assert.equal((await planPush(source, { url: URL_BASE, apiKey: API_KEY, fetchImpl })).actions.some((action) => action.kind === "snapshot"), false);
+
+  const restore = await planPull(target, pushed.guid, { url: URL_BASE, apiKey: API_KEY, fetchImpl });
+  assert.equal(restore.conflicts.length, 0);
+  await applyPull(target, restore);
+  assert.deepEqual(await readFile(path.join(target, ".agents/skills/release/assets/logo.bin")), asset);
+  assert.match(await readFile(path.join(target, ".agents/agents/reviewer.md"), "utf8"), /Inspect changes/);
+  assert.match(await readFile(path.join(target, ".agents/mcp.json"), "utf8"), /DOCS_TOKEN/);
+  assert.equal(await readFile(path.join(target, "AGENTS.md"), "utf8"), "# Project rules\nKeep changes small.\n");
+  assert.ok(await readFile(path.join(target, "agentplaybook.json"), "utf8"));
+
+  await put(source, ".agents/skills/release/assets/logo.bin", Buffer.from([9, 8, 7]));
+  const second = await planPush(source, { url: URL_BASE, apiKey: API_KEY, fetchImpl });
+  assert.ok(second.actions.some((action) => action.kind === "snapshot"));
+  await applyPush(source, second, { apiKey: API_KEY, fetchImpl });
+  assert.equal(state.backups.length, 2);
+  await applyPull(olderTarget, await planPull(olderTarget, pushed.guid, { url: URL_BASE, apiKey: API_KEY, fetchImpl, snapshotId: originalId }));
+  assert.deepEqual(await readFile(path.join(olderTarget, ".agents/skills/release/assets/logo.bin")), asset);
+
+  state.playbooks = []; // The backup survives deletion of the hosted playbook.
+  const recovered = await fixture("agentplaybooks-backup-recovered-");
+  const orphanPlan = await planPull(recovered, pushed.guid, { url: URL_BASE, apiKey: API_KEY, fetchImpl });
+  await applyPull(recovered, orphanPlan);
+  assert.deepEqual(await readFile(path.join(recovered, ".agents/skills/release/assets/logo.bin")), Buffer.from([9, 8, 7]));
 });

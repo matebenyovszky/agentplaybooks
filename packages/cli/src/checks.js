@@ -1,5 +1,6 @@
 import path from "node:path";
 import { isMap, parseDocument } from "yaml";
+import { parseAgentDefinition, SAFE_AGENT_NAME } from "./agents.js";
 import { digest, normalizePath } from "./discovery.js";
 
 const SKILL_NAME_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -47,7 +48,7 @@ function parseFrontmatter(content) {
   };
 }
 
-function credentialLines(content) {
+export function credentialLines(content) {
   const results = [];
   for (const [index, line] of content.split(/\r?\n/).entries()) {
     for (const pattern of CREDENTIAL_PATTERNS) {
@@ -140,6 +141,7 @@ export function parseYamlServers(content) {
 export function analyze(inventory) {
   const findings = [];
   const skills = [];
+  const agents = [];
   const mcpServers = [];
 
   for (const instruction of inventory.instructions) {
@@ -210,6 +212,27 @@ export function analyze(inventory) {
     }
   }
 
+  for (const source of inventory.agents ?? []) {
+    const agent = parseAgentDefinition(source);
+    agents.push(agent);
+    if (!agent.valid) {
+      findings.push(finding("high", "agent.definition.invalid", "Custom agent must use valid YAML frontmatter (or Codex TOML) with name, description, and a prompt.", source.source));
+    }
+    if (!SAFE_AGENT_NAME.test(agent.name)) {
+      findings.push(finding("high", "agent.name.invalid", "Agent name must be safe lowercase kebab-case and no longer than 64 characters.", source.source));
+    }
+    if (!agent.description) {
+      findings.push(finding("high", "agent.description.missing", "Custom agent is missing the required description.", source.source));
+    }
+    if (!agent.prompt.trim()) {
+      findings.push(finding("high", "agent.prompt.missing", "Custom agent has no system prompt.", source.source));
+    }
+    const lines = credentialLines(source.content);
+    if (lines.length) {
+      findings.push(finding("critical", "secret.hardcoded", "Possible hard-coded credential found in a custom agent; only line numbers are reported.", source.source, { lines }));
+    }
+  }
+
   for (const config of inventory.mcpConfigs) {
     const lines = credentialLines(config.content);
     if (lines.length) {
@@ -263,8 +286,16 @@ export function analyze(inventory) {
 
   const skillGroups = groupBy(skills, (skill) => skill.name);
   for (const [name, variants] of skillGroups) {
-    if (variants.length < 2 || new Set(variants.map((item) => item.digest)).size < 2) continue;
+    if (variants.length < 2 || new Set(variants.map((item) => item.treeDigest ?? item.digest)).size < 2) continue;
     findings.push(finding("medium", "skill.drift", `Skill '${name}' has different definitions across discovered locations.`, variants[0].source, {
+      relatedSources: variants.map((item) => item.source),
+    }));
+  }
+
+  const agentGroups = groupBy(agents, (agent) => agent.name);
+  for (const [name, variants] of agentGroups) {
+    if (variants.length < 2 || new Set(variants.map((item) => item.digest)).size < 2) continue;
+    findings.push(finding("medium", "agent.drift", `Custom agent '${name}' has different definitions across platforms.`, variants[0].source, {
       relatedSources: variants.map((item) => item.source),
     }));
   }
@@ -289,6 +320,7 @@ export function analyze(inventory) {
       root: inventory.root,
       instructions: inventory.instructions,
       skills,
+      agents,
       mcpConfigs: inventory.mcpConfigs,
       mcpServers,
     },
