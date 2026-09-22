@@ -11,8 +11,13 @@ author: Mate Benyovszky
 runs behind a CLI, a TUI, an Electron desktop app, and a messaging gateway for
 Telegram, Discord, Slack and around twenty other platforms. Everything it knows
 lives in one profile directory — `~/.hermes`, or `$HERMES_HOME` if you run
-several profiles — and nothing leaves your machine except the model calls you
-configure.
+several profiles. Model calls and configured remote integrations, including MCP
+servers and memory providers, can send data to their services.
+
+> **September 2026 update:** AgentPlaybooks now includes a native Hermes memory
+> provider. Read [Give Hermes a memory you can inspect and share](/blog/hermes-native-memory)
+> and the [setup guide](/docs/hermes-memory). Direct installation is available;
+> the Hermes plugin-store submission is awaiting maintainer review.
 
 > **August 2026 update:** Hermes Agent now includes profile-based Bot Mode with
 > persistent bots, routines, group chats, cross-machine peers, Agent Skills,

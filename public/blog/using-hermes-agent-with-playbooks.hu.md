@@ -11,8 +11,15 @@ A **Hermes Agent** a Nous Research nyílt forráskódú (MIT) személyi ügynök
 Ugyanaz az agent-core fut egy CLI, egy TUI, egy Electron desktop alkalmazás és
 egy messaging gateway mögött (Telegram, Discord, Slack és még körülbelül húsz
 platform). Minden, amit tud, egyetlen profilkönyvtárban él — `~/.hermes`, vagy
-`$HERMES_HOME`, ha több profilt futtatsz —, és semmi nem hagyja el a gépet a
-modellhívásokon kívül, amiket te állítasz be.
+`$HERMES_HOME`, ha több profilt futtatsz. A modellhívások és a beállított távoli
+integrációk, köztük az MCP-szerverek és a memóriaszolgáltatók, adatokat küldhetnek
+a szolgáltatásaiknak.
+
+> **2026. szeptemberi frissítés:** Az AgentPlaybooks már natív Hermes
+> memóriaszolgáltatót is tartalmaz. Olvasd el a
+> [Hermes-memória, amit látsz, javíthatsz és megoszthatsz](/blog/hermes-native-memory)
+> cikket és a [beállítási útmutatót](/docs/hermes-memory). A közvetlen telepítés
+> működik; a Hermes plugin-store beküldése a karbantartók jóváhagyására vár.
 
 > **2026. augusztusi frissítés:** A Hermes Agent már profilalapú Bot Mode-ot
 > kínál tartós botokkal, rutinokkal, csoportos beszélgetésekkel, többgépes

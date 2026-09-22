@@ -29,6 +29,7 @@ const docSlugs = [
   "developer-guide",
   "environment-setup",
   "getting-started",
+  "hermes-memory",
   "management-api",
   "mcp-federation",
   "mcp-integration",

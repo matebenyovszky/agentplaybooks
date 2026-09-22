@@ -7,7 +7,14 @@ For persistent multi-agent teammates, see
 That guide distinguishes integrations available today from planned native
 deployment adapters.
 
-## Prerequisites
+## Hermes native memory
+
+Hermes Agent can use AgentPlaybooks as a native memory provider through its CLI
+and Desktop settings. Follow the [Hermes memory guide](./hermes-memory.md) to
+install the plugin and connect a **private** playbook with a playbook-scoped key.
+The public-playbook prerequisites below do not apply to personal Hermes memory.
+
+## Prerequisites for public playbook integrations
 
 Before integrating, make sure you have:
 

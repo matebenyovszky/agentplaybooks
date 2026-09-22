@@ -6,6 +6,17 @@ MCP server definitions — healthy, consistent across AI coding tools, and
 shareable as a hosted playbook. It is a zero-dependency Node.js (>= 20)
 package that lives in [`packages/cli`](https://github.com/matebenyovszky/agentplaybooks/tree/main/packages/cli).
 
+## Hermes native memory setup
+
+The source CLI includes `apb memory setup <private-playbook-guid> --target=hermes`.
+It previews installation by default; `--apply` installs the provider into the
+selected profile. Set its key through `hermes memory setup` afterward. Use
+`HERMES_HOME` or `--hermes-home=<directory>` to select the profile.
+
+See the [Hermes memory guide](./hermes-memory.md) for source-build commands,
+direct installation without the AgentPlaybooks CLI, credential scope, and plugin
+store status. An older installed npm release may not contain this command.
+
 ## Doctor: audit your agent configuration
 
 ```bash
