@@ -160,7 +160,7 @@ formats and commands are open.
 | MCP servers | profile `mcp.json` or `config.yaml` `mcp_servers` entries |
 | Required secrets | `.env.EXAMPLE`; values remain local |
 | Routines | profile `cron/` definitions once routines enter the portable schema |
-| Runtime memory | opt-in import/export only; never silently overwritten |
+| Runtime memory | opt-in [native memory provider](./hermes-memory.md) backed by a private playbook per profile; existing local memory is not bulk-imported |
 
 Proposed CLI:
 

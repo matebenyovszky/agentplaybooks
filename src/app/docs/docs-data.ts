@@ -27,6 +27,12 @@ export const docsEntries: DocEntry[] = [
     section: "guides",
   },
   {
+    slug: "hermes-memory",
+    title: "Hermes Memory Provider",
+    description: "Native memory setup, private profiles, and shared knowledge",
+    section: "guides",
+  },
+  {
     slug: "cli",
     title: "CLI & Editor Plugins",
     description: "Doctor, sync, pull/push, and the Claude Code plugin",

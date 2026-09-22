@@ -281,7 +281,9 @@ playbook).
 
 ## Native Hermes memory
 
-Install and configure AgentPlaybooks as Hermes's native memory provider:
+Install and configure AgentPlaybooks as Hermes's native memory provider. These
+commands require a CLI release containing the provider; for a source build or
+direct Hermes installation, follow the [setup guide](https://agentplaybooks.ai/docs/hermes-memory).
 
 ```bash
 apb memory setup <private-playbook-guid> --target=hermes
