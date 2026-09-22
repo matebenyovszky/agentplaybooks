@@ -3,6 +3,11 @@
 # dependencies
 /node_modules
 /packages/cli/node_modules/
+/packages/cli/hermes-plugin/
+**/__pycache__/
+/packages/hermes-memory/build/
+/packages/hermes-memory/*.egg-info/
+/packages/hermes-memory/dist/
 /.pnp
 .pnp.*
 .yarn/*

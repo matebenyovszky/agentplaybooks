@@ -33,6 +33,7 @@
   "files": [
     "bin",
     "dist",
+    "hermes-plugin",
     ".claude-plugin",
     ".codex-plugin",
     ".cursor-plugin",

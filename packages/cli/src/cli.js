@@ -18,6 +18,7 @@ import {
   printHermesExportPlan,
 } from "./hermes-distribution.js";
 import { applyConnect, planConnect, printConnectPlan } from "./connect.js";
+import { applyHermesMemory, planHermesMemory, printHermesMemoryPlan } from "./hermes-memory.js";
 import {
   applyPull,
   applyPush,
@@ -64,6 +65,8 @@ Usage:
                                 [--name=<entry>] [--key-env=<VAR>] [--key-header=<H>]
   agentplaybooks connect --account [path] [--apply] [--json] [--target=<types>]
   agentplaybooks login [--url=<base>]
+  agentplaybooks memory setup <guid> --target=hermes [--hermes-home=<directory>]
+                             [--shared=<guids>] [--url=<base>] [--apply] [--json]
   agentplaybooks logout [--url=<base>]
   agentplaybooks playbooks [--url=<base>] [--json]
   agentplaybooks pull <id|guid> [path] [--apply] [--json] [--url=<base>]
@@ -82,6 +85,8 @@ Usage:
                               [--prefix=<P>] [--json] [--yes]
 
 Commands:
+  memory     Install and configure the native Hermes memory provider for a private
+             playbook. Plan-only without --apply; credentials are never copied.
   doctor     Audit agent instructions, skills, MCP configuration, secrets, and drift.
   sync       Plan or apply the canonical manifest and missing platform files
              for enabled targets (claude, cursor, codex, antigravity, hermes,
@@ -529,6 +534,23 @@ export async function run(args) {
   const { command, flags, positional, rest } = parse(args);
   if (!command || flags.has("--help") || command === "help") {
     console.log(HELP);
+    return;
+  }
+
+  if (command === "memory") {
+    if (positional[0] !== "setup" || flags.get("--target") !== "hermes") {
+      throw new Error("Usage: apb memory setup <guid> --target=hermes [--apply]");
+    }
+    const option = (name) => typeof flags.get(name) === "string" ? flags.get(name) : undefined;
+    const plan = await planHermesMemory({ playbook: positional[1], hermesHome: option("--hermes-home"),
+      sharedPlaybooks: option("--shared"), url: option("--url") });
+    if (flags.has("--json")) console.log(JSON.stringify({ ...plan, fileActions: plan.fileActions.map(withoutContent) }, null, 2));
+    else printHermesMemoryPlan(plan);
+    if (flags.has("--apply")) {
+      const result = await applyHermesMemory(plan);
+      if (!flags.has("--json")) for (const written of result.written) console.log(`Wrote: ${written}`);
+    }
+    if (plan.conflicts.length) process.exitCode = 2;
     return;
   }
 

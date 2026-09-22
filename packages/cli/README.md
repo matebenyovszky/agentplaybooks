@@ -279,6 +279,27 @@ The skill also works standalone: copy `skills/agentplaybooks/` into a
 project's `.claude/skills/` (or let `sync` do it once it is part of a
 playbook).
 
+## Native Hermes memory
+
+Install and configure AgentPlaybooks as Hermes's native memory provider:
+
+```bash
+apb memory setup <private-playbook-guid> --target=hermes
+apb memory setup <private-playbook-guid> --target=hermes --apply
+hermes memory setup
+hermes memory status
+```
+
+The setup command honors `HERMES_HOME` or `--hermes-home=<directory>`, preserves
+existing configuration, and reports conflicting providers or plugin files. It
+never copies API keys. Hermes's wizard accepts a playbook-scoped key through
+`AGENTPLAYBOOKS_MEMORY_API_KEY`. Shared read-only sources use `--shared=<guids>`.
+
+The provider uses existing literal memory search, mirrors explicit memory writes,
+and supports read/write/archive/delete/history tools. See the
+[provider guide](../hermes-memory/agentplaybooks/README.md) for scope and installation
+details. It does not upload full conversations or add semantic search, caching or retries.
+
 ## Licence
 
 MIT, as of `0.2.0-beta.0`. The `LICENSE` file next to this README is the

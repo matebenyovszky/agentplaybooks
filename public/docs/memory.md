@@ -2,6 +2,32 @@
 
 Memory is a persistent, hierarchical storage system that AI agents can read from and write to. It enables agents to maintain context across sessions, manage complex task plans, and share information between AI platforms.
 
+## Hermes native memory provider
+
+AgentPlaybooks includes a native Hermes provider in
+[`packages/hermes-memory`](https://github.com/matebenyovszky/agentplaybooks/tree/main/packages/hermes-memory).
+It integrates with `hermes memory setup` and Hermes Desktop's memory settings,
+mirrors explicit built-in memory writes, and exposes memory read/write/search,
+archive, deletion and history tools. Use a separate **private playbook per profile**.
+Shared playbooks are explicitly configured read-only sources.
+
+The provider currently uses this API's literal search. It does not perform semantic
+retrieval, upload full conversations, or implement caching and retries. Hermes's
+local MEMORY.md/USER.md remain active: correcting a mirrored fact remotely does
+not rewrite the local copy. Correct or remove both copies when needed.
+
+From a CLI release containing the provider:
+
+```bash
+apb memory setup <private-playbook-guid> --target=hermes
+apb memory setup <private-playbook-guid> --target=hermes --apply
+hermes memory setup
+```
+
+Set the playbook-scoped `AGENTPLAYBOOKS_MEMORY_API_KEY` through Hermes's secret
+setup. Source-checkout installation and the pending plugin-catalog submission are
+documented in the provider guide linked above.
+
 ## Memory Tiers
 
 Memory uses a 3-tier hierarchy inspired by human memory:

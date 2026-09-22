@@ -12,11 +12,7 @@ var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require
   throw Error('Dynamic require of "' + x + '" is not supported');
 });
 var __commonJS = (cb, mod) => function __require2() {
-  try {
-    return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
-  } catch (e) {
-    throw mod = 0, e;
-  }
+  return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
 };
 var __copyProps = (to, from, except, desc) => {
   if (from && typeof from === "object" || typeof from === "function") {
@@ -35,20 +31,20 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
-// ../../node_modules/yaml/dist/nodes/identity.js
+// ../../../../packages/cli/node_modules/yaml/dist/nodes/identity.js
 var require_identity = __commonJS({
-  "../../node_modules/yaml/dist/nodes/identity.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/nodes/identity.js"(exports) {
     "use strict";
-    var ALIAS = /* @__PURE__ */ Symbol.for("yaml.alias");
-    var DOC = /* @__PURE__ */ Symbol.for("yaml.document");
-    var MAP = /* @__PURE__ */ Symbol.for("yaml.map");
-    var PAIR = /* @__PURE__ */ Symbol.for("yaml.pair");
-    var SCALAR = /* @__PURE__ */ Symbol.for("yaml.scalar");
-    var SEQ = /* @__PURE__ */ Symbol.for("yaml.seq");
-    var NODE_TYPE = /* @__PURE__ */ Symbol.for("yaml.node.type");
+    var ALIAS = Symbol.for("yaml.alias");
+    var DOC = Symbol.for("yaml.document");
+    var MAP = Symbol.for("yaml.map");
+    var PAIR = Symbol.for("yaml.pair");
+    var SCALAR = Symbol.for("yaml.scalar");
+    var SEQ = Symbol.for("yaml.seq");
+    var NODE_TYPE = Symbol.for("yaml.node.type");
     var isAlias = (node) => !!node && typeof node === "object" && node[NODE_TYPE] === ALIAS;
     var isDocument = (node) => !!node && typeof node === "object" && node[NODE_TYPE] === DOC;
-    var isMap6 = (node) => !!node && typeof node === "object" && node[NODE_TYPE] === MAP;
+    var isMap7 = (node) => !!node && typeof node === "object" && node[NODE_TYPE] === MAP;
     var isPair = (node) => !!node && typeof node === "object" && node[NODE_TYPE] === PAIR;
     var isScalar = (node) => !!node && typeof node === "object" && node[NODE_TYPE] === SCALAR;
     var isSeq = (node) => !!node && typeof node === "object" && node[NODE_TYPE] === SEQ;
@@ -84,7 +80,7 @@ var require_identity = __commonJS({
     exports.isAlias = isAlias;
     exports.isCollection = isCollection;
     exports.isDocument = isDocument;
-    exports.isMap = isMap6;
+    exports.isMap = isMap7;
     exports.isNode = isNode;
     exports.isPair = isPair;
     exports.isScalar = isScalar;
@@ -92,14 +88,14 @@ var require_identity = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/visit.js
+// ../../../../packages/cli/node_modules/yaml/dist/visit.js
 var require_visit = __commonJS({
-  "../../node_modules/yaml/dist/visit.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/visit.js"(exports) {
     "use strict";
     var identity = require_identity();
-    var BREAK = /* @__PURE__ */ Symbol("break visit");
-    var SKIP = /* @__PURE__ */ Symbol("skip children");
-    var REMOVE = /* @__PURE__ */ Symbol("remove node");
+    var BREAK = Symbol("break visit");
+    var SKIP = Symbol("skip children");
+    var REMOVE = Symbol("remove node");
     function visit(node, visitor) {
       const visitor_ = initVisitor(visitor);
       if (identity.isDocument(node)) {
@@ -112,17 +108,17 @@ var require_visit = __commonJS({
     visit.BREAK = BREAK;
     visit.SKIP = SKIP;
     visit.REMOVE = REMOVE;
-    function visit_(key, node, visitor, path12) {
-      const ctrl = callVisitor(key, node, visitor, path12);
+    function visit_(key, node, visitor, path13) {
+      const ctrl = callVisitor(key, node, visitor, path13);
       if (identity.isNode(ctrl) || identity.isPair(ctrl)) {
-        replaceNode(key, path12, ctrl);
-        return visit_(key, ctrl, visitor, path12);
+        replaceNode(key, path13, ctrl);
+        return visit_(key, ctrl, visitor, path13);
       }
       if (typeof ctrl !== "symbol") {
         if (identity.isCollection(node)) {
-          path12 = Object.freeze(path12.concat(node));
+          path13 = Object.freeze(path13.concat(node));
           for (let i = 0; i < node.items.length; ++i) {
-            const ci = visit_(i, node.items[i], visitor, path12);
+            const ci = visit_(i, node.items[i], visitor, path13);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -133,13 +129,13 @@ var require_visit = __commonJS({
             }
           }
         } else if (identity.isPair(node)) {
-          path12 = Object.freeze(path12.concat(node));
-          const ck = visit_("key", node.key, visitor, path12);
+          path13 = Object.freeze(path13.concat(node));
+          const ck = visit_("key", node.key, visitor, path13);
           if (ck === BREAK)
             return BREAK;
           else if (ck === REMOVE)
             node.key = null;
-          const cv = visit_("value", node.value, visitor, path12);
+          const cv = visit_("value", node.value, visitor, path13);
           if (cv === BREAK)
             return BREAK;
           else if (cv === REMOVE)
@@ -160,17 +156,17 @@ var require_visit = __commonJS({
     visitAsync.BREAK = BREAK;
     visitAsync.SKIP = SKIP;
     visitAsync.REMOVE = REMOVE;
-    async function visitAsync_(key, node, visitor, path12) {
-      const ctrl = await callVisitor(key, node, visitor, path12);
+    async function visitAsync_(key, node, visitor, path13) {
+      const ctrl = await callVisitor(key, node, visitor, path13);
       if (identity.isNode(ctrl) || identity.isPair(ctrl)) {
-        replaceNode(key, path12, ctrl);
-        return visitAsync_(key, ctrl, visitor, path12);
+        replaceNode(key, path13, ctrl);
+        return visitAsync_(key, ctrl, visitor, path13);
       }
       if (typeof ctrl !== "symbol") {
         if (identity.isCollection(node)) {
-          path12 = Object.freeze(path12.concat(node));
+          path13 = Object.freeze(path13.concat(node));
           for (let i = 0; i < node.items.length; ++i) {
-            const ci = await visitAsync_(i, node.items[i], visitor, path12);
+            const ci = await visitAsync_(i, node.items[i], visitor, path13);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -181,13 +177,13 @@ var require_visit = __commonJS({
             }
           }
         } else if (identity.isPair(node)) {
-          path12 = Object.freeze(path12.concat(node));
-          const ck = await visitAsync_("key", node.key, visitor, path12);
+          path13 = Object.freeze(path13.concat(node));
+          const ck = await visitAsync_("key", node.key, visitor, path13);
           if (ck === BREAK)
             return BREAK;
           else if (ck === REMOVE)
             node.key = null;
-          const cv = await visitAsync_("value", node.value, visitor, path12);
+          const cv = await visitAsync_("value", node.value, visitor, path13);
           if (cv === BREAK)
             return BREAK;
           else if (cv === REMOVE)
@@ -214,23 +210,23 @@ var require_visit = __commonJS({
       }
       return visitor;
     }
-    function callVisitor(key, node, visitor, path12) {
+    function callVisitor(key, node, visitor, path13) {
       if (typeof visitor === "function")
-        return visitor(key, node, path12);
+        return visitor(key, node, path13);
       if (identity.isMap(node))
-        return visitor.Map?.(key, node, path12);
+        return visitor.Map?.(key, node, path13);
       if (identity.isSeq(node))
-        return visitor.Seq?.(key, node, path12);
+        return visitor.Seq?.(key, node, path13);
       if (identity.isPair(node))
-        return visitor.Pair?.(key, node, path12);
+        return visitor.Pair?.(key, node, path13);
       if (identity.isScalar(node))
-        return visitor.Scalar?.(key, node, path12);
+        return visitor.Scalar?.(key, node, path13);
       if (identity.isAlias(node))
-        return visitor.Alias?.(key, node, path12);
+        return visitor.Alias?.(key, node, path13);
       return void 0;
     }
-    function replaceNode(key, path12, node) {
-      const parent = path12[path12.length - 1];
+    function replaceNode(key, path13, node) {
+      const parent = path13[path13.length - 1];
       if (identity.isCollection(parent)) {
         parent.items[key] = node;
       } else if (identity.isPair(parent)) {
@@ -250,9 +246,9 @@ var require_visit = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/doc/directives.js
+// ../../../../packages/cli/node_modules/yaml/dist/doc/directives.js
 var require_directives = __commonJS({
-  "../../node_modules/yaml/dist/doc/directives.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/doc/directives.js"(exports) {
     "use strict";
     var identity = require_identity();
     var visit = require_visit();
@@ -421,9 +417,9 @@ var require_directives = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/doc/anchors.js
+// ../../../../packages/cli/node_modules/yaml/dist/doc/anchors.js
 var require_anchors = __commonJS({
-  "../../node_modules/yaml/dist/doc/anchors.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/doc/anchors.js"(exports) {
     "use strict";
     var identity = require_identity();
     var visit = require_visit();
@@ -491,9 +487,9 @@ var require_anchors = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/doc/applyReviver.js
+// ../../../../packages/cli/node_modules/yaml/dist/doc/applyReviver.js
 var require_applyReviver = __commonJS({
-  "../../node_modules/yaml/dist/doc/applyReviver.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/doc/applyReviver.js"(exports) {
     "use strict";
     function applyReviver(reviver, obj, key, val) {
       if (val && typeof val === "object") {
@@ -541,9 +537,9 @@ var require_applyReviver = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/nodes/toJS.js
+// ../../../../packages/cli/node_modules/yaml/dist/nodes/toJS.js
 var require_toJS = __commonJS({
-  "../../node_modules/yaml/dist/nodes/toJS.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/nodes/toJS.js"(exports) {
     "use strict";
     var identity = require_identity();
     function toJS(value, arg, ctx) {
@@ -571,9 +567,9 @@ var require_toJS = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/nodes/Node.js
+// ../../../../packages/cli/node_modules/yaml/dist/nodes/Node.js
 var require_Node = __commonJS({
-  "../../node_modules/yaml/dist/nodes/Node.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/nodes/Node.js"(exports) {
     "use strict";
     var applyReviver = require_applyReviver();
     var identity = require_identity();
@@ -612,9 +608,9 @@ var require_Node = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/nodes/Alias.js
+// ../../../../packages/cli/node_modules/yaml/dist/nodes/Alias.js
 var require_Alias = __commonJS({
-  "../../node_modules/yaml/dist/nodes/Alias.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/nodes/Alias.js"(exports) {
     "use strict";
     var anchors = require_anchors();
     var visit = require_visit();
@@ -728,9 +724,9 @@ var require_Alias = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/nodes/Scalar.js
+// ../../../../packages/cli/node_modules/yaml/dist/nodes/Scalar.js
 var require_Scalar = __commonJS({
-  "../../node_modules/yaml/dist/nodes/Scalar.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/nodes/Scalar.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Node = require_Node();
@@ -758,9 +754,9 @@ var require_Scalar = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/doc/createNode.js
+// ../../../../packages/cli/node_modules/yaml/dist/doc/createNode.js
 var require_createNode = __commonJS({
-  "../../node_modules/yaml/dist/doc/createNode.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/doc/createNode.js"(exports) {
     "use strict";
     var Alias = require_Alias();
     var identity = require_identity();
@@ -833,17 +829,17 @@ var require_createNode = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/nodes/Collection.js
+// ../../../../packages/cli/node_modules/yaml/dist/nodes/Collection.js
 var require_Collection = __commonJS({
-  "../../node_modules/yaml/dist/nodes/Collection.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/nodes/Collection.js"(exports) {
     "use strict";
     var createNode = require_createNode();
     var identity = require_identity();
     var Node = require_Node();
-    function collectionFromPath(schema, path12, value) {
+    function collectionFromPath(schema, path13, value) {
       let v = value;
-      for (let i = path12.length - 1; i >= 0; --i) {
-        const k = path12[i];
+      for (let i = path13.length - 1; i >= 0; --i) {
+        const k = path13[i];
         if (typeof k === "number" && Number.isInteger(k) && k >= 0) {
           const a = [];
           a[k] = v;
@@ -862,7 +858,7 @@ var require_Collection = __commonJS({
         sourceObjects: /* @__PURE__ */ new Map()
       });
     }
-    var isEmptyPath = (path12) => path12 == null || typeof path12 === "object" && !!path12[Symbol.iterator]().next().done;
+    var isEmptyPath = (path13) => path13 == null || typeof path13 === "object" && !!path13[Symbol.iterator]().next().done;
     var Collection = class extends Node.NodeBase {
       constructor(type, schema) {
         super(type);
@@ -892,11 +888,11 @@ var require_Collection = __commonJS({
        * be a Pair instance or a `{ key, value }` object, which may not have a key
        * that already exists in the map.
        */
-      addIn(path12, value) {
-        if (isEmptyPath(path12))
+      addIn(path13, value) {
+        if (isEmptyPath(path13))
           this.add(value);
         else {
-          const [key, ...rest] = path12;
+          const [key, ...rest] = path13;
           const node = this.get(key, true);
           if (identity.isCollection(node))
             node.addIn(rest, value);
@@ -910,8 +906,8 @@ var require_Collection = __commonJS({
        * Removes a value from the collection.
        * @returns `true` if the item was found and removed.
        */
-      deleteIn(path12) {
-        const [key, ...rest] = path12;
+      deleteIn(path13) {
+        const [key, ...rest] = path13;
         if (rest.length === 0)
           return this.delete(key);
         const node = this.get(key, true);
@@ -925,8 +921,8 @@ var require_Collection = __commonJS({
        * scalar values from their surrounding node; to disable set `keepScalar` to
        * `true` (collections are always returned intact).
        */
-      getIn(path12, keepScalar) {
-        const [key, ...rest] = path12;
+      getIn(path13, keepScalar) {
+        const [key, ...rest] = path13;
         const node = this.get(key, true);
         if (rest.length === 0)
           return !keepScalar && identity.isScalar(node) ? node.value : node;
@@ -944,8 +940,8 @@ var require_Collection = __commonJS({
       /**
        * Checks if the collection includes a value with the key `key`.
        */
-      hasIn(path12) {
-        const [key, ...rest] = path12;
+      hasIn(path13) {
+        const [key, ...rest] = path13;
         if (rest.length === 0)
           return this.has(key);
         const node = this.get(key, true);
@@ -955,8 +951,8 @@ var require_Collection = __commonJS({
        * Sets a value in this collection. For `!!set`, `value` needs to be a
        * boolean to add/remove the item from the set.
        */
-      setIn(path12, value) {
-        const [key, ...rest] = path12;
+      setIn(path13, value) {
+        const [key, ...rest] = path13;
         if (rest.length === 0) {
           this.set(key, value);
         } else {
@@ -976,9 +972,9 @@ var require_Collection = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/stringify/stringifyComment.js
+// ../../../../packages/cli/node_modules/yaml/dist/stringify/stringifyComment.js
 var require_stringifyComment = __commonJS({
-  "../../node_modules/yaml/dist/stringify/stringifyComment.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/stringify/stringifyComment.js"(exports) {
     "use strict";
     var stringifyComment = (str) => str.replace(/^(?!$)(?: $)?/gm, "#");
     function indentComment(comment, indent) {
@@ -993,9 +989,9 @@ var require_stringifyComment = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/stringify/foldFlowLines.js
+// ../../../../packages/cli/node_modules/yaml/dist/stringify/foldFlowLines.js
 var require_foldFlowLines = __commonJS({
-  "../../node_modules/yaml/dist/stringify/foldFlowLines.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/stringify/foldFlowLines.js"(exports) {
     "use strict";
     var FOLD_FLOW = "flow";
     var FOLD_BLOCK = "block";
@@ -1129,9 +1125,9 @@ ${indent}${text.slice(fold + 1, end2)}`;
   }
 });
 
-// ../../node_modules/yaml/dist/stringify/stringifyString.js
+// ../../../../packages/cli/node_modules/yaml/dist/stringify/stringifyString.js
 var require_stringifyString = __commonJS({
-  "../../node_modules/yaml/dist/stringify/stringifyString.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/stringify/stringifyString.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var foldFlowLines = require_foldFlowLines();
@@ -1412,9 +1408,9 @@ ${indent}`);
   }
 });
 
-// ../../node_modules/yaml/dist/stringify/stringify.js
+// ../../../../packages/cli/node_modules/yaml/dist/stringify/stringify.js
 var require_stringify = __commonJS({
-  "../../node_modules/yaml/dist/stringify/stringify.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/stringify/stringify.js"(exports) {
     "use strict";
     var anchors = require_anchors();
     var identity = require_identity();
@@ -1536,9 +1532,9 @@ ${ctx.indent}${str}`;
   }
 });
 
-// ../../node_modules/yaml/dist/stringify/stringifyPair.js
+// ../../../../packages/cli/node_modules/yaml/dist/stringify/stringifyPair.js
 var require_stringifyPair = __commonJS({
-  "../../node_modules/yaml/dist/stringify/stringifyPair.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/stringify/stringifyPair.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Scalar = require_Scalar();
@@ -1669,9 +1665,9 @@ ${ctx.indent}`;
   }
 });
 
-// ../../node_modules/yaml/dist/log.js
+// ../../../../packages/cli/node_modules/yaml/dist/log.js
 var require_log = __commonJS({
-  "../../node_modules/yaml/dist/log.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/log.js"(exports) {
     "use strict";
     var node_process = __require("process");
     function debug(logLevel, ...messages) {
@@ -1691,9 +1687,9 @@ var require_log = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/schema/yaml-1.1/merge.js
+// ../../../../packages/cli/node_modules/yaml/dist/schema/yaml-1.1/merge.js
 var require_merge = __commonJS({
-  "../../node_modules/yaml/dist/schema/yaml-1.1/merge.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/schema/yaml-1.1/merge.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Scalar = require_Scalar();
@@ -1751,9 +1747,9 @@ var require_merge = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/nodes/addPairToJSMap.js
+// ../../../../packages/cli/node_modules/yaml/dist/nodes/addPairToJSMap.js
 var require_addPairToJSMap = __commonJS({
-  "../../node_modules/yaml/dist/nodes/addPairToJSMap.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/nodes/addPairToJSMap.js"(exports) {
     "use strict";
     var log = require_log();
     var merge = require_merge();
@@ -1815,9 +1811,9 @@ var require_addPairToJSMap = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/nodes/Pair.js
+// ../../../../packages/cli/node_modules/yaml/dist/nodes/Pair.js
 var require_Pair = __commonJS({
-  "../../node_modules/yaml/dist/nodes/Pair.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/nodes/Pair.js"(exports) {
     "use strict";
     var createNode = require_createNode();
     var stringifyPair = require_stringifyPair();
@@ -1855,9 +1851,9 @@ var require_Pair = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/stringify/stringifyCollection.js
+// ../../../../packages/cli/node_modules/yaml/dist/stringify/stringifyCollection.js
 var require_stringifyCollection = __commonJS({
-  "../../node_modules/yaml/dist/stringify/stringifyCollection.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/stringify/stringifyCollection.js"(exports) {
     "use strict";
     var identity = require_identity();
     var stringify2 = require_stringify();
@@ -2006,9 +2002,9 @@ ${indent}${end}`;
   }
 });
 
-// ../../node_modules/yaml/dist/nodes/YAMLMap.js
+// ../../../../packages/cli/node_modules/yaml/dist/nodes/YAMLMap.js
 var require_YAMLMap = __commonJS({
-  "../../node_modules/yaml/dist/nodes/YAMLMap.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/nodes/YAMLMap.js"(exports) {
     "use strict";
     var stringifyCollection = require_stringifyCollection();
     var addPairToJSMap = require_addPairToJSMap();
@@ -2150,9 +2146,9 @@ var require_YAMLMap = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/schema/common/map.js
+// ../../../../packages/cli/node_modules/yaml/dist/schema/common/map.js
 var require_map = __commonJS({
-  "../../node_modules/yaml/dist/schema/common/map.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/schema/common/map.js"(exports) {
     "use strict";
     var identity = require_identity();
     var YAMLMap = require_YAMLMap();
@@ -2172,9 +2168,9 @@ var require_map = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/nodes/YAMLSeq.js
+// ../../../../packages/cli/node_modules/yaml/dist/nodes/YAMLSeq.js
 var require_YAMLSeq = __commonJS({
-  "../../node_modules/yaml/dist/nodes/YAMLSeq.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/nodes/YAMLSeq.js"(exports) {
     "use strict";
     var createNode = require_createNode();
     var stringifyCollection = require_stringifyCollection();
@@ -2288,9 +2284,9 @@ var require_YAMLSeq = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/schema/common/seq.js
+// ../../../../packages/cli/node_modules/yaml/dist/schema/common/seq.js
 var require_seq = __commonJS({
-  "../../node_modules/yaml/dist/schema/common/seq.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/schema/common/seq.js"(exports) {
     "use strict";
     var identity = require_identity();
     var YAMLSeq = require_YAMLSeq();
@@ -2310,9 +2306,9 @@ var require_seq = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/schema/common/string.js
+// ../../../../packages/cli/node_modules/yaml/dist/schema/common/string.js
 var require_string = __commonJS({
-  "../../node_modules/yaml/dist/schema/common/string.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/schema/common/string.js"(exports) {
     "use strict";
     var stringifyString = require_stringifyString();
     var string = {
@@ -2329,9 +2325,9 @@ var require_string = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/schema/common/null.js
+// ../../../../packages/cli/node_modules/yaml/dist/schema/common/null.js
 var require_null = __commonJS({
-  "../../node_modules/yaml/dist/schema/common/null.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/schema/common/null.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var nullTag = {
@@ -2347,9 +2343,9 @@ var require_null = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/schema/core/bool.js
+// ../../../../packages/cli/node_modules/yaml/dist/schema/core/bool.js
 var require_bool = __commonJS({
-  "../../node_modules/yaml/dist/schema/core/bool.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/schema/core/bool.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var boolTag = {
@@ -2371,9 +2367,9 @@ var require_bool = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/stringify/stringifyNumber.js
+// ../../../../packages/cli/node_modules/yaml/dist/stringify/stringifyNumber.js
 var require_stringifyNumber = __commonJS({
-  "../../node_modules/yaml/dist/stringify/stringifyNumber.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/stringify/stringifyNumber.js"(exports) {
     "use strict";
     function stringifyNumber({ format, minFractionDigits, tag, value }) {
       if (typeof value === "bigint")
@@ -2398,9 +2394,9 @@ var require_stringifyNumber = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/schema/core/float.js
+// ../../../../packages/cli/node_modules/yaml/dist/schema/core/float.js
 var require_float = __commonJS({
-  "../../node_modules/yaml/dist/schema/core/float.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/schema/core/float.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var stringifyNumber = require_stringifyNumber();
@@ -2444,9 +2440,9 @@ var require_float = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/schema/core/int.js
+// ../../../../packages/cli/node_modules/yaml/dist/schema/core/int.js
 var require_int = __commonJS({
-  "../../node_modules/yaml/dist/schema/core/int.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/schema/core/int.js"(exports) {
     "use strict";
     var stringifyNumber = require_stringifyNumber();
     var intIdentify = (value) => typeof value === "bigint" || Number.isInteger(value);
@@ -2489,9 +2485,9 @@ var require_int = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/schema/core/schema.js
+// ../../../../packages/cli/node_modules/yaml/dist/schema/core/schema.js
 var require_schema = __commonJS({
-  "../../node_modules/yaml/dist/schema/core/schema.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/schema/core/schema.js"(exports) {
     "use strict";
     var map = require_map();
     var _null = require_null();
@@ -2517,9 +2513,9 @@ var require_schema = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/schema/json/schema.js
+// ../../../../packages/cli/node_modules/yaml/dist/schema/json/schema.js
 var require_schema2 = __commonJS({
-  "../../node_modules/yaml/dist/schema/json/schema.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/schema/json/schema.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var map = require_map();
@@ -2584,9 +2580,9 @@ var require_schema2 = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/schema/yaml-1.1/binary.js
+// ../../../../packages/cli/node_modules/yaml/dist/schema/yaml-1.1/binary.js
 var require_binary = __commonJS({
-  "../../node_modules/yaml/dist/schema/yaml-1.1/binary.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/schema/yaml-1.1/binary.js"(exports) {
     "use strict";
     var node_buffer = __require("buffer");
     var Scalar = require_Scalar();
@@ -2650,9 +2646,9 @@ var require_binary = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/schema/yaml-1.1/pairs.js
+// ../../../../packages/cli/node_modules/yaml/dist/schema/yaml-1.1/pairs.js
 var require_pairs = __commonJS({
-  "../../node_modules/yaml/dist/schema/yaml-1.1/pairs.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/schema/yaml-1.1/pairs.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Pair = require_Pair();
@@ -2728,9 +2724,9 @@ ${cn.comment}` : item.comment;
   }
 });
 
-// ../../node_modules/yaml/dist/schema/yaml-1.1/omap.js
+// ../../../../packages/cli/node_modules/yaml/dist/schema/yaml-1.1/omap.js
 var require_omap = __commonJS({
-  "../../node_modules/yaml/dist/schema/yaml-1.1/omap.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/schema/yaml-1.1/omap.js"(exports) {
     "use strict";
     var identity = require_identity();
     var toJS = require_toJS();
@@ -2806,9 +2802,9 @@ var require_omap = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/schema/yaml-1.1/bool.js
+// ../../../../packages/cli/node_modules/yaml/dist/schema/yaml-1.1/bool.js
 var require_bool2 = __commonJS({
-  "../../node_modules/yaml/dist/schema/yaml-1.1/bool.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/schema/yaml-1.1/bool.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     function boolStringify({ value, source }, ctx) {
@@ -2838,9 +2834,9 @@ var require_bool2 = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/schema/yaml-1.1/float.js
+// ../../../../packages/cli/node_modules/yaml/dist/schema/yaml-1.1/float.js
 var require_float2 = __commonJS({
-  "../../node_modules/yaml/dist/schema/yaml-1.1/float.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/schema/yaml-1.1/float.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var stringifyNumber = require_stringifyNumber();
@@ -2887,9 +2883,9 @@ var require_float2 = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/schema/yaml-1.1/int.js
+// ../../../../packages/cli/node_modules/yaml/dist/schema/yaml-1.1/int.js
 var require_int2 = __commonJS({
-  "../../node_modules/yaml/dist/schema/yaml-1.1/int.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/schema/yaml-1.1/int.js"(exports) {
     "use strict";
     var stringifyNumber = require_stringifyNumber();
     var intIdentify = (value) => typeof value === "bigint" || Number.isInteger(value);
@@ -2966,9 +2962,9 @@ var require_int2 = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/schema/yaml-1.1/set.js
+// ../../../../packages/cli/node_modules/yaml/dist/schema/yaml-1.1/set.js
 var require_set = __commonJS({
-  "../../node_modules/yaml/dist/schema/yaml-1.1/set.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/schema/yaml-1.1/set.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Pair = require_Pair();
@@ -3055,9 +3051,9 @@ var require_set = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/schema/yaml-1.1/timestamp.js
+// ../../../../packages/cli/node_modules/yaml/dist/schema/yaml-1.1/timestamp.js
 var require_timestamp = __commonJS({
-  "../../node_modules/yaml/dist/schema/yaml-1.1/timestamp.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/schema/yaml-1.1/timestamp.js"(exports) {
     "use strict";
     var stringifyNumber = require_stringifyNumber();
     function parseSexagesimal(str, asBigInt) {
@@ -3143,9 +3139,9 @@ var require_timestamp = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/schema/yaml-1.1/schema.js
+// ../../../../packages/cli/node_modules/yaml/dist/schema/yaml-1.1/schema.js
 var require_schema3 = __commonJS({
-  "../../node_modules/yaml/dist/schema/yaml-1.1/schema.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/schema/yaml-1.1/schema.js"(exports) {
     "use strict";
     var map = require_map();
     var _null = require_null();
@@ -3187,9 +3183,9 @@ var require_schema3 = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/schema/tags.js
+// ../../../../packages/cli/node_modules/yaml/dist/schema/tags.js
 var require_tags = __commonJS({
-  "../../node_modules/yaml/dist/schema/tags.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/schema/tags.js"(exports) {
     "use strict";
     var map = require_map();
     var _null = require_null();
@@ -3281,9 +3277,9 @@ var require_tags = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/schema/Schema.js
+// ../../../../packages/cli/node_modules/yaml/dist/schema/Schema.js
 var require_Schema = __commonJS({
-  "../../node_modules/yaml/dist/schema/Schema.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/schema/Schema.js"(exports) {
     "use strict";
     var identity = require_identity();
     var map = require_map();
@@ -3313,9 +3309,9 @@ var require_Schema = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/stringify/stringifyDocument.js
+// ../../../../packages/cli/node_modules/yaml/dist/stringify/stringifyDocument.js
 var require_stringifyDocument = __commonJS({
-  "../../node_modules/yaml/dist/stringify/stringifyDocument.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/stringify/stringifyDocument.js"(exports) {
     "use strict";
     var identity = require_identity();
     var stringify2 = require_stringify();
@@ -3393,9 +3389,9 @@ var require_stringifyDocument = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/doc/Document.js
+// ../../../../packages/cli/node_modules/yaml/dist/doc/Document.js
 var require_Document = __commonJS({
-  "../../node_modules/yaml/dist/doc/Document.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/doc/Document.js"(exports) {
     "use strict";
     var Alias = require_Alias();
     var Collection = require_Collection();
@@ -3471,9 +3467,9 @@ var require_Document = __commonJS({
           this.contents.add(value);
       }
       /** Adds a value to the document. */
-      addIn(path12, value) {
+      addIn(path13, value) {
         if (assertCollection(this.contents))
-          this.contents.addIn(path12, value);
+          this.contents.addIn(path13, value);
       }
       /**
        * Create a new `Alias` node, ensuring that the target `node` has the required anchor.
@@ -3548,14 +3544,14 @@ var require_Document = __commonJS({
        * Removes a value from the document.
        * @returns `true` if the item was found and removed.
        */
-      deleteIn(path12) {
-        if (Collection.isEmptyPath(path12)) {
+      deleteIn(path13) {
+        if (Collection.isEmptyPath(path13)) {
           if (this.contents == null)
             return false;
           this.contents = null;
           return true;
         }
-        return assertCollection(this.contents) ? this.contents.deleteIn(path12) : false;
+        return assertCollection(this.contents) ? this.contents.deleteIn(path13) : false;
       }
       /**
        * Returns item at `key`, or `undefined` if not found. By default unwraps
@@ -3570,10 +3566,10 @@ var require_Document = __commonJS({
        * scalar values from their surrounding node; to disable set `keepScalar` to
        * `true` (collections are always returned intact).
        */
-      getIn(path12, keepScalar) {
-        if (Collection.isEmptyPath(path12))
+      getIn(path13, keepScalar) {
+        if (Collection.isEmptyPath(path13))
           return !keepScalar && identity.isScalar(this.contents) ? this.contents.value : this.contents;
-        return identity.isCollection(this.contents) ? this.contents.getIn(path12, keepScalar) : void 0;
+        return identity.isCollection(this.contents) ? this.contents.getIn(path13, keepScalar) : void 0;
       }
       /**
        * Checks if the document includes a value with the key `key`.
@@ -3584,10 +3580,10 @@ var require_Document = __commonJS({
       /**
        * Checks if the document includes a value at `path`.
        */
-      hasIn(path12) {
-        if (Collection.isEmptyPath(path12))
+      hasIn(path13) {
+        if (Collection.isEmptyPath(path13))
           return this.contents !== void 0;
-        return identity.isCollection(this.contents) ? this.contents.hasIn(path12) : false;
+        return identity.isCollection(this.contents) ? this.contents.hasIn(path13) : false;
       }
       /**
        * Sets a value in this document. For `!!set`, `value` needs to be a
@@ -3604,13 +3600,13 @@ var require_Document = __commonJS({
        * Sets a value in this document. For `!!set`, `value` needs to be a
        * boolean to add/remove the item from the set.
        */
-      setIn(path12, value) {
-        if (Collection.isEmptyPath(path12)) {
+      setIn(path13, value) {
+        if (Collection.isEmptyPath(path13)) {
           this.contents = value;
         } else if (this.contents == null) {
-          this.contents = Collection.collectionFromPath(this.schema, Array.from(path12), value);
+          this.contents = Collection.collectionFromPath(this.schema, Array.from(path13), value);
         } else if (assertCollection(this.contents)) {
-          this.contents.setIn(path12, value);
+          this.contents.setIn(path13, value);
         }
       }
       /**
@@ -3702,9 +3698,9 @@ var require_Document = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/errors.js
+// ../../../../packages/cli/node_modules/yaml/dist/errors.js
 var require_errors = __commonJS({
-  "../../node_modules/yaml/dist/errors.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/errors.js"(exports) {
     "use strict";
     var YAMLError = class extends Error {
       constructor(name, pos, code, message) {
@@ -3767,9 +3763,9 @@ ${pointer}
   }
 });
 
-// ../../node_modules/yaml/dist/compose/resolve-props.js
+// ../../../../packages/cli/node_modules/yaml/dist/compose/resolve-props.js
 var require_resolve_props = __commonJS({
-  "../../node_modules/yaml/dist/compose/resolve-props.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/compose/resolve-props.js"(exports) {
     "use strict";
     function resolveProps(tokens, { flow, indicator, next, offset, onError, parentIndent, startOnNewline }) {
       let spaceBefore = false;
@@ -3901,9 +3897,9 @@ var require_resolve_props = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/compose/util-contains-newline.js
+// ../../../../packages/cli/node_modules/yaml/dist/compose/util-contains-newline.js
 var require_util_contains_newline = __commonJS({
-  "../../node_modules/yaml/dist/compose/util-contains-newline.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/compose/util-contains-newline.js"(exports) {
     "use strict";
     function containsNewline(key) {
       if (!key)
@@ -3943,9 +3939,9 @@ var require_util_contains_newline = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/compose/util-flow-indent-check.js
+// ../../../../packages/cli/node_modules/yaml/dist/compose/util-flow-indent-check.js
 var require_util_flow_indent_check = __commonJS({
-  "../../node_modules/yaml/dist/compose/util-flow-indent-check.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/compose/util-flow-indent-check.js"(exports) {
     "use strict";
     var utilContainsNewline = require_util_contains_newline();
     function flowIndentCheck(indent, fc, onError) {
@@ -3961,9 +3957,9 @@ var require_util_flow_indent_check = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/compose/util-map-includes.js
+// ../../../../packages/cli/node_modules/yaml/dist/compose/util-map-includes.js
 var require_util_map_includes = __commonJS({
-  "../../node_modules/yaml/dist/compose/util-map-includes.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/compose/util-map-includes.js"(exports) {
     "use strict";
     var identity = require_identity();
     function mapIncludes(ctx, items, search) {
@@ -3977,9 +3973,9 @@ var require_util_map_includes = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/compose/resolve-block-map.js
+// ../../../../packages/cli/node_modules/yaml/dist/compose/resolve-block-map.js
 var require_resolve_block_map = __commonJS({
-  "../../node_modules/yaml/dist/compose/resolve-block-map.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/compose/resolve-block-map.js"(exports) {
     "use strict";
     var Pair = require_Pair();
     var YAMLMap = require_YAMLMap();
@@ -4085,9 +4081,9 @@ var require_resolve_block_map = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/compose/resolve-block-seq.js
+// ../../../../packages/cli/node_modules/yaml/dist/compose/resolve-block-seq.js
 var require_resolve_block_seq = __commonJS({
-  "../../node_modules/yaml/dist/compose/resolve-block-seq.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/compose/resolve-block-seq.js"(exports) {
     "use strict";
     var YAMLSeq = require_YAMLSeq();
     var resolveProps = require_resolve_props();
@@ -4136,9 +4132,9 @@ var require_resolve_block_seq = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/compose/resolve-end.js
+// ../../../../packages/cli/node_modules/yaml/dist/compose/resolve-end.js
 var require_resolve_end = __commonJS({
-  "../../node_modules/yaml/dist/compose/resolve-end.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/compose/resolve-end.js"(exports) {
     "use strict";
     function resolveEnd(end, offset, reqSpace, onError) {
       let comment = "";
@@ -4179,9 +4175,9 @@ var require_resolve_end = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/compose/resolve-flow-collection.js
+// ../../../../packages/cli/node_modules/yaml/dist/compose/resolve-flow-collection.js
 var require_resolve_flow_collection = __commonJS({
-  "../../node_modules/yaml/dist/compose/resolve-flow-collection.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/compose/resolve-flow-collection.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Pair = require_Pair();
@@ -4194,9 +4190,9 @@ var require_resolve_flow_collection = __commonJS({
     var blockMsg = "Block collections are not allowed within flow collections";
     var isBlock = (token) => token && (token.type === "block-map" || token.type === "block-seq");
     function resolveFlowCollection({ composeNode, composeEmptyNode }, ctx, fc, onError, tag) {
-      const isMap6 = fc.start.source === "{";
-      const fcName = isMap6 ? "flow map" : "flow sequence";
-      const NodeClass = tag?.nodeClass ?? (isMap6 ? YAMLMap.YAMLMap : YAMLSeq.YAMLSeq);
+      const isMap7 = fc.start.source === "{";
+      const fcName = isMap7 ? "flow map" : "flow sequence";
+      const NodeClass = tag?.nodeClass ?? (isMap7 ? YAMLMap.YAMLMap : YAMLSeq.YAMLSeq);
       const coll = new NodeClass(ctx.schema);
       coll.flow = true;
       const atRoot = ctx.atRoot;
@@ -4232,7 +4228,7 @@ var require_resolve_flow_collection = __commonJS({
             offset = props.end;
             continue;
           }
-          if (!isMap6 && ctx.options.strict && utilContainsNewline.containsNewline(key))
+          if (!isMap7 && ctx.options.strict && utilContainsNewline.containsNewline(key))
             onError(
               key,
               // checked by containsNewline()
@@ -4272,7 +4268,7 @@ var require_resolve_flow_collection = __commonJS({
             }
           }
         }
-        if (!isMap6 && !sep && !props.found) {
+        if (!isMap7 && !sep && !props.found) {
           const valueNode = value ? composeNode(ctx, value, props, onError) : composeEmptyNode(ctx, props.end, sep, null, props, onError);
           coll.items.push(valueNode);
           offset = valueNode.range[2];
@@ -4295,7 +4291,7 @@ var require_resolve_flow_collection = __commonJS({
             startOnNewline: false
           });
           if (valueProps.found) {
-            if (!isMap6 && !props.found && ctx.options.strict) {
+            if (!isMap7 && !props.found && ctx.options.strict) {
               if (sep)
                 for (const st of sep) {
                   if (st === valueProps.found)
@@ -4327,7 +4323,7 @@ var require_resolve_flow_collection = __commonJS({
           const pair = new Pair.Pair(keyNode, valueNode);
           if (ctx.options.keepSourceTokens)
             pair.srcToken = collItem;
-          if (isMap6) {
+          if (isMap7) {
             const map = coll;
             if (utilMapIncludes.mapIncludes(ctx, map.items, keyNode))
               onError(keyStart, "DUPLICATE_KEY", "Map keys must be unique");
@@ -4343,7 +4339,7 @@ var require_resolve_flow_collection = __commonJS({
           offset = valueNode ? valueNode.range[2] : valueProps.end;
         }
       }
-      const expectedEnd = isMap6 ? "}" : "]";
+      const expectedEnd = isMap7 ? "}" : "]";
       const [ce, ...ee] = fc.end;
       let cePos = offset;
       if (ce?.source === expectedEnd)
@@ -4373,9 +4369,9 @@ var require_resolve_flow_collection = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/compose/compose-collection.js
+// ../../../../packages/cli/node_modules/yaml/dist/compose/compose-collection.js
 var require_compose_collection = __commonJS({
-  "../../node_modules/yaml/dist/compose/compose-collection.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/compose/compose-collection.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Scalar = require_Scalar();
@@ -4438,9 +4434,9 @@ var require_compose_collection = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/compose/resolve-block-scalar.js
+// ../../../../packages/cli/node_modules/yaml/dist/compose/resolve-block-scalar.js
 var require_resolve_block_scalar = __commonJS({
-  "../../node_modules/yaml/dist/compose/resolve-block-scalar.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/compose/resolve-block-scalar.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     function resolveBlockScalar(ctx, scalar, onError) {
@@ -4621,9 +4617,9 @@ var require_resolve_block_scalar = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/compose/resolve-flow-scalar.js
+// ../../../../packages/cli/node_modules/yaml/dist/compose/resolve-flow-scalar.js
 var require_resolve_flow_scalar = __commonJS({
-  "../../node_modules/yaml/dist/compose/resolve-flow-scalar.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/compose/resolve-flow-scalar.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var resolveEnd = require_resolve_end();
@@ -4841,9 +4837,9 @@ var require_resolve_flow_scalar = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/compose/compose-scalar.js
+// ../../../../packages/cli/node_modules/yaml/dist/compose/compose-scalar.js
 var require_compose_scalar = __commonJS({
-  "../../node_modules/yaml/dist/compose/compose-scalar.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/compose/compose-scalar.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Scalar = require_Scalar();
@@ -4922,9 +4918,9 @@ var require_compose_scalar = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/compose/util-empty-scalar-position.js
+// ../../../../packages/cli/node_modules/yaml/dist/compose/util-empty-scalar-position.js
 var require_util_empty_scalar_position = __commonJS({
-  "../../node_modules/yaml/dist/compose/util-empty-scalar-position.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/compose/util-empty-scalar-position.js"(exports) {
     "use strict";
     function emptyScalarPosition(offset, before, pos) {
       if (before) {
@@ -4952,9 +4948,9 @@ var require_util_empty_scalar_position = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/compose/compose-node.js
+// ../../../../packages/cli/node_modules/yaml/dist/compose/compose-node.js
 var require_compose_node = __commonJS({
-  "../../node_modules/yaml/dist/compose/compose-node.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/compose/compose-node.js"(exports) {
     "use strict";
     var Alias = require_Alias();
     var identity = require_identity();
@@ -5058,9 +5054,9 @@ var require_compose_node = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/compose/compose-doc.js
+// ../../../../packages/cli/node_modules/yaml/dist/compose/compose-doc.js
 var require_compose_doc = __commonJS({
-  "../../node_modules/yaml/dist/compose/compose-doc.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/compose/compose-doc.js"(exports) {
     "use strict";
     var Document = require_Document();
     var composeNode = require_compose_node();
@@ -5101,9 +5097,9 @@ var require_compose_doc = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/compose/composer.js
+// ../../../../packages/cli/node_modules/yaml/dist/compose/composer.js
 var require_composer = __commonJS({
-  "../../node_modules/yaml/dist/compose/composer.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/compose/composer.js"(exports) {
     "use strict";
     var node_process = __require("process");
     var directives = require_directives();
@@ -5309,9 +5305,9 @@ ${end.comment}` : end.comment;
   }
 });
 
-// ../../node_modules/yaml/dist/parse/cst-scalar.js
+// ../../../../packages/cli/node_modules/yaml/dist/parse/cst-scalar.js
 var require_cst_scalar = __commonJS({
-  "../../node_modules/yaml/dist/parse/cst-scalar.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/parse/cst-scalar.js"(exports) {
     "use strict";
     var resolveBlockScalar = require_resolve_block_scalar();
     var resolveFlowScalar = require_resolve_flow_scalar();
@@ -5494,9 +5490,9 @@ var require_cst_scalar = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/parse/cst-stringify.js
+// ../../../../packages/cli/node_modules/yaml/dist/parse/cst-stringify.js
 var require_cst_stringify = __commonJS({
-  "../../node_modules/yaml/dist/parse/cst-stringify.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/parse/cst-stringify.js"(exports) {
     "use strict";
     var stringify2 = (cst) => "type" in cst ? stringifyToken(cst) : stringifyItem(cst);
     function stringifyToken(token) {
@@ -5555,13 +5551,13 @@ var require_cst_stringify = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/parse/cst-visit.js
+// ../../../../packages/cli/node_modules/yaml/dist/parse/cst-visit.js
 var require_cst_visit = __commonJS({
-  "../../node_modules/yaml/dist/parse/cst-visit.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/parse/cst-visit.js"(exports) {
     "use strict";
-    var BREAK = /* @__PURE__ */ Symbol("break visit");
-    var SKIP = /* @__PURE__ */ Symbol("skip children");
-    var REMOVE = /* @__PURE__ */ Symbol("remove item");
+    var BREAK = Symbol("break visit");
+    var SKIP = Symbol("skip children");
+    var REMOVE = Symbol("remove item");
     function visit(cst, visitor) {
       if ("type" in cst && cst.type === "document")
         cst = { start: cst.start, value: cst.value };
@@ -5570,9 +5566,9 @@ var require_cst_visit = __commonJS({
     visit.BREAK = BREAK;
     visit.SKIP = SKIP;
     visit.REMOVE = REMOVE;
-    visit.itemAtPath = (cst, path12) => {
+    visit.itemAtPath = (cst, path13) => {
       let item = cst;
-      for (const [field, index] of path12) {
+      for (const [field, index] of path13) {
         const tok = item?.[field];
         if (tok && "items" in tok) {
           item = tok.items[index];
@@ -5581,23 +5577,23 @@ var require_cst_visit = __commonJS({
       }
       return item;
     };
-    visit.parentCollection = (cst, path12) => {
-      const parent = visit.itemAtPath(cst, path12.slice(0, -1));
-      const field = path12[path12.length - 1][0];
+    visit.parentCollection = (cst, path13) => {
+      const parent = visit.itemAtPath(cst, path13.slice(0, -1));
+      const field = path13[path13.length - 1][0];
       const coll = parent?.[field];
       if (coll && "items" in coll)
         return coll;
       throw new Error("Parent collection not found");
     };
-    function _visit(path12, item, visitor) {
-      let ctrl = visitor(item, path12);
+    function _visit(path13, item, visitor) {
+      let ctrl = visitor(item, path13);
       if (typeof ctrl === "symbol")
         return ctrl;
       for (const field of ["key", "value"]) {
         const token = item[field];
         if (token && "items" in token) {
           for (let i = 0; i < token.items.length; ++i) {
-            const ci = _visit(Object.freeze(path12.concat([[field, i]])), token.items[i], visitor);
+            const ci = _visit(Object.freeze(path13.concat([[field, i]])), token.items[i], visitor);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -5608,18 +5604,18 @@ var require_cst_visit = __commonJS({
             }
           }
           if (typeof ctrl === "function" && field === "key")
-            ctrl = ctrl(item, path12);
+            ctrl = ctrl(item, path13);
         }
       }
-      return typeof ctrl === "function" ? ctrl(item, path12) : ctrl;
+      return typeof ctrl === "function" ? ctrl(item, path13) : ctrl;
     }
     exports.visit = visit;
   }
 });
 
-// ../../node_modules/yaml/dist/parse/cst.js
+// ../../../../packages/cli/node_modules/yaml/dist/parse/cst.js
 var require_cst = __commonJS({
-  "../../node_modules/yaml/dist/parse/cst.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/parse/cst.js"(exports) {
     "use strict";
     var cstScalar = require_cst_scalar();
     var cstStringify = require_cst_stringify();
@@ -5719,9 +5715,9 @@ var require_cst = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/parse/lexer.js
+// ../../../../packages/cli/node_modules/yaml/dist/parse/lexer.js
 var require_lexer = __commonJS({
-  "../../node_modules/yaml/dist/parse/lexer.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/parse/lexer.js"(exports) {
     "use strict";
     var cst = require_cst();
     function isEmpty(ch) {
@@ -6308,9 +6304,9 @@ var require_lexer = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/parse/line-counter.js
+// ../../../../packages/cli/node_modules/yaml/dist/parse/line-counter.js
 var require_line_counter = __commonJS({
-  "../../node_modules/yaml/dist/parse/line-counter.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/parse/line-counter.js"(exports) {
     "use strict";
     var LineCounter = class {
       constructor() {
@@ -6339,9 +6335,9 @@ var require_line_counter = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/parse/parser.js
+// ../../../../packages/cli/node_modules/yaml/dist/parse/parser.js
 var require_parser = __commonJS({
-  "../../node_modules/yaml/dist/parse/parser.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/parse/parser.js"(exports) {
     "use strict";
     var node_process = __require("process");
     var cst = require_cst();
@@ -7213,9 +7209,9 @@ var require_parser = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/public-api.js
+// ../../../../packages/cli/node_modules/yaml/dist/public-api.js
 var require_public_api = __commonJS({
-  "../../node_modules/yaml/dist/public-api.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/public-api.js"(exports) {
     "use strict";
     var composer = require_composer();
     var Document = require_Document();
@@ -7243,7 +7239,7 @@ var require_public_api = __commonJS({
         return docs;
       return Object.assign([], { empty: true }, composer$1.streamInfo());
     }
-    function parseDocument6(source, options = {}) {
+    function parseDocument7(source, options = {}) {
       const { lineCounter: lineCounter2, prettyErrors } = parseOptions(options);
       const parser$1 = new parser.Parser(lineCounter2?.addNewLine);
       const composer$1 = new composer.Composer(options);
@@ -7269,7 +7265,7 @@ var require_public_api = __commonJS({
       } else if (options === void 0 && reviver && typeof reviver === "object") {
         options = reviver;
       }
-      const doc = parseDocument6(src, options);
+      const doc = parseDocument7(src, options);
       if (!doc)
         return null;
       doc.warnings.forEach((warning) => log.warn(doc.options.logLevel, warning));
@@ -7305,14 +7301,14 @@ var require_public_api = __commonJS({
     }
     exports.parse = parse2;
     exports.parseAllDocuments = parseAllDocuments;
-    exports.parseDocument = parseDocument6;
+    exports.parseDocument = parseDocument7;
     exports.stringify = stringify2;
   }
 });
 
-// ../../node_modules/yaml/dist/index.js
+// ../../../../packages/cli/node_modules/yaml/dist/index.js
 var require_dist = __commonJS({
-  "../../node_modules/yaml/dist/index.js"(exports) {
+  "../../../../packages/cli/node_modules/yaml/dist/index.js"(exports) {
     "use strict";
     var composer = require_composer();
     var Document = require_Document();
@@ -7364,7 +7360,7 @@ var require_dist = __commonJS({
 
 // src/cli.js
 import os5 from "node:os";
-import path11 from "node:path";
+import path12 from "node:path";
 import readline from "node:readline";
 
 // src/checks.js
@@ -8065,7 +8061,7 @@ function interpretCallback(query, expectedState) {
   }
   return { ok: true, code };
 }
-function startCallbackServer({ path: path12 = "/callback", timeoutMs = 3e5, createServer = http.createServer } = {}) {
+function startCallbackServer({ path: path13 = "/callback", timeoutMs = 3e5, createServer = http.createServer } = {}) {
   let resolveCallback;
   let rejectCallback;
   const callback = new Promise((resolve, reject) => {
@@ -8075,7 +8071,7 @@ function startCallbackServer({ path: path12 = "/callback", timeoutMs = 3e5, crea
   let settled = false;
   const server = createServer((request2, response) => {
     const url = new URL(request2.url, "http://127.0.0.1");
-    if (url.pathname !== path12) {
+    if (url.pathname !== path13) {
       response.writeHead(404).end("Not found");
       return;
     }
@@ -9983,10 +9979,117 @@ conflict (${item.target}): ${item.reason}`);
   }
 }
 
-// src/adopt.js
+// src/hermes-memory.js
 var import_yaml5 = __toESM(require_dist(), 1);
-import { readFile as readFile7, writeFile as writeFile5, rename as rename5 } from "node:fs/promises";
+import { readFile as readFile7 } from "node:fs/promises";
+import { createHash as createHash2 } from "node:crypto";
 import path9 from "node:path";
+import { fileURLToPath } from "node:url";
+var GUID = /^(?:[a-f\d]{8,}|[a-f\d]{8}(?:-[a-f\d]{4}){3}-[a-f\d]{12})$/i;
+var PLUGIN_FILES = ["__init__.py", "client.py", "config_schema.py", "plugin.yaml", "README.md", "LICENSE"];
+var digest2 = (value) => value === null ? null : createHash2("sha256").update(value).digest("hex");
+async function readOptional(filename) {
+  try {
+    return await readFile7(filename, "utf8");
+  } catch (error) {
+    if (error.code === "ENOENT") return null;
+    throw error;
+  }
+}
+async function planHermesMemory(options = {}) {
+  if (!GUID.test(options.playbook ?? "")) throw new Error("Pass the private memory playbook GUID.");
+  const env = options.env ?? process.env;
+  const profile = await hermesProfile({ ...options, env: options.hermesHome ? { ...env, HERMES_HOME: options.hermesHome } : env });
+  const baseUrl = resolveBaseUrl(options.url, env);
+  const url = new URL(baseUrl);
+  if (url.username || url.password || url.search || url.hash || !(url.protocol === "https:" || url.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname))) {
+    throw new Error("Use HTTPS (HTTP is allowed only on localhost).");
+  }
+  const shared = [...new Set((options.sharedPlaybooks ?? "").split(",").map((x) => x.trim()).filter(Boolean))];
+  if (shared.some((guid) => !GUID.test(guid))) throw new Error("Shared playbooks must be comma-separated GUIDs.");
+  const fileActions = [], conflicts = [];
+  const add = (name, old, content) => {
+    if (old === content) return;
+    fileActions.push({
+      target: "hermes",
+      kind: "memory-provider",
+      name,
+      path: `${profile.display}/${name}`,
+      absolutePath: path9.join(profile.directory, name),
+      action: old === null ? "create" : "merge",
+      expectedHash: digest2(old),
+      content
+    });
+  };
+  const conflict2 = (name, reason) => conflicts.push({ kind: "memory-provider", name, reason });
+  const configPath = path9.join(profile.directory, "config.yaml");
+  const oldYaml = await readOptional(configPath);
+  const yaml = (0, import_yaml5.parseDocument)(oldYaml ?? "{}\n");
+  if (yaml.errors.length || !(0, import_yaml5.isMap)(yaml.contents)) throw new Error("Hermes config.yaml must be a valid YAML mapping.");
+  const memory = yaml.get("memory", true);
+  if (memory !== void 0 && !(0, import_yaml5.isMap)(memory)) throw new Error("Hermes memory configuration must be a mapping.");
+  const selected = yaml.getIn(["memory", "provider"]);
+  if (selected && !["agentplaybooks", "builtin", "built-in", "none", "default"].includes(selected)) {
+    conflict2("memory.provider", `The profile uses '${selected}'. Select AgentPlaybooks explicitly with 'hermes memory setup' before rerunning.`);
+  }
+  const disabled = yaml.getIn(["plugins", "disabled"]);
+  if (disabled?.toJSON?.()?.includes("agentplaybooks")) conflict2("plugins.disabled", "AgentPlaybooks is disabled; enable it in Hermes before setup.");
+  if (selected !== "agentplaybooks") {
+    yaml.setIn(["memory", "provider"], "agentplaybooks");
+    add("config.yaml", oldYaml, String(yaml));
+  }
+  const settingsName = "agentplaybooks/config.json";
+  const oldSettings = await readOptional(path9.join(profile.directory, settingsName));
+  const settings = oldSettings === null ? {} : JSON.parse(oldSettings);
+  const desired = { base_url: baseUrl, playbook_guid: options.playbook, shared_playbooks: shared.join(",") };
+  if (Object.entries(desired).some(([key, value]) => settings[key] !== void 0 && settings[key] !== value)) {
+    conflict2(settingsName, "Existing memory settings differ. Edit them in 'hermes memory setup' to switch playbooks; no memory is migrated automatically.");
+  }
+  if (Object.entries(desired).some(([key, value]) => settings[key] !== value)) {
+    add(settingsName, oldSettings, JSON.stringify({ ...settings, ...desired }, null, 2) + "\n");
+  }
+  const bundled = fileURLToPath(new URL("../hermes-plugin/", import.meta.url));
+  const source = fileURLToPath(new URL("../../hermes-memory/agentplaybooks/", import.meta.url));
+  const pluginDirectory = options.pluginDirectory ?? (await readOptional(path9.join(bundled, "plugin.yaml")) !== null ? bundled : source);
+  for (const name of PLUGIN_FILES) {
+    const relative = `plugins/agentplaybooks/${name}`;
+    const content = await readFile7(path9.join(pluginDirectory, name), "utf8");
+    const old = await readOptional(path9.join(profile.directory, relative));
+    if (old !== null && old !== content) conflict2(relative, "An installed plugin file differs; update through Hermes or reconcile it explicitly.");
+    add(relative, old, content);
+  }
+  return {
+    profile: profile.directory,
+    fileActions,
+    conflicts,
+    changed: fileActions.length > 0,
+    keyEnvVar: "AGENTPLAYBOOKS_MEMORY_API_KEY",
+    playbook: options.playbook,
+    keyPresentInEnvironment: Boolean(env.AGENTPLAYBOOKS_MEMORY_API_KEY)
+  };
+}
+async function applyHermesMemory(plan) {
+  if (plan.conflicts.length) throw new Error("Resolve memory setup conflicts before applying; no files were written.");
+  for (const action of plan.fileActions) {
+    if (digest2(await readOptional(action.absolutePath)) !== action.expectedHash) {
+      throw new Error(`Setup target changed after planning: ${action.path}. Rerun the plan.`);
+    }
+  }
+  return applyAdapters(plan.fileActions, path9.join(plan.profile, ".agentplaybooks", "backups", `memory-${Date.now()}`));
+}
+function printHermesMemoryPlan(plan, log = console.log) {
+  log(`Hermes memory: private playbook ${plan.playbook}`);
+  log(`Profile: ${plan.profile}`);
+  for (const action of plan.fileActions) log(`  ${action.action} ${action.path}`);
+  for (const item of plan.conflicts) log(`  [conflict] ${item.name}: ${item.reason}`);
+  log(`Credential: ${plan.keyEnvVar} (profile-scoped environment; never copied by this command).`);
+  log("Use 'hermes memory setup' for credential setup, then 'hermes memory status' to verify.");
+}
+
+// src/adopt.js
+var import_yaml6 = __toESM(require_dist(), 1);
+import { readFile as readFile8, writeFile as writeFile5, rename as rename5 } from "node:fs/promises";
+import path10 from "node:path";
 var CREDENTIAL_KEY = /(api[_-]?key|secret|token|password|passwd|credential|auth)/i;
 var NOT_A_VALUE = /^(\s*|\$\{.*\}|\$[A-Za-z_][A-Za-z0-9_]*|env:.*|vault:.*|\*+|x{3,}|\.{3}|<.*>|your[-_].*|changeme|placeholder|redacted|dummy|todo)$/i;
 var EXPANSION_SUPPORT = {
@@ -10024,8 +10127,8 @@ function walkForCredentials(value, keyPath, found) {
 }
 function parseConfig(source, content) {
   if (/\.ya?ml$/i.test(source)) {
-    const document = (0, import_yaml5.parseDocument)(content, { strict: false });
-    if (document.errors.length > 0 || !(0, import_yaml5.isMap)(document.contents)) return null;
+    const document = (0, import_yaml6.parseDocument)(content, { strict: false });
+    if (document.errors.length > 0 || !(0, import_yaml6.isMap)(document.contents)) return null;
     return { format: "yaml", data: document.toJSON() };
   }
   if (/\.toml$/i.test(source)) return { format: "toml", data: null };
@@ -10096,8 +10199,8 @@ function setIn(target, keyPath, value) {
 function rewriteConfig(content, format, occurrences, names) {
   const normalized = normalizeText(content);
   if (format === "yaml") {
-    const document2 = (0, import_yaml5.parseDocument)(normalized, { strict: false });
-    if (document2.errors.length > 0 || !(0, import_yaml5.isMap)(document2.contents)) return null;
+    const document2 = (0, import_yaml6.parseDocument)(normalized, { strict: false });
+    if (document2.errors.length > 0 || !(0, import_yaml6.isMap)(document2.contents)) return null;
     for (const [index, occurrence] of occurrences.entries()) {
       if (document2.getIn(occurrence.keyPath) === void 0) return null;
       document2.setIn(occurrence.keyPath, `\${${names[index]}}`);
@@ -10119,12 +10222,12 @@ function rewriteConfig(content, format, occurrences, names) {
 `;
 }
 async function applyRewrite(absolutePath, content) {
-  const temporary = path9.join(path9.dirname(absolutePath), `.${path9.basename(absolutePath)}.${process.pid}.tmp`);
+  const temporary = path10.join(path10.dirname(absolutePath), `.${path10.basename(absolutePath)}.${process.pid}.tmp`);
   await writeFile5(temporary, content, { encoding: "utf8", mode: 384 });
   await rename5(temporary, absolutePath);
 }
 async function readConfigForRewrite(absolutePath) {
-  return normalizeText(await readFile7(absolutePath, "utf8"));
+  return normalizeText(await readFile8(absolutePath, "utf8"));
 }
 async function inventoryForAdoption({ global = false, root } = {}) {
   return global ? discoverGlobal() : discover(root);
@@ -10132,8 +10235,8 @@ async function inventoryForAdoption({ global = false, root } = {}) {
 
 // src/secrets.js
 import { spawn } from "node:child_process";
-import path10 from "node:path";
-import { readFile as readFile8 } from "node:fs/promises";
+import path11 from "node:path";
+import { readFile as readFile9 } from "node:fs/promises";
 var SECRET_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
 async function savePlaybookKey(url, guid, apiKey, homedir) {
   const credentials = await loadCredentials(homedir);
@@ -10265,7 +10368,7 @@ function runWithEnvironment(command, args, injected) {
 }
 async function readManifestSecrets(root) {
   try {
-    const manifest = JSON.parse(await readFile8(path10.join(root, "agentplaybook.json"), "utf8"));
+    const manifest = JSON.parse(await readFile9(path11.join(root, "agentplaybook.json"), "utf8"));
     const secrets = manifest?.spec?.secrets;
     return Array.isArray(secrets) ? secrets : [];
   } catch (error) {
@@ -10285,6 +10388,8 @@ Usage:
                                 [--name=<entry>] [--key-env=<VAR>] [--key-header=<H>]
   agentplaybooks connect --account [path] [--apply] [--json] [--target=<types>]
   agentplaybooks login [--url=<base>]
+  agentplaybooks memory setup <guid> --target=hermes [--hermes-home=<directory>]
+                             [--shared=<guids>] [--url=<base>] [--apply] [--json]
   agentplaybooks logout [--url=<base>]
   agentplaybooks playbooks [--url=<base>] [--json]
   agentplaybooks pull <id|guid> [path] [--apply] [--json] [--url=<base>]
@@ -10303,6 +10408,8 @@ Usage:
                               [--prefix=<P>] [--json] [--yes]
 
 Commands:
+  memory     Install and configure the native Hermes memory provider for a private
+             playbook. Plan-only without --apply; credentials are never copied.
   doctor     Audit agent instructions, skills, MCP configuration, secrets, and drift.
   sync       Plan or apply the canonical manifest and missing platform files
              for enabled targets (claude, cursor, codex, antigravity, hermes,
@@ -10516,7 +10623,7 @@ async function runSecrets(url, flags, positional, rest) {
   if (subcommand === "run" && rest.length === 0) {
     throw new Error("Usage: agentplaybooks secrets run [path] -- <command> [args...]");
   }
-  const root = flags.has("--global") ? os5.homedir() : path11.resolve(subcommand === "push" ? positional[2] ?? process.cwd() : positional[1] ?? process.cwd());
+  const root = flags.has("--global") ? os5.homedir() : path12.resolve(subcommand === "push" ? positional[2] ?? process.cwd() : positional[1] ?? process.cwd());
   const needsVault = subcommand !== "adopt" || flags.has("--apply");
   const vault = needsVault ? await resolveVaultAccess(url, root, flags) : { guid: null, playbookKey: null };
   const { guid, playbookKey } = vault;
@@ -10672,8 +10779,28 @@ async function run(args) {
     console.log(HELP);
     return;
   }
+  if (command === "memory") {
+    if (positional[0] !== "setup" || flags.get("--target") !== "hermes") {
+      throw new Error("Usage: apb memory setup <guid> --target=hermes [--apply]");
+    }
+    const option = (name) => typeof flags.get(name) === "string" ? flags.get(name) : void 0;
+    const plan = await planHermesMemory({
+      playbook: positional[1],
+      hermesHome: option("--hermes-home"),
+      sharedPlaybooks: option("--shared"),
+      url: option("--url")
+    });
+    if (flags.has("--json")) console.log(JSON.stringify({ ...plan, fileActions: plan.fileActions.map(withoutContent) }, null, 2));
+    else printHermesMemoryPlan(plan);
+    if (flags.has("--apply")) {
+      const result = await applyHermesMemory(plan);
+      if (!flags.has("--json")) for (const written of result.written) console.log(`Wrote: ${written}`);
+    }
+    if (plan.conflicts.length) process.exitCode = 2;
+    return;
+  }
   if (command === "doctor") {
-    const report = flags.has("--global") ? await runGlobalDoctor({ includeVendored: flags.has("--include-vendored") }) : await runDoctor(path11.resolve(positional[0] ?? process.cwd()));
+    const report = flags.has("--global") ? await runGlobalDoctor({ includeVendored: flags.has("--include-vendored") }) : await runDoctor(path12.resolve(positional[0] ?? process.cwd()));
     if (flags.has("--json")) console.log(JSON.stringify(publicReport(report), null, 2));
     else printDoctor(report);
     if (flags.has("--strict") && report.findings.some((item) => item.severity === "critical" || item.severity === "high")) {
@@ -10690,7 +10817,7 @@ async function run(args) {
       // the main one. Ignored by every other target, which has no such concept.
       hermesProfileName: typeof flags.get("--profile") === "string" ? flags.get("--profile") : ""
     };
-    const plan = flags.has("--global") ? await planGlobalSync(options) : await planSync(path11.resolve(positional[0] ?? process.cwd()), options);
+    const plan = flags.has("--global") ? await planGlobalSync(options) : await planSync(path12.resolve(positional[0] ?? process.cwd()), options);
     if (flags.has("--json")) {
       console.log(JSON.stringify({
         action: plan.action,
@@ -10719,7 +10846,7 @@ async function run(args) {
     const requestedTargets = typeof flags.get("--target") === "string" ? flags.get("--target").split(",").map((value) => value.trim()).filter(Boolean) : [];
     const account = flags.has("--account");
     const requestedPlaybooks = account ? [] : positional[0]?.split(",") ?? [];
-    const plan = await planConnect(path11.resolve(positional[account ? 0 : 1] ?? process.cwd()), {
+    const plan = await planConnect(path12.resolve(positional[account ? 0 : 1] ?? process.cwd()), {
       account,
       playbooks: requestedPlaybooks,
       targets: requestedTargets,
@@ -10793,8 +10920,8 @@ async function run(args) {
     if (kind !== "hermes") throw new Error("Usage: agentplaybooks export hermes <dir> [path]");
     const destination = positional[1];
     if (!destination) throw new Error("Usage: agentplaybooks export hermes <dir> [path]");
-    const root = path11.resolve(positional[2] ?? process.cwd());
-    const plan = await planHermesExport(root, path11.resolve(destination), {
+    const root = path12.resolve(positional[2] ?? process.cwd());
+    const plan = await planHermesExport(root, path12.resolve(destination), {
       name: typeof flags.get("--name") === "string" ? flags.get("--name") : void 0,
       version: typeof flags.get("--version") === "string" ? flags.get("--version") : void 0
     });
@@ -10825,7 +10952,7 @@ async function run(args) {
   if (command === "pull") {
     const ref = positional[0];
     if (!ref) throw new Error("Usage: agentplaybooks pull <id|guid> [path]");
-    const root = path11.resolve(positional[1] ?? process.cwd());
+    const root = path12.resolve(positional[1] ?? process.cwd());
     const apiKey = await requireApiKey(url);
     const plan = await planPull(root, ref, { url, apiKey });
     if (flags.has("--json")) {
@@ -10851,7 +10978,7 @@ async function run(args) {
   }
   if (command === "push") {
     const global = flags.has("--global");
-    const root = global ? os5.homedir() : path11.resolve(positional[0] ?? process.cwd());
+    const root = global ? os5.homedir() : path12.resolve(positional[0] ?? process.cwd());
     const apiKey = await requireApiKey(url);
     const plan = global ? await planGlobalPush({ url, apiKey, includeVendored: flags.has("--include-vendored") }) : await planPush(root, { url, apiKey });
     if (flags.has("--json")) {
@@ -10895,7 +11022,7 @@ async function run(args) {
   if (command === "auth") {
     const provider = positional[0];
     if (!provider) throw new Error("Usage: agentplaybooks auth <provider> [path]");
-    const root = path11.resolve(positional[1] ?? process.cwd());
+    const root = path12.resolve(positional[1] ?? process.cwd());
     const template = await fetchTemplate(url, provider);
     const plan = planConsent(template);
     const vault = await resolveVaultAccess(url, root, flags);
