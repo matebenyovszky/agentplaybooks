@@ -4,6 +4,9 @@ Memory is a persistent, hierarchical storage system that AI agents can read from
 
 ## Hermes native memory provider
 
+Follow the [Hermes memory setup guide](./hermes-memory.md) for direct installation,
+configuration, a first-session check, and the current plugin-store status.
+
 AgentPlaybooks includes a native Hermes provider in
 [`packages/hermes-memory`](https://github.com/matebenyovszky/agentplaybooks/tree/main/packages/hermes-memory).
 It integrates with `hermes memory setup` and Hermes Desktop's memory settings,

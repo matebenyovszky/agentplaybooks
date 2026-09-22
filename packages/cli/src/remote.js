@@ -1,4 +1,4 @@
-import { chmod, mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { chmod, mkdir, readdir, readFile, rename, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { runDoctor, runGlobalDoctor } from "./doctor.js";
@@ -12,6 +12,28 @@ export const DEFAULT_BASE_URL = "https://agentplaybooks.ai";
 const LINK_FILE = [".agentplaybooks", "remote.json"];
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SAFE_SKILL_NAME = /^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/;
+
+// A skill is a directory: SKILL.md plus the files its instructions reach for.
+// Those files travel with it, and the shape of their names is fixed in three
+// places that have to agree -- `isSafeSkillFile` in the web app, the
+// `safe_filename` CHECK on skill_attachments, and here. One level, from the
+// Agent Skills convention, and nothing that could climb out of the directory.
+const SKILL_FILE_DIRECTORIES = ["scripts", "references", "assets", "examples", "templates"];
+const SAFE_SKILL_FILE = new RegExp(
+  `^(?:(?:${SKILL_FILE_DIRECTORIES.join("|")})/)?[A-Za-z0-9][A-Za-z0-9._-]*$`,
+);
+// The `safe_filename` constraint caps the whole path at 100 characters, and
+// `max_file_size` caps one file at 256 KB.
+const MAX_SKILL_FILE_NAME = 100;
+const MAX_SKILL_FILE_BYTES = 262144;
+
+function isSafeSkillFile(filename) {
+  if (typeof filename !== "string" || filename.length === 0) return false;
+  if (filename.length > MAX_SKILL_FILE_NAME) return false;
+  if (filename.includes("..") || filename.startsWith("/") || filename.includes("\\")) return false;
+  if (filename === "SKILL.md") return false;
+  return SAFE_SKILL_FILE.test(filename);
+}
 
 export function resolveBaseUrl(flagUrl, env = process.env) {
   const url = flagUrl || env.AGENTPLAYBOOKS_URL || DEFAULT_BASE_URL;
@@ -268,8 +290,7 @@ async function requestLatestSnapshot(url, apiKey, playbookId, fetchImpl) {
   try {
     return await request(url, `/api/manage/playbooks/${playbookId}/snapshots/latest`, { apiKey, fetchImpl });
   } catch (error) {
-    // Older servers have no snapshot endpoint. Their legacy skills/MCP path
-    // remains readable; a new push still requires the server to be upgraded.
+    // Older servers can still supply their legacy skills and MCP records.
     if (error?.status === 404) return null;
     throw error;
   }
@@ -331,6 +352,28 @@ export async function planPull(root, ref, { url, apiKey, fetchImpl, snapshotId }
       actions.push({ kind: "skill", name: skill.name, action: "create", path: relativePath, content });
     } else if (existing !== content) {
       conflicts.push({ kind: "skill", name: skill.name, reason: `Local ${relativePath} differs from the remote skill.` });
+    }
+
+    // The files the skill bundles land beside its SKILL.md, which is where the
+    // document tells the agent to look for them. A skill whose instructions say
+    // "import the module in scripts/" is not usable without this step.
+    for (const file of skill.attachments ?? []) {
+      if (!isSafeSkillFile(file.filename)) {
+        conflicts.push({
+          kind: "skill-file",
+          name: `${skill.name}/${String(file.filename)}`,
+          reason: "Remote file name is not a safe path inside the skill directory.",
+        });
+        continue;
+      }
+      const filePath = `.agents/skills/${skill.name}/${file.filename}`;
+      const fileContent = normalizeText(file.content ?? "");
+      const currentFile = await readLocalFile(root, filePath);
+      if (currentFile === null) {
+        actions.push({ kind: "skill-file", name: `${skill.name}/${file.filename}`, action: "create", path: filePath, content: fileContent });
+      } else if (currentFile !== fileContent) {
+        conflicts.push({ kind: "skill-file", name: `${skill.name}/${file.filename}`, reason: `Local ${filePath} differs from the remote file.` });
+      }
     }
   }
 
@@ -432,7 +475,58 @@ export async function applyPull(root, plan) {
   return { written: plan.actions.map((action) => action.path) };
 }
 
-function localSkillsForPush(report, conflicts) {
+/**
+ * The files a local skill bundles: everything beside its `SKILL.md`, plus one
+ * level into the standard subdirectories. Anything else in the directory is
+ * left alone rather than uploaded under a name the server would reject.
+ *
+ * A file that cannot travel is reported, not skipped silently: the usual cause
+ * is a script that has outgrown the size limit, and finding that out from a
+ * 400 in the middle of an upload is worse than reading it in the plan.
+ */
+async function readSkillFiles(skillDocumentPath, skillName, warnings) {
+  const directory = path.dirname(skillDocumentPath);
+  const names = [];
+
+  const entries = await readdir(directory, { withFileTypes: true }).catch(() => []);
+  for (const entry of entries) {
+    if (entry.isFile()) {
+      names.push(entry.name);
+    } else if (entry.isDirectory() && SKILL_FILE_DIRECTORIES.includes(entry.name)) {
+      const nested = await readdir(path.join(directory, entry.name), { withFileTypes: true }).catch(() => []);
+      for (const child of nested) {
+        if (child.isFile()) names.push(`${entry.name}/${child.name}`);
+      }
+    }
+  }
+
+  const files = [];
+  for (const filename of names.sort()) {
+    if (filename === "SKILL.md") continue;
+    if (!isSafeSkillFile(filename)) {
+      warnings.push({ kind: "skill-file", name: `${skillName}/${filename}`, reason: "File stays in the private snapshot but is outside the hosted skill attachment format." });
+      continue;
+    }
+    const content = await readFile(path.join(directory, ...filename.split("/"))).catch(() => null);
+    if (content === null) continue;
+    if (content.byteLength > MAX_SKILL_FILE_BYTES) {
+      warnings.push({ kind: "skill-file", name: `${skillName}/${filename}`, reason: `File is ${content.byteLength} bytes; the hosted attachment limit is ${MAX_SKILL_FILE_BYTES}, but it stays in the private snapshot.` });
+      continue;
+    }
+    let normalized;
+    try {
+      if (content.some((byte) => byte < 0x20 && byte !== 0x09 && byte !== 0x0a && byte !== 0x0d)) throw new Error("binary");
+      normalized = normalizeText(new TextDecoder("utf-8", { fatal: true }).decode(content));
+    } catch {
+      warnings.push({ kind: "skill-file", name: `${skillName}/${filename}`, reason: "Binary file stays in the private snapshot but cannot be a hosted text attachment." });
+      continue;
+    }
+    files.push({ filename, content: normalized });
+  }
+  return files;
+}
+
+async function localSkillsForPush(report, conflicts, warnings) {
   const groups = new Map();
   for (const skill of report.inventory.skills) {
     const group = groups.get(skill.name) ?? [];
@@ -446,10 +540,14 @@ function localSkillsForPush(report, conflicts) {
       continue;
     }
     if (new Set(variants.map((item) => item.treeDigest ?? item.digest)).size > 1) {
-      conflicts.push({ kind: "skill", name, reason: "Skill definitions differ across platforms; resolve the drift before pushing." });
+      conflicts.push({ kind: "skill", name, reason: "Skill trees differ across platforms; resolve the drift before pushing." });
       continue;
     }
-    skills.push({ name, description: variants[0].description ?? "", content: variants[0].content, source: variants[0].source });
+    const chosen = variants.find((item) => item.platform === "portable") ?? variants[0];
+    const files = chosen.absolutePath
+      ? await readSkillFiles(chosen.absolutePath, name, warnings)
+      : [];
+    skills.push({ name, description: chosen.description ?? "", content: chosen.content, source: chosen.source, files });
   }
   return skills;
 }
@@ -558,9 +656,38 @@ export async function planGlobalPush(options = {}) {
   });
 }
 
+/**
+ * What has to happen to the files a skill bundles. A file the remote has and
+ * the working tree does not is left alone, the same way a skill that only
+ * exists remotely is: push adds and updates, it does not delete.
+ */
+function skillFileActions(skill, remoteSkill) {
+  const actions = [];
+  const remoteFiles = new Map((remoteSkill?.attachments ?? []).map((file) => [file.filename, file]));
+  for (const file of skill.files ?? []) {
+    const existing = remoteFiles.get(file.filename);
+    const base = {
+      kind: "skill-file",
+      name: `${skill.name}/${file.filename}`,
+      skill: skill.name,
+      filename: file.filename,
+      // Null for a skill that does not exist remotely yet; applyPush fills it
+      // in from the create response.
+      skillId: remoteSkill?.id ?? null,
+    };
+    if (!existing) {
+      actions.push({ ...base, action: "create" });
+    } else if (normalizeText(existing.content ?? "") !== file.content) {
+      actions.push({ ...base, action: "update", attachmentId: existing.id });
+    }
+  }
+  return actions;
+}
+
 async function planPushFrom(report, root, { url, apiKey, fetchImpl, scope = "project", displayName } = {}) {
   const conflicts = [];
-  const skills = localSkillsForPush(report, conflicts);
+  const warnings = [];
+  const skills = await localSkillsForPush(report, conflicts, warnings);
   const mcpServers = scope === "global" ? [] : localMcpServersForPush(report, conflicts);
   const instructions = localInstructionsForPush(report, conflicts);
 
@@ -602,6 +729,7 @@ async function planPushFrom(report, root, { url, apiKey, fetchImpl, scope = "pro
     }
     for (const skill of skills) {
       actions.push({ kind: "skill", action: "create", name: skill.name });
+      actions.push(...skillFileActions(skill, null));
     }
     for (const server of mcpServers) {
       actions.push({ kind: "mcp", action: "create", name: server.name });
@@ -623,6 +751,7 @@ async function planPushFrom(report, root, { url, apiKey, fetchImpl, scope = "pro
       } else if (normalizeText(existing.content ?? "") !== skill.content || (existing.description ?? "") !== skill.description) {
         actions.push({ kind: "skill", action: "update", name: skill.name, skillId: existing.id });
       }
+      actions.push(...skillFileActions(skill, existing));
     }
     const remoteMcp = new Map((remote.mcp_servers ?? []).map((server) => [server.name, server]));
     for (const server of mcpServers) {
@@ -651,6 +780,7 @@ async function planPushFrom(report, root, { url, apiKey, fetchImpl, scope = "pro
     remote: remote ? { id: remote.id, guid: remote.guid, name: remote.name } : null,
     actions,
     conflicts,
+    warnings,
     scope,
     root,
   };
@@ -681,8 +811,7 @@ export async function applyPush(root, plan, { apiKey, fetchImpl } = {}) {
     playbookId = created.id;
     guid = created.guid;
     name = created.name;
-    // Record the new remote immediately. If a later upload fails, retrying
-    // resumes this playbook instead of creating a duplicate.
+    // A failed later upload can resume this playbook instead of duplicating it.
     await writeLink(root, { url, playbookId, guid, name, pendingSync: true });
   } else {
     // Config and instructions are separate columns but one resource, so a
@@ -703,16 +832,24 @@ export async function applyPush(root, plan, { apiKey, fetchImpl } = {}) {
   }
 
   const skillByName = new Map(plan.skills.map((skill) => [skill.name, skill]));
+  // A bundled file is uploaded against its skill's id, which for a skill being
+  // created only exists once the create response comes back.
+  const skillIdByName = new Map();
+  for (const action of plan.actions) {
+    if (action.kind === "skill" && action.skillId) skillIdByName.set(action.name, action.skillId);
+    if (action.kind === "skill-file" && action.skillId) skillIdByName.set(action.skill, action.skillId);
+  }
   for (const action of plan.actions) {
     if (action.kind !== "skill") continue;
     const skill = skillByName.get(action.name);
     if (action.action === "create") {
-      await request(url, `/api/manage/playbooks/${playbookId}/skills`, {
+      const created = await request(url, `/api/manage/playbooks/${playbookId}/skills`, {
         method: "POST",
         apiKey,
         fetchImpl,
         body: { name: skill.name, description: skill.description, content: skill.content },
       });
+      if (created?.id) skillIdByName.set(skill.name, created.id);
     } else {
       await request(url, `/api/manage/playbooks/${playbookId}/skills/${action.skillId}`, {
         method: "PUT",
@@ -720,6 +857,19 @@ export async function applyPush(root, plan, { apiKey, fetchImpl } = {}) {
         fetchImpl,
         body: { name: skill.name, description: skill.description, content: skill.content },
       });
+    }
+  }
+
+  for (const action of plan.actions) {
+    if (action.kind !== "skill-file") continue;
+    const skillId = skillIdByName.get(action.skill);
+    const file = (skillByName.get(action.skill)?.files ?? []).find((item) => item.filename === action.filename);
+    if (!skillId || !file) continue;
+    const body = { filename: file.filename, content: file.content };
+    if (action.action === "create") {
+      await request(url, `/api/manage/skills/${skillId}/attachments`, { method: "POST", apiKey, fetchImpl, body });
+    } else {
+      await request(url, `/api/manage/skills/${skillId}/attachments/${action.attachmentId}`, { method: "PUT", apiKey, fetchImpl, body });
     }
   }
 

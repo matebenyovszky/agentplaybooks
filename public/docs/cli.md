@@ -6,6 +6,17 @@ MCP server definitions — healthy, consistent across AI coding tools, and
 shareable as a hosted playbook. It is a zero-dependency Node.js (>= 20)
 package that lives in [`packages/cli`](https://github.com/matebenyovszky/agentplaybooks/tree/main/packages/cli).
 
+## Hermes native memory setup
+
+The source CLI includes `apb memory setup <private-playbook-guid> --target=hermes`.
+It previews installation by default; `--apply` installs the provider into the
+selected profile. Set its key through `hermes memory setup` afterward. Use
+`HERMES_HOME` or `--hermes-home=<directory>` to select the profile.
+
+See the [Hermes memory guide](./hermes-memory.md) for source-build commands,
+direct installation without the AgentPlaybooks CLI, credential scope, and plugin
+store status. An older installed npm release may not contain this command.
+
 ## Doctor: audit your agent configuration
 
 ```bash
@@ -190,6 +201,53 @@ equivalent; `pull` reports them instead of writing a half-translated config.
 Secret values never move in either direction — see below. Use `--url=<base>`
 or `AGENTPLAYBOOKS_URL` for self-hosted deployments.
 
+## Export: one playbook, one Hermes bot
+
+A Hermes Agent bot is a profile: its own persona, skills, model, memory and
+history. Hermes installs and updates one from a directory or a git URL, so
+`export hermes` writes that directory from a playbook rather than inventing a
+second delivery mechanism.
+
+```bash
+apb pull <playbook-guid> --apply            # the playbook onto disk
+apb export hermes ./bots/research --apply   # as a Hermes distribution
+hermes profile install ./bots/research --name research
+apb sync --target=hermes --profile=research --apply
+```
+
+What lands in the directory is `distribution.yaml`, `SOUL.md` from the
+playbook's persona, and `skills/<name>/` holding each skill's `SKILL.md` with
+the files it bundles. Nothing is fetched: the source is what `pull` already
+wrote, so the same project produces the same distribution offline.
+
+**The fourth command is not optional.** Unlike `hermes profile create`,
+`profile install` copies no `config.yaml`, so a bot installed from a
+distribution has no providers and no model and cannot answer anything.
+`sync --profile=<bot>` seeds the bot's configuration from the installation's
+own and merges the playbook's MCP servers into it. The plan says when it is
+seeding rather than copying a whole configuration silently.
+
+A distribution carries no `config.yaml` of its own on purpose. `profile
+install` replaces that file rather than merging it, so shipping one would
+overwrite the providers the machine is configured for and pin the bot's model
+to whatever was true at export time. Which model a bot runs is a local
+decision, and changing it per bot is most of the reason to have one.
+
+To take a later change, re-run `pull` and `export hermes`, then:
+
+```bash
+hermes profile update research
+```
+
+The distribution's files are replaced; the bot's sessions, memories, `.env` and
+configuration are not touched. The manifest declares only what the export
+actually ships, so a playbook with no persona does not claim `SOUL.md` and an
+update cannot delete a `SOUL.md` someone wrote by hand.
+
+Because the bot is a playbook, sharing the playbook shares the bot. A colleague
+who accepts a collaboration invite runs the same four commands and has the same
+agent, with their own memory and history.
+
 ## Which playbook a command works on
 
 The working directory decides. `pull --apply` and `push` write
@@ -366,4 +424,6 @@ workflow (plan first, apply after your approval).
   `.hermes.md` that hides `AGENTS.md` is reported as a conflict.
   Public playbook skills can also be installed straight from the web:
   `hermes skills install well-known:https://agentplaybooks.ai/playbooks/<guid>/.well-known/skills/<name>`.
+  To make a playbook a *Bot* rather than part of the main profile, see
+  `export hermes` below.
 - **Cursor**: skills in `.cursor/skills/`, MCP servers in `.cursor/mcp.json`.

@@ -15,7 +15,7 @@ Your agent setup stays in sync across Claude, ChatGPT, Cursor, Codex, Gemini, lo
 - Skills: JSON schema definitions plus optional SKILL.md content
 - Skill attachments: secure file storage for code, prompts, and docs
 - MCP servers: tools and resources in Model Context Protocol format
-- Memory: key-value store with tags and descriptions
+- Memory: key-value store with tags and descriptions, with a [native Hermes memory provider](https://agentplaybooks.ai/docs/hermes-memory)
 - Canvas: versioned markdown work documents, scoped to a playbook run, so several
   teams can execute the same playbook without sharing work products
 

@@ -10,6 +10,15 @@ import {
     formatAsMarkdown,
     PlaybookWithExports
 } from "../../_shared/formatters";
+import { isSafeSkillFile } from "@/lib/skill-markdown";
+import type { Skill } from "@/lib/supabase/types";
+
+/**
+ * One bundled skill file, as a client needs it to rebuild the skill directory.
+ * The id travels with it so a client that pushes back can update the file in
+ * place rather than trying to create one that already exists.
+ */
+type AttachmentRow = { id: string; filename: string; content: string };
 
 // Helper: Convert playbook to persona shape
 function playbookToPersona(playbook: {
@@ -69,11 +78,32 @@ export async function GET(
         return NextResponse.json({ error: "Playbook not found" }, { status: 404 });
     }
 
-    // Get related data
+    // Get related data. The attachments come along with the skills because a
+    // skill backed by a script is not usable without them: `apb pull` has to
+    // be able to write the whole skill directory, and it only makes this one
+    // request. They are dropped again below for the export formats, which
+    // describe tools rather than files.
     const [skillsRes, mcpRes] = await Promise.all([
-        supabase.from("skills").select("*").eq("playbook_id", playbook.id),
+        supabase
+            .from("skills")
+            .select("*, skill_attachments(id, filename, content)")
+            .eq("playbook_id", playbook.id),
         supabase.from("mcp_servers").select("*").eq("playbook_id", playbook.id),
     ]);
+
+    type SkillRow = Skill & { skill_attachments?: AttachmentRow[] | null };
+    const skillRows = (skillsRes.data ?? []) as unknown as SkillRow[];
+    const bareSkills: Skill[] = [];
+    const skillsWithFiles: Array<Skill & { attachments: AttachmentRow[] }> = [];
+    for (const { skill_attachments, ...skill } of skillRows) {
+        bareSkills.push(skill as Skill);
+        skillsWithFiles.push({
+            ...(skill as Skill),
+            // A stored name that the serving rules would reject can never be
+            // written to disk safely, so it is not offered to a client either.
+            attachments: (skill_attachments ?? []).filter((file) => isSafeSkillFile(file.filename)),
+        });
+    }
 
     const persona = playbookToPersona(playbook);
 
@@ -82,7 +112,7 @@ export async function GET(
         current_user_role: accessRole || "viewer",
         persona,
         personas: [persona],
-        skills: skillsRes.data || [],
+        skills: bareSkills,
         mcp_servers: mcpRes.data || [],
     };
 
@@ -99,7 +129,7 @@ export async function GET(
                 headers: { "Content-Type": "text/markdown" },
             });
         default:
-            return NextResponse.json(fullPlaybook);
+            return NextResponse.json({ ...fullPlaybook, skills: skillsWithFiles });
     }
 }
 
