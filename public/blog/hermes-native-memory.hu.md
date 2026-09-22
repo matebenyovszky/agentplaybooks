@@ -109,6 +109,7 @@ produkciós tesztről.
 Próbáld ki egy kis privát playbookkal, és mondd el, mi működött jól, mi lepett
 meg, és mire lenne még szükséged. Beállítási kérdéseket, a memória kezelésével
 kapcsolatos észrevételeket és hibajelzéseket egyaránt várunk.
+[X-en](https://x.com/agent_playbooks) és
 [LinkedInen](https://www.linkedin.com/company/agentplaybooksai/) is elérsz minket;
 ott ugyanúgy szívesen fogadunk kérdéseket és visszajelzéseket, mint a GitHubon.
 

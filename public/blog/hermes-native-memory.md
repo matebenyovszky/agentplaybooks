@@ -98,6 +98,7 @@ They are automated integration checks, not a live-account production test.
 Try it with a small private playbook and tell us what worked, what surprised you,
 and what you would want next. Setup questions, memory-policy questions, and bug
 reports are all welcome. You can also reach us on
+[X](https://x.com/agent_playbooks) and
 [LinkedIn](https://www.linkedin.com/company/agentplaybooksai/); questions and
 feedback are welcome there as well as on GitHub.
 
