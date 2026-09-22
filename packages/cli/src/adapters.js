@@ -377,14 +377,30 @@ function mergedHermesConfig(existingContent, additions, externalDir, { conflicts
  * `config.yaml` entries (MCP servers plus the portable skill store), and
  * `SOUL.md` from the playbook's persona.
  */
-async function hermesActions(report, targetIds, conflicts, { root, homedir, env, platform, skipMcp }) {
+async function hermesActions(report, targetIds, conflicts, { root, homedir, env, platform, skipMcp, hermesProfileName }) {
   if (!targetIds.includes("hermes")) return [];
-  const profile = await hermesProfile({ homedir, env, platform });
+  const profile = await hermesProfile({ homedir, env, platform, profile: hermesProfileName });
   const actions = [];
 
   const configPath = path.join(profile.directory, "config.yaml");
   const configDisplay = `${profile.display}/config.yaml`;
-  const existingConfig = await readIfExists(configPath);
+  let existingConfig = await readIfExists(configPath);
+  let seededFrom = null;
+
+  // A bot installed with `hermes profile install` has no config.yaml at all:
+  // unlike `hermes profile create`, install does not copy one, so the profile
+  // starts with no providers and no model and `hermes -p <bot>` cannot resolve
+  // one. Writing a file that holds only MCP servers would leave it that way
+  // and look like this tool broke it, so a new named profile starts from the
+  // installation's own config -- the same thing `profile create` does -- and
+  // the merge below adds to that. The model can then be changed per bot, which
+  // is the point of having one.
+  if (existingConfig === null && hermesProfileName) {
+    const installation = await hermesProfile({ homedir, env, platform });
+    existingConfig = await readIfExists(path.join(installation.directory, "config.yaml"));
+    if (existingConfig !== null) seededFrom = `${installation.display}/config.yaml`;
+  }
+
   const additions = skipMcp
     ? {}
     : mcpAdditionsFor(TARGET_ADAPTERS.hermes, groupByName(report.inventory.mcpServers), "hermes", conflicts);
@@ -399,9 +415,10 @@ async function hermesActions(report, targetIds, conflicts, { root, homedir, env,
       kind: "hermes-config",
       target: "hermes",
       name: "config.yaml",
-      action: existingConfig === null ? "create" : "merge",
+      action: existingConfig === null ? "create" : (seededFrom ? "create" : "merge"),
       path: configDisplay,
       absolutePath: configPath,
+      seededFrom,
       servers: merged.servers,
       externalDirs: merged.externalDirs,
       content: merged.content,
@@ -516,6 +533,10 @@ export async function planAdapters(report, targets, {
   env = process.env,
   platform = process.platform,
   skipMcp = false,
+  // A Hermes bot or group is its own profile directory. Naming one here points
+  // every hermes-target write at `profiles/<name>/` instead of the main
+  // profile, which is what makes one playbook drive one bot.
+  hermesProfileName = "",
 } = {}) {
   const root = report.inventory.root;
   const targetIds = targets
@@ -526,7 +547,7 @@ export async function planAdapters(report, targets, {
     ...await instructionActions(report, targetIds, conflicts, { root }),
     ...skillActions(report, targetIds, conflicts, { root }),
     ...(skipMcp ? [] : mcpActions(report, targetIds, conflicts, { root })),
-    ...await hermesActions(report, targetIds, conflicts, { root, homedir, env, platform, skipMcp }),
+    ...await hermesActions(report, targetIds, conflicts, { root, homedir, env, platform, skipMcp, hermesProfileName }),
   ];
   actions.sort((a, b) => a.path.localeCompare(b.path));
   return { actions, conflicts };

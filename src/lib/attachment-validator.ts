@@ -9,12 +9,13 @@
  * - Content validation
  */
 
-import { 
-  ALLOWED_FILE_TYPES, 
-  FILE_EXTENSION_MAP, 
+import {
+  ALLOWED_FILE_TYPES,
+  FILE_EXTENSION_MAP,
   ATTACHMENT_LIMITS,
-  type AttachmentFileType 
+  type AttachmentFileType
 } from './supabase/types';
+import { SKILL_FILE_DIRECTORIES } from './skill-markdown';
 
 export interface AttachmentValidationResult {
   valid: boolean;
@@ -24,57 +25,82 @@ export interface AttachmentValidationResult {
 }
 
 /**
- * Validates and sanitizes a filename
- * - Removes path components
- * - Validates characters
- * - Checks length
- * - Detects file type
+ * Validates and sanitizes an attachment filename.
+ *
+ * A skill's files are `SKILL.md` plus whatever it bundles, and the Agent Skills
+ * convention puts those under `scripts/`, `references/`, `assets/`,
+ * `examples/` or `templates/`. That single directory level is accepted here and
+ * nothing deeper, which is what `/.well-known/skills/` already serves and what
+ * the `safe_filename` constraint on the table now stores.
+ *
+ * Rejecting every slash would also stop traversal, and used to, but it made the
+ * two halves of the feature disagree: a skill could be served with a
+ * `scripts/foo.py` in its file list that could never be uploaded.
  */
 export function validateFilename(filename: string): AttachmentValidationResult {
   const errors: string[] = [];
-  
-  // Remove any path components (security: path traversal)
-  let sanitized = filename.replace(/^.*[\\\/]/, '');
-  
-  // Check for path traversal attempts
-  if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+
+  // Windows clients send backslashes; here they mean the same separator.
+  const normalized = String(filename ?? '').trim().replace(/\\/g, '/');
+
+  // `..` is never part of a legitimate attachment name, and neither is an
+  // absolute path. Everything else is settled by the segment rules below.
+  if (normalized.includes('..')) {
     errors.push('Path traversal detected in filename');
   }
-  
-  // Check length
-  if (sanitized.length === 0) {
+  if (normalized.startsWith('/')) {
+    errors.push('Filename must be relative to the skill directory');
+  }
+
+  const segments = normalized.split('/').filter((segment) => segment.length > 0);
+  if (segments.length === 0) {
     errors.push('Filename is empty');
     return { valid: false, errors };
   }
-  
-  if (sanitized.length > ATTACHMENT_LIMITS.MAX_FILENAME_LENGTH) {
-    errors.push(`Filename too long (max ${ATTACHMENT_LIMITS.MAX_FILENAME_LENGTH} characters)`);
+  if (segments.length > 2) {
+    errors.push('Filename may contain at most one directory level');
   }
-  
-  // Validate characters: only a-zA-Z0-9_.-
+
+  let directory = segments.length > 1 ? segments[0] : '';
+  if (directory && !(SKILL_FILE_DIRECTORIES as readonly string[]).includes(directory)) {
+    errors.push(
+      `Unsupported directory '${directory}'. Allowed: ${SKILL_FILE_DIRECTORIES.join(', ')}`,
+    );
+    directory = '';
+  }
+
+  // Validate characters in the name itself: a-zA-Z0-9_.-, starting
+  // alphanumeric. A repairable name is repaired rather than rejected, which is
+  // what callers of this function already expect.
   const validPattern = /^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/;
-  if (!validPattern.test(sanitized)) {
-    // Try to sanitize
-    sanitized = sanitized
+  let base = segments[segments.length - 1];
+  if (!validPattern.test(base)) {
+    base = base
       .replace(/[^a-zA-Z0-9_.-]/g, '_')
       .replace(/^[^a-zA-Z0-9]/, 'f');
-    
-    if (!validPattern.test(sanitized)) {
+
+    if (!validPattern.test(base)) {
       errors.push('Filename contains invalid characters');
     }
   }
-  
+
+  const sanitized = directory ? `${directory}/${base}` : base;
+
+  if (sanitized.length > ATTACHMENT_LIMITS.MAX_FILENAME_LENGTH) {
+    errors.push(`Filename too long (max ${ATTACHMENT_LIMITS.MAX_FILENAME_LENGTH} characters)`);
+  }
+
   // Detect file type from extension
-  const ext = sanitized.includes('.') 
-    ? '.' + sanitized.split('.').pop()?.toLowerCase() 
+  const ext = base.includes('.')
+    ? '.' + base.split('.').pop()?.toLowerCase()
     : null;
-  
+
   const detectedType = ext ? FILE_EXTENSION_MAP[ext] : undefined;
-  
+
   if (ext && !detectedType) {
     errors.push(`Unsupported file extension: ${ext}`);
   }
-  
+
   return {
     valid: errors.length === 0,
     errors,

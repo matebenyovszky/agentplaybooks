@@ -176,6 +176,9 @@ function printTargetSuggestion(plan) {
 function actionDetail(action) {
   const parts = [];
   if (action.from) parts.push(`from ${action.from}`);
+  // Copying the installation's providers into a new bot profile is a big,
+  // invisible change to make silently.
+  if (action.seededFrom) parts.push(`seeded from ${action.seededFrom}`);
   if (action.servers?.length) parts.push(`+ ${action.servers.join(", ")}`);
   // A registered skill directory is the whole point of the hermes target, so it
   // has to be visible in the plan rather than hidden inside the file diff.

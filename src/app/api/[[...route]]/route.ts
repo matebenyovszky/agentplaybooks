@@ -20,6 +20,7 @@ import {
   validateFilename,
   validateContent
 } from "@/lib/attachment-validator";
+import { isSafeSkillFile } from "@/lib/skill-markdown";
 import { hashApiKey, generateApiKey, getKeyPrefix } from "@/lib/utils";
 import {
   getAuthenticatedUser as getAuthenticatedUserFromRequest,
@@ -33,6 +34,7 @@ import { DEFAULT_USER_API_KEY_PERMISSIONS } from "@/lib/user-api-key-permissions
 import {
   createPlaybook,
   listAccessiblePlaybooks,
+  parseCreatePlaybookInput,
 } from "@/lib/repositories/playbooks";
 import { projectPlaybookToolsForUser } from "@/app/api/_shared/playbook-tools";
 import { operationPathsFromTools } from "@/app/api/_shared/operation-openapi";
@@ -962,6 +964,48 @@ app.delete("/user/api-keys/:kid", async (c) => {
   return c.json({ success: true });
 });
 
+// PUT /api/user/api-keys/:kid/rotate - Regenerate a user API key (returns new plain key)
+app.put("/user/api-keys/:kid/rotate", async (c) => {
+  const user = await requireAuth(c);
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const keyId = c.req.param("kid");
+  const supabase = getServiceSupabase();
+  const { data: existingKey, error: fetchError } = await supabase
+    .from("user_api_keys")
+    .select("id")
+    .eq("id", keyId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (fetchError || !existingKey) {
+    return c.json({ error: "API key not found" }, 404);
+  }
+
+  const plainKey = generateApiKey();
+  const keyHash = await hashApiKey(plainKey);
+  const keyPrefix = getKeyPrefix(plainKey);
+  const { data, error } = await supabase
+    .from("user_api_keys")
+    .update({ key_hash: keyHash, key_prefix: keyPrefix })
+    .eq("id", keyId)
+    .eq("user_id", user.id)
+    .select("id, key_prefix, name, permissions, last_used_at, expires_at, is_active, created_at")
+    .single();
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json({
+    ...data,
+    key: plainKey,
+    warning: "This is the only time the new key will be shown. Store it securely.",
+  });
+});
+
 // ============================================
 // MANAGEMENT API (User API Key supported)
 // These endpoints can be called with User API key for AI automation
@@ -992,48 +1036,12 @@ app.post("/manage/playbooks", async (c) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const body = await c.req.json();
-  const {
-    name,
-    description,
-    is_public,
-    visibility,
-    config,
-    tags,
-    persona_name,
-    persona_system_prompt,
-    persona_metadata,
-    instructions,
-  } = body;
-
-  if (!name) {
-    return c.json({ error: "Name is required" }, 400);
-  }
-
-  // Project instructions are optional; accept a string or an explicit null.
-  if (instructions !== undefined && instructions !== null && typeof instructions !== "string") {
-    return c.json({ error: "Invalid instructions" }, 400);
-  }
-
-  // Determine visibility
-  let visibilityValue = visibility;
-  if (!visibilityValue && is_public !== undefined) {
-    visibilityValue = is_public ? 'public' : 'private';
-  }
-  if (!visibilityValue) visibilityValue = 'private';
+  const body = await c.req.json().catch(() => null);
+  const parsed = parseCreatePlaybookInput(body);
+  if ("error" in parsed) return c.json({ error: parsed.error }, 400);
 
   try {
-    const data = await createPlaybook(user.id, {
-      name,
-      description: description || null,
-      visibility: visibilityValue,
-      config: config || {},
-      tags: tags || [],
-      persona_name,
-      persona_system_prompt,
-      persona_metadata: persona_metadata || {},
-      instructions: instructions || null,
-    });
+    const data = await createPlaybook(user.id, parsed.input);
     return c.json(data, 201);
   } catch (error) {
     return c.json({ error: error instanceof Error ? error.message : "Failed to create playbook" }, 500);
@@ -1063,20 +1071,39 @@ app.get("/manage/playbooks/:id", async (c) => {
     return c.json({ error: "Playbook not found" }, 404);
   }
 
-  // Get related data
+  // Get related data. A skill's bundled files come with it: this is the
+  // endpoint `apb pull` and `apb push` read, and a skill backed by a script is
+  // only half a skill without them. The id travels too, so a push can update a
+  // file in place instead of trying to create one that already exists.
   const [skills, mcpServers] = await Promise.all([
-    supabase.from("skills").select("*").eq("playbook_id", playbook.id),
+    supabase
+      .from("skills")
+      .select("*, skill_attachments(id, filename, content)")
+      .eq("playbook_id", playbook.id),
     supabase.from("mcp_servers").select("*").eq("playbook_id", playbook.id),
   ]);
 
   const persona = playbookToPersona(playbook);
+
+  type SkillAttachmentRow = { id: string; filename: string; content: string };
+  type SkillWithAttachments = Record<string, unknown> & {
+    skill_attachments?: SkillAttachmentRow[] | null;
+  };
+  const skillsWithFiles = ((skills.data ?? []) as unknown as SkillWithAttachments[]).map(
+    ({ skill_attachments, ...skill }) => ({
+      ...skill,
+      // A stored name the serving rules would reject can never be written to
+      // disk safely, so it is not handed to a client either.
+      attachments: (skill_attachments ?? []).filter((file) => isSafeSkillFile(file.filename)),
+    }),
+  );
 
   return c.json({
     ...playbook,
     current_user_role: accessRole,
     persona,
     personas: [persona], // backward-compatible shape
-    skills: skills.data || [],
+    skills: skillsWithFiles,
     mcp_servers: mcpServers.data || [],
   });
 });

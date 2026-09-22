@@ -339,8 +339,12 @@ export type SkillAttachmentsInsert = Omit<SkillAttachmentsRow, 'id' | 'created_a
 export type SkillAttachmentsUpdate = Partial<Omit<SkillAttachmentsRow, 'id' | 'skill_id' | 'created_at'>>;
 
 // Security limits
+// Mirrored by CHECK constraints on skill_attachments: `max_file_size`,
+// `safe_filename`, and the `check_attachment_limit` trigger. Raising a number
+// here without the matching migration produces an upload the API accepts and
+// the database then rejects.
 export const ATTACHMENT_LIMITS = {
-  MAX_FILE_SIZE: 51200, // 50KB
+  MAX_FILE_SIZE: 262144, // 256KB
   MAX_FILES_PER_SKILL: 10,
   MAX_FILENAME_LENGTH: 100,
 } as const;

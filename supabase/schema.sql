@@ -361,11 +361,10 @@ ALTER TABLE public.secrets ADD CONSTRAINT secrets_category_check CHECK ((categor
 
 ALTER TABLE public.skill_attachments ADD CONSTRAINT content_size_match CHECK ((octet_length(content) = size_bytes));
 
-ALTER TABLE public.skill_attachments ADD CONSTRAINT max_file_size CHECK ((size_bytes <= 51200));
+ALTER TABLE public.skill_attachments ADD CONSTRAINT max_file_size CHECK ((size_bytes <= 262144));
 
-ALTER TABLE public.skill_attachments ADD CONSTRAINT no_path_traversal CHECK (((filename !~~ '%..%'::text) AND (filename !~~ '%/%'::text) AND (filename !~~ '%\%'::text)));
 
-ALTER TABLE public.skill_attachments ADD CONSTRAINT safe_filename CHECK (((length(filename) <= 100) AND (filename ~ '^[a-zA-Z0-9][a-zA-Z0-9_.-]*$'::text)));
+ALTER TABLE public.skill_attachments ADD CONSTRAINT safe_filename CHECK (((length(filename) <= 100) AND (filename ~ '^(?:(?:scripts|references|assets|examples|templates)/)?[a-zA-Z0-9][a-zA-Z0-9_.-]*$'::text)));
 
 ALTER TABLE public.skill_versions ADD CONSTRAINT skill_versions_change_type_check CHECK ((change_type = ANY (ARRAY['UPDATE'::text, 'DELETE'::text, 'MANUAL_SAVE'::text])));
 

@@ -105,10 +105,24 @@ export function skillMarkdown(skill: SkillDocument): string | null {
   return `---\n${header}\n---\n\n${body.replace(/^\n+/, "")}`;
 }
 
+/**
+ * The subdirectories a skill may bundle files under, from the Agent Skills
+ * convention. One level, from this list, and nothing else.
+ */
+export const SKILL_FILE_DIRECTORIES = ["scripts", "references", "assets", "examples", "templates"] as const;
+
 // Attachment filenames become URL path segments and, for anyone who downloads a
 // skill, file paths. Only the shapes the spec uses are accepted: a plain name,
 // or one of the standard subdirectories.
-const SAFE_SKILL_FILE = /^(?:scripts|references|assets|examples|templates)?\/?[A-Za-z0-9._-]+$/;
+//
+// This rule is enforced in three places and they have to agree: here, on the
+// way out; `validateFilename` in attachment-validator.ts, on the way in; and
+// the `safe_filename` CHECK on skill_attachments, in storage. Change one
+// without the others and you get a file that can be stored but never served,
+// or one the API accepts and the database then rejects.
+const SAFE_SKILL_FILE = new RegExp(
+  `^(?:(?:${SKILL_FILE_DIRECTORIES.join("|")})/)?[A-Za-z0-9][A-Za-z0-9._-]*$`,
+);
 
 export function isSafeSkillFile(filename: unknown): filename is string {
   if (typeof filename !== "string" || filename.length === 0 || filename.length > 128) return false;

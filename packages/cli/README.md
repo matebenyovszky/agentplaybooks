@@ -278,6 +278,7 @@ API-key header remains a fallback for non-interactive environments.
 The skill also works standalone: copy `skills/agentplaybooks/` into a
 project's `.claude/skills/` (or let `sync` do it once it is part of a
 playbook).
+
 ## Native Hermes memory
 
 Install and configure AgentPlaybooks as Hermes's native memory provider:
@@ -298,3 +299,47 @@ The provider uses existing literal memory search, mirrors explicit memory writes
 and supports read/write/archive/delete/history tools. See the
 [provider guide](../hermes-memory/agentplaybooks/README.md) for scope and installation
 details. It does not upload full conversations or add semantic search, caching or retries.
+
+## Licence
+
+MIT, as of `0.2.0-beta.0`. The `LICENSE` file next to this README is the
+authoritative text and ships inside the published tarball.
+
+Two earlier tarballs are wrong about this. `0.2.0-alpha.1` and `0.2.0-alpha.2`
+were published declaring `PolyForm-Noncommercial-1.0.0`, which is not and never
+was the licence of this project. A published npm version is immutable, so the
+metadata on those two cannot be corrected in place; they should be deprecated
+with a pointer to a current release:
+
+```bash
+npm deprecate @agentplaybooks/cli@0.2.0-alpha.1 "Mislabelled licence. This package is MIT; install 0.2.0-beta.0 or later."
+npm deprecate @agentplaybooks/cli@0.2.0-alpha.2 "Mislabelled licence. This package is MIT; install 0.2.0-beta.0 or later."
+```
+
+`tests/package-metadata.test.ts` in the repository root now fails the build if
+the licence or the version drifts between `package.json`, the plugin manifest
+and the marketplace listing, so this cannot recur unnoticed.
+
+## One playbook, one Hermes bot
+
+`export hermes` writes the playbook this project is linked to as a Hermes Agent
+profile distribution — the directory `hermes profile install` reads:
+
+```bash
+apb pull <playbook-guid> --apply
+apb export hermes ./bots/research --apply
+hermes profile install ./bots/research --name research
+apb sync --target=hermes --profile=research --apply
+```
+
+The distribution holds `distribution.yaml`, `SOUL.md` and `skills/<name>/` with
+each skill's bundled files. It ships no `config.yaml`: `profile install`
+replaces that file rather than merging it, so one would overwrite the machine's
+providers and pin the bot's model. The fourth command covers that instead —
+unlike `profile create`, `profile install` copies no configuration at all, so a
+new bot has no model until `sync --profile=<bot>` seeds one from the
+installation's own and merges the playbook's MCP servers in.
+
+Later changes: re-run `pull` and `export hermes`, then `hermes profile update
+research`. Distribution files are replaced; sessions, memories and
+configuration are not.
