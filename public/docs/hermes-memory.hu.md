@@ -1,9 +1,13 @@
 # Hermes memóriaszolgáltató
 
+![AgentPlaybooks Hermes Memory pluginkép](/plugin-catalog/hermes-memory.png)
+
 Az AgentPlaybooks natív memóriaszolgáltatóként választható ki a Hermes Agentben.
 A tartós tényeket privát playbookban tárolja, több munkameneten át elérhetővé
 teszi, és az AgentPlaybooksban is szerkeszthető, archiválható vagy törölhető
 bejegyzésekként kezeli.
+A portolható utasításokhoz, skillekhez és Hermes-profilokhoz lásd a külön
+[Portable Agents plugint](./hermes-portable-agents.md).
 
 ## Telepítés és beállítás
 

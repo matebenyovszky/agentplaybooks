@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="AgentPlaybooks Hermes Memory plugin card">
+  <defs>
+    <linearGradient id="background" x2="1" y2="1">
+      <stop stop-color="#0b172b"/>
+      <stop offset="1" stop-color="#101b32"/>
+    </linearGradient>
+    <linearGradient id="gold" x2="1" y2="1">
+      <stop stop-color="#fbbf24"/>
+      <stop offset="1" stop-color="#d97706"/>
+    </linearGradient>
+    <linearGradient id="blue" x2="1" y2="1">
+      <stop stop-color="#60a5fa"/>
+      <stop offset="1" stop-color="#2563eb"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" rx="44" fill="url(#background)"/>
+  <path d="M0 500H1200M0 550H1200M100 0V630M1100 0V630" fill="none" stroke="#3b82f6" stroke-opacity=".12"/>
+  <rect x="56" y="56" width="1088" height="518" rx="32" fill="none" stroke="#60a5fa" stroke-opacity=".32" stroke-width="2"/>
+  <g fill="none" stroke="url(#blue)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M150 262h160l85-87h148l84 87h151"/>
+    <path d="M150 400h160l85 88h148l84-88h151"/>
+    <path d="M395 175v313M627 262v138" stroke-opacity=".54"/>
+    <circle cx="150" cy="262" r="13" fill="#0b172b"/>
+    <circle cx="150" cy="400" r="13" fill="#0b172b"/>
+    <circle cx="778" cy="262" r="13" fill="#0b172b"/>
+    <circle cx="778" cy="400" r="13" fill="#0b172b"/>
+  </g>
+  <rect x="423" y="239" width="176" height="186" rx="34" fill="#15253e" stroke="#60a5fa" stroke-width="4"/>
+  <path d="M477 284v94h70v-94M469 298h86M469 330h86M469 362h86" fill="none" stroke="url(#gold)" stroke-width="9" stroke-linecap="round"/>
+  <circle cx="395" cy="175" r="10" fill="#fbbf24"/><circle cx="395" cy="488" r="10" fill="#fbbf24"/>
+  <text x="850" y="272" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#93c5fd" letter-spacing="3">AGENTPLAYBOOKS</text>
+  <text x="846" y="349" font-family="Segoe UI, Arial, sans-serif" font-size="36" font-weight="700" fill="#ffffff">Hermes Memory</text>
+  <text x="849" y="404" font-family="Segoe UI, Arial, sans-serif" font-size="23" fill="#cbd5e1">Private memory you control.</text>
+  <rect x="848" y="440" width="172" height="6" rx="3" fill="url(#gold)"/>
+</svg>

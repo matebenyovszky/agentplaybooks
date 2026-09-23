@@ -33,6 +33,12 @@ export const docsEntries: DocEntry[] = [
     section: "guides",
   },
   {
+    slug: "hermes-portable-agents",
+    title: "Portable Agents in Hermes",
+    description: "Audit, sync, and export agent configuration for Hermes",
+    section: "guides",
+  },
+  {
     slug: "cli",
     title: "CLI & Editor Plugins",
     description: "Doctor, sync, pull/push, and the Claude Code plugin",

@@ -1,0 +1,45 @@
+name: Hermes portable agent plugin
+
+on:
+  pull_request:
+    paths: ["packages/hermes-portable/**", ".github/workflows/hermes-portable.yml"]
+  push:
+    branches: [main]
+    paths: ["packages/hermes-portable/**", ".github/workflows/hermes-portable.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  compatibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.12"
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: NousResearch/hermes-agent
+          ref: 71a2fe399bbd7a219c71f9d9fca2b313b01f2057
+          path: .tmp/hermes-upstream
+      - run: pip install -e .tmp/hermes-upstream
+      - name: Validate package and discover bundled Hermes skill
+        env:
+          HERMES_HOME: ${{ runner.temp }}/hermes-portable-validation
+          PYTHONPATH: ${{ github.workspace }}/.tmp/hermes-upstream
+        run: |
+          python -m hermes_cli.main plugins validate packages/hermes-portable/agentplaybooks-portable
+          python - <<'PY'
+          from pathlib import Path
+          from tempfile import TemporaryDirectory
+          from hermes_cli.agent_plugins import load_agent_plugin
+
+          root = Path("packages/hermes-portable/agentplaybooks-portable").resolve()
+          with TemporaryDirectory() as data:
+              package = load_agent_plugin(root, Path(data))
+              assert package.name == "agentplaybooks-portable"
+              assert [skill.name for skill in package.skills] == ["agentplaybooks-portable"]
+              assert not package.diagnostics, package.diagnostics
+          PY
