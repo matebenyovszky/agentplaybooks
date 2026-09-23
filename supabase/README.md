@@ -35,7 +35,7 @@ if you need this on-premise.
 
 ## A note on RLS
 
-18 tables have RLS enabled and there are 46 policies, but RLS is not the
+Sensitive tables have RLS enabled, but RLS is not the
 primary authorization mechanism: almost every API route queries with the
 service-role key, which bypasses it. Authorization lives in
 `src/app/api/_shared/guards.ts`.
@@ -49,3 +49,26 @@ apparently-dead code breaks those endpoints rather than merely tightening them.
 Policies written against `auth.uid()` are currently inert, because no
 JWT-bearing client queries tables directly — the browser talks only to
 `/api/*`.
+
+`playbook_snapshots` is intentionally private: RLS is enabled, `anon` and
+`authenticated` have no direct table grants, and only the management API's
+role-checked service client can read or write snapshots. The playbook FK is
+`ON DELETE SET NULL`, so the owner can recover a backup by GUID after deleting
+the playbook itself.
+
+## Production deployment
+
+The [Deploy Supabase workflow](../.github/workflows/deploy-supabase.yml) runs on
+merges to `main` that change migrations, or manually. It runs the test suite,
+previews and applies pending migrations, then checks the live schema and access
+grants. Set the `SUPABASE_DB_URL` GitHub Actions secret to a percent-encoded
+Postgres connection string for project `bydcjwxfiiolmnddzbpy` (prefer the
+session pooler if the runner cannot reach the direct IPv6 host). Do not commit
+the connection string.
+
+The production history through `20260919075416` predates this repository's
+current migration filenames. `scripts/prepare-supabase-deploy.mjs` stages the
+audited, already-applied versions as no-op placeholders and copies only newer
+migration files into a temporary CLI workdir. The real SQL is always taken from
+`supabase/migrations`. If production history changes outside this workflow,
+review and update `deploy-baseline-versions.txt` before another deployment.

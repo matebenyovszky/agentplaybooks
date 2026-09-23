@@ -124,20 +124,26 @@ npx wrangler deploy
 ## CLI, ChatGPT/Codex Plugin, and Claude Code Plugin (`packages/cli`)
 
 `agentplaybooks doctor <project>` audits local agent configuration
-(instructions, Agent Skills, MCP servers, likely hard-coded secrets, drift)
+(instructions, Agent Skills, custom agents, MCP servers, likely hard-coded secrets, drift)
 and `agentplaybooks sync <project>` creates the canonical
 `agentplaybook.json` plus the platform files missing from enabled targets:
-Claude Code (`.claude/skills` + `.mcp.json`), Cursor (`.cursor/skills` +
-`.cursor/mcp.json`), ChatGPT/Codex (`.codex/skills` + `.codex/config.toml`),
-Google Antigravity (`.agents/skills`), Grok Bot (`.agents/skills`, which it
+Claude Code, Cursor, ChatGPT/Codex, GitHub Copilot, Gemini CLI, Google
+Antigravity (`.agents/skills`), Grok Bot (`.agents/skills`, which it
 discovers natively alongside `AGENTS.md`), and Hermes Agent (`.agents/skills`
 registered in `~/.hermes/config.yaml`, plus that file's `mcp_servers:` and
 `SOUL.md`).
+`agentplaybooks plugin export|import` round-trips Agent Plugins 1.0 packages;
+the only manifest extension carries secret references and bindings, never
+secret values.
 `login` / `playbooks` / `pull` / `push` synchronize skills, MCP servers, and the
-manifest with a hosted playbook using a user API key; secret values never move,
-only the references the playbook declares in `spec.secrets`. All mutating
-commands are plan-only until `--apply`. See
-[packages/cli/README.md](packages/cli/README.md).
+manifest with a hosted playbook using a user API key. `push` also creates a
+private, versioned cross-platform AI agent configuration backup, including
+complete Agent Skills folders and portable custom agents. `backups` lists
+revisions; `pull --snapshot` can recover an earlier one. Secret values never
+move, only references declared in `spec.secrets`. Mutating commands show a
+plan first and require `--apply`, `--yes`, or interactive confirmation where
+supported. See [packages/cli/README.md](packages/cli/README.md) and the
+[backup and migration guide](public/docs/portable-agent-backups.md).
 
 The same package is a ChatGPT/Codex plugin (skill + account MCP) and a Claude
 Code / Claude Cowork plugin (skill + slash commands + account MCP). Both expose

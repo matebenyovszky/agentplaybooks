@@ -92,11 +92,18 @@ describe("Cursor plugin catalog manifests", () => {
       skills: string;
       commands: string;
     };
+    const codex = JSON.parse(source("packages/cli/.codex-plugin/plugin.json")) as {
+      name: string;
+      version: string;
+      license: string;
+    };
 
     expect(cursor.name).toBe("agentplaybooks");
     expect(cursor.name).toBe(claude.name);
-    expect(cursor.version).toBe("0.3.0-beta.3");
+    expect(cursor.version).toBe("0.4.0");
     expect(cursor.version).toBe(claude.version);
+    expect(codex.version).toBe(claude.version);
+    expect(codex.license).toBe("MIT");
     expect(cursor.license).toBe("MIT");
     expect(cursor.description).toBe(claude.description);
     expect(cursor.skills).toBe("./skills");
@@ -107,15 +114,19 @@ describe("Cursor plugin catalog manifests", () => {
     const marketplace = JSON.parse(source(".cursor-plugin/marketplace.json")) as {
       plugins: Array<{ source: string; license: string; version: string }>;
     };
+    const claudeMarketplace = JSON.parse(source(".claude-plugin/marketplace.json")) as {
+      plugins: Array<{ source: string; license: string; version: string }>;
+    };
     expect(marketplace.plugins).toHaveLength(1);
     expect(marketplace.plugins[0].source).toBe("./packages/cli");
     expect(marketplace.plugins[0].license).toBe("MIT");
-    expect(marketplace.plugins[0].version).toBe("0.3.0-beta.2");
+    expect(marketplace.plugins[0].version).toBe("0.4.0");
+    expect(claudeMarketplace.plugins[0]).toMatchObject(marketplace.plugins[0]);
   });
 
   it("publishes the fixed CLI package version", () => {
     const cli = JSON.parse(source("packages/cli/package.json")) as { version: string };
-    expect(cli.version).toBe("0.3.0-beta.3");
+    expect(cli.version).toBe("0.4.0");
   });
 });
 

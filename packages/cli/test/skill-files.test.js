@@ -60,6 +60,13 @@ function fakeApi(state) {
       }
     }
 
+    const snapshots = pathname.match(/^\/api\/manage\/playbooks\/([^/]+)\/snapshots$/);
+    if (method === "POST" && snapshots) {
+      const snapshot = { id: `backup-${(state.backups ?? []).length + 1}`, snapshot: body.snapshot };
+      state.backups = [...(state.backups ?? []), snapshot];
+      return respond(201, snapshot);
+    }
+
     const skills = pathname.match(/^\/api\/manage\/playbooks\/([^/]+)\/skills$/);
     if (method === "POST" && skills) {
       const playbook = state.playbooks.find((item) => item.id === skills[1]);
@@ -242,7 +249,7 @@ test("push leaves a remote file the working tree no longer has", async () => {
   assert.equal(state.playbooks[0].skills[0].attachments.length, 1);
 });
 
-test("push reports a file too large for the store instead of failing mid-upload", async () => {
+test("push keeps a file too large for hosted attachments in its portable snapshot", async () => {
   const root = await fixture("apb-push-large-");
   await put(root, ".agents/skills/office-live/SKILL.md",
     "---\nname: office-live\ndescription: Drive the open Office document.\n---\n\nBody.\n");
@@ -252,8 +259,10 @@ test("push reports a file too large for the store instead of failing mid-upload"
   const { fetchImpl } = fakeApi(state);
 
   const plan = await planPush(root, { url: URL_BASE, apiKey: API_KEY, fetchImpl });
-  const conflict = plan.conflicts.find((item) => item.kind === "skill-file");
-  assert.ok(conflict, "the oversized file must be reported");
-  assert.match(conflict.reason, /262145 bytes/);
+  const warning = plan.warnings.find((item) => item.kind === "skill-file");
+  assert.ok(warning, "the hosted attachment limit must be reported");
+  assert.match(warning.reason, /262145 bytes/);
+  assert.equal(plan.conflicts.length, 0);
+  assert.ok(plan.snapshot.files.some((file) => file.path === ".agents/skills/office-live/scripts/huge.py"));
   assert.equal(plan.actions.filter((action) => action.kind === "skill-file").length, 0);
 });

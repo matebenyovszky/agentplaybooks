@@ -18,14 +18,16 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: "AgentPlaybooks — One Playbook, Every Agent",
-  description: "A portable operating environment for AI agents. Keep skills, MCP servers, project instructions, and memory in one source of truth, deployed to Claude Code, Cursor, Codex, Antigravity, and Hermes from a single command.",
+  description: "Back up and migrate AI agent configuration across supported tools. AgentPlaybooks syncs Agent Skills, custom agents, MCP references, and project instructions, with private versioned recovery.",
   keywords: [
     "agent configuration", "agent skills", "SKILL.md", "AGENTS.md",
     "MCP server", "Model Context Protocol", "agent memory", "agent persona",
     "Claude Code skills", "Cursor rules", "Codex CLI", "Google Antigravity",
     "Hermes Agent", "ChatGPT custom GPT", "Gemini gems", "local LLM",
     "portable AI configuration", "vendor lock-in", "self-hosted AI",
-    "agent secrets management", "OpenAPI", "JSON schema", "robot skills"
+    "agent secrets management", "OpenAPI", "JSON schema", "robot skills",
+    "AI agent configuration backup", "cross-platform AI agent migration",
+    "Agent Plugins 1.0", "portable custom agents"
   ],
   icons: {
     icon: [
@@ -39,7 +41,7 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   openGraph: {
     title: "AgentPlaybooks — One Playbook, Every Agent",
-    description: "A portable operating environment for AI agents: skills, MCP servers, instructions, and memory in one source of truth that deploys to every agent tool you use.",
+    description: "Portable Agent Skills, custom agents, MCP references, and project instructions with private, versioned backup and restore across supported AI coding tools.",
     type: "website",
     siteName: "AgentPlaybooks",
     images: [
@@ -54,7 +56,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "AgentPlaybooks — One Playbook, Every Agent",
-    description: "Keep agent skills, MCP servers, instructions, and memory in one portable playbook. Deploys to Claude Code, Cursor, Codex, Antigravity, and Hermes from a single command.",
+    description: "Back up and migrate Agent Skills, custom agents, MCP references, and instructions across supported AI coding tools.",
     images: ["/twitter-image.png"],
   },
   robots: {

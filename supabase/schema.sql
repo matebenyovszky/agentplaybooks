@@ -911,3 +911,26 @@ CREATE POLICY "Users can insert their own API keys" ON public.user_api_keys AS P
 CREATE POLICY "Users can update their own API keys" ON public.user_api_keys AS PERMISSIVE FOR UPDATE TO authenticated USING ((auth.uid() = user_id));
 
 CREATE POLICY "Users can view their own API keys" ON public.user_api_keys AS PERMISSIVE FOR SELECT TO authenticated USING ((auth.uid() = user_id));
+
+-- Immutable, private portable configuration backups. Retained by GUID even
+-- when the corresponding playbook is deleted.
+CREATE TABLE IF NOT EXISTS public.playbook_snapshots (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  playbook_id uuid REFERENCES public.playbooks(id) ON DELETE SET NULL,
+  playbook_guid text NOT NULL,
+  playbook_name text NOT NULL,
+  owner_user_id uuid NOT NULL,
+  created_by uuid,
+  digest text NOT NULL CHECK (digest ~ '^sha256:[0-9a-f]{64}$'),
+  snapshot jsonb NOT NULL,
+  file_count integer NOT NULL CHECK (file_count BETWEEN 1 AND 1000),
+  size_bytes integer NOT NULL CHECK (size_bytes BETWEEN 1 AND 4194304),
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS playbook_snapshots_owner_guid_created_idx
+  ON public.playbook_snapshots (owner_user_id, playbook_guid, created_at DESC);
+CREATE INDEX IF NOT EXISTS playbook_snapshots_playbook_created_idx
+  ON public.playbook_snapshots (playbook_id, created_at DESC) WHERE playbook_id IS NOT NULL;
+ALTER TABLE public.playbook_snapshots ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.playbook_snapshots FROM anon, authenticated;
+GRANT ALL ON public.playbook_snapshots TO service_role;

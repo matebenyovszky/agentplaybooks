@@ -5,6 +5,7 @@ import path from "node:path";
 import test from "node:test";
 import { applyPull, applyPush, planPull, planPush } from "../src/remote.js";
 import { applySync, planSync } from "../src/sync.js";
+import { snapshotDigest } from "../src/snapshot.js";
 
 const URL_BASE = "https://remote.test";
 const API_KEY = "apb_test_key";
@@ -44,6 +45,13 @@ function fakeApi(playbook) {
         Object.assign(playbook, body);
         return respond(200, playbook);
       }
+    }
+    if (method === "GET" && pathname === `/api/manage/playbooks/${playbook?.id}/snapshots/latest`) {
+      return respond(200, playbook.snapshot ? { snapshot: playbook.snapshot, digest: snapshotDigest(playbook.snapshot) } : { snapshot: null });
+    }
+    if (method === "POST" && pathname === `/api/manage/playbooks/${playbook?.id}/snapshots`) {
+      playbook.snapshot = body.snapshot;
+      return respond(201, { digest: snapshotDigest(body.snapshot) });
     }
     if (method === "POST" && pathname === `/api/manage/playbooks/${playbook?.id}/skills`) {
       const skill = { id: `skill-${playbook.skills.length + 1}`, ...body };

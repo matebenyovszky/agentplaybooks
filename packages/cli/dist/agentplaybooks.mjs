@@ -31,9 +31,9 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
-// ../../../../packages/cli/node_modules/yaml/dist/nodes/identity.js
+// node_modules/yaml/dist/nodes/identity.js
 var require_identity = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/nodes/identity.js"(exports) {
+  "node_modules/yaml/dist/nodes/identity.js"(exports) {
     "use strict";
     var ALIAS = Symbol.for("yaml.alias");
     var DOC = Symbol.for("yaml.document");
@@ -44,7 +44,7 @@ var require_identity = __commonJS({
     var NODE_TYPE = Symbol.for("yaml.node.type");
     var isAlias = (node) => !!node && typeof node === "object" && node[NODE_TYPE] === ALIAS;
     var isDocument = (node) => !!node && typeof node === "object" && node[NODE_TYPE] === DOC;
-    var isMap7 = (node) => !!node && typeof node === "object" && node[NODE_TYPE] === MAP;
+    var isMap8 = (node) => !!node && typeof node === "object" && node[NODE_TYPE] === MAP;
     var isPair = (node) => !!node && typeof node === "object" && node[NODE_TYPE] === PAIR;
     var isScalar = (node) => !!node && typeof node === "object" && node[NODE_TYPE] === SCALAR;
     var isSeq = (node) => !!node && typeof node === "object" && node[NODE_TYPE] === SEQ;
@@ -80,7 +80,7 @@ var require_identity = __commonJS({
     exports.isAlias = isAlias;
     exports.isCollection = isCollection;
     exports.isDocument = isDocument;
-    exports.isMap = isMap7;
+    exports.isMap = isMap8;
     exports.isNode = isNode;
     exports.isPair = isPair;
     exports.isScalar = isScalar;
@@ -88,9 +88,9 @@ var require_identity = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/visit.js
+// node_modules/yaml/dist/visit.js
 var require_visit = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/visit.js"(exports) {
+  "node_modules/yaml/dist/visit.js"(exports) {
     "use strict";
     var identity = require_identity();
     var BREAK = Symbol("break visit");
@@ -108,17 +108,17 @@ var require_visit = __commonJS({
     visit.BREAK = BREAK;
     visit.SKIP = SKIP;
     visit.REMOVE = REMOVE;
-    function visit_(key, node, visitor, path13) {
-      const ctrl = callVisitor(key, node, visitor, path13);
+    function visit_(key, node, visitor, path16) {
+      const ctrl = callVisitor(key, node, visitor, path16);
       if (identity.isNode(ctrl) || identity.isPair(ctrl)) {
-        replaceNode(key, path13, ctrl);
-        return visit_(key, ctrl, visitor, path13);
+        replaceNode(key, path16, ctrl);
+        return visit_(key, ctrl, visitor, path16);
       }
       if (typeof ctrl !== "symbol") {
         if (identity.isCollection(node)) {
-          path13 = Object.freeze(path13.concat(node));
+          path16 = Object.freeze(path16.concat(node));
           for (let i = 0; i < node.items.length; ++i) {
-            const ci = visit_(i, node.items[i], visitor, path13);
+            const ci = visit_(i, node.items[i], visitor, path16);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -129,13 +129,13 @@ var require_visit = __commonJS({
             }
           }
         } else if (identity.isPair(node)) {
-          path13 = Object.freeze(path13.concat(node));
-          const ck = visit_("key", node.key, visitor, path13);
+          path16 = Object.freeze(path16.concat(node));
+          const ck = visit_("key", node.key, visitor, path16);
           if (ck === BREAK)
             return BREAK;
           else if (ck === REMOVE)
             node.key = null;
-          const cv = visit_("value", node.value, visitor, path13);
+          const cv = visit_("value", node.value, visitor, path16);
           if (cv === BREAK)
             return BREAK;
           else if (cv === REMOVE)
@@ -156,17 +156,17 @@ var require_visit = __commonJS({
     visitAsync.BREAK = BREAK;
     visitAsync.SKIP = SKIP;
     visitAsync.REMOVE = REMOVE;
-    async function visitAsync_(key, node, visitor, path13) {
-      const ctrl = await callVisitor(key, node, visitor, path13);
+    async function visitAsync_(key, node, visitor, path16) {
+      const ctrl = await callVisitor(key, node, visitor, path16);
       if (identity.isNode(ctrl) || identity.isPair(ctrl)) {
-        replaceNode(key, path13, ctrl);
-        return visitAsync_(key, ctrl, visitor, path13);
+        replaceNode(key, path16, ctrl);
+        return visitAsync_(key, ctrl, visitor, path16);
       }
       if (typeof ctrl !== "symbol") {
         if (identity.isCollection(node)) {
-          path13 = Object.freeze(path13.concat(node));
+          path16 = Object.freeze(path16.concat(node));
           for (let i = 0; i < node.items.length; ++i) {
-            const ci = await visitAsync_(i, node.items[i], visitor, path13);
+            const ci = await visitAsync_(i, node.items[i], visitor, path16);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -177,13 +177,13 @@ var require_visit = __commonJS({
             }
           }
         } else if (identity.isPair(node)) {
-          path13 = Object.freeze(path13.concat(node));
-          const ck = await visitAsync_("key", node.key, visitor, path13);
+          path16 = Object.freeze(path16.concat(node));
+          const ck = await visitAsync_("key", node.key, visitor, path16);
           if (ck === BREAK)
             return BREAK;
           else if (ck === REMOVE)
             node.key = null;
-          const cv = await visitAsync_("value", node.value, visitor, path13);
+          const cv = await visitAsync_("value", node.value, visitor, path16);
           if (cv === BREAK)
             return BREAK;
           else if (cv === REMOVE)
@@ -210,23 +210,23 @@ var require_visit = __commonJS({
       }
       return visitor;
     }
-    function callVisitor(key, node, visitor, path13) {
+    function callVisitor(key, node, visitor, path16) {
       if (typeof visitor === "function")
-        return visitor(key, node, path13);
+        return visitor(key, node, path16);
       if (identity.isMap(node))
-        return visitor.Map?.(key, node, path13);
+        return visitor.Map?.(key, node, path16);
       if (identity.isSeq(node))
-        return visitor.Seq?.(key, node, path13);
+        return visitor.Seq?.(key, node, path16);
       if (identity.isPair(node))
-        return visitor.Pair?.(key, node, path13);
+        return visitor.Pair?.(key, node, path16);
       if (identity.isScalar(node))
-        return visitor.Scalar?.(key, node, path13);
+        return visitor.Scalar?.(key, node, path16);
       if (identity.isAlias(node))
-        return visitor.Alias?.(key, node, path13);
+        return visitor.Alias?.(key, node, path16);
       return void 0;
     }
-    function replaceNode(key, path13, node) {
-      const parent = path13[path13.length - 1];
+    function replaceNode(key, path16, node) {
+      const parent = path16[path16.length - 1];
       if (identity.isCollection(parent)) {
         parent.items[key] = node;
       } else if (identity.isPair(parent)) {
@@ -246,9 +246,9 @@ var require_visit = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/doc/directives.js
+// node_modules/yaml/dist/doc/directives.js
 var require_directives = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/doc/directives.js"(exports) {
+  "node_modules/yaml/dist/doc/directives.js"(exports) {
     "use strict";
     var identity = require_identity();
     var visit = require_visit();
@@ -417,9 +417,9 @@ var require_directives = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/doc/anchors.js
+// node_modules/yaml/dist/doc/anchors.js
 var require_anchors = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/doc/anchors.js"(exports) {
+  "node_modules/yaml/dist/doc/anchors.js"(exports) {
     "use strict";
     var identity = require_identity();
     var visit = require_visit();
@@ -487,9 +487,9 @@ var require_anchors = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/doc/applyReviver.js
+// node_modules/yaml/dist/doc/applyReviver.js
 var require_applyReviver = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/doc/applyReviver.js"(exports) {
+  "node_modules/yaml/dist/doc/applyReviver.js"(exports) {
     "use strict";
     function applyReviver(reviver, obj, key, val) {
       if (val && typeof val === "object") {
@@ -537,9 +537,9 @@ var require_applyReviver = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/nodes/toJS.js
+// node_modules/yaml/dist/nodes/toJS.js
 var require_toJS = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/nodes/toJS.js"(exports) {
+  "node_modules/yaml/dist/nodes/toJS.js"(exports) {
     "use strict";
     var identity = require_identity();
     function toJS(value, arg, ctx) {
@@ -567,9 +567,9 @@ var require_toJS = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/nodes/Node.js
+// node_modules/yaml/dist/nodes/Node.js
 var require_Node = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/nodes/Node.js"(exports) {
+  "node_modules/yaml/dist/nodes/Node.js"(exports) {
     "use strict";
     var applyReviver = require_applyReviver();
     var identity = require_identity();
@@ -608,9 +608,9 @@ var require_Node = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/nodes/Alias.js
+// node_modules/yaml/dist/nodes/Alias.js
 var require_Alias = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/nodes/Alias.js"(exports) {
+  "node_modules/yaml/dist/nodes/Alias.js"(exports) {
     "use strict";
     var anchors = require_anchors();
     var visit = require_visit();
@@ -724,9 +724,9 @@ var require_Alias = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/nodes/Scalar.js
+// node_modules/yaml/dist/nodes/Scalar.js
 var require_Scalar = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/nodes/Scalar.js"(exports) {
+  "node_modules/yaml/dist/nodes/Scalar.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Node = require_Node();
@@ -754,9 +754,9 @@ var require_Scalar = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/doc/createNode.js
+// node_modules/yaml/dist/doc/createNode.js
 var require_createNode = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/doc/createNode.js"(exports) {
+  "node_modules/yaml/dist/doc/createNode.js"(exports) {
     "use strict";
     var Alias = require_Alias();
     var identity = require_identity();
@@ -829,17 +829,17 @@ var require_createNode = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/nodes/Collection.js
+// node_modules/yaml/dist/nodes/Collection.js
 var require_Collection = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/nodes/Collection.js"(exports) {
+  "node_modules/yaml/dist/nodes/Collection.js"(exports) {
     "use strict";
     var createNode = require_createNode();
     var identity = require_identity();
     var Node = require_Node();
-    function collectionFromPath(schema, path13, value) {
+    function collectionFromPath(schema, path16, value) {
       let v = value;
-      for (let i = path13.length - 1; i >= 0; --i) {
-        const k = path13[i];
+      for (let i = path16.length - 1; i >= 0; --i) {
+        const k = path16[i];
         if (typeof k === "number" && Number.isInteger(k) && k >= 0) {
           const a = [];
           a[k] = v;
@@ -858,7 +858,7 @@ var require_Collection = __commonJS({
         sourceObjects: /* @__PURE__ */ new Map()
       });
     }
-    var isEmptyPath = (path13) => path13 == null || typeof path13 === "object" && !!path13[Symbol.iterator]().next().done;
+    var isEmptyPath = (path16) => path16 == null || typeof path16 === "object" && !!path16[Symbol.iterator]().next().done;
     var Collection = class extends Node.NodeBase {
       constructor(type, schema) {
         super(type);
@@ -888,11 +888,11 @@ var require_Collection = __commonJS({
        * be a Pair instance or a `{ key, value }` object, which may not have a key
        * that already exists in the map.
        */
-      addIn(path13, value) {
-        if (isEmptyPath(path13))
+      addIn(path16, value) {
+        if (isEmptyPath(path16))
           this.add(value);
         else {
-          const [key, ...rest] = path13;
+          const [key, ...rest] = path16;
           const node = this.get(key, true);
           if (identity.isCollection(node))
             node.addIn(rest, value);
@@ -906,8 +906,8 @@ var require_Collection = __commonJS({
        * Removes a value from the collection.
        * @returns `true` if the item was found and removed.
        */
-      deleteIn(path13) {
-        const [key, ...rest] = path13;
+      deleteIn(path16) {
+        const [key, ...rest] = path16;
         if (rest.length === 0)
           return this.delete(key);
         const node = this.get(key, true);
@@ -921,8 +921,8 @@ var require_Collection = __commonJS({
        * scalar values from their surrounding node; to disable set `keepScalar` to
        * `true` (collections are always returned intact).
        */
-      getIn(path13, keepScalar) {
-        const [key, ...rest] = path13;
+      getIn(path16, keepScalar) {
+        const [key, ...rest] = path16;
         const node = this.get(key, true);
         if (rest.length === 0)
           return !keepScalar && identity.isScalar(node) ? node.value : node;
@@ -940,8 +940,8 @@ var require_Collection = __commonJS({
       /**
        * Checks if the collection includes a value with the key `key`.
        */
-      hasIn(path13) {
-        const [key, ...rest] = path13;
+      hasIn(path16) {
+        const [key, ...rest] = path16;
         if (rest.length === 0)
           return this.has(key);
         const node = this.get(key, true);
@@ -951,8 +951,8 @@ var require_Collection = __commonJS({
        * Sets a value in this collection. For `!!set`, `value` needs to be a
        * boolean to add/remove the item from the set.
        */
-      setIn(path13, value) {
-        const [key, ...rest] = path13;
+      setIn(path16, value) {
+        const [key, ...rest] = path16;
         if (rest.length === 0) {
           this.set(key, value);
         } else {
@@ -972,9 +972,9 @@ var require_Collection = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/stringify/stringifyComment.js
+// node_modules/yaml/dist/stringify/stringifyComment.js
 var require_stringifyComment = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/stringify/stringifyComment.js"(exports) {
+  "node_modules/yaml/dist/stringify/stringifyComment.js"(exports) {
     "use strict";
     var stringifyComment = (str) => str.replace(/^(?!$)(?: $)?/gm, "#");
     function indentComment(comment, indent) {
@@ -989,9 +989,9 @@ var require_stringifyComment = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/stringify/foldFlowLines.js
+// node_modules/yaml/dist/stringify/foldFlowLines.js
 var require_foldFlowLines = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/stringify/foldFlowLines.js"(exports) {
+  "node_modules/yaml/dist/stringify/foldFlowLines.js"(exports) {
     "use strict";
     var FOLD_FLOW = "flow";
     var FOLD_BLOCK = "block";
@@ -1125,9 +1125,9 @@ ${indent}${text.slice(fold + 1, end2)}`;
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/stringify/stringifyString.js
+// node_modules/yaml/dist/stringify/stringifyString.js
 var require_stringifyString = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/stringify/stringifyString.js"(exports) {
+  "node_modules/yaml/dist/stringify/stringifyString.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var foldFlowLines = require_foldFlowLines();
@@ -1408,9 +1408,9 @@ ${indent}`);
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/stringify/stringify.js
+// node_modules/yaml/dist/stringify/stringify.js
 var require_stringify = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/stringify/stringify.js"(exports) {
+  "node_modules/yaml/dist/stringify/stringify.js"(exports) {
     "use strict";
     var anchors = require_anchors();
     var identity = require_identity();
@@ -1499,7 +1499,7 @@ var require_stringify = __commonJS({
         props.push(doc.directives.tagString(tag));
       return props.join(" ");
     }
-    function stringify2(item, ctx, onComment, onChompKeep) {
+    function stringify3(item, ctx, onComment, onChompKeep) {
       if (identity.isPair(item))
         return item.toString(ctx, onComment, onChompKeep);
       if (identity.isAlias(item)) {
@@ -1528,17 +1528,17 @@ var require_stringify = __commonJS({
 ${ctx.indent}${str}`;
     }
     exports.createStringifyContext = createStringifyContext;
-    exports.stringify = stringify2;
+    exports.stringify = stringify3;
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/stringify/stringifyPair.js
+// node_modules/yaml/dist/stringify/stringifyPair.js
 var require_stringifyPair = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/stringify/stringifyPair.js"(exports) {
+  "node_modules/yaml/dist/stringify/stringifyPair.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Scalar = require_Scalar();
-    var stringify2 = require_stringify();
+    var stringify3 = require_stringify();
     var stringifyComment = require_stringifyComment();
     function stringifyPair({ key, value }, ctx, onComment, onChompKeep) {
       const { allNullValues, doc, indent, indentStep, options: { commentString, indentSeq, simpleKeys } } = ctx;
@@ -1560,7 +1560,7 @@ var require_stringifyPair = __commonJS({
       });
       let keyCommentDone = false;
       let chompKeep = false;
-      let str = stringify2.stringify(key, ctx, () => keyCommentDone = true, () => chompKeep = true);
+      let str = stringify3.stringify(key, ctx, () => keyCommentDone = true, () => chompKeep = true);
       if (!explicitKey && !ctx.inFlow && str.length > 1024) {
         if (simpleKeys)
           throw new Error("With simple keys, single line scalar must not span more than 1024 characters");
@@ -1612,7 +1612,7 @@ ${indent}:`;
         ctx.indent = ctx.indent.substring(2);
       }
       let valueCommentDone = false;
-      const valueStr = stringify2.stringify(value, ctx, () => valueCommentDone = true, () => chompKeep = true);
+      const valueStr = stringify3.stringify(value, ctx, () => valueCommentDone = true, () => chompKeep = true);
       let ws = " ";
       if (keyComment || vsb || vcb) {
         ws = vsb ? "\n" : "";
@@ -1665,9 +1665,9 @@ ${ctx.indent}`;
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/log.js
+// node_modules/yaml/dist/log.js
 var require_log = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/log.js"(exports) {
+  "node_modules/yaml/dist/log.js"(exports) {
     "use strict";
     var node_process = __require("process");
     function debug(logLevel, ...messages) {
@@ -1687,9 +1687,9 @@ var require_log = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/schema/yaml-1.1/merge.js
+// node_modules/yaml/dist/schema/yaml-1.1/merge.js
 var require_merge = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/schema/yaml-1.1/merge.js"(exports) {
+  "node_modules/yaml/dist/schema/yaml-1.1/merge.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Scalar = require_Scalar();
@@ -1747,13 +1747,13 @@ var require_merge = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/nodes/addPairToJSMap.js
+// node_modules/yaml/dist/nodes/addPairToJSMap.js
 var require_addPairToJSMap = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/nodes/addPairToJSMap.js"(exports) {
+  "node_modules/yaml/dist/nodes/addPairToJSMap.js"(exports) {
     "use strict";
     var log = require_log();
     var merge = require_merge();
-    var stringify2 = require_stringify();
+    var stringify3 = require_stringify();
     var identity = require_identity();
     var toJS = require_toJS();
     function addPairToJSMap(ctx, map, { key, value }) {
@@ -1789,7 +1789,7 @@ var require_addPairToJSMap = __commonJS({
       if (typeof jsKey !== "object")
         return String(jsKey);
       if (identity.isNode(key) && ctx?.doc) {
-        const strCtx = stringify2.createStringifyContext(ctx.doc, {});
+        const strCtx = stringify3.createStringifyContext(ctx.doc, {});
         strCtx.anchors = /* @__PURE__ */ new Set();
         for (const node of ctx.anchors.keys())
           strCtx.anchors.add(node.anchor);
@@ -1811,9 +1811,9 @@ var require_addPairToJSMap = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/nodes/Pair.js
+// node_modules/yaml/dist/nodes/Pair.js
 var require_Pair = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/nodes/Pair.js"(exports) {
+  "node_modules/yaml/dist/nodes/Pair.js"(exports) {
     "use strict";
     var createNode = require_createNode();
     var stringifyPair = require_stringifyPair();
@@ -1851,17 +1851,17 @@ var require_Pair = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/stringify/stringifyCollection.js
+// node_modules/yaml/dist/stringify/stringifyCollection.js
 var require_stringifyCollection = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/stringify/stringifyCollection.js"(exports) {
+  "node_modules/yaml/dist/stringify/stringifyCollection.js"(exports) {
     "use strict";
     var identity = require_identity();
-    var stringify2 = require_stringify();
+    var stringify3 = require_stringify();
     var stringifyComment = require_stringifyComment();
     function stringifyCollection(collection, ctx, options) {
       const flow = ctx.inFlow ?? collection.flow;
-      const stringify3 = flow ? stringifyFlowCollection : stringifyBlockCollection;
-      return stringify3(collection, ctx, options);
+      const stringify4 = flow ? stringifyFlowCollection : stringifyBlockCollection;
+      return stringify4(collection, ctx, options);
     }
     function stringifyBlockCollection({ comment, items }, ctx, { blockItemPrefix, flowChars, itemIndent, onChompKeep, onComment }) {
       const { indent, options: { commentString } } = ctx;
@@ -1886,7 +1886,7 @@ var require_stringifyCollection = __commonJS({
           }
         }
         chompKeep = false;
-        let str2 = stringify2.stringify(item, itemCtx, () => comment2 = null, () => chompKeep = true);
+        let str2 = stringify3.stringify(item, itemCtx, () => comment2 = null, () => chompKeep = true);
         if (comment2)
           str2 += stringifyComment.lineComment(str2, itemIndent, commentString(comment2));
         if (chompKeep && comment2)
@@ -1953,7 +1953,7 @@ ${indent}${line}` : "\n";
         }
         if (comment)
           reqNewline = true;
-        let str = stringify2.stringify(item, itemCtx, () => comment = null);
+        let str = stringify3.stringify(item, itemCtx, () => comment = null);
         reqNewline || (reqNewline = lines.length > linesAtValue || str.includes("\n"));
         if (i < items.length - 1) {
           str += ",";
@@ -2002,9 +2002,9 @@ ${indent}${end}`;
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/nodes/YAMLMap.js
+// node_modules/yaml/dist/nodes/YAMLMap.js
 var require_YAMLMap = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/nodes/YAMLMap.js"(exports) {
+  "node_modules/yaml/dist/nodes/YAMLMap.js"(exports) {
     "use strict";
     var stringifyCollection = require_stringifyCollection();
     var addPairToJSMap = require_addPairToJSMap();
@@ -2146,9 +2146,9 @@ var require_YAMLMap = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/schema/common/map.js
+// node_modules/yaml/dist/schema/common/map.js
 var require_map = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/schema/common/map.js"(exports) {
+  "node_modules/yaml/dist/schema/common/map.js"(exports) {
     "use strict";
     var identity = require_identity();
     var YAMLMap = require_YAMLMap();
@@ -2168,9 +2168,9 @@ var require_map = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/nodes/YAMLSeq.js
+// node_modules/yaml/dist/nodes/YAMLSeq.js
 var require_YAMLSeq = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/nodes/YAMLSeq.js"(exports) {
+  "node_modules/yaml/dist/nodes/YAMLSeq.js"(exports) {
     "use strict";
     var createNode = require_createNode();
     var stringifyCollection = require_stringifyCollection();
@@ -2284,9 +2284,9 @@ var require_YAMLSeq = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/schema/common/seq.js
+// node_modules/yaml/dist/schema/common/seq.js
 var require_seq = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/schema/common/seq.js"(exports) {
+  "node_modules/yaml/dist/schema/common/seq.js"(exports) {
     "use strict";
     var identity = require_identity();
     var YAMLSeq = require_YAMLSeq();
@@ -2306,9 +2306,9 @@ var require_seq = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/schema/common/string.js
+// node_modules/yaml/dist/schema/common/string.js
 var require_string = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/schema/common/string.js"(exports) {
+  "node_modules/yaml/dist/schema/common/string.js"(exports) {
     "use strict";
     var stringifyString = require_stringifyString();
     var string = {
@@ -2325,9 +2325,9 @@ var require_string = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/schema/common/null.js
+// node_modules/yaml/dist/schema/common/null.js
 var require_null = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/schema/common/null.js"(exports) {
+  "node_modules/yaml/dist/schema/common/null.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var nullTag = {
@@ -2343,9 +2343,9 @@ var require_null = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/schema/core/bool.js
+// node_modules/yaml/dist/schema/core/bool.js
 var require_bool = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/schema/core/bool.js"(exports) {
+  "node_modules/yaml/dist/schema/core/bool.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var boolTag = {
@@ -2367,9 +2367,9 @@ var require_bool = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/stringify/stringifyNumber.js
+// node_modules/yaml/dist/stringify/stringifyNumber.js
 var require_stringifyNumber = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/stringify/stringifyNumber.js"(exports) {
+  "node_modules/yaml/dist/stringify/stringifyNumber.js"(exports) {
     "use strict";
     function stringifyNumber({ format, minFractionDigits, tag, value }) {
       if (typeof value === "bigint")
@@ -2394,9 +2394,9 @@ var require_stringifyNumber = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/schema/core/float.js
+// node_modules/yaml/dist/schema/core/float.js
 var require_float = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/schema/core/float.js"(exports) {
+  "node_modules/yaml/dist/schema/core/float.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var stringifyNumber = require_stringifyNumber();
@@ -2440,9 +2440,9 @@ var require_float = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/schema/core/int.js
+// node_modules/yaml/dist/schema/core/int.js
 var require_int = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/schema/core/int.js"(exports) {
+  "node_modules/yaml/dist/schema/core/int.js"(exports) {
     "use strict";
     var stringifyNumber = require_stringifyNumber();
     var intIdentify = (value) => typeof value === "bigint" || Number.isInteger(value);
@@ -2485,9 +2485,9 @@ var require_int = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/schema/core/schema.js
+// node_modules/yaml/dist/schema/core/schema.js
 var require_schema = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/schema/core/schema.js"(exports) {
+  "node_modules/yaml/dist/schema/core/schema.js"(exports) {
     "use strict";
     var map = require_map();
     var _null = require_null();
@@ -2513,9 +2513,9 @@ var require_schema = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/schema/json/schema.js
+// node_modules/yaml/dist/schema/json/schema.js
 var require_schema2 = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/schema/json/schema.js"(exports) {
+  "node_modules/yaml/dist/schema/json/schema.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var map = require_map();
@@ -2580,9 +2580,9 @@ var require_schema2 = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/schema/yaml-1.1/binary.js
+// node_modules/yaml/dist/schema/yaml-1.1/binary.js
 var require_binary = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/schema/yaml-1.1/binary.js"(exports) {
+  "node_modules/yaml/dist/schema/yaml-1.1/binary.js"(exports) {
     "use strict";
     var node_buffer = __require("buffer");
     var Scalar = require_Scalar();
@@ -2646,9 +2646,9 @@ var require_binary = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/schema/yaml-1.1/pairs.js
+// node_modules/yaml/dist/schema/yaml-1.1/pairs.js
 var require_pairs = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/schema/yaml-1.1/pairs.js"(exports) {
+  "node_modules/yaml/dist/schema/yaml-1.1/pairs.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Pair = require_Pair();
@@ -2724,9 +2724,9 @@ ${cn.comment}` : item.comment;
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/schema/yaml-1.1/omap.js
+// node_modules/yaml/dist/schema/yaml-1.1/omap.js
 var require_omap = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/schema/yaml-1.1/omap.js"(exports) {
+  "node_modules/yaml/dist/schema/yaml-1.1/omap.js"(exports) {
     "use strict";
     var identity = require_identity();
     var toJS = require_toJS();
@@ -2802,9 +2802,9 @@ var require_omap = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/schema/yaml-1.1/bool.js
+// node_modules/yaml/dist/schema/yaml-1.1/bool.js
 var require_bool2 = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/schema/yaml-1.1/bool.js"(exports) {
+  "node_modules/yaml/dist/schema/yaml-1.1/bool.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     function boolStringify({ value, source }, ctx) {
@@ -2834,9 +2834,9 @@ var require_bool2 = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/schema/yaml-1.1/float.js
+// node_modules/yaml/dist/schema/yaml-1.1/float.js
 var require_float2 = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/schema/yaml-1.1/float.js"(exports) {
+  "node_modules/yaml/dist/schema/yaml-1.1/float.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var stringifyNumber = require_stringifyNumber();
@@ -2883,9 +2883,9 @@ var require_float2 = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/schema/yaml-1.1/int.js
+// node_modules/yaml/dist/schema/yaml-1.1/int.js
 var require_int2 = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/schema/yaml-1.1/int.js"(exports) {
+  "node_modules/yaml/dist/schema/yaml-1.1/int.js"(exports) {
     "use strict";
     var stringifyNumber = require_stringifyNumber();
     var intIdentify = (value) => typeof value === "bigint" || Number.isInteger(value);
@@ -2962,9 +2962,9 @@ var require_int2 = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/schema/yaml-1.1/set.js
+// node_modules/yaml/dist/schema/yaml-1.1/set.js
 var require_set = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/schema/yaml-1.1/set.js"(exports) {
+  "node_modules/yaml/dist/schema/yaml-1.1/set.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Pair = require_Pair();
@@ -3051,9 +3051,9 @@ var require_set = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/schema/yaml-1.1/timestamp.js
+// node_modules/yaml/dist/schema/yaml-1.1/timestamp.js
 var require_timestamp = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/schema/yaml-1.1/timestamp.js"(exports) {
+  "node_modules/yaml/dist/schema/yaml-1.1/timestamp.js"(exports) {
     "use strict";
     var stringifyNumber = require_stringifyNumber();
     function parseSexagesimal(str, asBigInt) {
@@ -3139,9 +3139,9 @@ var require_timestamp = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/schema/yaml-1.1/schema.js
+// node_modules/yaml/dist/schema/yaml-1.1/schema.js
 var require_schema3 = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/schema/yaml-1.1/schema.js"(exports) {
+  "node_modules/yaml/dist/schema/yaml-1.1/schema.js"(exports) {
     "use strict";
     var map = require_map();
     var _null = require_null();
@@ -3183,9 +3183,9 @@ var require_schema3 = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/schema/tags.js
+// node_modules/yaml/dist/schema/tags.js
 var require_tags = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/schema/tags.js"(exports) {
+  "node_modules/yaml/dist/schema/tags.js"(exports) {
     "use strict";
     var map = require_map();
     var _null = require_null();
@@ -3277,9 +3277,9 @@ var require_tags = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/schema/Schema.js
+// node_modules/yaml/dist/schema/Schema.js
 var require_Schema = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/schema/Schema.js"(exports) {
+  "node_modules/yaml/dist/schema/Schema.js"(exports) {
     "use strict";
     var identity = require_identity();
     var map = require_map();
@@ -3309,12 +3309,12 @@ var require_Schema = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/stringify/stringifyDocument.js
+// node_modules/yaml/dist/stringify/stringifyDocument.js
 var require_stringifyDocument = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/stringify/stringifyDocument.js"(exports) {
+  "node_modules/yaml/dist/stringify/stringifyDocument.js"(exports) {
     "use strict";
     var identity = require_identity();
-    var stringify2 = require_stringify();
+    var stringify3 = require_stringify();
     var stringifyComment = require_stringifyComment();
     function stringifyDocument(doc, options) {
       const lines = [];
@@ -3329,7 +3329,7 @@ var require_stringifyDocument = __commonJS({
       }
       if (hasDirectives)
         lines.push("---");
-      const ctx = stringify2.createStringifyContext(doc, options);
+      const ctx = stringify3.createStringifyContext(doc, options);
       const { commentString } = ctx.options;
       if (doc.commentBefore) {
         if (lines.length !== 1)
@@ -3351,7 +3351,7 @@ var require_stringifyDocument = __commonJS({
           contentComment = doc.contents.comment;
         }
         const onChompKeep = contentComment ? void 0 : () => chompKeep = true;
-        let body = stringify2.stringify(doc.contents, ctx, () => contentComment = null, onChompKeep);
+        let body = stringify3.stringify(doc.contents, ctx, () => contentComment = null, onChompKeep);
         if (contentComment)
           body += stringifyComment.lineComment(body, "", commentString(contentComment));
         if ((body[0] === "|" || body[0] === ">") && lines[lines.length - 1] === "---") {
@@ -3359,7 +3359,7 @@ var require_stringifyDocument = __commonJS({
         } else
           lines.push(body);
       } else {
-        lines.push(stringify2.stringify(doc.contents, ctx));
+        lines.push(stringify3.stringify(doc.contents, ctx));
       }
       if (doc.directives?.docEnd) {
         if (doc.comment) {
@@ -3389,9 +3389,9 @@ var require_stringifyDocument = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/doc/Document.js
+// node_modules/yaml/dist/doc/Document.js
 var require_Document = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/doc/Document.js"(exports) {
+  "node_modules/yaml/dist/doc/Document.js"(exports) {
     "use strict";
     var Alias = require_Alias();
     var Collection = require_Collection();
@@ -3467,9 +3467,9 @@ var require_Document = __commonJS({
           this.contents.add(value);
       }
       /** Adds a value to the document. */
-      addIn(path13, value) {
+      addIn(path16, value) {
         if (assertCollection(this.contents))
-          this.contents.addIn(path13, value);
+          this.contents.addIn(path16, value);
       }
       /**
        * Create a new `Alias` node, ensuring that the target `node` has the required anchor.
@@ -3544,14 +3544,14 @@ var require_Document = __commonJS({
        * Removes a value from the document.
        * @returns `true` if the item was found and removed.
        */
-      deleteIn(path13) {
-        if (Collection.isEmptyPath(path13)) {
+      deleteIn(path16) {
+        if (Collection.isEmptyPath(path16)) {
           if (this.contents == null)
             return false;
           this.contents = null;
           return true;
         }
-        return assertCollection(this.contents) ? this.contents.deleteIn(path13) : false;
+        return assertCollection(this.contents) ? this.contents.deleteIn(path16) : false;
       }
       /**
        * Returns item at `key`, or `undefined` if not found. By default unwraps
@@ -3566,10 +3566,10 @@ var require_Document = __commonJS({
        * scalar values from their surrounding node; to disable set `keepScalar` to
        * `true` (collections are always returned intact).
        */
-      getIn(path13, keepScalar) {
-        if (Collection.isEmptyPath(path13))
+      getIn(path16, keepScalar) {
+        if (Collection.isEmptyPath(path16))
           return !keepScalar && identity.isScalar(this.contents) ? this.contents.value : this.contents;
-        return identity.isCollection(this.contents) ? this.contents.getIn(path13, keepScalar) : void 0;
+        return identity.isCollection(this.contents) ? this.contents.getIn(path16, keepScalar) : void 0;
       }
       /**
        * Checks if the document includes a value with the key `key`.
@@ -3580,10 +3580,10 @@ var require_Document = __commonJS({
       /**
        * Checks if the document includes a value at `path`.
        */
-      hasIn(path13) {
-        if (Collection.isEmptyPath(path13))
+      hasIn(path16) {
+        if (Collection.isEmptyPath(path16))
           return this.contents !== void 0;
-        return identity.isCollection(this.contents) ? this.contents.hasIn(path13) : false;
+        return identity.isCollection(this.contents) ? this.contents.hasIn(path16) : false;
       }
       /**
        * Sets a value in this document. For `!!set`, `value` needs to be a
@@ -3600,13 +3600,13 @@ var require_Document = __commonJS({
        * Sets a value in this document. For `!!set`, `value` needs to be a
        * boolean to add/remove the item from the set.
        */
-      setIn(path13, value) {
-        if (Collection.isEmptyPath(path13)) {
+      setIn(path16, value) {
+        if (Collection.isEmptyPath(path16)) {
           this.contents = value;
         } else if (this.contents == null) {
-          this.contents = Collection.collectionFromPath(this.schema, Array.from(path13), value);
+          this.contents = Collection.collectionFromPath(this.schema, Array.from(path16), value);
         } else if (assertCollection(this.contents)) {
-          this.contents.setIn(path13, value);
+          this.contents.setIn(path16, value);
         }
       }
       /**
@@ -3698,9 +3698,9 @@ var require_Document = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/errors.js
+// node_modules/yaml/dist/errors.js
 var require_errors = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/errors.js"(exports) {
+  "node_modules/yaml/dist/errors.js"(exports) {
     "use strict";
     var YAMLError = class extends Error {
       constructor(name, pos, code, message) {
@@ -3763,9 +3763,9 @@ ${pointer}
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/compose/resolve-props.js
+// node_modules/yaml/dist/compose/resolve-props.js
 var require_resolve_props = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/compose/resolve-props.js"(exports) {
+  "node_modules/yaml/dist/compose/resolve-props.js"(exports) {
     "use strict";
     function resolveProps(tokens, { flow, indicator, next, offset, onError, parentIndent, startOnNewline }) {
       let spaceBefore = false;
@@ -3897,9 +3897,9 @@ var require_resolve_props = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/compose/util-contains-newline.js
+// node_modules/yaml/dist/compose/util-contains-newline.js
 var require_util_contains_newline = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/compose/util-contains-newline.js"(exports) {
+  "node_modules/yaml/dist/compose/util-contains-newline.js"(exports) {
     "use strict";
     function containsNewline(key) {
       if (!key)
@@ -3939,9 +3939,9 @@ var require_util_contains_newline = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/compose/util-flow-indent-check.js
+// node_modules/yaml/dist/compose/util-flow-indent-check.js
 var require_util_flow_indent_check = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/compose/util-flow-indent-check.js"(exports) {
+  "node_modules/yaml/dist/compose/util-flow-indent-check.js"(exports) {
     "use strict";
     var utilContainsNewline = require_util_contains_newline();
     function flowIndentCheck(indent, fc, onError) {
@@ -3957,9 +3957,9 @@ var require_util_flow_indent_check = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/compose/util-map-includes.js
+// node_modules/yaml/dist/compose/util-map-includes.js
 var require_util_map_includes = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/compose/util-map-includes.js"(exports) {
+  "node_modules/yaml/dist/compose/util-map-includes.js"(exports) {
     "use strict";
     var identity = require_identity();
     function mapIncludes(ctx, items, search) {
@@ -3973,9 +3973,9 @@ var require_util_map_includes = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/compose/resolve-block-map.js
+// node_modules/yaml/dist/compose/resolve-block-map.js
 var require_resolve_block_map = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/compose/resolve-block-map.js"(exports) {
+  "node_modules/yaml/dist/compose/resolve-block-map.js"(exports) {
     "use strict";
     var Pair = require_Pair();
     var YAMLMap = require_YAMLMap();
@@ -4081,9 +4081,9 @@ var require_resolve_block_map = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/compose/resolve-block-seq.js
+// node_modules/yaml/dist/compose/resolve-block-seq.js
 var require_resolve_block_seq = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/compose/resolve-block-seq.js"(exports) {
+  "node_modules/yaml/dist/compose/resolve-block-seq.js"(exports) {
     "use strict";
     var YAMLSeq = require_YAMLSeq();
     var resolveProps = require_resolve_props();
@@ -4132,9 +4132,9 @@ var require_resolve_block_seq = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/compose/resolve-end.js
+// node_modules/yaml/dist/compose/resolve-end.js
 var require_resolve_end = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/compose/resolve-end.js"(exports) {
+  "node_modules/yaml/dist/compose/resolve-end.js"(exports) {
     "use strict";
     function resolveEnd(end, offset, reqSpace, onError) {
       let comment = "";
@@ -4175,9 +4175,9 @@ var require_resolve_end = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/compose/resolve-flow-collection.js
+// node_modules/yaml/dist/compose/resolve-flow-collection.js
 var require_resolve_flow_collection = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/compose/resolve-flow-collection.js"(exports) {
+  "node_modules/yaml/dist/compose/resolve-flow-collection.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Pair = require_Pair();
@@ -4190,9 +4190,9 @@ var require_resolve_flow_collection = __commonJS({
     var blockMsg = "Block collections are not allowed within flow collections";
     var isBlock = (token) => token && (token.type === "block-map" || token.type === "block-seq");
     function resolveFlowCollection({ composeNode, composeEmptyNode }, ctx, fc, onError, tag) {
-      const isMap7 = fc.start.source === "{";
-      const fcName = isMap7 ? "flow map" : "flow sequence";
-      const NodeClass = tag?.nodeClass ?? (isMap7 ? YAMLMap.YAMLMap : YAMLSeq.YAMLSeq);
+      const isMap8 = fc.start.source === "{";
+      const fcName = isMap8 ? "flow map" : "flow sequence";
+      const NodeClass = tag?.nodeClass ?? (isMap8 ? YAMLMap.YAMLMap : YAMLSeq.YAMLSeq);
       const coll = new NodeClass(ctx.schema);
       coll.flow = true;
       const atRoot = ctx.atRoot;
@@ -4228,7 +4228,7 @@ var require_resolve_flow_collection = __commonJS({
             offset = props.end;
             continue;
           }
-          if (!isMap7 && ctx.options.strict && utilContainsNewline.containsNewline(key))
+          if (!isMap8 && ctx.options.strict && utilContainsNewline.containsNewline(key))
             onError(
               key,
               // checked by containsNewline()
@@ -4268,7 +4268,7 @@ var require_resolve_flow_collection = __commonJS({
             }
           }
         }
-        if (!isMap7 && !sep && !props.found) {
+        if (!isMap8 && !sep && !props.found) {
           const valueNode = value ? composeNode(ctx, value, props, onError) : composeEmptyNode(ctx, props.end, sep, null, props, onError);
           coll.items.push(valueNode);
           offset = valueNode.range[2];
@@ -4291,7 +4291,7 @@ var require_resolve_flow_collection = __commonJS({
             startOnNewline: false
           });
           if (valueProps.found) {
-            if (!isMap7 && !props.found && ctx.options.strict) {
+            if (!isMap8 && !props.found && ctx.options.strict) {
               if (sep)
                 for (const st of sep) {
                   if (st === valueProps.found)
@@ -4323,7 +4323,7 @@ var require_resolve_flow_collection = __commonJS({
           const pair = new Pair.Pair(keyNode, valueNode);
           if (ctx.options.keepSourceTokens)
             pair.srcToken = collItem;
-          if (isMap7) {
+          if (isMap8) {
             const map = coll;
             if (utilMapIncludes.mapIncludes(ctx, map.items, keyNode))
               onError(keyStart, "DUPLICATE_KEY", "Map keys must be unique");
@@ -4339,7 +4339,7 @@ var require_resolve_flow_collection = __commonJS({
           offset = valueNode ? valueNode.range[2] : valueProps.end;
         }
       }
-      const expectedEnd = isMap7 ? "}" : "]";
+      const expectedEnd = isMap8 ? "}" : "]";
       const [ce, ...ee] = fc.end;
       let cePos = offset;
       if (ce?.source === expectedEnd)
@@ -4369,9 +4369,9 @@ var require_resolve_flow_collection = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/compose/compose-collection.js
+// node_modules/yaml/dist/compose/compose-collection.js
 var require_compose_collection = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/compose/compose-collection.js"(exports) {
+  "node_modules/yaml/dist/compose/compose-collection.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Scalar = require_Scalar();
@@ -4434,9 +4434,9 @@ var require_compose_collection = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/compose/resolve-block-scalar.js
+// node_modules/yaml/dist/compose/resolve-block-scalar.js
 var require_resolve_block_scalar = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/compose/resolve-block-scalar.js"(exports) {
+  "node_modules/yaml/dist/compose/resolve-block-scalar.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     function resolveBlockScalar(ctx, scalar, onError) {
@@ -4617,9 +4617,9 @@ var require_resolve_block_scalar = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/compose/resolve-flow-scalar.js
+// node_modules/yaml/dist/compose/resolve-flow-scalar.js
 var require_resolve_flow_scalar = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/compose/resolve-flow-scalar.js"(exports) {
+  "node_modules/yaml/dist/compose/resolve-flow-scalar.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var resolveEnd = require_resolve_end();
@@ -4837,9 +4837,9 @@ var require_resolve_flow_scalar = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/compose/compose-scalar.js
+// node_modules/yaml/dist/compose/compose-scalar.js
 var require_compose_scalar = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/compose/compose-scalar.js"(exports) {
+  "node_modules/yaml/dist/compose/compose-scalar.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Scalar = require_Scalar();
@@ -4918,9 +4918,9 @@ var require_compose_scalar = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/compose/util-empty-scalar-position.js
+// node_modules/yaml/dist/compose/util-empty-scalar-position.js
 var require_util_empty_scalar_position = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/compose/util-empty-scalar-position.js"(exports) {
+  "node_modules/yaml/dist/compose/util-empty-scalar-position.js"(exports) {
     "use strict";
     function emptyScalarPosition(offset, before, pos) {
       if (before) {
@@ -4948,9 +4948,9 @@ var require_util_empty_scalar_position = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/compose/compose-node.js
+// node_modules/yaml/dist/compose/compose-node.js
 var require_compose_node = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/compose/compose-node.js"(exports) {
+  "node_modules/yaml/dist/compose/compose-node.js"(exports) {
     "use strict";
     var Alias = require_Alias();
     var identity = require_identity();
@@ -5054,9 +5054,9 @@ var require_compose_node = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/compose/compose-doc.js
+// node_modules/yaml/dist/compose/compose-doc.js
 var require_compose_doc = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/compose/compose-doc.js"(exports) {
+  "node_modules/yaml/dist/compose/compose-doc.js"(exports) {
     "use strict";
     var Document = require_Document();
     var composeNode = require_compose_node();
@@ -5097,9 +5097,9 @@ var require_compose_doc = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/compose/composer.js
+// node_modules/yaml/dist/compose/composer.js
 var require_composer = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/compose/composer.js"(exports) {
+  "node_modules/yaml/dist/compose/composer.js"(exports) {
     "use strict";
     var node_process = __require("process");
     var directives = require_directives();
@@ -5305,9 +5305,9 @@ ${end.comment}` : end.comment;
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/parse/cst-scalar.js
+// node_modules/yaml/dist/parse/cst-scalar.js
 var require_cst_scalar = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/parse/cst-scalar.js"(exports) {
+  "node_modules/yaml/dist/parse/cst-scalar.js"(exports) {
     "use strict";
     var resolveBlockScalar = require_resolve_block_scalar();
     var resolveFlowScalar = require_resolve_flow_scalar();
@@ -5490,11 +5490,11 @@ var require_cst_scalar = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/parse/cst-stringify.js
+// node_modules/yaml/dist/parse/cst-stringify.js
 var require_cst_stringify = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/parse/cst-stringify.js"(exports) {
+  "node_modules/yaml/dist/parse/cst-stringify.js"(exports) {
     "use strict";
-    var stringify2 = (cst) => "type" in cst ? stringifyToken(cst) : stringifyItem(cst);
+    var stringify3 = (cst) => "type" in cst ? stringifyToken(cst) : stringifyItem(cst);
     function stringifyToken(token) {
       switch (token.type) {
         case "block-scalar": {
@@ -5547,13 +5547,13 @@ var require_cst_stringify = __commonJS({
         res += stringifyToken(value);
       return res;
     }
-    exports.stringify = stringify2;
+    exports.stringify = stringify3;
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/parse/cst-visit.js
+// node_modules/yaml/dist/parse/cst-visit.js
 var require_cst_visit = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/parse/cst-visit.js"(exports) {
+  "node_modules/yaml/dist/parse/cst-visit.js"(exports) {
     "use strict";
     var BREAK = Symbol("break visit");
     var SKIP = Symbol("skip children");
@@ -5566,9 +5566,9 @@ var require_cst_visit = __commonJS({
     visit.BREAK = BREAK;
     visit.SKIP = SKIP;
     visit.REMOVE = REMOVE;
-    visit.itemAtPath = (cst, path13) => {
+    visit.itemAtPath = (cst, path16) => {
       let item = cst;
-      for (const [field, index] of path13) {
+      for (const [field, index] of path16) {
         const tok = item?.[field];
         if (tok && "items" in tok) {
           item = tok.items[index];
@@ -5577,23 +5577,23 @@ var require_cst_visit = __commonJS({
       }
       return item;
     };
-    visit.parentCollection = (cst, path13) => {
-      const parent = visit.itemAtPath(cst, path13.slice(0, -1));
-      const field = path13[path13.length - 1][0];
+    visit.parentCollection = (cst, path16) => {
+      const parent = visit.itemAtPath(cst, path16.slice(0, -1));
+      const field = path16[path16.length - 1][0];
       const coll = parent?.[field];
       if (coll && "items" in coll)
         return coll;
       throw new Error("Parent collection not found");
     };
-    function _visit(path13, item, visitor) {
-      let ctrl = visitor(item, path13);
+    function _visit(path16, item, visitor) {
+      let ctrl = visitor(item, path16);
       if (typeof ctrl === "symbol")
         return ctrl;
       for (const field of ["key", "value"]) {
         const token = item[field];
         if (token && "items" in token) {
           for (let i = 0; i < token.items.length; ++i) {
-            const ci = _visit(Object.freeze(path13.concat([[field, i]])), token.items[i], visitor);
+            const ci = _visit(Object.freeze(path16.concat([[field, i]])), token.items[i], visitor);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -5604,18 +5604,18 @@ var require_cst_visit = __commonJS({
             }
           }
           if (typeof ctrl === "function" && field === "key")
-            ctrl = ctrl(item, path13);
+            ctrl = ctrl(item, path16);
         }
       }
-      return typeof ctrl === "function" ? ctrl(item, path13) : ctrl;
+      return typeof ctrl === "function" ? ctrl(item, path16) : ctrl;
     }
     exports.visit = visit;
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/parse/cst.js
+// node_modules/yaml/dist/parse/cst.js
 var require_cst = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/parse/cst.js"(exports) {
+  "node_modules/yaml/dist/parse/cst.js"(exports) {
     "use strict";
     var cstScalar = require_cst_scalar();
     var cstStringify = require_cst_stringify();
@@ -5715,9 +5715,9 @@ var require_cst = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/parse/lexer.js
+// node_modules/yaml/dist/parse/lexer.js
 var require_lexer = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/parse/lexer.js"(exports) {
+  "node_modules/yaml/dist/parse/lexer.js"(exports) {
     "use strict";
     var cst = require_cst();
     function isEmpty(ch) {
@@ -6304,9 +6304,9 @@ var require_lexer = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/parse/line-counter.js
+// node_modules/yaml/dist/parse/line-counter.js
 var require_line_counter = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/parse/line-counter.js"(exports) {
+  "node_modules/yaml/dist/parse/line-counter.js"(exports) {
     "use strict";
     var LineCounter = class {
       constructor() {
@@ -6335,9 +6335,9 @@ var require_line_counter = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/parse/parser.js
+// node_modules/yaml/dist/parse/parser.js
 var require_parser = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/parse/parser.js"(exports) {
+  "node_modules/yaml/dist/parse/parser.js"(exports) {
     "use strict";
     var node_process = __require("process");
     var cst = require_cst();
@@ -7209,9 +7209,9 @@ var require_parser = __commonJS({
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/public-api.js
+// node_modules/yaml/dist/public-api.js
 var require_public_api = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/public-api.js"(exports) {
+  "node_modules/yaml/dist/public-api.js"(exports) {
     "use strict";
     var composer = require_composer();
     var Document = require_Document();
@@ -7239,7 +7239,7 @@ var require_public_api = __commonJS({
         return docs;
       return Object.assign([], { empty: true }, composer$1.streamInfo());
     }
-    function parseDocument7(source, options = {}) {
+    function parseDocument8(source, options = {}) {
       const { lineCounter: lineCounter2, prettyErrors } = parseOptions(options);
       const parser$1 = new parser.Parser(lineCounter2?.addNewLine);
       const composer$1 = new composer.Composer(options);
@@ -7265,7 +7265,7 @@ var require_public_api = __commonJS({
       } else if (options === void 0 && reviver && typeof reviver === "object") {
         options = reviver;
       }
-      const doc = parseDocument7(src, options);
+      const doc = parseDocument8(src, options);
       if (!doc)
         return null;
       doc.warnings.forEach((warning) => log.warn(doc.options.logLevel, warning));
@@ -7277,7 +7277,7 @@ var require_public_api = __commonJS({
       }
       return doc.toJS(Object.assign({ reviver: _reviver }, options));
     }
-    function stringify2(value, replacer, options) {
+    function stringify3(value, replacer, options) {
       let _replacer = null;
       if (typeof replacer === "function" || Array.isArray(replacer)) {
         _replacer = replacer;
@@ -7301,14 +7301,14 @@ var require_public_api = __commonJS({
     }
     exports.parse = parse2;
     exports.parseAllDocuments = parseAllDocuments;
-    exports.parseDocument = parseDocument7;
-    exports.stringify = stringify2;
+    exports.parseDocument = parseDocument8;
+    exports.stringify = stringify3;
   }
 });
 
-// ../../../../packages/cli/node_modules/yaml/dist/index.js
+// node_modules/yaml/dist/index.js
 var require_dist = __commonJS({
-  "../../../../packages/cli/node_modules/yaml/dist/index.js"(exports) {
+  "node_modules/yaml/dist/index.js"(exports) {
     "use strict";
     var composer = require_composer();
     var Document = require_Document();
@@ -7360,10 +7360,14 @@ var require_dist = __commonJS({
 
 // src/cli.js
 import os5 from "node:os";
-import path12 from "node:path";
+import path15 from "node:path";
 import readline from "node:readline";
 
 // src/checks.js
+var import_yaml3 = __toESM(require_dist(), 1);
+import path3 from "node:path";
+
+// src/agents.js
 var import_yaml2 = __toESM(require_dist(), 1);
 import path2 from "node:path";
 
@@ -7379,6 +7383,7 @@ var IGNORED_DIRECTORIES = /* @__PURE__ */ new Set([
   ".open-next",
   ".wrangler",
   ".agentplaybooks",
+  ".tmp",
   "node_modules",
   "dist",
   "build",
@@ -7454,7 +7459,11 @@ function platformFor(relativePath) {
 function isMcpConfig(relativePath) {
   const normalized = normalizePath(relativePath).toLowerCase();
   const base = path.basename(relativePath).toLowerCase();
-  return MCP_JSON_FILES.has(base) || normalized === ".cursor/mcp.json" || normalized.endsWith("/.cursor/mcp.json") || normalized === ".vscode/mcp.json" || normalized.endsWith("/.vscode/mcp.json") || normalized === ".codex/config.toml" || normalized.endsWith("/.codex/config.toml") || normalized === ".hermes/config.yaml" || normalized.endsWith("/.hermes/config.yaml");
+  return MCP_JSON_FILES.has(base) || normalized === ".cursor/mcp.json" || normalized.endsWith("/.cursor/mcp.json") || normalized === ".vscode/mcp.json" || normalized.endsWith("/.vscode/mcp.json") || normalized === ".gemini/settings.json" || normalized.endsWith("/.gemini/settings.json") || normalized === ".codex/config.toml" || normalized.endsWith("/.codex/config.toml") || normalized === ".hermes/config.yaml" || normalized.endsWith("/.hermes/config.yaml");
+}
+function isAgentDefinition(relativePath) {
+  const normalized = normalizePath(relativePath).toLowerCase();
+  return /(^|\/)\.(?:claude|cursor|gemini|agents)\/agents\/[^/]+\.md$/.test(normalized) || /(^|\/)\.github\/agents\/[^/]+\.md$/.test(normalized) || /(^|\/)\.codex\/agents\/[^/]+\.toml$/.test(normalized);
 }
 async function walk(root, ignored = IGNORED_DIRECTORIES, listDir = readdir) {
   const files = [];
@@ -7492,6 +7501,24 @@ async function readText(absolutePath) {
   if (buffer.byteLength > MAX_TEXT_BYTES) return null;
   return normalizeText(buffer.toString("utf8"));
 }
+async function skillTreeDigest(skillFile, allFiles) {
+  const directory = path.dirname(skillFile);
+  const members = allFiles.filter((file) => {
+    const relative = path.relative(directory, file);
+    return relative && relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative);
+  }).sort((a, b) => normalizePath(path.relative(directory, a)).localeCompare(normalizePath(path.relative(directory, b))));
+  const hash = createHash("sha256");
+  for (const file of members) {
+    const relative = normalizePath(path.relative(directory, file));
+    const buffer = await readFile(file);
+    hash.update(relative);
+    hash.update("\0");
+    if (buffer.byteLength <= MAX_TEXT_BYTES && !buffer.includes(0)) hash.update(normalizeText(buffer.toString("utf8")));
+    else hash.update(buffer);
+    hash.update("\0");
+  }
+  return `sha256:${hash.digest("hex")}`;
+}
 async function readTextIfExists(absolutePath) {
   try {
     return await readText(absolutePath);
@@ -7499,7 +7526,7 @@ async function readTextIfExists(absolutePath) {
     return null;
   }
 }
-async function discover(root, { extraMcpPaths = [], skipVendored = false, readdir: listDir } = {}) {
+async function discover(root, { extraMcpPaths = [], agentPlatform = null, skipVendored = false, readdir: listDir } = {}) {
   const absoluteRoot = path.resolve(root);
   const ignored = skipVendored ? /* @__PURE__ */ new Set([...IGNORED_DIRECTORIES, ...VENDORED_DIRECTORIES]) : IGNORED_DIRECTORIES;
   const files = await walk(absoluteRoot, ignored, listDir);
@@ -7507,15 +7534,19 @@ async function discover(root, { extraMcpPaths = [], skipVendored = false, readdi
     root: absoluteRoot,
     instructions: [],
     skills: [],
+    agents: [],
     mcpConfigs: []
   };
   for (const absolutePath of files) {
     const relativePath = normalizePath(path.relative(absoluteRoot, absolutePath));
     const base = path.basename(absolutePath);
     const isSkill = base === "SKILL.md";
+    const rootAgentExtension = agentPlatform === "codex" ? "toml" : "md";
+    const rootAgent = agentPlatform && new RegExp(`^agents/[^/]+\\.${rootAgentExtension}$`, "i").test(relativePath);
+    const isAgent = isAgentDefinition(relativePath) || rootAgent;
     const isInstruction = INSTRUCTION_FILES.has(base);
     const isMcp = isMcpConfig(relativePath) || extraMcpPaths.includes(relativePath);
-    if (!isSkill && !isInstruction && !isMcp) continue;
+    if (!isSkill && !isAgent && !isInstruction && !isMcp) continue;
     const content = await readText(absolutePath);
     if (content === null) continue;
     const item = {
@@ -7525,9 +7556,22 @@ async function discover(root, { extraMcpPaths = [], skipVendored = false, readdi
       digest: digest(content),
       content
     };
+    if (isSkill) item.treeDigest = await skillTreeDigest(absolutePath, files);
     if (isSkill) inventory.skills.push(item);
+    if (isAgent) inventory.agents.push(item);
     if (isInstruction) inventory.instructions.push(item);
     if (isMcp) inventory.mcpConfigs.push(item);
+  }
+  const configuredPlatforms = new Set([
+    ...inventory.instructions,
+    ...inventory.skills,
+    ...inventory.agents
+  ].map((item) => item.platform));
+  for (const config of inventory.mcpConfigs.filter((item) => item.source === ".mcp.json")) {
+    const claude = configuredPlatforms.has("claude");
+    const copilot = configuredPlatforms.has("copilot");
+    if (claude && copilot) config.platform = "shared-mcp";
+    else if (copilot) config.platform = "copilot";
   }
   return inventory;
 }
@@ -7627,7 +7671,7 @@ async function discoverGlobal({
     roots.push({ directory, label: normalizePath(directory), platform: "hermes" });
   }
   const bundled = includeVendored ? /* @__PURE__ */ new Set() : await hermesBundledSkillNames(profile.directory);
-  const combined = { root: homedir, instructions: [], skills: [], mcpConfigs: [] };
+  const combined = { root: homedir, instructions: [], skills: [], agents: [], mcpConfigs: [] };
   for (const entry of roots) {
     try {
       await access(entry.directory);
@@ -7636,9 +7680,10 @@ async function discoverGlobal({
     }
     const inventory = await discover(entry.directory, {
       extraMcpPaths: entry.extraMcpPaths,
+      agentPlatform: entry.platform,
       skipVendored: true
     });
-    for (const key of ["instructions", "skills", "mcpConfigs"]) {
+    for (const key of ["instructions", "skills", "agents", "mcpConfigs"]) {
       for (const item of inventory[key]) {
         const source = `${entry.label}/${item.source}`;
         if (key === "skills" && !includeVendored && isVendorSkill(source, bundled)) continue;
@@ -7647,6 +7692,151 @@ async function discoverGlobal({
     }
   }
   return combined;
+}
+
+// src/agents.js
+var SAFE_AGENT_NAME = /^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/;
+var COMMON_FIELDS = /* @__PURE__ */ new Set(["name", "description", "tools", "model", "extensions"]);
+var TOOL_SCOPE_MARKER = "\n\n[AgentPlaybooks tool scope]\nUse only these tools: ";
+function toolsFrom(value) {
+  if (Array.isArray(value)) return value.filter((item) => typeof item === "string").map((item) => item.trim()).filter(Boolean);
+  if (typeof value === "string") return value.split(",").map((item) => item.trim()).filter(Boolean);
+  return [];
+}
+function semanticDigest(agent) {
+  return digest(JSON.stringify({
+    name: agent.name,
+    description: agent.description,
+    prompt: agent.prompt,
+    tools: agent.tools,
+    model: agent.model ?? null
+  }));
+}
+function markdownAgent(item) {
+  const match = item.content.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
+  if (!match) return { valid: false, values: {}, prompt: item.content };
+  const document = (0, import_yaml2.parseDocument)(match[1], { strict: true, uniqueKeys: true });
+  if (document.errors.length > 0 || !(0, import_yaml2.isMap)(document.contents)) {
+    return { valid: false, values: {}, prompt: item.content.slice(match[0].length) };
+  }
+  const values = document.toJS();
+  return {
+    valid: values && typeof values === "object" && !Array.isArray(values),
+    values: values ?? {},
+    prompt: item.content.slice(match[0].length)
+  };
+}
+function tomlValue(content, key) {
+  const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const multiline = content.match(new RegExp(`^${escaped}\\s*=\\s*"""([\\s\\S]*?)"""`, "m"));
+  if (multiline) return multiline[1];
+  const line = content.match(new RegExp(`^${escaped}\\s*=\\s*("(?:\\\\.|[^"\\\\])*")\\s*$`, "m"));
+  if (!line) return void 0;
+  try {
+    return JSON.parse(line[1]);
+  } catch {
+    return void 0;
+  }
+}
+function codexAgent(item) {
+  let prompt = tomlValue(item.content, "developer_instructions") ?? "";
+  let tools = [];
+  const marker = prompt.lastIndexOf(TOOL_SCOPE_MARKER);
+  if (marker !== -1) {
+    tools = prompt.slice(marker + TOOL_SCOPE_MARKER.length).split(",").map((value) => value.trim()).filter(Boolean);
+    prompt = prompt.slice(0, marker);
+  }
+  const values = {
+    name: tomlValue(item.content, "name"),
+    description: tomlValue(item.content, "description"),
+    model: tomlValue(item.content, "model"),
+    tools
+  };
+  for (const key of ["model_reasoning_effort", "sandbox_mode", "approval_policy"]) {
+    const value = tomlValue(item.content, key);
+    if (value !== void 0) values[key] = value;
+  }
+  return {
+    valid: Boolean(tomlValue(item.content, "name") && tomlValue(item.content, "description") && prompt),
+    values,
+    prompt
+  };
+}
+function parseAgentDefinition(item) {
+  const parsed = item.source.toLowerCase().endsWith(".toml") ? codexAgent(item) : markdownAgent(item);
+  const filename = path2.basename(item.source);
+  const fallbackName = filename.toLowerCase().endsWith(".agent.md") ? filename.slice(0, -".agent.md".length) : path2.basename(filename, path2.extname(filename));
+  const name = typeof parsed.values.name === "string" && parsed.values.name.length > 0 ? parsed.values.name : fallbackName;
+  const description = typeof parsed.values.description === "string" ? parsed.values.description : "";
+  const model = typeof parsed.values.model === "string" && parsed.values.model.length > 0 ? parsed.values.model : void 0;
+  const extras = Object.fromEntries(Object.entries(parsed.values).filter(([key]) => !COMMON_FIELDS.has(key)));
+  const declaredExtensions = parsed.values.extensions && typeof parsed.values.extensions === "object" && !Array.isArray(parsed.values.extensions) ? parsed.values.extensions : {};
+  const extensions = {
+    ...declaredExtensions,
+    ...Object.keys(extras).length > 0 ? { [item.platform]: extras } : {}
+  };
+  const agent = {
+    ...item,
+    valid: parsed.valid,
+    name,
+    description,
+    prompt: normalizeText(parsed.prompt).replace(/^\n/, ""),
+    tools: toolsFrom(parsed.values.tools),
+    ...model ? { model } : {},
+    ...Object.keys(extensions).length > 0 ? { extensions } : {}
+  };
+  agent.digest = semanticDigest(agent);
+  return agent;
+}
+function frontmatterFor(agent, target) {
+  const targetFields = agent.extensions?.[target];
+  const extraFields = targetFields && typeof targetFields === "object" && !Array.isArray(targetFields) ? Object.fromEntries(Object.entries(targetFields).filter(([key]) => !COMMON_FIELDS.has(key))) : {};
+  const values = {
+    ...extraFields,
+    name: agent.name,
+    description: agent.description
+  };
+  if (agent.tools.length > 0) values.tools = target === "claude" ? agent.tools.join(", ") : agent.tools;
+  if (agent.model) values.model = agent.model;
+  return (0, import_yaml2.stringify)(values, { lineWidth: 0 }).trimEnd();
+}
+function serializeAgent(agent, target) {
+  const prompt = agent.prompt.endsWith("\n") ? agent.prompt : `${agent.prompt}
+`;
+  if (target === "codex") {
+    const scopedPrompt = agent.tools.length > 0 ? `${prompt.replace(/\s*$/, "")}${TOOL_SCOPE_MARKER}${agent.tools.join(", ")}` : prompt.replace(/\s*$/, "");
+    const lines = [
+      `name = ${JSON.stringify(agent.name)}`,
+      `description = ${JSON.stringify(agent.description)}`,
+      `developer_instructions = ${JSON.stringify(scopedPrompt)}`
+    ];
+    if (agent.model) lines.push(`model = ${JSON.stringify(agent.model)}`);
+    for (const key of ["model_reasoning_effort", "sandbox_mode", "approval_policy"]) {
+      const value = agent.extensions?.codex?.[key];
+      if (typeof value === "string") lines.push(`${key} = ${JSON.stringify(value)}`);
+    }
+    return `${lines.join("\n")}
+`;
+  }
+  return `---
+${frontmatterFor(agent, target)}
+---
+${prompt}`;
+}
+function portableAgentContent(agent) {
+  const values = {
+    name: agent.name,
+    description: agent.description,
+    ...agent.tools.length > 0 ? { tools: agent.tools } : {},
+    ...agent.model ? { model: agent.model } : {},
+    ...agent.extensions ? { extensions: agent.extensions } : {}
+  };
+  const prompt = agent.prompt.endsWith("\n") ? agent.prompt : `${agent.prompt}
+`;
+  return `---
+${(0, import_yaml2.stringify)(values, { lineWidth: 0 }).trimEnd()}
+---
+${prompt}`;
 }
 
 // src/checks.js
@@ -7677,8 +7867,8 @@ function groupBy(items, keyFor) {
 function parseFrontmatter(content) {
   const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
   if (!match) return { values: {}, valid: false, body: content };
-  const document = (0, import_yaml2.parseDocument)(match[1], { strict: true, uniqueKeys: true });
-  if (document.errors.length > 0 || !(0, import_yaml2.isMap)(document.contents)) {
+  const document = (0, import_yaml3.parseDocument)(match[1], { strict: true, uniqueKeys: true });
+  if (document.errors.length > 0 || !(0, import_yaml3.isMap)(document.contents)) {
     return { values: {}, valid: false, body: content.slice(match[0].length) };
   }
   const values = document.toJS();
@@ -7752,10 +7942,10 @@ function parseTomlServers(content) {
   return servers;
 }
 function parseYamlServers(content) {
-  const document = (0, import_yaml2.parseDocument)(content, { strict: false });
+  const document = (0, import_yaml3.parseDocument)(content, { strict: false });
   if (document.errors.length > 0) return null;
   if (document.contents === null) return [];
-  if (!(0, import_yaml2.isMap)(document.contents)) return null;
+  if (!(0, import_yaml3.isMap)(document.contents)) return null;
   const collection = document.getIn(["mcp_servers"], true);
   const servers = typeof collection?.toJSON === "function" ? collection.toJSON() : collection;
   if (servers === void 0 || servers === null) return [];
@@ -7769,6 +7959,7 @@ function parseYamlServers(content) {
 function analyze(inventory) {
   const findings = [];
   const skills = [];
+  const agents = [];
   const mcpServers = [];
   for (const instruction of inventory.instructions) {
     const lines = credentialLines(instruction.content);
@@ -7778,7 +7969,7 @@ function analyze(inventory) {
   }
   for (const skill of inventory.skills) {
     const frontmatter = parseFrontmatter(skill.content);
-    const parentName = path2.basename(path2.dirname(skill.source));
+    const parentName = path3.basename(path3.dirname(skill.source));
     const name = typeof frontmatter.values.name === "string" ? frontmatter.values.name : parentName;
     const description = typeof frontmatter.values.description === "string" ? frontmatter.values.description : "";
     skills.push({ ...skill, name, description });
@@ -7828,6 +8019,26 @@ function analyze(inventory) {
     const lines = credentialLines(skill.content);
     if (lines.length) {
       findings.push(finding("critical", "secret.hardcoded", "Possible hard-coded credential found; only line numbers are reported.", skill.source, { lines }));
+    }
+  }
+  for (const source of inventory.agents ?? []) {
+    const agent = parseAgentDefinition(source);
+    agents.push(agent);
+    if (!agent.valid) {
+      findings.push(finding("high", "agent.definition.invalid", "Custom agent must use valid YAML frontmatter (or Codex TOML) with name, description, and a prompt.", source.source));
+    }
+    if (!SAFE_AGENT_NAME.test(agent.name)) {
+      findings.push(finding("high", "agent.name.invalid", "Agent name must be safe lowercase kebab-case and no longer than 64 characters.", source.source));
+    }
+    if (!agent.description) {
+      findings.push(finding("high", "agent.description.missing", "Custom agent is missing the required description.", source.source));
+    }
+    if (!agent.prompt.trim()) {
+      findings.push(finding("high", "agent.prompt.missing", "Custom agent has no system prompt.", source.source));
+    }
+    const lines = credentialLines(source.content);
+    if (lines.length) {
+      findings.push(finding("critical", "secret.hardcoded", "Possible hard-coded credential found in a custom agent; only line numbers are reported.", source.source, { lines }));
     }
   }
   for (const config of inventory.mcpConfigs) {
@@ -7880,8 +8091,15 @@ function analyze(inventory) {
   }
   const skillGroups = groupBy(skills, (skill) => skill.name);
   for (const [name, variants] of skillGroups) {
-    if (variants.length < 2 || new Set(variants.map((item) => item.digest)).size < 2) continue;
+    if (variants.length < 2 || new Set(variants.map((item) => item.treeDigest ?? item.digest)).size < 2) continue;
     findings.push(finding("medium", "skill.drift", `Skill '${name}' has different definitions across discovered locations.`, variants[0].source, {
+      relatedSources: variants.map((item) => item.source)
+    }));
+  }
+  const agentGroups = groupBy(agents, (agent) => agent.name);
+  for (const [name, variants] of agentGroups) {
+    if (variants.length < 2 || new Set(variants.map((item) => item.digest)).size < 2) continue;
+    findings.push(finding("medium", "agent.drift", `Custom agent '${name}' has different definitions across platforms.`, variants[0].source, {
       relatedSources: variants.map((item) => item.source)
     }));
   }
@@ -7903,6 +8121,7 @@ function analyze(inventory) {
       root: inventory.root,
       instructions: inventory.instructions,
       skills,
+      agents,
       mcpConfigs: inventory.mcpConfigs,
       mcpServers
     }
@@ -7929,7 +8148,7 @@ async function runGlobalDoctor(options = {}) {
 }
 function platformPresence(inventory) {
   const found = /* @__PURE__ */ new Set();
-  for (const collection of [inventory.instructions, inventory.skills, inventory.mcpConfigs, inventory.mcpServers]) {
+  for (const collection of [inventory.instructions, inventory.skills, inventory.agents, inventory.mcpConfigs, inventory.mcpServers]) {
     for (const item of collection ?? []) {
       if (NAMED_PLATFORMS.has(item.platform)) found.add(item.platform);
     }
@@ -7952,6 +8171,7 @@ function publicReport(report) {
     summary: {
       instructions: report.inventory.instructions.length,
       skills: report.inventory.skills.length,
+      agents: report.inventory.agents.length,
       mcpConfigs: report.inventory.mcpConfigs.length,
       mcpServers: report.inventory.mcpServers.length,
       findings: report.findings.length
@@ -7961,10 +8181,11 @@ function publicReport(report) {
   };
 }
 function pushableInventory(report) {
-  const { instructions, skills, mcpConfigs } = report.inventory;
+  const { instructions, skills, agents, mcpConfigs } = report.inventory;
   return {
     uploads: [
-      { kind: "skill", count: skills.length },
+      { kind: "skill tree", count: skills.length },
+      { kind: "custom agent", count: agents?.length ?? 0 },
       { kind: "instruction file", count: instructions.length }
     ].filter((item) => item.count > 0),
     excluded: mcpConfigs.length > 0 ? [{ kind: "MCP client config", count: mcpConfigs.length, why: "carries auth headers" }] : []
@@ -7990,7 +8211,7 @@ function printDoctor(report) {
     return result;
   }, {});
   console.log(`AgentPlaybooks Doctor \u2014 health ${report.score}/100`);
-  console.log(`Found ${report.inventory.instructions.length} instruction file(s), ${report.inventory.skills.length} skill(s), and ${report.inventory.mcpServers.length} MCP server definition(s).`);
+  console.log(`Found ${report.inventory.instructions.length} instruction file(s), ${report.inventory.skills.length} skill(s), ${report.inventory.agents.length} custom agent(s), and ${report.inventory.mcpServers.length} MCP server definition(s).`);
   console.log(formatPlatformLine(platformPresence(report.inventory)));
   console.log(`Findings: ${counts.critical ?? 0} critical, ${counts.high ?? 0} high, ${counts.medium ?? 0} medium, ${counts.low ?? 0} low.`);
   if (report.findings.length === 0) {
@@ -8061,7 +8282,7 @@ function interpretCallback(query, expectedState) {
   }
   return { ok: true, code };
 }
-function startCallbackServer({ path: path13 = "/callback", timeoutMs = 3e5, createServer = http.createServer } = {}) {
+function startCallbackServer({ path: path16 = "/callback", timeoutMs = 3e5, createServer = http.createServer } = {}) {
   let resolveCallback;
   let rejectCallback;
   const callback = new Promise((resolve, reject) => {
@@ -8071,7 +8292,7 @@ function startCallbackServer({ path: path13 = "/callback", timeoutMs = 3e5, crea
   let settled = false;
   const server = createServer((request2, response) => {
     const url = new URL(request2.url, "http://127.0.0.1");
-    if (url.pathname !== path13) {
+    if (url.pathname !== path16) {
       response.writeHead(404).end("Not found");
       return;
     }
@@ -8237,17 +8458,27 @@ function checkPrerequisites(state) {
 // src/sync.js
 import { mkdir as mkdir2, readFile as readFile3, rename as rename2, writeFile as writeFile2, copyFile as copyFile2 } from "node:fs/promises";
 import os3 from "node:os";
-import path5 from "node:path";
+import path6 from "node:path";
 
 // src/adapters.js
-var import_yaml3 = __toESM(require_dist(), 1);
-import { access as access2, mkdir, copyFile, readFile as readFile2, rename, writeFile } from "node:fs/promises";
+var import_yaml4 = __toESM(require_dist(), 1);
+import { access as access2, mkdir, copyFile, readFile as readFile2, readdir as readdir2, rename, writeFile } from "node:fs/promises";
 import os2 from "node:os";
-import path3 from "node:path";
+import path4 from "node:path";
 var TARGET_ADAPTERS = {
-  claude: { platforms: ["claude"], skillsDir: ".claude/skills", mcpPath: ".mcp.json", format: "json" },
-  cursor: { platforms: ["cursor"], skillsDir: ".cursor/skills", mcpPath: ".cursor/mcp.json", format: "json" },
-  codex: { platforms: ["codex"], skillsDir: ".codex/skills", mcpPath: ".codex/config.toml", format: "toml" },
+  claude: { platforms: ["claude"], mcpPlatforms: ["claude", "copilot", "shared-mcp"], skillsDir: ".claude/skills", agentDir: ".claude/agents", mcpPath: ".mcp.json", format: "json" },
+  cursor: { platforms: ["cursor"], skillsDir: ".cursor/skills", agentDir: ".cursor/agents", mcpPath: ".cursor/mcp.json", format: "json" },
+  codex: { platforms: ["codex"], skillsDir: ".codex/skills", agentDir: ".codex/agents", agentFormat: "toml", mcpPath: ".codex/config.toml", format: "toml" },
+  copilot: {
+    platforms: ["copilot"],
+    mcpPlatforms: ["copilot", "claude", "shared-mcp"],
+    skillsDir: ".github/skills",
+    agentDir: ".github/agents",
+    agentSuffix: ".agent.md",
+    mcpPath: ".mcp.json",
+    format: "json"
+  },
+  gemini: { platforms: ["gemini"], skillsDir: ".gemini/skills", agentDir: ".gemini/agents", mcpPath: ".gemini/settings.json", format: "json" },
   antigravity: { platforms: ["antigravity", "portable"], skillsDir: ".agents/skills" },
   // Grok Bot (xAI) discovers skills from a fixed set of roots that includes the
   // portable `.agents/skills` store, and its system prompt loads `AGENTS.md`
@@ -8286,6 +8517,8 @@ var TARGET_HOME_MARKERS = {
   claude: ".claude",
   cursor: ".cursor",
   codex: ".codex",
+  copilot: ".copilot",
+  gemini: ".gemini",
   antigravity: ".gemini",
   hermes: ".hermes",
   grok: ".grokbot"
@@ -8296,6 +8529,39 @@ function canonicalize(value) {
     return Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonicalize(value[key])]));
   }
   return value;
+}
+function agentActions(report, targetIds, conflicts, { root }) {
+  const actions = [];
+  const groups = groupByName(report.inventory.agents ?? []);
+  for (const [name, variants] of groups) {
+    const digests = new Set(variants.map((item) => item.digest));
+    const canonical = variants.find((item) => item.platform === "portable") ?? variants[0];
+    for (const target of targetIds) {
+      const adapter = TARGET_ADAPTERS[target];
+      if (!adapter?.agentDir || variants.some((item) => adapter.platforms.includes(item.platform))) continue;
+      if (digests.size > 1) {
+        conflicts.push(conflict(target, "agent", name, "Custom agent definitions differ across platforms; resolve the drift before syncing.", variants.map((item) => item.source)));
+        continue;
+      }
+      if (!SAFE_AGENT_NAME.test(name)) {
+        conflicts.push(conflict(target, "agent", name, "Agent name is not a safe lowercase kebab-case file name.", variants.map((item) => item.source)));
+        continue;
+      }
+      const suffix = adapter.agentSuffix ?? (adapter.agentFormat === "toml" ? ".toml" : ".md");
+      const relativePath = `${adapter.agentDir}/${name}${suffix}`;
+      actions.push({
+        kind: "agent",
+        target,
+        name,
+        action: "create",
+        path: relativePath,
+        absolutePath: path4.join(root, ...relativePath.split("/")),
+        content: serializeAgent(canonical, target),
+        from: canonical.source
+      });
+    }
+  }
+  return actions;
 }
 function canonicalJson(value) {
   return JSON.stringify(canonicalize(value));
@@ -8320,17 +8586,47 @@ function groupByName(items) {
   }
   return groups;
 }
-function skillActions(report, targetIds, conflicts, { root }) {
+async function directoryFiles(root) {
+  const files = [];
+  const queue = [root];
+  while (queue.length > 0) {
+    const current = queue.shift();
+    for (const entry of await readdir2(current, { withFileTypes: true })) {
+      if (entry.isSymbolicLink()) continue;
+      const absolute = path4.join(current, entry.name);
+      if (entry.isDirectory()) queue.push(absolute);
+      else if (entry.isFile()) files.push(absolute);
+    }
+  }
+  return files.sort((a, b) => a.localeCompare(b));
+}
+function sameFileContent(left, right) {
+  if (left.equals(right)) return true;
+  if (left.includes(0) || right.includes(0)) return false;
+  return normalizeText(left.toString("utf8")) === normalizeText(right.toString("utf8"));
+}
+async function readBufferIfExists(absolutePath) {
+  try {
+    return await readFile2(absolutePath);
+  } catch (error) {
+    if (error?.code === "ENOENT") return null;
+    throw error;
+  }
+}
+async function skillActions(report, targetIds, conflicts, { root }) {
   const actions = [];
   const groups = groupByName(report.inventory.skills);
   const planned = /* @__PURE__ */ new Set();
   for (const [name, variants] of groups) {
-    const digests = new Set(variants.map((item) => item.digest));
+    const canonical = variants.find((item) => item.platform === "portable") ?? variants[0];
+    const skillDigests = new Set(variants.map((item) => item.digest));
+    const treeDigests = new Set(variants.map((item) => item.treeDigest ?? item.digest));
+    const sourceRoot = path4.dirname(canonical.absolutePath);
+    const sourceFiles = await directoryFiles(sourceRoot);
     for (const target of targetIds) {
       const adapter = TARGET_ADAPTERS[target];
       if (!adapter?.skillsDir) continue;
-      if (variants.some((item) => adapter.platforms.includes(item.platform))) continue;
-      if (digests.size > 1) {
+      if (skillDigests.size > 1 || treeDigests.size > 1 && canonical.platform !== "portable") {
         conflicts.push(conflict(target, "skill", name, "Skill definitions differ across platforms; resolve the drift before syncing.", variants.map((item) => item.source)));
         continue;
       }
@@ -8338,20 +8634,32 @@ function skillActions(report, targetIds, conflicts, { root }) {
         conflicts.push(conflict(target, "skill", name, "Skill name is not a safe lowercase kebab-case directory name.", variants.map((item) => item.source)));
         continue;
       }
-      const relativePath = `${adapter.skillsDir}/${name}/SKILL.md`;
-      const absolutePath = path3.join(root, ...relativePath.split("/"));
-      if (planned.has(absolutePath)) continue;
-      planned.add(absolutePath);
-      actions.push({
-        kind: "skill",
-        target,
-        name,
-        action: "create",
-        path: relativePath,
-        absolutePath,
-        content: variants[0].content,
-        from: variants[0].source
-      });
+      const targetRoot = path4.join(root, ...adapter.skillsDir.split("/"), name);
+      if (path4.resolve(targetRoot) === path4.resolve(sourceRoot)) continue;
+      for (const sourceFile of sourceFiles) {
+        const member = normalizePath(path4.relative(sourceRoot, sourceFile));
+        const relativePath = `${adapter.skillsDir}/${name}/${member}`;
+        const absolutePath = path4.join(targetRoot, ...member.split("/"));
+        if (planned.has(absolutePath)) continue;
+        const [content, existing] = await Promise.all([readFile2(sourceFile), readBufferIfExists(absolutePath)]);
+        if (existing !== null) {
+          if (!sameFileContent(existing, content)) {
+            conflicts.push(conflict(target, member === "SKILL.md" ? "skill" : "skill-resource", name, `${relativePath} differs from the portable skill and was not overwritten.`, [canonical.source, relativePath]));
+          }
+          continue;
+        }
+        planned.add(absolutePath);
+        actions.push({
+          kind: member === "SKILL.md" ? "skill" : "skill-resource",
+          target,
+          name,
+          action: "create",
+          path: relativePath,
+          absolutePath,
+          content,
+          from: canonical.source
+        });
+      }
     }
   }
   return actions;
@@ -8432,6 +8740,7 @@ function mcpAdditionsFor(adapter, groups, target, conflicts) {
 function mcpActions(report, targetIds, conflicts, { root }) {
   const actions = [];
   const groups = groupByName(report.inventory.mcpServers);
+  const planned = /* @__PURE__ */ new Set();
   for (const target of targetIds) {
     const adapter = TARGET_ADAPTERS[target];
     if (!adapter?.mcpPath) {
@@ -8443,6 +8752,7 @@ function mcpActions(report, targetIds, conflicts, { root }) {
     }
     const additions = mcpAdditionsFor(adapter, groups, target, conflicts);
     if (Object.keys(additions).length === 0) continue;
+    if (planned.has(adapter.mcpPath)) continue;
     const existing = report.inventory.mcpConfigs.find((config) => config.source === adapter.mcpPath);
     const existingContent = existing ? existing.content : null;
     const merged = adapter.format === "toml" ? mergedTomlContent(existingContent, additions, target, conflicts, adapter.mcpPath) : mergedJsonContent(existingContent, additions, target, conflicts, adapter.mcpPath);
@@ -8453,16 +8763,17 @@ function mcpActions(report, targetIds, conflicts, { root }) {
       name: adapter.mcpPath,
       action: existing ? "merge" : "create",
       path: adapter.mcpPath,
-      absolutePath: path3.join(root, ...adapter.mcpPath.split("/")),
+      absolutePath: path4.join(root, ...adapter.mcpPath.split("/")),
       servers: merged.added.sort(),
       content: merged.content
     });
+    planned.add(adapter.mcpPath);
   }
   return actions;
 }
 function samePath(left, right) {
-  const a = path3.resolve(left);
-  const b = path3.resolve(right);
+  const a = path4.resolve(left);
+  const b = path4.resolve(right);
   return process.platform === "win32" ? a.toLowerCase() === b.toLowerCase() : a === b;
 }
 function unrepresentableServerKeys(definition) {
@@ -8474,8 +8785,8 @@ function connectionOnly(definition) {
   );
 }
 function mergedHermesConfig(existingContent, additions, externalDir, { conflicts, display, homedir, env }) {
-  const document = (0, import_yaml3.parseDocument)(existingContent ?? "", { strict: true, uniqueKeys: true });
-  if (document.errors.length > 0 || document.contents !== null && !(0, import_yaml3.isMap)(document.contents)) {
+  const document = (0, import_yaml4.parseDocument)(existingContent ?? "", { strict: true, uniqueKeys: true });
+  if (document.errors.length > 0 || document.contents !== null && !(0, import_yaml4.isMap)(document.contents)) {
     conflicts.push(conflict("hermes", "hermes-config", display, `${display} is not a YAML mapping this tool can safely merge into; add the entries by hand.`, [display]));
     return { content: null, servers: [], externalDirs: [] };
   }
@@ -8535,17 +8846,17 @@ async function hermesActions(report, targetIds, conflicts, { root, homedir, env,
   if (!targetIds.includes("hermes")) return [];
   const profile = await hermesProfile({ homedir, env, platform, profile: hermesProfileName });
   const actions = [];
-  const configPath = path3.join(profile.directory, "config.yaml");
+  const configPath = path4.join(profile.directory, "config.yaml");
   const configDisplay = `${profile.display}/config.yaml`;
   let existingConfig = await readIfExists(configPath);
   let seededFrom = null;
   if (existingConfig === null && hermesProfileName) {
     const installation = await hermesProfile({ homedir, env, platform });
-    existingConfig = await readIfExists(path3.join(installation.directory, "config.yaml"));
+    existingConfig = await readIfExists(path4.join(installation.directory, "config.yaml"));
     if (existingConfig !== null) seededFrom = `${installation.display}/config.yaml`;
   }
   const additions = skipMcp ? {} : mcpAdditionsFor(TARGET_ADAPTERS.hermes, groupByName(report.inventory.mcpServers), "hermes", conflicts);
-  const merged = mergedHermesConfig(existingConfig, additions, path3.join(root, ".agents", "skills"), {
+  const merged = mergedHermesConfig(existingConfig, additions, path4.join(root, ".agents", "skills"), {
     conflicts,
     display: configDisplay,
     homedir,
@@ -8565,9 +8876,9 @@ async function hermesActions(report, targetIds, conflicts, { root, homedir, env,
       content: merged.content
     });
   }
-  const persona = await readIfExists(path3.join(root, ...PORTABLE_PERSONA_PATH.split("/")));
+  const persona = await readIfExists(path4.join(root, ...PORTABLE_PERSONA_PATH.split("/")));
   if (persona !== null && persona.trim().length > 0) {
-    const soulPath = path3.join(profile.directory, "SOUL.md");
+    const soulPath = path4.join(profile.directory, "SOUL.md");
     const soulDisplay = `${profile.display}/SOUL.md`;
     const content = persona.endsWith("\n") ? persona : `${persona}
 `;
@@ -8616,7 +8927,7 @@ async function instructionActions(report, targetIds, conflicts, { root }) {
       name: "CLAUDE.md",
       action: "create",
       path: "CLAUDE.md",
-      absolutePath: path3.join(root, "CLAUDE.md"),
+      absolutePath: path4.join(root, "CLAUDE.md"),
       content: CLAUDE_BRIDGE_CONTENT,
       from: "AGENTS.md"
     }];
@@ -8629,7 +8940,7 @@ async function instructionActions(report, targetIds, conflicts, { root }) {
 async function detectInstalledTargets(homedir = os2.homedir(), env = process.env, platform = process.platform) {
   const detected = [];
   for (const [type, marker] of Object.entries(TARGET_HOME_MARKERS)) {
-    const directory = type === "hermes" ? (await hermesProfile({ homedir, env, platform })).directory : path3.join(homedir, marker);
+    const directory = type === "hermes" ? (await hermesProfile({ homedir, env, platform })).directory : path4.join(homedir, marker);
     try {
       await access2(directory);
       detected.push(type);
@@ -8654,7 +8965,8 @@ async function planAdapters(report, targets, {
   const conflicts = [];
   const actions = [
     ...await instructionActions(report, targetIds, conflicts, { root }),
-    ...skillActions(report, targetIds, conflicts, { root }),
+    ...await skillActions(report, targetIds, conflicts, { root }),
+    ...agentActions(report, targetIds, conflicts, { root }),
     ...skipMcp ? [] : mcpActions(report, targetIds, conflicts, { root }),
     ...await hermesActions(report, targetIds, conflicts, { root, homedir, env, platform, skipMcp, hermesProfileName })
   ];
@@ -8662,8 +8974,8 @@ async function planAdapters(report, targets, {
   return { actions, conflicts };
 }
 async function atomicWrite(absolutePath, content) {
-  await mkdir(path3.dirname(absolutePath), { recursive: true });
-  const tempPath = path3.join(path3.dirname(absolutePath), `.${path3.basename(absolutePath)}.${process.pid}.tmp`);
+  await mkdir(path4.dirname(absolutePath), { recursive: true });
+  const tempPath = path4.join(path4.dirname(absolutePath), `.${path4.basename(absolutePath)}.${process.pid}.tmp`);
   await writeFile(tempPath, content, { encoding: "utf8", mode: 384 });
   await rename(tempPath, absolutePath);
 }
@@ -8676,7 +8988,7 @@ async function applyAdapters(actions, backupDirectory) {
   for (const action of actions) {
     if (action.action === "merge") {
       await mkdir(backupDirectory, { recursive: true, mode: 448 });
-      const backupPath = path3.join(backupDirectory, backupName(action.path));
+      const backupPath = path4.join(backupDirectory, backupName(action.path));
       await copyFile(action.absolutePath, backupPath);
       backups.push(backupPath);
     }
@@ -8693,7 +9005,7 @@ async function planHermesMcpServersAction({
   platform = process.platform
 }) {
   const profile = await hermesProfile({ homedir, env, platform });
-  const configPath = path3.join(profile.directory, "config.yaml");
+  const configPath = path4.join(profile.directory, "config.yaml");
   const display = `${profile.display}/config.yaml`;
   const existingContent = await readIfExists(configPath);
   const merged = mergedHermesConfig(existingContent, definitions, null, {
@@ -8734,14 +9046,14 @@ function planMcpServersAction({ root, target, definitions, existingContent = nul
     name: adapter.mcpPath,
     action: existingContent === null ? "create" : "merge",
     path: adapter.mcpPath,
-    absolutePath: path3.join(root, ...adapter.mcpPath.split("/")),
+    absolutePath: path4.join(root, ...adapter.mcpPath.split("/")),
     servers: merged.added,
     content: merged.content
   };
 }
 
 // src/manifest.js
-import path4 from "node:path";
+import path5 from "node:path";
 function slugify(value) {
   const slug = value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 64);
   return slug || "agent-playbook";
@@ -8782,10 +9094,11 @@ function secretReferences(report) {
   return [...found].sort().map((name) => ({ name, ref: `env:${name}`, required: true }));
 }
 function createManifest(report, { displayName } = {}) {
-  const projectName = displayName ?? path4.basename(report.inventory.root);
+  const projectName = displayName ?? path5.basename(report.inventory.root);
   const platforms = /* @__PURE__ */ new Set([
     ...report.inventory.instructions.map((item) => item.platform),
     ...report.inventory.skills.map((item) => item.platform),
+    ...(report.inventory.agents ?? []).map((item) => item.platform),
     ...report.inventory.mcpServers.map((item) => item.platform)
   ]);
   const supportedTargets = /* @__PURE__ */ new Set(["codex", "claude", "cursor", "copilot", "gemini"]);
@@ -8801,9 +9114,17 @@ function createManifest(report, { displayName } = {}) {
     spec: {
       instructions: report.inventory.instructions.map(sourceRef).sort((a, b) => a.source.localeCompare(b.source)),
       skills: report.inventory.skills.map((item) => ({
-        ...sourceRef(item),
+        ...sourceRef({ ...item, digest: item.treeDigest ?? item.digest }),
         name: item.name,
         ...item.description ? { description: item.description } : {}
+      })).sort((a, b) => a.name.localeCompare(b.name) || a.source.localeCompare(b.source)),
+      agents: (report.inventory.agents ?? []).map((item) => ({
+        ...sourceRef(item),
+        name: item.name,
+        description: item.description,
+        ...item.tools.length > 0 ? { tools: item.tools } : {},
+        ...item.model ? { model: item.model } : {},
+        ...item.extensions ? { extensions: item.extensions } : {}
       })).sort((a, b) => a.name.localeCompare(b.name) || a.source.localeCompare(b.source)),
       connections: {
         mcp: report.inventory.mcpServers.map((server) => ({
@@ -8857,21 +9178,21 @@ function timestampForPath() {
   return (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
 }
 async function atomicWrite2(manifestPath, manifest) {
-  const directory = path5.dirname(manifestPath);
+  const directory = path6.dirname(manifestPath);
   await mkdir2(directory, { recursive: true, mode: 448 });
-  const tempPath = path5.join(directory, `.${MANIFEST_NAME}.${process.pid}.tmp`);
+  const tempPath = path6.join(directory, `.${MANIFEST_NAME}.${process.pid}.tmp`);
   await writeFile2(tempPath, `${JSON.stringify(manifest, null, 2)}
 `, { encoding: "utf8", mode: 384 });
   await rename2(tempPath, manifestPath);
 }
 async function planSync(target, options = {}) {
   const report = await runDoctor(target);
-  return planFrom(report, path5.join(report.inventory.root, MANIFEST_NAME), options);
+  return planFrom(report, path6.join(report.inventory.root, MANIFEST_NAME), options);
 }
 async function planGlobalSync(options = {}) {
   const homedir = options.homedir ?? os3.homedir();
   const report = await runGlobalDoctor(options);
-  const manifestPath = path5.join(homedir, ".agentplaybooks", MANIFEST_NAME);
+  const manifestPath = path6.join(homedir, ".agentplaybooks", MANIFEST_NAME);
   return planFrom(report, manifestPath, { ...options, homedir, skipMcp: true, scope: "global" });
 }
 async function planFrom(report, manifestPath, options = {}) {
@@ -8942,11 +9263,11 @@ function mergeExisting(discovered, existing) {
 }
 async function applySync(plan) {
   if (!plan.changed) return { applied: false, backupPath: null, written: [], backups: [] };
-  const backupDirectory = path5.join(path5.dirname(plan.manifestPath), ".agentplaybooks", "backups", timestampForPath());
+  const backupDirectory = path6.join(path6.dirname(plan.manifestPath), ".agentplaybooks", "backups", timestampForPath());
   let backupPath = null;
   if (plan.manifestChanged && plan.existing) {
     await mkdir2(backupDirectory, { recursive: true, mode: 448 });
-    backupPath = path5.join(backupDirectory, MANIFEST_NAME);
+    backupPath = path6.join(backupDirectory, MANIFEST_NAME);
     await copyFile2(plan.manifestPath, backupPath);
   }
   if (plan.manifestChanged) {
@@ -8983,6 +9304,7 @@ function printSyncPlan(plan) {
     console.log(`Sync plan: ${plan.action} ${plan.manifestPath}`);
     console.log(`  ${plan.manifest.spec.instructions.length} instruction file(s)`);
     console.log(`  ${plan.manifest.spec.skills.length} skill(s)`);
+    console.log(`  ${plan.manifest.spec.agents.length} custom agent(s)`);
     console.log(`  ${plan.manifest.spec.connections.mcp.length} MCP server definition(s)`);
     console.log(`  ${plan.manifest.spec.targets.length} deployment target(s)`);
     if (plan.manifest.spec.secrets.length > 0) {
@@ -9002,15 +9324,668 @@ function printSyncPlan(plan) {
   printTargetSuggestion(plan);
 }
 
-// src/hermes-distribution.js
-import { mkdir as mkdir4, readFile as readFile5, readdir as readdir3, rename as rename4, writeFile as writeFile4 } from "node:fs/promises";
+// src/agent-plugins.js
+import { copyFile as copyFile3, mkdir as mkdir3, readFile as readFile5, readdir as readdir4, rename as rename3, writeFile as writeFile3 } from "node:fs/promises";
+import path8 from "node:path";
+
+// src/snapshot.js
+import { createHash as createHash2 } from "node:crypto";
+import { lstat, readFile as readFile4, readdir as readdir3 } from "node:fs/promises";
 import path7 from "node:path";
+var SNAPSHOT_FORMAT = "agentplaybooks.portable-snapshot/v1";
+var SNAPSHOT_MAX_FILES = 1e3;
+var SNAPSHOT_MAX_BYTES = 4 * 1024 * 1024;
+var MAX_FILE_BYTES = 1024 * 1024;
+var SKILL_NAME = /^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/;
+function validSnapshotPath(value) {
+  if (typeof value !== "string" || !value || value.includes("\\") || value.startsWith("/") || value.includes("\0")) return false;
+  const segments = value.split("/");
+  if (segments.some((segment) => !segment || segment === "." || segment === ".." || segment.includes(":"))) return false;
+  if (["AGENTS.md", "agentplaybook.json", ".agents/mcp.json", ".agents/persona.md"].includes(value)) return true;
+  if (segments[0] === ".agents" && segments[1] === "agents" && segments.length === 3) {
+    return segments[2].endsWith(".md") && SAFE_AGENT_NAME.test(segments[2].slice(0, -3));
+  }
+  return segments[0] === ".agents" && segments[1] === "skills" && segments.length >= 4 && SKILL_NAME.test(segments[2]);
+}
+function sha256(buffer) {
+  return `sha256:${createHash2("sha256").update(buffer).digest("hex")}`;
+}
+function textIfUtf8(buffer) {
+  if (buffer.includes(0)) return null;
+  try {
+    return new TextDecoder("utf-8", { fatal: true }).decode(buffer);
+  } catch {
+    return null;
+  }
+}
+function unsafeCredentialField(definition) {
+  for (const field of ["env", "headers"]) {
+    for (const [key, value] of Object.entries(definition?.[field] ?? {})) {
+      if (!/(?:key|token|secret|pass|auth|credential)/i.test(key)) continue;
+      if (typeof value !== "string") return `${field}.${key}`;
+      if (!/(?:\$\{[A-Za-z_][A-Za-z0-9_]*\}|\$[A-Za-z_][A-Za-z0-9_]*|env:[A-Za-z_][A-Za-z0-9_]*|vault:[^\s]+)/.test(value)) return `${field}.${key}`;
+    }
+  }
+  return null;
+}
+async function treeFiles(root) {
+  const files = [];
+  const queue = [root];
+  while (queue.length > 0) {
+    const current = queue.shift();
+    for (const entry of await readdir3(current, { withFileTypes: true })) {
+      if (entry.isSymbolicLink()) continue;
+      const absolute = path7.join(current, entry.name);
+      if (entry.isDirectory()) queue.push(absolute);
+      else if (entry.isFile()) files.push(absolute);
+    }
+  }
+  return files.sort((a, b) => a.localeCompare(b));
+}
+function groupByName2(items) {
+  const groups = /* @__PURE__ */ new Map();
+  for (const item of items ?? []) {
+    const group = groups.get(item.name) ?? [];
+    group.push(item);
+    groups.set(item.name, group);
+  }
+  return groups;
+}
+function validateSnapshot(snapshot) {
+  if (!snapshot || snapshot.format !== SNAPSHOT_FORMAT || !Array.isArray(snapshot.files)) throw new Error("Unsupported portable snapshot format.");
+  if (snapshot.files.length > SNAPSHOT_MAX_FILES) throw new Error("Portable snapshot has too many files.");
+  const seen = /* @__PURE__ */ new Set();
+  let total = 0;
+  for (const file of snapshot.files) {
+    if (!validSnapshotPath(file?.path) || seen.has(file.path.toLowerCase())) throw new Error(`Unsafe or duplicate snapshot path: ${String(file?.path)}.`);
+    seen.add(file.path.toLowerCase());
+    if (typeof file.content !== "string" || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(file.content)) throw new Error(`Invalid base64 for ${file.path}.`);
+    const bytes = Buffer.from(file.content, "base64");
+    total += bytes.length;
+    if (bytes.length > MAX_FILE_BYTES || total > SNAPSHOT_MAX_BYTES) throw new Error("Portable snapshot exceeds the size limit.");
+    if (file.sha256 !== sha256(bytes)) throw new Error(`Snapshot checksum mismatch for ${file.path}.`);
+  }
+  if (snapshot.files.length === 0) throw new Error("Portable snapshot contains no files.");
+  return snapshot;
+}
+function snapshotDigest(snapshot) {
+  validateSnapshot(snapshot);
+  const hash = createHash2("sha256");
+  for (const file of [...snapshot.files].sort((a, b) => a.path.localeCompare(b.path))) {
+    hash.update(file.path);
+    hash.update("\0");
+    hash.update(Buffer.from(file.content, "base64"));
+    hash.update("\0");
+  }
+  return `sha256:${hash.digest("hex")}`;
+}
+async function buildPortableSnapshot(report, root, manifest, instructions, { skipMcp = false } = {}) {
+  const files = /* @__PURE__ */ new Map();
+  const conflicts = [];
+  const add = (relative, content, source) => {
+    if (!validSnapshotPath(relative)) throw new Error(`Unsafe snapshot path: ${relative}.`);
+    const buffer = Buffer.isBuffer(content) ? content : Buffer.from(content, "utf8");
+    if (buffer.length > MAX_FILE_BYTES) {
+      conflicts.push({ kind: "snapshot", name: relative, reason: "File exceeds the 1 MiB backup limit." });
+      return;
+    }
+    const text = textIfUtf8(buffer);
+    if (text !== null && credentialLines(text).length > 0) {
+      conflicts.push({ kind: "snapshot", name: relative, reason: `Possible hard-coded credential in ${source}; backup refused.` });
+      return;
+    }
+    files.set(relative, { path: relative, content: buffer.toString("base64"), sha256: sha256(buffer) });
+  };
+  for (const [name, variants] of groupByName2(report.inventory.skills)) {
+    if (!SKILL_NAME.test(name) || new Set(variants.map((item) => item.treeDigest ?? item.digest)).size !== 1) {
+      conflicts.push({ kind: "skill", name, reason: "Invalid skill name or differing skill trees; backup refused." });
+      continue;
+    }
+    const chosen = variants.find((item) => item.platform === "portable") ?? variants[0];
+    const directory = path7.dirname(chosen.absolutePath);
+    for (const absolute of await treeFiles(directory)) {
+      const relative = normalizePath(path7.relative(directory, absolute));
+      add(`.agents/skills/${name}/${relative}`, await readFile4(absolute), chosen.source);
+    }
+  }
+  for (const [name, variants] of groupByName2(report.inventory.agents)) {
+    if (!SAFE_AGENT_NAME.test(name) || new Set(variants.map((item) => item.digest)).size !== 1) {
+      conflicts.push({ kind: "agent", name, reason: "Invalid agent name or differing agent definitions; backup refused." });
+      continue;
+    }
+    const chosen = variants.find((item) => item.platform === "portable") ?? variants[0];
+    add(`.agents/agents/${name}.md`, portableAgentContent(chosen), chosen.source);
+  }
+  if (!skipMcp) {
+    const mcp = {};
+    for (const [name, variants] of groupByName2(report.inventory.mcpServers)) {
+      if (new Set(variants.map((item) => canonicalJson(item.definition))).size !== 1) {
+        conflicts.push({ kind: "mcp", name, reason: "Differing MCP definitions; backup refused." });
+        continue;
+      }
+      const field = unsafeCredentialField(variants[0].definition);
+      if (field) {
+        conflicts.push({ kind: "mcp", name, reason: `Literal credential-like ${field} value; use an environment or vault reference.` });
+        continue;
+      }
+      mcp[name] = variants[0].definition;
+    }
+    if (Object.keys(mcp).length > 0) add(".agents/mcp.json", `${JSON.stringify({ mcpServers: mcp }, null, 2)}
+`, "MCP definitions");
+  }
+  if (instructions) add("AGENTS.md", instructions.content.endsWith("\n") ? instructions.content : `${instructions.content}
+`, instructions.source);
+  const persona = path7.join(root, ".agents", "persona.md");
+  try {
+    if ((await lstat(persona)).isFile()) add(".agents/persona.md", await readFile4(persona), ".agents/persona.md");
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+  }
+  add("agentplaybook.json", `${JSON.stringify(manifest, null, 2)}
+`, "manifest");
+  const snapshot = { format: SNAPSHOT_FORMAT, files: [...files.values()].sort((a, b) => a.path.localeCompare(b.path)) };
+  if (conflicts.length > 0) return { snapshot: null, conflicts };
+  validateSnapshot(snapshot);
+  return { snapshot, digest: snapshotDigest(snapshot), conflicts };
+}
+async function planSnapshotRestore(root, snapshot) {
+  validateSnapshot(snapshot);
+  const actions = [];
+  const conflicts = [];
+  for (const file of snapshot.files) {
+    const absolute = await assertSafeDestination(root, file.path);
+    const content = Buffer.from(file.content, "base64");
+    let existing = null;
+    try {
+      existing = await readFile4(absolute);
+    } catch (error) {
+      if (error?.code !== "ENOENT") throw error;
+    }
+    if (existing === null) actions.push({ kind: "snapshot-file", action: "create", name: file.path, path: file.path, content });
+    else if (!existing.equals(content)) conflicts.push({ kind: "snapshot-file", name: file.path, reason: `Local ${file.path} differs from the central backup.` });
+  }
+  return { actions, conflicts };
+}
+async function assertSafeDestination(root, relative) {
+  if (!validSnapshotPath(relative)) throw new Error(`Unsafe restore path: ${relative}.`);
+  const base = path7.resolve(root);
+  let current = base;
+  for (const segment of relative.split("/")) {
+    current = path7.join(current, segment);
+    const inside = path7.relative(base, current);
+    if (inside.startsWith("..") || path7.isAbsolute(inside)) throw new Error(`Restore path escapes its root: ${relative}.`);
+    try {
+      const stat = await lstat(current);
+      if (stat.isSymbolicLink()) throw new Error(`Restore path passes through a symlink: ${relative}.`);
+    } catch (error) {
+      if (error?.code !== "ENOENT") throw error;
+    }
+  }
+  return current;
+}
+
+// src/agent-plugins.js
+var PLUGIN_SCHEMA = "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json";
+var MCP_SCHEMA = "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json";
+var PLUGIN_NAME = /^(?!.*(?:--|\.\.))[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/;
+var SECRET_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
+var REF_PATTERNS = [/\$\{([A-Za-z_][A-Za-z0-9_]*)\}/g, /(?<![\w$])\$([A-Za-z_][A-Za-z0-9_]*)/g, /env:([A-Za-z_][A-Za-z0-9_]*)/g];
+function canonicalize2(value) {
+  if (Array.isArray(value)) return value.map(canonicalize2);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonicalize2(value[key])]));
+  }
+  return value;
+}
+function sameJson(left, right) {
+  return JSON.stringify(canonicalize2(left)) === JSON.stringify(canonicalize2(right));
+}
+function groupBy2(items, keyFor) {
+  const groups = /* @__PURE__ */ new Map();
+  for (const item of items) {
+    const key = keyFor(item);
+    const group = groups.get(key) ?? [];
+    group.push(item);
+    groups.set(key, group);
+  }
+  return groups;
+}
+function slugify2(value) {
+  const result = String(value).toLowerCase().replace(/[^a-z0-9.-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 64);
+  return PLUGIN_NAME.test(result) ? result : "agent-playbook";
+}
+async function readJsonIfExists(file) {
+  try {
+    return JSON.parse(await readFile5(file, "utf8"));
+  } catch (error) {
+    if (error?.code === "ENOENT") return null;
+    throw new Error(`Cannot read ${normalizePath(file)}: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+async function readIfExists2(file) {
+  try {
+    return await readFile5(file);
+  } catch (error) {
+    if (error?.code === "ENOENT") return null;
+    throw error;
+  }
+}
+async function filesBelow(root) {
+  const result = [];
+  const queue = [root];
+  while (queue.length > 0) {
+    const current = queue.shift();
+    let entries;
+    try {
+      entries = await readdir4(current, { withFileTypes: true });
+    } catch (error) {
+      if (error?.code === "ENOENT") continue;
+      throw error;
+    }
+    for (const entry of entries) {
+      if (entry.isSymbolicLink()) continue;
+      const absolute = path8.join(current, entry.name);
+      if (entry.isDirectory()) queue.push(absolute);
+      else if (entry.isFile()) result.push(absolute);
+    }
+  }
+  return result;
+}
+async function addAction(actions, conflicts, root, relative, content, from) {
+  const absolutePath = path8.join(root, ...relative.split("/"));
+  const existing = await readIfExists2(absolutePath);
+  const buffer = Buffer.isBuffer(content) ? content : Buffer.from(content, "utf8");
+  if (existing?.equals(buffer)) return;
+  if (existing !== null) {
+    conflicts.push({ kind: "file", name: relative, reason: "A different file already exists and was not overwritten.", sources: [from, relative].filter(Boolean) });
+    return;
+  }
+  actions.push({ kind: "plugin-file", action: "create", path: relative, absolutePath, content: buffer, from });
+}
+function referencesIn(value) {
+  const found = /* @__PURE__ */ new Set();
+  if (typeof value !== "string") return found;
+  for (const pattern of REF_PATTERNS) {
+    for (const match of value.matchAll(pattern)) {
+      if (match[1] !== "PLUGIN_ROOT" && match[1] !== "PLUGIN_DATA") found.add(match[1]);
+    }
+  }
+  return found;
+}
+function referencesBelow(value, found = /* @__PURE__ */ new Set()) {
+  if (typeof value === "string") for (const name of referencesIn(value)) found.add(name);
+  else if (Array.isArray(value)) for (const item of value) referencesBelow(item, found);
+  else if (value && typeof value === "object") for (const item of Object.values(value)) referencesBelow(item, found);
+  return found;
+}
+function exportServer(server, bindings) {
+  const definition = structuredClone(server.definition);
+  const unsafe = unsafeCredentialField(definition);
+  if (unsafe) return { error: `literal credential-like ${unsafe} value; use a reference` };
+  const allowed = server.transport === "stdio" ? /* @__PURE__ */ new Set(["command", "args", "env", "cwd"]) : /* @__PURE__ */ new Set(["url", "headers"]);
+  const unsupported = Object.keys(definition).filter((key) => !allowed.has(key));
+  if (unsupported.length > 0) return { error: `unsupported keys: ${unsupported.join(", ")}` };
+  for (const field of ["env", "headers"]) {
+    if (!definition[field] || typeof definition[field] !== "object" || Array.isArray(definition[field])) continue;
+    for (const [key, template] of Object.entries(definition[field])) {
+      const names = referencesIn(template);
+      if (names.size === 0) continue;
+      delete definition[field][key];
+      for (const name of names) bindings.push({ name, server: server.name, path: [field, key], template });
+    }
+    if (Object.keys(definition[field]).length === 0) delete definition[field];
+  }
+  const unbound = referencesBelow(definition);
+  if (unbound.size > 0) return { error: `secret references outside env/headers cannot be bound (${[...unbound].join(", ")})` };
+  if (server.transport === "stdio") {
+    if (typeof definition.command !== "string" || !definition.command) return { error: "stdio server has no command" };
+    return { definition: { type: "stdio", ...definition } };
+  }
+  if (server.transport !== "http" && server.transport !== "sse") return { error: `unknown transport '${server.transport}'` };
+  if (typeof definition.url !== "string" || !definition.url) return { error: "remote server has no URL" };
+  return { definition: { type: server.transport === "sse" ? "sse" : "streamable-http", ...definition } };
+}
+function secretExtension(manifestSecrets, bindings) {
+  const byName = /* @__PURE__ */ new Map();
+  for (const secret of manifestSecrets ?? []) {
+    if (!SECRET_NAME.test(secret.name)) continue;
+    byName.set(secret.name, { name: secret.name, ref: secret.ref, required: secret.required !== false, bindings: [] });
+  }
+  for (const binding of bindings) {
+    const secret = byName.get(binding.name) ?? { name: binding.name, ref: `env:${binding.name}`, required: true, bindings: [] };
+    secret.bindings.push({ server: binding.server, path: binding.path, template: binding.template });
+    byName.set(binding.name, secret);
+  }
+  return [...byName.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+async function planPluginExport(root, { output } = {}) {
+  const projectRoot = path8.resolve(root);
+  const outputRoot = path8.resolve(output ?? path8.join(projectRoot, ".agentplaybooks", "plugin"));
+  const report = await runDoctor(projectRoot);
+  const playbook = await readJsonIfExists(path8.join(projectRoot, "agentplaybook.json"));
+  const actions = [];
+  const conflicts = [];
+  const skillGroups = groupBy2(report.inventory.skills, (item) => item.name);
+  for (const [name, variants] of skillGroups) {
+    if (!SAFE_AGENT_NAME.test(name)) {
+      conflicts.push({ kind: "skill", name, reason: "Skill name is not a safe Agent Skills directory name.", sources: variants.map((item) => item.source) });
+      continue;
+    }
+    if (new Set(variants.map((item) => item.treeDigest ?? item.digest)).size > 1) {
+      conflicts.push({ kind: "skill", name, reason: "Skill definitions drift across platforms.", sources: variants.map((item) => item.source) });
+      continue;
+    }
+    const sourceRoot = path8.dirname(variants[0].absolutePath);
+    const members = await filesBelow(sourceRoot);
+    let unsafeResource = null;
+    for (const file of members) {
+      const content = await readFile5(file);
+      if (content.includes(0)) continue;
+      try {
+        if (credentialLines(new TextDecoder("utf-8", { fatal: true }).decode(content)).length > 0) {
+          unsafeResource = normalizePath(path8.relative(sourceRoot, file));
+          break;
+        }
+      } catch (error) {
+        if (!(error instanceof TypeError)) throw error;
+      }
+    }
+    if (unsafeResource) {
+      conflicts.push({ kind: "skill", name, reason: `Possible literal credential in ${unsafeResource}; export refused.`, sources: [variants[0].source] });
+      continue;
+    }
+    for (const file of members) {
+      const relative = normalizePath(path8.relative(sourceRoot, file));
+      await addAction(actions, conflicts, outputRoot, `skills/${name}/${relative}`, await readFile5(file), variants[0].source);
+    }
+  }
+  const agentGroups = groupBy2(report.inventory.agents, (item) => item.name);
+  for (const [name, variants] of agentGroups) {
+    if (!SAFE_AGENT_NAME.test(name)) {
+      conflicts.push({ kind: "agent", name, reason: "Agent name is not a safe portable file name.", sources: variants.map((item) => item.source) });
+      continue;
+    }
+    if (new Set(variants.map((item) => item.digest)).size > 1) {
+      conflicts.push({ kind: "agent", name, reason: "Custom agent definitions drift across platforms.", sources: variants.map((item) => item.source) });
+      continue;
+    }
+    const canonical = variants.find((item) => item.platform === "portable") ?? variants[0];
+    await addAction(actions, conflicts, outputRoot, `ai.agentplaybooks/agents/${name}.md`, portableAgentContent(canonical), canonical.source);
+    await addAction(actions, conflicts, outputRoot, `com.github.copilot/agents/${name}.agent.md`, serializeAgent(canonical, "copilot"), canonical.source);
+  }
+  const mcpServers = {};
+  const bindings = [];
+  const mcpGroups = groupBy2(report.inventory.mcpServers, (item) => item.name);
+  const secretSources = new Set(report.findings.filter((item) => item.code === "secret.hardcoded").map((item) => item.source));
+  for (const [name, variants] of mcpGroups) {
+    if (variants.some((item) => secretSources.has(item.source))) {
+      conflicts.push({ kind: "mcp", name, reason: "The source contains a possible literal credential; export was refused.", sources: variants.map((item) => item.source) });
+      continue;
+    }
+    if (new Set(variants.map((item) => JSON.stringify(canonicalize2(item.definition)))).size > 1) {
+      conflicts.push({ kind: "mcp", name, reason: "MCP definitions drift across platforms.", sources: variants.map((item) => item.source) });
+      continue;
+    }
+    const converted = exportServer(variants[0], bindings);
+    if (converted.error) {
+      conflicts.push({ kind: "mcp", name, reason: `Cannot represent this server in Agent Plugins 1.0: ${converted.error}.`, sources: variants.map((item) => item.source) });
+      continue;
+    }
+    mcpServers[name] = converted.definition;
+  }
+  if (Object.keys(mcpServers).length > 0) {
+    await addAction(actions, conflicts, outputRoot, "mcp.json", `${JSON.stringify({ $schema: MCP_SCHEMA, mcpServers }, null, 2)}
+`, "MCP inventory");
+  }
+  const secrets = secretExtension(playbook?.spec?.secrets, bindings);
+  const plugin = {
+    $schema: PLUGIN_SCHEMA,
+    name: slugify2(playbook?.metadata?.name ?? path8.basename(projectRoot)),
+    version: String(playbook?.metadata?.labels?.version ?? "1.0.0"),
+    ...playbook?.metadata?.description ? { description: playbook.metadata.description } : {},
+    ...secrets.length > 0 ? { extensions: { "ai.agentplaybooks": { secrets } } } : {}
+  };
+  await addAction(actions, conflicts, outputRoot, "plugin.json", `${JSON.stringify(plugin, null, 2)}
+`, "agentplaybook.json");
+  actions.sort((a, b) => a.path.localeCompare(b.path));
+  return { kind: "export", root: projectRoot, output: outputRoot, plugin, actions, conflicts };
+}
+function validatePluginManifest(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("plugin.json must be a JSON object.");
+  const allowed = /* @__PURE__ */ new Set(["$schema", "name", "version", "description", "author", "homepage", "repository", "license", "keywords", "extensions"]);
+  const extra = Object.keys(value).filter((key) => !allowed.has(key));
+  if (extra.length) throw new Error(`plugin.json contains unsupported fields: ${extra.join(", ")}.`);
+  if (value.$schema !== PLUGIN_SCHEMA) throw new Error(`plugin.json must target Agent Plugins 1.0 (${PLUGIN_SCHEMA}).`);
+  if (typeof value.name !== "string" || value.name.length > 64 || !PLUGIN_NAME.test(value.name)) throw new Error("plugin.json has an invalid Agent Plugins name.");
+  if (value.extensions !== void 0 && (!value.extensions || typeof value.extensions !== "object" || Array.isArray(value.extensions))) throw new Error("plugin.json extensions must be an object.");
+  for (const field of ["version", "description", "homepage", "repository", "license"]) {
+    if (value[field] !== void 0 && typeof value[field] !== "string") throw new Error(`plugin.json '${field}' must be a string.`);
+  }
+  if (value.keywords !== void 0 && (!Array.isArray(value.keywords) || value.keywords.some((item) => typeof item !== "string"))) throw new Error("plugin.json keywords must be strings.");
+  if (value.author !== void 0) {
+    if (!value.author || typeof value.author !== "object" || Array.isArray(value.author)) throw new Error("plugin.json author must be an object.");
+    if (Object.keys(value.author).some((key) => !["name", "email", "url"].includes(key)) || Object.values(value.author).some((item) => typeof item !== "string")) throw new Error("plugin.json author does not match the Agent Plugins schema.");
+  }
+  for (const extension of Object.values(value.extensions ?? {})) {
+    if (!extension || typeof extension !== "object" || Array.isArray(extension)) throw new Error("Every plugin extension value must be an object.");
+  }
+  return value;
+}
+function assertStringMap(value, label) {
+  if (!value || typeof value !== "object" || Array.isArray(value) || Object.values(value).some((item) => typeof item !== "string")) {
+    throw new Error(`${label} must map strings to strings.`);
+  }
+}
+function validateMcpDocument(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("mcp.json must be a JSON object.");
+  if (value.$schema !== MCP_SCHEMA) throw new Error(`mcp.json must target Agent Plugins 1.0 (${MCP_SCHEMA}).`);
+  if (!value.mcpServers || typeof value.mcpServers !== "object" || Array.isArray(value.mcpServers)) throw new Error("mcp.json must contain mcpServers.");
+  if (Object.keys(value).some((key) => key !== "$schema" && key !== "mcpServers")) throw new Error("mcp.json contains fields outside the Agent Plugins 1.0 schema.");
+  for (const [name, server] of Object.entries(value.mcpServers)) {
+    if (!server || typeof server !== "object" || Array.isArray(server)) throw new Error(`MCP server '${name}' must be an object.`);
+    const stdio = server.type === "stdio";
+    const remote = server.type === "streamable-http" || server.type === "sse";
+    if (!stdio && !remote) throw new Error(`MCP server '${name}' has an unsupported type.`);
+    const allowed = stdio ? /* @__PURE__ */ new Set(["type", "command", "args", "env", "cwd"]) : /* @__PURE__ */ new Set(["type", "url", "headers"]);
+    if (Object.keys(server).some((key) => !allowed.has(key))) throw new Error(`MCP server '${name}' has fields outside its Agent Plugins schema.`);
+    if (stdio && (typeof server.command !== "string" || !server.command)) throw new Error(`MCP server '${name}' has no command.`);
+    if (remote && (typeof server.url !== "string" || !server.url)) throw new Error(`MCP server '${name}' has no URL.`);
+    if (stdio && server.args !== void 0 && (!Array.isArray(server.args) || server.args.some((item) => typeof item !== "string"))) throw new Error(`MCP server '${name}' args must be strings.`);
+    if (stdio && server.env !== void 0) {
+      assertStringMap(server.env, `MCP server '${name}' env`);
+      if (server.env.PLUGIN_ROOT !== void 0 || server.env.PLUGIN_DATA !== void 0) throw new Error(`MCP server '${name}' cannot override PLUGIN_ROOT or PLUGIN_DATA.`);
+    }
+    if (stdio && server.cwd !== void 0) {
+      if (typeof server.cwd !== "string" || !/^(?:\.\/|\$\{PLUGIN_ROOT\}(?:\/|$)|\$\{PLUGIN_DATA\}(?:\/|$))/.test(server.cwd) || server.cwd.split("/").includes("..")) {
+        throw new Error(`MCP server '${name}' cwd is not contained in the plugin or plugin data directory.`);
+      }
+    }
+    if (remote) {
+      if (server.headers !== void 0) assertStringMap(server.headers, `MCP server '${name}' headers`);
+      let url;
+      try {
+        url = new URL(server.url);
+      } catch {
+        throw new Error(`MCP server '${name}' URL is invalid.`);
+      }
+      const loopback = ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
+      if (url.protocol !== "https:" && !(url.protocol === "http:" && loopback)) throw new Error(`MCP server '${name}' must use HTTPS outside loopback.`);
+    }
+  }
+  return value;
+}
+function importedSecrets(plugin) {
+  const secrets = plugin.extensions?.["ai.agentplaybooks"]?.secrets ?? [];
+  if (!Array.isArray(secrets)) throw new Error("ai.agentplaybooks.secrets must be an array.");
+  for (const secret of secrets) {
+    if (!secret || !SECRET_NAME.test(secret.name) || typeof secret.ref !== "string") throw new Error("AgentPlaybooks secret declarations need a valid name and ref.");
+    if (!/^[a-z][a-z0-9+.-]*:[^\s]+$/i.test(secret.ref)) throw new Error(`Secret '${secret.name}' must use a named reference scheme such as env: or vault:.`);
+    if (secret.bindings !== void 0 && !Array.isArray(secret.bindings)) throw new Error(`Bindings for '${secret.name}' must be an array.`);
+    for (const binding of secret.bindings ?? []) {
+      if (typeof binding?.template !== "string" || !referencesIn(binding.template).has(secret.name)) {
+        throw new Error(`Binding template for '${secret.name}' must contain a reference to that secret.`);
+      }
+    }
+  }
+  return secrets;
+}
+function setBinding(definitions, binding) {
+  const server = definitions[binding.server];
+  if (!server || !Array.isArray(binding.path) || binding.path.length !== 2 || !["env", "headers"].includes(binding.path[0])) {
+    throw new Error(`Secret binding for '${binding.server}' has an invalid target path.`);
+  }
+  if (typeof binding.path[1] !== "string" || typeof binding.template !== "string") throw new Error(`Secret binding for '${binding.server}' is incomplete.`);
+  server[binding.path[0]] ??= {};
+  server[binding.path[0]][binding.path[1]] = binding.template;
+}
+function nativeServers(mcp, secrets) {
+  const definitions = {};
+  for (const [name, server] of Object.entries(mcp?.mcpServers ?? {})) {
+    const { type, ...definition } = structuredClone(server);
+    definitions[name] = definition;
+  }
+  for (const secret of secrets) for (const binding of secret.bindings ?? []) setBinding(definitions, binding);
+  return definitions;
+}
+async function mergedPortableMcp(root, definitions, conflicts) {
+  if (Object.keys(definitions).length === 0) return null;
+  const relative = ".agents/mcp.json";
+  const absolutePath = path8.join(root, ".agents", "mcp.json");
+  const current = await readJsonIfExists(absolutePath) ?? { mcpServers: {} };
+  if (!current.mcpServers || typeof current.mcpServers !== "object" || Array.isArray(current.mcpServers)) throw new Error(`${relative} has no mcpServers object.`);
+  const added = [];
+  for (const [name, definition] of Object.entries(definitions)) {
+    if (current.mcpServers[name] && !sameJson(current.mcpServers[name], definition)) {
+      conflicts.push({ kind: "mcp", name, reason: "The portable store already has a different server definition.", sources: [relative, "mcp.json"] });
+      continue;
+    }
+    if (!current.mcpServers[name]) {
+      current.mcpServers[name] = definition;
+      added.push(name);
+    }
+  }
+  if (added.length === 0) return null;
+  return { kind: "mcp-config", action: await readIfExists2(absolutePath) === null ? "create" : "merge", path: relative, absolutePath, content: Buffer.from(`${JSON.stringify(current, null, 2)}
+`), servers: added };
+}
+async function planPluginImport(pluginDirectory, root) {
+  const pluginRoot = path8.resolve(pluginDirectory);
+  const projectRoot = path8.resolve(root);
+  const plugin = validatePluginManifest(await readJsonIfExists(path8.join(pluginRoot, "plugin.json")));
+  const mcpRaw = await readJsonIfExists(path8.join(pluginRoot, "mcp.json"));
+  const mcp = mcpRaw === null ? null : validateMcpDocument(mcpRaw);
+  const secrets = importedSecrets(plugin);
+  const actions = [];
+  const conflicts = [];
+  const skillsRoot = path8.join(pluginRoot, "skills");
+  const skillFiles = await filesBelow(skillsRoot);
+  const relativeSkillFiles = skillFiles.map((file) => normalizePath(path8.relative(skillsRoot, file)));
+  for (const directory of new Set(relativeSkillFiles.map((relative) => relative.split("/")[0]))) {
+    if (!relativeSkillFiles.includes(`${directory}/SKILL.md`)) throw new Error(`Plugin skill '${directory}' has no SKILL.md.`);
+  }
+  const pluginReport = await runDoctor(pluginRoot);
+  const invalidSkill = pluginReport.findings.find((item) => item.severity === "high" && item.code.startsWith("skill."));
+  if (invalidSkill) throw new Error(`Plugin skill is invalid (${invalidSkill.code} at ${invalidSkill.source}).`);
+  for (const file of skillFiles) {
+    const relative = normalizePath(path8.relative(skillsRoot, file));
+    const [skillName] = relative.split("/");
+    await addAction(actions, conflicts, projectRoot, `.agents/skills/${skillName}/${relative.split("/").slice(1).join("/")}`, await readFile5(file), `skills/${relative}`);
+  }
+  const canonicalAgentRoot = path8.join(pluginRoot, "ai.agentplaybooks", "agents");
+  const canonicalFiles = (await filesBelow(canonicalAgentRoot)).filter((file) => file.toLowerCase().endsWith(".md"));
+  const agentRoot = canonicalFiles.length > 0 ? canonicalAgentRoot : path8.join(pluginRoot, "com.github.copilot", "agents");
+  for (const file of (canonicalFiles.length > 0 ? canonicalFiles : await filesBelow(agentRoot)).filter((item) => item.toLowerCase().endsWith(".md"))) {
+    const filename = path8.basename(file);
+    const name = filename.toLowerCase().endsWith(".agent.md") ? filename.slice(0, -".agent.md".length) : path8.basename(filename, ".md");
+    const source = normalizeText(await readFile5(file, "utf8"));
+    const parsed = parseAgentDefinition({ source: `.agents/agents/${name}.md`, platform: "portable", content: source, absolutePath: file, digest: "" });
+    if (!parsed.valid || !SAFE_AGENT_NAME.test(parsed.name) || !parsed.description || !parsed.prompt.trim()) {
+      conflicts.push({ kind: "agent", name, reason: "Plugin custom agent is invalid and was not imported.", sources: [normalizePath(path8.relative(pluginRoot, file))] });
+      continue;
+    }
+    await addAction(actions, conflicts, projectRoot, `.agents/agents/${parsed.name}.md`, portableAgentContent(parsed), normalizePath(path8.relative(pluginRoot, file)));
+  }
+  const mcpAction = await mergedPortableMcp(projectRoot, nativeServers(mcp, secrets), conflicts);
+  if (mcpAction) actions.push(mcpAction);
+  actions.sort((a, b) => a.path.localeCompare(b.path));
+  return { kind: "import", root: projectRoot, pluginRoot, plugin, secrets, actions, conflicts, refreshManifest: true };
+}
+async function atomicWrite3(action) {
+  await mkdir3(path8.dirname(action.absolutePath), { recursive: true });
+  const temp = path8.join(path8.dirname(action.absolutePath), `.${path8.basename(action.absolutePath)}.${process.pid}.tmp`);
+  await writeFile3(temp, action.content, { mode: 384 });
+  await rename3(temp, action.absolutePath);
+}
+async function applyPluginPlan(plan) {
+  if (plan.kind === "export" && plan.conflicts.length > 0) {
+    throw new Error("Refusing an incomplete Agent Plugins export: resolve plan conflicts first.");
+  }
+  const written = [];
+  const backups = [];
+  const backupRoot = path8.join(plan.root, ".agentplaybooks", "backups", (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-"));
+  for (const action of plan.actions) {
+    if (plan.kind === "import" && action.action === "merge") {
+      const backup = path8.join(backupRoot, action.path.split("/").join("__"));
+      await mkdir3(path8.dirname(backup), { recursive: true, mode: 448 });
+      await copyFile3(action.absolutePath, backup);
+      backups.push(backup);
+    }
+    await atomicWrite3(action);
+    written.push(action.path);
+  }
+  if (plan.kind === "import") {
+    const syncPlan = await planSync(plan.root);
+    const merged = new Map(syncPlan.manifest.spec.secrets.map((secret) => [secret.name, secret]));
+    for (const secret of plan.secrets) merged.set(secret.name, { name: secret.name, ref: secret.ref, required: secret.required !== false });
+    syncPlan.manifest.spec.secrets = [...merged.values()].sort((a, b) => a.name.localeCompare(b.name));
+    syncPlan.fileActions = [];
+    const comparable = (value) => {
+      if (!value) return value;
+      const copy = structuredClone(value);
+      delete copy.metadata?.generatedAt;
+      return copy;
+    };
+    syncPlan.manifestChanged = !syncPlan.existing || !sameJson(comparable(syncPlan.existing), comparable(syncPlan.manifest));
+    syncPlan.changed = syncPlan.manifestChanged;
+    const result = await applySync(syncPlan);
+    if (result.applied) {
+      written.push("agentplaybook.json");
+      if (result.backupPath) backups.push(result.backupPath);
+    }
+  }
+  return { applied: written.length > 0, written, backups };
+}
+function publicPluginPlan(plan) {
+  return {
+    kind: plan.kind,
+    root: plan.root,
+    ...plan.output ? { output: plan.output } : { pluginRoot: plan.pluginRoot },
+    plugin: { name: plan.plugin.name, version: plan.plugin.version ?? null },
+    actions: plan.actions.map(({ content, absolutePath, ...action }) => action),
+    conflicts: plan.conflicts,
+    ...plan.kind === "import" ? { refreshManifest: true, secrets: plan.secrets.map(({ bindings, ...secret }) => ({ ...secret, bindingCount: bindings?.length ?? 0 })) } : {}
+  };
+}
+function printPluginPlan(plan) {
+  console.log(`Agent Plugins ${plan.kind} plan for '${plan.plugin.name}':`);
+  if (plan.kind === "export") console.log(`  output: ${plan.output}`);
+  else console.log(`  source: ${plan.pluginRoot}`);
+  for (const action of plan.actions) console.log(`  ${action.action} ${action.path}`);
+  if (plan.kind === "import") console.log("  refresh agentplaybook.json (secret references only; never values)");
+  for (const item of plan.conflicts) console.log(`  [conflict] ${item.kind} '${item.name}': ${item.reason}`);
+  if (plan.actions.length === 0 && plan.conflicts.length === 0) console.log("  already in sync");
+  console.log("No files have been changed. Run again with --apply to write these changes.");
+}
+
+// src/hermes-distribution.js
+import { mkdir as mkdir5, readFile as readFile7, readdir as readdir6, rename as rename5, writeFile as writeFile5 } from "node:fs/promises";
+import path10 from "node:path";
 
 // src/remote.js
-import { chmod, mkdir as mkdir3, readdir as readdir2, readFile as readFile4, rename as rename3, writeFile as writeFile3 } from "node:fs/promises";
+import { chmod, mkdir as mkdir4, readdir as readdir5, readFile as readFile6, rename as rename4, writeFile as writeFile4 } from "node:fs/promises";
 import os4 from "node:os";
-import path6 from "node:path";
-var import_yaml4 = __toESM(require_dist(), 1);
+import path9 from "node:path";
+var import_yaml5 = __toESM(require_dist(), 1);
 var DEFAULT_BASE_URL = "https://agentplaybooks.ai";
 var LINK_FILE = [".agentplaybooks", "remote.json"];
 var UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -9033,22 +10008,22 @@ function resolveBaseUrl(flagUrl, env = process.env) {
   return url.replace(/\/+$/, "");
 }
 function credentialsPath(homedir = os4.homedir()) {
-  return path6.join(homedir, ".agentplaybooks", "credentials.json");
+  return path9.join(homedir, ".agentplaybooks", "credentials.json");
 }
 async function loadCredentials(homedir) {
   try {
-    return JSON.parse(await readFile4(credentialsPath(homedir), "utf8"));
+    return JSON.parse(await readFile6(credentialsPath(homedir), "utf8"));
   } catch (error) {
     if (error?.code === "ENOENT") return { version: 1, remotes: {} };
     throw new Error(`Cannot read stored credentials: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 async function writePrivateJson(filePath, value) {
-  await mkdir3(path6.dirname(filePath), { recursive: true, mode: 448 });
-  const tempPath = path6.join(path6.dirname(filePath), `.${path6.basename(filePath)}.${process.pid}.tmp`);
-  await writeFile3(tempPath, `${JSON.stringify(value, null, 2)}
+  await mkdir4(path9.dirname(filePath), { recursive: true, mode: 448 });
+  const tempPath = path9.join(path9.dirname(filePath), `.${path9.basename(filePath)}.${process.pid}.tmp`);
+  await writeFile4(tempPath, `${JSON.stringify(value, null, 2)}
 `, { encoding: "utf8", mode: 384 });
-  await rename3(tempPath, filePath);
+  await rename4(tempPath, filePath);
   await chmod(filePath, 384).catch(() => {
   });
 }
@@ -9088,7 +10063,9 @@ async function request(url, requestPath, { method = "GET", apiKey, body, fetchIm
   }
   if (!response.ok) {
     const message = payload?.error || `HTTP ${response.status}`;
-    throw new Error(`${method} ${requestPath} failed: ${message}`);
+    const error = new Error(`${method} ${requestPath} failed: ${message}`);
+    error.status = response.status;
+    throw error;
   }
   return payload;
 }
@@ -9097,6 +10074,9 @@ async function verifyApiKey(url, apiKey, { fetchImpl } = {}) {
 }
 async function listPlaybooks(url, apiKey, { fetchImpl } = {}) {
   return await request(url, "/api/manage/playbooks", { apiKey, fetchImpl }) ?? [];
+}
+async function listBackups(url, apiKey, guid, { fetchImpl } = {}) {
+  return await request(url, `/api/manage/backups/${encodeURIComponent(guid)}?list=1`, { apiKey, fetchImpl }) ?? [];
 }
 async function getPlaybook(url, apiKey, id, { fetchImpl } = {}) {
   return request(url, `/api/manage/playbooks/${id}`, { apiKey, fetchImpl });
@@ -9109,11 +10089,11 @@ async function resolvePlaybook(url, apiKey, ref, { fetchImpl } = {}) {
   return getPlaybook(url, apiKey, match.id, { fetchImpl });
 }
 function linkPath(root) {
-  return path6.join(root, ...LINK_FILE);
+  return path9.join(root, ...LINK_FILE);
 }
 async function readLink(root) {
   try {
-    return JSON.parse(await readFile4(linkPath(root), "utf8"));
+    return JSON.parse(await readFile6(linkPath(root), "utf8"));
   } catch (error) {
     if (error?.code === "ENOENT") return null;
     throw new Error(`Cannot read ${LINK_FILE.join("/")}: ${error instanceof Error ? error.message : String(error)}`);
@@ -9128,8 +10108,8 @@ function skillFileContent(skill) {
   let body = content;
   let frontmatter = {};
   if (match) {
-    const document = (0, import_yaml4.parseDocument)(match[1], { strict: true, uniqueKeys: true });
-    if (document.errors.length === 0 && (0, import_yaml4.isMap)(document.contents)) {
+    const document = (0, import_yaml5.parseDocument)(match[1], { strict: true, uniqueKeys: true });
+    if (document.errors.length === 0 && (0, import_yaml5.isMap)(document.contents)) {
       frontmatter = document.toJS();
       body = content.slice(match[0].length);
     }
@@ -9148,7 +10128,7 @@ function skillFileContent(skill) {
     ...skill.licence && frontmatter.license === void 0 ? { license: skill.licence } : {}
   };
   delete normalizedFrontmatter.licence;
-  const yaml = (0, import_yaml4.stringify)(normalizedFrontmatter, { lineWidth: 0 }).trimEnd();
+  const yaml = (0, import_yaml5.stringify)(normalizedFrontmatter, { lineWidth: 0 }).trimEnd();
   return `---
 ${yaml}
 ---
@@ -9157,7 +10137,7 @@ ${body}${body.endsWith("\n") ? "" : "\n"}`;
 }
 async function readLocalFile(root, relativePath) {
   try {
-    return normalizeText(await readFile4(path6.join(root, ...relativePath.split("/")), "utf8"));
+    return normalizeText(await readFile6(path9.join(root, ...relativePath.split("/")), "utf8"));
   } catch (error) {
     if (error?.code === "ENOENT") return null;
     throw error;
@@ -9230,8 +10210,43 @@ function mcpDocument(existingContent, additions) {
   return `${JSON.stringify(document, null, 2)}
 `;
 }
-async function planPull(root, ref, { url, apiKey, fetchImpl } = {}) {
-  const playbook = await resolvePlaybook(url, apiKey, ref, { fetchImpl });
+async function requestLatestSnapshot(url, apiKey, playbookId, fetchImpl) {
+  try {
+    return await request(url, `/api/manage/playbooks/${playbookId}/snapshots/latest`, { apiKey, fetchImpl });
+  } catch (error) {
+    if (error?.status === 404) return null;
+    throw error;
+  }
+}
+async function planPull(root, ref, { url, apiKey, fetchImpl, snapshotId } = {}) {
+  let playbook;
+  let saved;
+  try {
+    playbook = await resolvePlaybook(url, apiKey, ref, { fetchImpl });
+  } catch (error) {
+    if (UUID_PATTERN.test(ref) || !String(error?.message).startsWith("No accessible playbook with GUID")) throw error;
+    try {
+      const suffix = snapshotId ? `?snapshot=${encodeURIComponent(snapshotId)}` : "";
+      saved = await request(url, `/api/manage/backups/${encodeURIComponent(ref)}${suffix}`, { apiKey, fetchImpl });
+    } catch (backupError) {
+      if (backupError?.status === 404) throw error;
+      throw backupError;
+    }
+    playbook = { id: null, guid: ref, name: saved.playbook_name };
+  }
+  if (!saved) saved = snapshotId ? await request(url, `/api/manage/playbooks/${playbook.id}/snapshots/${encodeURIComponent(snapshotId)}`, { apiKey, fetchImpl }) : await requestLatestSnapshot(url, apiKey, playbook.id, fetchImpl);
+  if (saved?.snapshot) {
+    if (saved.digest !== snapshotDigest(saved.snapshot)) throw new Error("Central backup digest mismatch; refusing to restore.");
+    const restored = await planSnapshotRestore(root, saved.snapshot);
+    return {
+      playbook: { id: playbook.id, guid: playbook.guid, name: playbook.name },
+      url,
+      actions: restored.actions,
+      conflicts: restored.conflicts,
+      snapshot: { digest: saved.digest, createdAt: saved.created_at }
+    };
+  }
+  if (snapshotId) throw new Error(`Snapshot '${snapshotId}' was not found.`);
   const actions = [];
   const conflicts = [];
   for (const skill of playbook.skills ?? []) {
@@ -9343,9 +10358,10 @@ async function planPull(root, ref, { url, apiKey, fetchImpl } = {}) {
 }
 async function applyPull(root, plan) {
   for (const action of plan.actions) {
-    const absolutePath = path6.join(root, ...action.path.split("/"));
-    await mkdir3(path6.dirname(absolutePath), { recursive: true });
-    await writeFile3(absolutePath, action.content, "utf8");
+    const absolutePath = await assertSafeDestination(root, action.path);
+    await mkdir4(path9.dirname(absolutePath), { recursive: true });
+    await assertSafeDestination(root, action.path);
+    await writeFile4(absolutePath, action.content);
   }
   await writeLink(root, {
     url: plan.url,
@@ -9356,15 +10372,15 @@ async function applyPull(root, plan) {
   });
   return { written: plan.actions.map((action) => action.path) };
 }
-async function readSkillFiles(skillDocumentPath, skillName, conflicts) {
-  const directory = path6.dirname(skillDocumentPath);
+async function readSkillFiles(skillDocumentPath, skillName, warnings) {
+  const directory = path9.dirname(skillDocumentPath);
   const names = [];
-  const entries = await readdir2(directory, { withFileTypes: true }).catch(() => []);
+  const entries = await readdir5(directory, { withFileTypes: true }).catch(() => []);
   for (const entry of entries) {
     if (entry.isFile()) {
       names.push(entry.name);
     } else if (entry.isDirectory() && SKILL_FILE_DIRECTORIES.includes(entry.name)) {
-      const nested = await readdir2(path6.join(directory, entry.name), { withFileTypes: true }).catch(() => []);
+      const nested = await readdir5(path9.join(directory, entry.name), { withFileTypes: true }).catch(() => []);
       for (const child of nested) {
         if (child.isFile()) names.push(`${entry.name}/${child.name}`);
       }
@@ -9372,24 +10388,30 @@ async function readSkillFiles(skillDocumentPath, skillName, conflicts) {
   }
   const files = [];
   for (const filename of names.sort()) {
-    if (!isSafeSkillFile(filename)) continue;
-    const content = await readFile4(path6.join(directory, ...filename.split("/")), "utf8").catch(() => null);
-    if (content === null) continue;
-    if (content.includes("\0")) {
-      conflicts.push({ kind: "skill-file", name: `${skillName}/${filename}`, reason: "File is binary; only text files can be bundled with a skill." });
+    if (filename === "SKILL.md") continue;
+    if (!isSafeSkillFile(filename)) {
+      warnings.push({ kind: "skill-file", name: `${skillName}/${filename}`, reason: "File stays in the private snapshot but is outside the hosted skill attachment format." });
       continue;
     }
-    const normalized = normalizeText(content);
-    const bytes = Buffer.byteLength(normalized, "utf8");
-    if (bytes > MAX_SKILL_FILE_BYTES) {
-      conflicts.push({ kind: "skill-file", name: `${skillName}/${filename}`, reason: `File is ${bytes} bytes; the limit is ${MAX_SKILL_FILE_BYTES}.` });
+    const content = await readFile6(path9.join(directory, ...filename.split("/"))).catch(() => null);
+    if (content === null) continue;
+    if (content.byteLength > MAX_SKILL_FILE_BYTES) {
+      warnings.push({ kind: "skill-file", name: `${skillName}/${filename}`, reason: `File is ${content.byteLength} bytes; the hosted attachment limit is ${MAX_SKILL_FILE_BYTES}, but it stays in the private snapshot.` });
+      continue;
+    }
+    let normalized;
+    try {
+      if (content.some((byte) => byte < 32 && byte !== 9 && byte !== 10 && byte !== 13)) throw new Error("binary");
+      normalized = normalizeText(new TextDecoder("utf-8", { fatal: true }).decode(content));
+    } catch {
+      warnings.push({ kind: "skill-file", name: `${skillName}/${filename}`, reason: "Binary file stays in the private snapshot but cannot be a hosted text attachment." });
       continue;
     }
     files.push({ filename, content: normalized });
   }
   return files;
 }
-async function localSkillsForPush(report, conflicts) {
+async function localSkillsForPush(report, conflicts, warnings) {
   const groups = /* @__PURE__ */ new Map();
   for (const skill of report.inventory.skills) {
     const group = groups.get(skill.name) ?? [];
@@ -9402,27 +10424,34 @@ async function localSkillsForPush(report, conflicts) {
       conflicts.push({ kind: "skill", name, reason: "Skill name is not a safe lowercase kebab-case name; skipped." });
       continue;
     }
-    if (new Set(variants.map((item) => item.digest)).size > 1) {
-      conflicts.push({ kind: "skill", name, reason: "Skill definitions differ across platforms; resolve the drift before pushing." });
+    if (new Set(variants.map((item) => item.treeDigest ?? item.digest)).size > 1) {
+      conflicts.push({ kind: "skill", name, reason: "Skill trees differ across platforms; resolve the drift before pushing." });
       continue;
     }
-    const files = variants[0].absolutePath ? await readSkillFiles(variants[0].absolutePath, name, conflicts) : [];
-    skills.push({ name, description: variants[0].description ?? "", content: variants[0].content, source: variants[0].source, files });
+    const chosen = variants.find((item) => item.platform === "portable") ?? variants[0];
+    const files = chosen.absolutePath ? await readSkillFiles(chosen.absolutePath, name, warnings) : [];
+    skills.push({ name, description: chosen.description ?? "", content: chosen.content, source: chosen.source, files });
   }
   return skills;
 }
 function localInstructionsForPush(report, conflicts) {
   const candidates = report.inventory.instructions.filter((item) => !item.source.includes("/") && INSTRUCTION_PRECEDENCE.includes(item.source));
   if (candidates.length === 0) return null;
-  if (new Set(candidates.map((item) => item.digest)).size > 1) {
+  const canonical = candidates.find((item) => item.source === "AGENTS.md");
+  const substantive = candidates.filter((item) => !(canonical && item.source === "CLAUDE.md" && item.content.trim() === "@AGENTS.md"));
+  if (!canonical && candidates.some((item) => item.source === "CLAUDE.md" && item.content.trim() === "@AGENTS.md")) {
+    conflicts.push({ kind: "instructions", name: "CLAUDE.md", reason: "CLAUDE.md imports AGENTS.md, but AGENTS.md is missing." });
+    return null;
+  }
+  if (new Set(substantive.map((item) => item.digest)).size > 1) {
     conflicts.push({
       kind: "instructions",
-      name: candidates.map((item) => item.source).sort().join(", "),
+      name: substantive.map((item) => item.source).sort().join(", "),
       reason: "Project-root instruction files differ from each other; align them before pushing."
     });
     return null;
   }
-  const ordered = [...candidates].sort(
+  const ordered = [...substantive].sort(
     (a, b) => INSTRUCTION_PRECEDENCE.indexOf(a.source) - INSTRUCTION_PRECEDENCE.indexOf(b.source)
   );
   return { source: ordered[0].source, content: ordered[0].content };
@@ -9498,7 +10527,8 @@ function skillFileActions(skill, remoteSkill) {
 }
 async function planPushFrom(report, root, { url, apiKey, fetchImpl, scope = "project", displayName } = {}) {
   const conflicts = [];
-  const skills = await localSkillsForPush(report, conflicts);
+  const warnings = [];
+  const skills = await localSkillsForPush(report, conflicts, warnings);
   const mcpServers = scope === "global" ? [] : localMcpServersForPush(report, conflicts);
   const instructions = localInstructionsForPush(report, conflicts);
   const uploadedSources = /* @__PURE__ */ new Set([
@@ -9512,12 +10542,26 @@ async function planPushFrom(report, root, { url, apiKey, fetchImpl, scope = "pro
     throw new Error(`Refusing to push: possible hard-coded credentials in ${sources}. Move secrets to environment references first.`);
   }
   const manifest = comparableManifest(createManifest(report, { displayName }));
+  const portable = await buildPortableSnapshot(report, root, manifest, instructions, { skipMcp: scope === "global" });
+  conflicts.push(...portable.conflicts);
   const link = await readLink(root);
   let remote = null;
   if (link?.playbookId && link.url === url) {
     remote = await getPlaybook(url, apiKey, link.playbookId, { fetchImpl });
   }
   const actions = [];
+  if (portable.snapshot && conflicts.length === 0) {
+    const latest = remote ? await requestLatestSnapshot(url, apiKey, remote.id, fetchImpl) : null;
+    if (latest?.digest !== portable.digest) {
+      actions.push({
+        kind: "snapshot",
+        action: "create",
+        name: `${portable.snapshot.files.length} portable file(s)`,
+        digest: portable.digest,
+        paths: portable.snapshot.files.map((file) => file.path)
+      });
+    }
+  }
   if (!remote) {
     actions.push({ kind: "playbook", action: "create", name: manifest.metadata.displayName || manifest.metadata.name });
     if (instructions) {
@@ -9569,14 +10613,19 @@ async function planPushFrom(report, root, { url, apiKey, fetchImpl, scope = "pro
     skills,
     mcpServers,
     instructions,
+    snapshot: portable.snapshot,
     remote: remote ? { id: remote.id, guid: remote.guid, name: remote.name } : null,
     actions,
     conflicts,
+    warnings,
     scope,
     root
   };
 }
 async function applyPush(root, plan, { apiKey, fetchImpl } = {}) {
+  if (plan.conflicts.length > 0 || !plan.snapshot) {
+    throw new Error("Refusing an incomplete push: resolve all plan conflicts before creating a central backup.");
+  }
   const { url } = plan;
   let playbookId = plan.remote?.id ?? null;
   let guid = plan.remote?.guid ?? null;
@@ -9597,6 +10646,7 @@ async function applyPush(root, plan, { apiKey, fetchImpl } = {}) {
     playbookId = created.id;
     guid = created.guid;
     name = created.name;
+    await writeLink(root, { url, playbookId, guid, name, pendingSync: true });
   } else {
     const update = {};
     if (plan.actions.some((action) => action.kind === "playbook" && action.action === "update-config")) {
@@ -9677,6 +10727,14 @@ async function applyPush(root, plan, { apiKey, fetchImpl } = {}) {
       });
     }
   }
+  if (plan.actions.some((action) => action.kind === "snapshot")) {
+    await request(url, `/api/manage/playbooks/${playbookId}/snapshots`, {
+      method: "POST",
+      apiKey,
+      fetchImpl,
+      body: { snapshot: plan.snapshot }
+    });
+  }
   await writeLink(root, { url, playbookId, guid, name, lastSyncedAt: (/* @__PURE__ */ new Date()).toISOString() });
   return { playbookId, guid, name };
 }
@@ -9695,9 +10753,9 @@ var MANIFEST_FILENAME = "distribution.yaml";
 var HERMES_REQUIRES = ">=0.20.0";
 var SKILL_FILE_DIRECTORIES2 = ["scripts", "references", "assets", "examples", "templates"];
 var SAFE_PROFILE_NAME = /^[a-z0-9](?:[a-z0-9_-]{0,62}[a-z0-9])?$/;
-async function readIfExists2(absolutePath) {
+async function readIfExists3(absolutePath) {
   try {
-    return normalizeText(await readFile5(absolutePath, "utf8"));
+    return normalizeText(await readFile7(absolutePath, "utf8"));
   } catch (error) {
     if (error?.code === "ENOENT") return null;
     throw error;
@@ -9730,25 +10788,25 @@ function renderManifest({ name, version, description, author, owned }) {
 `;
 }
 async function readPortableSkills(root) {
-  const skillsRoot = path7.join(root, ...PORTABLE_SKILLS_DIR.split("/"));
-  const entries = await readdir3(skillsRoot, { withFileTypes: true }).catch(() => []);
+  const skillsRoot = path10.join(root, ...PORTABLE_SKILLS_DIR.split("/"));
+  const entries = await readdir6(skillsRoot, { withFileTypes: true }).catch(() => []);
   const skills = [];
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
-    const directory = path7.join(skillsRoot, entry.name);
-    const document = await readIfExists2(path7.join(directory, "SKILL.md"));
+    const directory = path10.join(skillsRoot, entry.name);
+    const document = await readIfExists3(path10.join(directory, "SKILL.md"));
     if (document === null) continue;
     const files = [{ relativePath: "SKILL.md", content: document }];
-    const inside = await readdir3(directory, { withFileTypes: true }).catch(() => []);
+    const inside = await readdir6(directory, { withFileTypes: true }).catch(() => []);
     for (const child of inside) {
       if (child.isFile() && child.name !== "SKILL.md") {
-        const content = await readIfExists2(path7.join(directory, child.name));
+        const content = await readIfExists3(path10.join(directory, child.name));
         if (content !== null) files.push({ relativePath: child.name, content });
       } else if (child.isDirectory() && SKILL_FILE_DIRECTORIES2.includes(child.name)) {
-        const nested = await readdir3(path7.join(directory, child.name), { withFileTypes: true }).catch(() => []);
+        const nested = await readdir6(path10.join(directory, child.name), { withFileTypes: true }).catch(() => []);
         for (const file of nested) {
           if (!file.isFile()) continue;
-          const content = await readIfExists2(path7.join(directory, child.name, file.name));
+          const content = await readIfExists3(path10.join(directory, child.name, file.name));
           if (content !== null) files.push({ relativePath: `${child.name}/${file.name}`, content });
         }
       }
@@ -9761,12 +10819,12 @@ async function readPortableSkills(root) {
 }
 async function planHermesExport(root, destination, { name, version } = {}) {
   const link = await readLink(root);
-  const profileName = (name ?? link?.name ?? path7.basename(root)).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  const profileName = (name ?? link?.name ?? path10.basename(root)).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
   if (!SAFE_PROFILE_NAME.test(profileName)) {
     throw new Error(`'${profileName}' is not a usable Hermes profile name. Pass --name with a lowercase, hyphenated one.`);
   }
   const skills = await readPortableSkills(root);
-  const persona = await readIfExists2(path7.join(root, ...PORTABLE_PERSONA_PATH3.split("/")));
+  const persona = await readIfExists3(path10.join(root, ...PORTABLE_PERSONA_PATH3.split("/")));
   if (skills.length === 0 && persona === null) {
     throw new Error(`Nothing to export: ${root} has no ${PORTABLE_SKILLS_DIR} and no ${PORTABLE_PERSONA_PATH3}. Run 'agentplaybooks pull <playbook> --apply' first.`);
   }
@@ -9799,7 +10857,7 @@ async function planHermesExport(root, destination, { name, version } = {}) {
   });
   return {
     root,
-    destination: path7.resolve(destination),
+    destination: path10.resolve(destination),
     profileName,
     playbook: link ? { guid: link.guid, name: link.name } : null,
     skills: skills.map((skill) => skill.name),
@@ -9809,14 +10867,14 @@ async function planHermesExport(root, destination, { name, version } = {}) {
 async function applyHermesExport(plan) {
   const written = [];
   for (const file of plan.files) {
-    const absolutePath = path7.join(plan.destination, ...file.path.split("/"));
-    await mkdir4(path7.dirname(absolutePath), { recursive: true });
-    const temporary = path7.join(
-      path7.dirname(absolutePath),
-      `.${path7.basename(absolutePath)}.${process.pid}.tmp`
+    const absolutePath = path10.join(plan.destination, ...file.path.split("/"));
+    await mkdir5(path10.dirname(absolutePath), { recursive: true });
+    const temporary = path10.join(
+      path10.dirname(absolutePath),
+      `.${path10.basename(absolutePath)}.${process.pid}.tmp`
     );
-    await writeFile4(temporary, file.content, "utf8");
-    await rename4(temporary, absolutePath);
+    await writeFile5(temporary, file.content, "utf8");
+    await rename5(temporary, absolutePath);
     written.push(file.path);
   }
   return { written };
@@ -9837,8 +10895,8 @@ function hermesInstallHint(plan) {
 }
 
 // src/connect.js
-import { readFile as readFile6 } from "node:fs/promises";
-import path8 from "node:path";
+import { readFile as readFile8 } from "node:fs/promises";
+import path11 from "node:path";
 var GUID_PATTERN = /^[0-9a-f]{8,}$/i;
 var UUID_PATTERN2 = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 var SAFE_ENV_NAME = /^[A-Z_][A-Z0-9_]*$/;
@@ -9859,7 +10917,7 @@ function serverDefinition({ url, keyEnvVar, keyHeader = DEFAULT_KEY_HEADER, targ
 }
 async function readIfPresent(absolutePath) {
   try {
-    return await readFile6(absolutePath, "utf8");
+    return await readFile8(absolutePath, "utf8");
   } catch (error) {
     if (error?.code === "ENOENT") return null;
     throw new Error(`Cannot read ${absolutePath}: ${error instanceof Error ? error.message : String(error)}`);
@@ -9948,7 +11006,7 @@ async function planConnect(root, options = {}) {
 }
 async function applyConnect(plan) {
   if (!plan.changed) return { applied: false, written: [], backups: [] };
-  const backupDirectory = path8.join(plan.root, ".agentplaybooks", "backups", `connect-${Date.now()}`);
+  const backupDirectory = path11.join(plan.root, ".agentplaybooks", "backups", `connect-${Date.now()}`);
   const { written, backups } = await applyAdapters(plan.fileActions, backupDirectory);
   return { applied: true, written, backups };
 }
@@ -9980,17 +11038,17 @@ conflict (${item.target}): ${item.reason}`);
 }
 
 // src/hermes-memory.js
-var import_yaml5 = __toESM(require_dist(), 1);
-import { readFile as readFile7 } from "node:fs/promises";
-import { createHash as createHash2 } from "node:crypto";
-import path9 from "node:path";
+var import_yaml6 = __toESM(require_dist(), 1);
+import { readFile as readFile9 } from "node:fs/promises";
+import { createHash as createHash3 } from "node:crypto";
+import path12 from "node:path";
 import { fileURLToPath } from "node:url";
 var GUID = /^(?:[a-f\d]{8,}|[a-f\d]{8}(?:-[a-f\d]{4}){3}-[a-f\d]{12})$/i;
 var PLUGIN_FILES = ["__init__.py", "client.py", "config_schema.py", "plugin.yaml", "README.md", "LICENSE"];
-var digest2 = (value) => value === null ? null : createHash2("sha256").update(value).digest("hex");
+var digest2 = (value) => value === null ? null : createHash3("sha256").update(value).digest("hex");
 async function readOptional(filename) {
   try {
-    return await readFile7(filename, "utf8");
+    return await readFile9(filename, "utf8");
   } catch (error) {
     if (error.code === "ENOENT") return null;
     throw error;
@@ -10015,19 +11073,19 @@ async function planHermesMemory(options = {}) {
       kind: "memory-provider",
       name,
       path: `${profile.display}/${name}`,
-      absolutePath: path9.join(profile.directory, name),
+      absolutePath: path12.join(profile.directory, name),
       action: old === null ? "create" : "merge",
       expectedHash: digest2(old),
       content
     });
   };
   const conflict2 = (name, reason) => conflicts.push({ kind: "memory-provider", name, reason });
-  const configPath = path9.join(profile.directory, "config.yaml");
+  const configPath = path12.join(profile.directory, "config.yaml");
   const oldYaml = await readOptional(configPath);
-  const yaml = (0, import_yaml5.parseDocument)(oldYaml ?? "{}\n");
-  if (yaml.errors.length || !(0, import_yaml5.isMap)(yaml.contents)) throw new Error("Hermes config.yaml must be a valid YAML mapping.");
+  const yaml = (0, import_yaml6.parseDocument)(oldYaml ?? "{}\n");
+  if (yaml.errors.length || !(0, import_yaml6.isMap)(yaml.contents)) throw new Error("Hermes config.yaml must be a valid YAML mapping.");
   const memory = yaml.get("memory", true);
-  if (memory !== void 0 && !(0, import_yaml5.isMap)(memory)) throw new Error("Hermes memory configuration must be a mapping.");
+  if (memory !== void 0 && !(0, import_yaml6.isMap)(memory)) throw new Error("Hermes memory configuration must be a mapping.");
   const selected = yaml.getIn(["memory", "provider"]);
   if (selected && !["agentplaybooks", "builtin", "built-in", "none", "default"].includes(selected)) {
     conflict2("memory.provider", `The profile uses '${selected}'. Select AgentPlaybooks explicitly with 'hermes memory setup' before rerunning.`);
@@ -10039,7 +11097,7 @@ async function planHermesMemory(options = {}) {
     add("config.yaml", oldYaml, String(yaml));
   }
   const settingsName = "agentplaybooks/config.json";
-  const oldSettings = await readOptional(path9.join(profile.directory, settingsName));
+  const oldSettings = await readOptional(path12.join(profile.directory, settingsName));
   const settings = oldSettings === null ? {} : JSON.parse(oldSettings);
   const desired = { base_url: baseUrl, playbook_guid: options.playbook, shared_playbooks: shared.join(",") };
   if (Object.entries(desired).some(([key, value]) => settings[key] !== void 0 && settings[key] !== value)) {
@@ -10050,11 +11108,11 @@ async function planHermesMemory(options = {}) {
   }
   const bundled = fileURLToPath(new URL("../hermes-plugin/", import.meta.url));
   const source = fileURLToPath(new URL("../../hermes-memory/agentplaybooks/", import.meta.url));
-  const pluginDirectory = options.pluginDirectory ?? (await readOptional(path9.join(bundled, "plugin.yaml")) !== null ? bundled : source);
+  const pluginDirectory = options.pluginDirectory ?? (await readOptional(path12.join(bundled, "plugin.yaml")) !== null ? bundled : source);
   for (const name of PLUGIN_FILES) {
     const relative = `plugins/agentplaybooks/${name}`;
-    const content = await readFile7(path9.join(pluginDirectory, name), "utf8");
-    const old = await readOptional(path9.join(profile.directory, relative));
+    const content = await readFile9(path12.join(pluginDirectory, name), "utf8");
+    const old = await readOptional(path12.join(profile.directory, relative));
     if (old !== null && old !== content) conflict2(relative, "An installed plugin file differs; update through Hermes or reconcile it explicitly.");
     add(relative, old, content);
   }
@@ -10075,7 +11133,7 @@ async function applyHermesMemory(plan) {
       throw new Error(`Setup target changed after planning: ${action.path}. Rerun the plan.`);
     }
   }
-  return applyAdapters(plan.fileActions, path9.join(plan.profile, ".agentplaybooks", "backups", `memory-${Date.now()}`));
+  return applyAdapters(plan.fileActions, path12.join(plan.profile, ".agentplaybooks", "backups", `memory-${Date.now()}`));
 }
 function printHermesMemoryPlan(plan, log = console.log) {
   log(`Hermes memory: private playbook ${plan.playbook}`);
@@ -10087,9 +11145,9 @@ function printHermesMemoryPlan(plan, log = console.log) {
 }
 
 // src/adopt.js
-var import_yaml6 = __toESM(require_dist(), 1);
-import { readFile as readFile8, writeFile as writeFile5, rename as rename5 } from "node:fs/promises";
-import path10 from "node:path";
+var import_yaml7 = __toESM(require_dist(), 1);
+import { readFile as readFile10, writeFile as writeFile6, rename as rename6 } from "node:fs/promises";
+import path13 from "node:path";
 var CREDENTIAL_KEY = /(api[_-]?key|secret|token|password|passwd|credential|auth)/i;
 var NOT_A_VALUE = /^(\s*|\$\{.*\}|\$[A-Za-z_][A-Za-z0-9_]*|env:.*|vault:.*|\*+|x{3,}|\.{3}|<.*>|your[-_].*|changeme|placeholder|redacted|dummy|todo)$/i;
 var EXPANSION_SUPPORT = {
@@ -10127,8 +11185,8 @@ function walkForCredentials(value, keyPath, found) {
 }
 function parseConfig(source, content) {
   if (/\.ya?ml$/i.test(source)) {
-    const document = (0, import_yaml6.parseDocument)(content, { strict: false });
-    if (document.errors.length > 0 || !(0, import_yaml6.isMap)(document.contents)) return null;
+    const document = (0, import_yaml7.parseDocument)(content, { strict: false });
+    if (document.errors.length > 0 || !(0, import_yaml7.isMap)(document.contents)) return null;
     return { format: "yaml", data: document.toJSON() };
   }
   if (/\.toml$/i.test(source)) return { format: "toml", data: null };
@@ -10199,8 +11257,8 @@ function setIn(target, keyPath, value) {
 function rewriteConfig(content, format, occurrences, names) {
   const normalized = normalizeText(content);
   if (format === "yaml") {
-    const document2 = (0, import_yaml6.parseDocument)(normalized, { strict: false });
-    if (document2.errors.length > 0 || !(0, import_yaml6.isMap)(document2.contents)) return null;
+    const document2 = (0, import_yaml7.parseDocument)(normalized, { strict: false });
+    if (document2.errors.length > 0 || !(0, import_yaml7.isMap)(document2.contents)) return null;
     for (const [index, occurrence] of occurrences.entries()) {
       if (document2.getIn(occurrence.keyPath) === void 0) return null;
       document2.setIn(occurrence.keyPath, `\${${names[index]}}`);
@@ -10222,12 +11280,12 @@ function rewriteConfig(content, format, occurrences, names) {
 `;
 }
 async function applyRewrite(absolutePath, content) {
-  const temporary = path10.join(path10.dirname(absolutePath), `.${path10.basename(absolutePath)}.${process.pid}.tmp`);
-  await writeFile5(temporary, content, { encoding: "utf8", mode: 384 });
-  await rename5(temporary, absolutePath);
+  const temporary = path13.join(path13.dirname(absolutePath), `.${path13.basename(absolutePath)}.${process.pid}.tmp`);
+  await writeFile6(temporary, content, { encoding: "utf8", mode: 384 });
+  await rename6(temporary, absolutePath);
 }
 async function readConfigForRewrite(absolutePath) {
-  return normalizeText(await readFile8(absolutePath, "utf8"));
+  return normalizeText(await readFile10(absolutePath, "utf8"));
 }
 async function inventoryForAdoption({ global = false, root } = {}) {
   return global ? discoverGlobal() : discover(root);
@@ -10235,8 +11293,8 @@ async function inventoryForAdoption({ global = false, root } = {}) {
 
 // src/secrets.js
 import { spawn } from "node:child_process";
-import path11 from "node:path";
-import { readFile as readFile9 } from "node:fs/promises";
+import path14 from "node:path";
+import { readFile as readFile11 } from "node:fs/promises";
 var SECRET_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
 async function savePlaybookKey(url, guid, apiKey, homedir) {
   const credentials = await loadCredentials(homedir);
@@ -10368,7 +11426,7 @@ function runWithEnvironment(command, args, injected) {
 }
 async function readManifestSecrets(root) {
   try {
-    const manifest = JSON.parse(await readFile9(path11.join(root, "agentplaybook.json"), "utf8"));
+    const manifest = JSON.parse(await readFile11(path14.join(root, "agentplaybook.json"), "utf8"));
     const secrets = manifest?.spec?.secrets;
     return Array.isArray(secrets) ? secrets : [];
   } catch (error) {
@@ -10384,6 +11442,8 @@ Usage:
   agentplaybooks doctor [path] [--json] [--strict] [--global] [--include-vendored]
   agentplaybooks sync [path] [--apply] [--json] [--target=<types>] [--profile=<bot>]
   agentplaybooks sync --global [--apply] [--json] [--target=<types>] [--include-vendored]
+  agentplaybooks plugin export [path] [--output=<directory>] [--apply] [--json]
+  agentplaybooks plugin import <plugin-directory> [path] [--apply] [--json]
   agentplaybooks connect <guid>[,<guid>...] [path] [--apply] [--json] [--target=<types>]
                                 [--name=<entry>] [--key-env=<VAR>] [--key-header=<H>]
   agentplaybooks connect --account [path] [--apply] [--json] [--target=<types>]
@@ -10392,7 +11452,8 @@ Usage:
                              [--shared=<guids>] [--url=<base>] [--apply] [--json]
   agentplaybooks logout [--url=<base>]
   agentplaybooks playbooks [--url=<base>] [--json]
-  agentplaybooks pull <id|guid> [path] [--apply] [--json] [--url=<base>]
+  agentplaybooks backups <guid> [--url=<base>] [--json]
+  agentplaybooks pull <id|guid> [path] [--snapshot=<id>] [--apply] [--json] [--url=<base>]
   agentplaybooks push [path] [--apply|--yes] [--json] [--url=<base>]
   agentplaybooks push --global [--apply|--yes] [--json] [--include-vendored]
   agentplaybooks export hermes <dir> [path] [--apply] [--json] [--name=<bot>]
@@ -10412,16 +11473,19 @@ Commands:
              playbook. Plan-only without --apply; credentials are never copied.
   doctor     Audit agent instructions, skills, MCP configuration, secrets, and drift.
   sync       Plan or apply the canonical manifest and missing platform files
-             for enabled targets (claude, cursor, codex, antigravity, hermes,
-             grok).
+             for enabled targets (claude, cursor, codex, copilot, gemini,
+             antigravity, hermes, grok), including portable custom agents.
              --target=claude,codex writes only those targets this run, not in
              addition to auto-detected ones, which is what a freshly pulled
              playbook needs.
              --global works across your home-scoped stores (~/.cursor/skills,
              ~/.claude/skills, the Hermes profile) instead of one project. It
-             moves skills only: a global MCP config holds credentials, so
+             moves skills and custom agents only: a global MCP config holds credentials, so
              copying it between clients would spread them. Skills the clients
              ship with themselves are left out unless --include-vendored.
+  plugin     Import or export an Agent Plugins 1.0 package. Core skills and MCP
+             stay standard; ai.agentplaybooks adds secret references/bindings,
+             never secret values. Plan-only unless --apply is supplied.
   export     Write the playbook this project is linked to as a Hermes Agent
              profile distribution: one playbook, one bot. The directory is
              what 'hermes profile install <dir> --name <bot>' expects, and
@@ -10443,14 +11507,18 @@ Commands:
              Reads AGENTPLAYBOOKS_API_KEY, or prompts on stdin.
   logout     Remove the stored API key for a remote.
   playbooks  List the playbooks the stored API key can access.
-  pull       Plan or apply downloading a remote playbook's skills into
-             .agents/skills and link the project to that playbook.
+  backups    List immutable central backup revisions by playbook GUID, even
+             after the playbook itself was deleted (owner only).
+  pull       Restore the latest portable snapshot (or --snapshot=<id>) into
+             .agents/ without overwriting conflicts. Legacy playbooks fall
+             back to skill/MCP records.
   auth       Run the one-time OAuth consent for a user-scoped connection
              (Gmail, LinkedIn, X, ...) and store the resulting refresh token in
              the playbook vault. Federation renews it from then on. See which
              providers need it: curl <url>/api/connections
-  push       Plan or apply uploading local skills and the manifest to the
-             linked (or a new) remote playbook. Secret values are never sent.
+  push       Plan or apply uploading skills/MCP for hosted use plus a private,
+             versioned portable backup with agents, skill resources, and manifest.
+             Secret values are never sent.
              --global uploads this machine's own skills instead of one project's,
              as a workstation playbook. MCP configuration stays local: a
              home-scoped MCP config is where auth headers live.
@@ -10542,14 +11610,21 @@ function withoutContent(action) {
   return summary;
 }
 function printRemotePlan(kind, plan) {
-  if (plan.actions.length === 0 && plan.conflicts.length === 0) {
+  if (plan.actions.length === 0 && plan.conflicts.length === 0 && !(plan.warnings?.length > 0)) {
     console.log(`Nothing to ${kind}; already in sync.`);
   }
   for (const action of plan.actions) {
     console.log(`  ${action.action} ${action.kind} ${action.path ?? action.name}`);
+    if (action.kind === "snapshot" && Array.isArray(action.paths)) {
+      for (const file of action.paths.slice(0, 20)) console.log(`    ${file}`);
+      if (action.paths.length > 20) console.log(`    \u2026 ${action.paths.length - 20} more file(s); use --json for the full path list.`);
+    }
   }
   for (const item of plan.conflicts) {
     console.log(`  [conflict] ${item.kind} '${item.name}': ${item.reason}`);
+  }
+  for (const item of plan.warnings ?? []) {
+    console.log(`  [warning] ${item.kind} '${item.name}': ${item.reason}`);
   }
 }
 function printPushScope(plan, root) {
@@ -10623,7 +11698,7 @@ async function runSecrets(url, flags, positional, rest) {
   if (subcommand === "run" && rest.length === 0) {
     throw new Error("Usage: agentplaybooks secrets run [path] -- <command> [args...]");
   }
-  const root = flags.has("--global") ? os5.homedir() : path12.resolve(subcommand === "push" ? positional[2] ?? process.cwd() : positional[1] ?? process.cwd());
+  const root = flags.has("--global") ? os5.homedir() : path15.resolve(subcommand === "push" ? positional[2] ?? process.cwd() : positional[1] ?? process.cwd());
   const needsVault = subcommand !== "adopt" || flags.has("--apply");
   const vault = needsVault ? await resolveVaultAccess(url, root, flags) : { guid: null, playbookKey: null };
   const { guid, playbookKey } = vault;
@@ -10800,7 +11875,7 @@ async function run(args) {
     return;
   }
   if (command === "doctor") {
-    const report = flags.has("--global") ? await runGlobalDoctor({ includeVendored: flags.has("--include-vendored") }) : await runDoctor(path12.resolve(positional[0] ?? process.cwd()));
+    const report = flags.has("--global") ? await runGlobalDoctor({ includeVendored: flags.has("--include-vendored") }) : await runDoctor(path15.resolve(positional[0] ?? process.cwd()));
     if (flags.has("--json")) console.log(JSON.stringify(publicReport(report), null, 2));
     else printDoctor(report);
     if (flags.has("--strict") && report.findings.some((item) => item.severity === "critical" || item.severity === "high")) {
@@ -10817,7 +11892,7 @@ async function run(args) {
       // the main one. Ignored by every other target, which has no such concept.
       hermesProfileName: typeof flags.get("--profile") === "string" ? flags.get("--profile") : ""
     };
-    const plan = flags.has("--global") ? await planGlobalSync(options) : await planSync(path12.resolve(positional[0] ?? process.cwd()), options);
+    const plan = flags.has("--global") ? await planGlobalSync(options) : await planSync(path15.resolve(positional[0] ?? process.cwd()), options);
     if (flags.has("--json")) {
       console.log(JSON.stringify({
         action: plan.action,
@@ -10842,11 +11917,37 @@ async function run(args) {
     }
     return;
   }
+  if (command === "plugin") {
+    const subcommand = positional[0];
+    let plan;
+    if (subcommand === "export") {
+      const root = path15.resolve(positional[1] ?? process.cwd());
+      const output = typeof flags.get("--output") === "string" ? path15.resolve(flags.get("--output")) : void 0;
+      plan = await planPluginExport(root, { output });
+    } else if (subcommand === "import") {
+      if (!positional[1]) throw new Error("Usage: agentplaybooks plugin import <plugin-directory> [path] [--apply]");
+      plan = await planPluginImport(path15.resolve(positional[1]), path15.resolve(positional[2] ?? process.cwd()));
+    } else {
+      throw new Error("Usage: agentplaybooks plugin <export|import> ...");
+    }
+    if (flags.has("--json")) console.log(JSON.stringify(publicPluginPlan(plan), null, 2));
+    else printPluginPlan(plan);
+    if (flags.has("--apply")) {
+      const result = await applyPluginPlan(plan);
+      if (!flags.has("--json")) {
+        console.log(result.applied ? "Applied Agent Plugins plan." : "No changes applied.");
+        for (const written of result.written) console.log(`Wrote: ${written}`);
+        for (const backup of result.backups) console.log(`Backup: ${backup}`);
+      }
+    }
+    if (plan.conflicts.length > 0) process.exitCode = 2;
+    return;
+  }
   if (command === "connect") {
     const requestedTargets = typeof flags.get("--target") === "string" ? flags.get("--target").split(",").map((value) => value.trim()).filter(Boolean) : [];
     const account = flags.has("--account");
     const requestedPlaybooks = account ? [] : positional[0]?.split(",") ?? [];
-    const plan = await planConnect(path12.resolve(positional[account ? 0 : 1] ?? process.cwd()), {
+    const plan = await planConnect(path15.resolve(positional[account ? 0 : 1] ?? process.cwd()), {
       account,
       playbooks: requestedPlaybooks,
       targets: requestedTargets,
@@ -10915,13 +12016,23 @@ async function run(args) {
     }
     return;
   }
+  if (command === "backups") {
+    const guid = positional[0];
+    if (!guid) throw new Error("Usage: agentplaybooks backups <guid> [--json]");
+    const apiKey = await requireApiKey(url);
+    const backups = await listBackups(url, apiKey, guid);
+    if (flags.has("--json")) console.log(JSON.stringify(backups, null, 2));
+    else if (backups.length === 0) console.log(`No central backups for '${guid}'.`);
+    else for (const backup of backups) console.log(`${backup.id}  ${backup.created_at}  ${backup.file_count} files  ${backup.size_bytes} bytes`);
+    return;
+  }
   if (command === "export") {
     const kind = positional[0];
     if (kind !== "hermes") throw new Error("Usage: agentplaybooks export hermes <dir> [path]");
     const destination = positional[1];
     if (!destination) throw new Error("Usage: agentplaybooks export hermes <dir> [path]");
-    const root = path12.resolve(positional[2] ?? process.cwd());
-    const plan = await planHermesExport(root, path12.resolve(destination), {
+    const root = path15.resolve(positional[2] ?? process.cwd());
+    const plan = await planHermesExport(root, path15.resolve(destination), {
       name: typeof flags.get("--name") === "string" ? flags.get("--name") : void 0,
       version: typeof flags.get("--version") === "string" ? flags.get("--version") : void 0
     });
@@ -10952,12 +12063,14 @@ async function run(args) {
   if (command === "pull") {
     const ref = positional[0];
     if (!ref) throw new Error("Usage: agentplaybooks pull <id|guid> [path]");
-    const root = path12.resolve(positional[1] ?? process.cwd());
+    const root = path15.resolve(positional[1] ?? process.cwd());
     const apiKey = await requireApiKey(url);
-    const plan = await planPull(root, ref, { url, apiKey });
+    const snapshotId = typeof flags.get("--snapshot") === "string" ? flags.get("--snapshot") : void 0;
+    const plan = await planPull(root, ref, { url, apiKey, snapshotId });
     if (flags.has("--json")) {
       console.log(JSON.stringify({
         playbook: plan.playbook,
+        snapshot: plan.snapshot ?? null,
         actions: plan.actions.map(withoutContent),
         conflicts: plan.conflicts
       }, null, 2));
@@ -10978,7 +12091,7 @@ async function run(args) {
   }
   if (command === "push") {
     const global = flags.has("--global");
-    const root = global ? os5.homedir() : path12.resolve(positional[0] ?? process.cwd());
+    const root = global ? os5.homedir() : path15.resolve(positional[0] ?? process.cwd());
     const apiKey = await requireApiKey(url);
     const plan = global ? await planGlobalPush({ url, apiKey, includeVendored: flags.has("--include-vendored") }) : await planPush(root, { url, apiKey });
     if (flags.has("--json")) {
@@ -10986,7 +12099,8 @@ async function run(args) {
         scope: plan.scope,
         remote: plan.remote,
         actions: plan.actions,
-        conflicts: plan.conflicts
+        conflicts: plan.conflicts,
+        warnings: plan.warnings
       }, null, 2));
     } else {
       printPushScope(plan, root);
@@ -11022,7 +12136,7 @@ async function run(args) {
   if (command === "auth") {
     const provider = positional[0];
     if (!provider) throw new Error("Usage: agentplaybooks auth <provider> [path]");
-    const root = path12.resolve(positional[1] ?? process.cwd());
+    const root = path15.resolve(positional[1] ?? process.cwd());
     const template = await fetchTemplate(url, provider);
     const plan = planConsent(template);
     const vault = await resolveVaultAccess(url, root, flags);

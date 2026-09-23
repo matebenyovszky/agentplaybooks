@@ -42,6 +42,8 @@ hiányzó fájlokat:
 | `claude` — Claude Code / Claude Cowork | `.claude/skills/<név>/SKILL.md` | `.mcp.json` | `AGENTS.md`-t importáló `CLAUDE.md` |
 | `cursor` — Cursor | `.cursor/skills/<név>/SKILL.md` | `.cursor/mcp.json` | — |
 | `codex` — ChatGPT / OpenAI Codex | `.codex/skills/<név>/SKILL.md` | `.codex/config.toml` | natívan olvassa az `AGENTS.md`-t |
+| `copilot` — GitHub Copilot | `.github/skills/<név>/SKILL.md` | `.mcp.json` | projektutasítások / natív ügynökök |
+| `gemini` — Gemini CLI | `.gemini/skills/<név>/SKILL.md` | `.gemini/settings.json` MCP része | `GEMINI.md` / natív ügynökök |
 | `antigravity` — Google Antigravity | `.agents/skills/<név>/SKILL.md` | — (globális konfig) | — |
 | `grok` — Grok Bot (xAI) | `.agents/skills/<név>/SKILL.md` | — (fiókszintű MCP Box; jelentve) | natívan olvassa az `AGENTS.md`-t |
 | `hermes` — Hermes Agent (Nous Research) | `.agents/skills/<név>/SKILL.md`, regisztrálva a `~/.hermes/config.yaml`-ban | `mcp_servers:` a `~/.hermes/config.yaml`-ban | natívan olvassa az `AGENTS.md`-t; persona → `~/.hermes/SOUL.md` |
@@ -72,12 +74,18 @@ export AGENTPLAYBOOKS_API_KEY=<sajat-user-api-kulcs>
 apb login               # kulcs ellenőrzése és tárolása (~/.agentplaybooks, 0600)
 apb playbooks           # a kulccsal elérhető playbookok listája
 
-apb pull <guid> --apply # skillek letöltése a .agents/skills/ tárba
-apb push --apply        # lokális skillek + manifest feltöltése
+apb push --apply        # hosztolt rekordok + privát, verziózott mentés
+apb backups <guid>      # mentési verziók azonosítói
+apb pull <guid> --apply # legfrissebb hordozható mentés visszaállítása
+apb pull <guid> --snapshot=<id> --apply # korábbi verzió
 ```
 
-Az utasítások, a skillek, az MCP-szerverek és a manifest mindkét irányban
-utaznak:
+A privát mentés az utasításokat, a teljes skill-könyvtárat (assetekkel), az
+egyedi ügynököket, az MCP-hivatkozásokat és a manifestet hordozza. Változatlan
+verzióként tárolódik, a playbook törlése után is megmarad, és a tulajdonos GUID
+alapján helyreállíthatja. A széf értékeit nem kéri le; a tetszőleges skill-
+assetekbe esetleg beágyazott titkokat feltöltés előtt ellenőrizni kell. A különálló hosztolt
+skill- és MCP-rekordok továbbra is az élő használatot szolgálják:
 
 - **Lokális → hosztolt** (`push`): a projekt utasításfájlja, a bármelyik
   platformmappában megtalált skillek és MCP-szerver definíciók, valamint a
@@ -90,13 +98,16 @@ utaznak:
   federációs beállítások — timeoutok, auth, hozzáférés, kurált eszközlisták,
   leírások — megmaradnak, nem íródnak felül. A lokálisan már nem létező távoli
   bejegyzéseket nem bántja.
-- **Hosztolt → lokális** (`pull` + `sync --apply`): a playbook utasításai az
-  `AGENTS.md`-be, a távoli skillek a `.agents/skills/`, a távoli MCP-szerverek
-  pedig a `.agents/mcp.json` fájlba
-  kerülnek — vagyis a hordozható tárba —, a projekt pedig a
-  `.agentplaybooks/remote.json`-nal linkelődik. Az ezt követő sync mindet
-  szétteríti minden engedélyezett platform-targetre — bármelyik szerkesztőt is
-  használja a csapattársad.
+- **Hosztolt → lokális** (`pull` + `sync --apply`): a mentés az `AGENTS.md` és
+  `.agents/` fájlokba áll vissza, majd a sync kitelepíti a célplatformokra. Az
+  eltérő meglévő fájl konfliktus marad, nem íródik felül. Régebbi, mentés
+  nélküli playbook esetén a hagyományos utasítás, `SKILL.md` és MCP-rekord
+  helyreállítása működik.
+
+Konfliktusos forrásból a `push` nem készít hiányos mentést. Korlátok: 1000
+fájl, összesen 4 MiB, fájlonként 1 MiB. Pontos hatókör és platformkorlátok:
+[platformközi ügynökmentések](/docs/portable-agent-backups). A helyi
+felülírások, hookok, jogosultságok és worktree-k szándékosan nem hordozhatók.
 
 A Claude Code a `CLAUDE.md`-t olvassa, az `AGENTS.md`-t nem, viszont támogatja a
 `@` importokat. Ezért a `claude` target nem másolja le az utasításaidat, hanem

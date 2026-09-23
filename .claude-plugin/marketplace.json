@@ -13,7 +13,7 @@
       "name": "agentplaybooks",
       "source": "./packages/cli",
       "description": "Sync portable agent configuration and connect playbooks, skills, tools, memory, canvas, and the secret proxy.",
-      "version": "0.3.0-beta.3",
+      "version": "0.4.0",
       "author": {
         "name": "AgentPlaybooks",
         "url": "https://agentplaybooks.ai"

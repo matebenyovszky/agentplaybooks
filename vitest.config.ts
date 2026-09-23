@@ -1,4 +1,4 @@
-import { configDefaults, defineConfig } from 'vitest/config';
+import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 
@@ -7,7 +7,7 @@ export default defineConfig({
     test: {
         environment: 'node',
         globals: true,
-        exclude: [...configDefaults.exclude, 'packages/cli/**'],
+        include: ['tests/**/*.{test,spec}.{js,ts,tsx}', 'src/**/*.{test,spec}.{js,ts,tsx}'],
         setupFiles: ['./tests/setup.ts'],
         alias: {
             '@': path.resolve(process.cwd(), './src'),

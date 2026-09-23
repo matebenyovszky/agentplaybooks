@@ -5,6 +5,7 @@ import path from "node:path";
 import test from "node:test";
 import { applyPull, applyPush, planPull, planPush } from "../src/remote.js";
 import { applySync, planSync } from "../src/sync.js";
+import { snapshotDigest } from "../src/snapshot.js";
 
 const URL_BASE = "https://remote.test";
 const API_KEY = "apb_test_key";
@@ -50,6 +51,13 @@ function fakeApi(playbook) {
         return respond(200, playbook);
       }
     }
+    if (method === "GET" && pathname === `/api/manage/playbooks/${playbook?.id}/snapshots/latest`) {
+      return respond(200, playbook.snapshot ? { snapshot: playbook.snapshot, digest: snapshotDigest(playbook.snapshot) } : { snapshot: null });
+    }
+    if (method === "POST" && pathname === `/api/manage/playbooks/${playbook?.id}/snapshots`) {
+      playbook.snapshot = body.snapshot;
+      return respond(201, { digest: snapshotDigest(body.snapshot) });
+    }
     return respond(404, { error: `No route for ${method} ${pathname}` });
   };
   return { fetchImpl, current: () => playbook };
@@ -88,6 +96,16 @@ test("AGENTS.md wins over CLAUDE.md, and disagreeing root files are a conflict",
   assert.equal(plan.instructions, null);
   assert.equal(plan.actions.filter((action) => action.kind === "instructions").length, 0);
   assert.match(plan.conflicts.find((item) => item.kind === "instructions").reason, /differ from each other/);
+});
+
+test("a generated CLAUDE.md import is the same project instruction source", async () => {
+  const root = await fixture();
+  await put(root, "AGENTS.md", INSTRUCTIONS);
+  await put(root, "CLAUDE.md", "@AGENTS.md\n");
+  const plan = await planPush(root, { url: URL_BASE, apiKey: API_KEY, fetchImpl: fakeApi(null).fetchImpl });
+  assert.equal(plan.conflicts.length, 0);
+  assert.equal(plan.instructions.content, INSTRUCTIONS);
+  assert.ok(plan.actions.some((action) => action.kind === "snapshot"));
 });
 
 test("nested instruction files stay local", async () => {

@@ -5,6 +5,7 @@ import { runDoctor, runGlobalDoctor } from "./doctor.js";
 import { normalizeText } from "./discovery.js";
 import { createManifest, comparableManifest } from "./manifest.js";
 import { canonicalJson } from "./adapters.js";
+import { assertSafeDestination, buildPortableSnapshot, planSnapshotRestore, snapshotDigest } from "./snapshot.js";
 import { isMap, parseDocument, stringify } from "yaml";
 
 export const DEFAULT_BASE_URL = "https://agentplaybooks.ai";
@@ -102,7 +103,9 @@ export async function request(url, requestPath, { method = "GET", apiKey, body, 
   }
   if (!response.ok) {
     const message = payload?.error || `HTTP ${response.status}`;
-    throw new Error(`${method} ${requestPath} failed: ${message}`);
+    const error = new Error(`${method} ${requestPath} failed: ${message}`);
+    error.status = response.status;
+    throw error;
   }
   return payload;
 }
@@ -113,6 +116,10 @@ export async function verifyApiKey(url, apiKey, { fetchImpl } = {}) {
 
 export async function listPlaybooks(url, apiKey, { fetchImpl } = {}) {
   return await request(url, "/api/manage/playbooks", { apiKey, fetchImpl }) ?? [];
+}
+
+export async function listBackups(url, apiKey, guid, { fetchImpl } = {}) {
+  return await request(url, `/api/manage/backups/${encodeURIComponent(guid)}?list=1`, { apiKey, fetchImpl }) ?? [];
 }
 
 async function getPlaybook(url, apiKey, id, { fetchImpl } = {}) {
@@ -279,14 +286,53 @@ function mcpDocument(existingContent, additions) {
   return `${JSON.stringify(document, null, 2)}\n`;
 }
 
+async function requestLatestSnapshot(url, apiKey, playbookId, fetchImpl) {
+  try {
+    return await request(url, `/api/manage/playbooks/${playbookId}/snapshots/latest`, { apiKey, fetchImpl });
+  } catch (error) {
+    // Older servers can still supply their legacy skills and MCP records.
+    if (error?.status === 404) return null;
+    throw error;
+  }
+}
+
 /**
  * Plan pulling a remote playbook's skills and MCP servers into the portable
  * local store (.agents/). Existing entries with different content become
  * conflicts; nothing is overwritten. A follow-up `sync --apply` fans the
  * portable store out to each enabled platform target.
  */
-export async function planPull(root, ref, { url, apiKey, fetchImpl } = {}) {
-  const playbook = await resolvePlaybook(url, apiKey, ref, { fetchImpl });
+export async function planPull(root, ref, { url, apiKey, fetchImpl, snapshotId } = {}) {
+  let playbook;
+  let saved;
+  try {
+    playbook = await resolvePlaybook(url, apiKey, ref, { fetchImpl });
+  } catch (error) {
+    if (UUID_PATTERN.test(ref) || !String(error?.message).startsWith("No accessible playbook with GUID")) throw error;
+    try {
+      const suffix = snapshotId ? `?snapshot=${encodeURIComponent(snapshotId)}` : "";
+      saved = await request(url, `/api/manage/backups/${encodeURIComponent(ref)}${suffix}`, { apiKey, fetchImpl });
+    } catch (backupError) {
+      if (backupError?.status === 404) throw error;
+      throw backupError;
+    }
+    playbook = { id: null, guid: ref, name: saved.playbook_name };
+  }
+  if (!saved) saved = snapshotId
+    ? await request(url, `/api/manage/playbooks/${playbook.id}/snapshots/${encodeURIComponent(snapshotId)}`, { apiKey, fetchImpl })
+    : await requestLatestSnapshot(url, apiKey, playbook.id, fetchImpl);
+  if (saved?.snapshot) {
+    if (saved.digest !== snapshotDigest(saved.snapshot)) throw new Error("Central backup digest mismatch; refusing to restore.");
+    const restored = await planSnapshotRestore(root, saved.snapshot);
+    return {
+      playbook: { id: playbook.id, guid: playbook.guid, name: playbook.name },
+      url,
+      actions: restored.actions,
+      conflicts: restored.conflicts,
+      snapshot: { digest: saved.digest, createdAt: saved.created_at },
+    };
+  }
+  if (snapshotId) throw new Error(`Snapshot '${snapshotId}' was not found.`);
   const actions = [];
   const conflicts = [];
 
@@ -414,9 +460,10 @@ export async function planPull(root, ref, { url, apiKey, fetchImpl } = {}) {
 
 export async function applyPull(root, plan) {
   for (const action of plan.actions) {
-    const absolutePath = path.join(root, ...action.path.split("/"));
+    const absolutePath = await assertSafeDestination(root, action.path);
     await mkdir(path.dirname(absolutePath), { recursive: true });
-    await writeFile(absolutePath, action.content, "utf8");
+    await assertSafeDestination(root, action.path);
+    await writeFile(absolutePath, action.content);
   }
   await writeLink(root, {
     url: plan.url,
@@ -437,7 +484,7 @@ export async function applyPull(root, plan) {
  * is a script that has outgrown the size limit, and finding that out from a
  * 400 in the middle of an upload is worse than reading it in the plan.
  */
-async function readSkillFiles(skillDocumentPath, skillName, conflicts) {
+async function readSkillFiles(skillDocumentPath, skillName, warnings) {
   const directory = path.dirname(skillDocumentPath);
   const names = [];
 
@@ -455,17 +502,23 @@ async function readSkillFiles(skillDocumentPath, skillName, conflicts) {
 
   const files = [];
   for (const filename of names.sort()) {
-    if (!isSafeSkillFile(filename)) continue;
-    const content = await readFile(path.join(directory, ...filename.split("/")), "utf8").catch(() => null);
-    if (content === null) continue;
-    if (content.includes(" ")) {
-      conflicts.push({ kind: "skill-file", name: `${skillName}/${filename}`, reason: "File is binary; only text files can be bundled with a skill." });
+    if (filename === "SKILL.md") continue;
+    if (!isSafeSkillFile(filename)) {
+      warnings.push({ kind: "skill-file", name: `${skillName}/${filename}`, reason: "File stays in the private snapshot but is outside the hosted skill attachment format." });
       continue;
     }
-    const normalized = normalizeText(content);
-    const bytes = Buffer.byteLength(normalized, "utf8");
-    if (bytes > MAX_SKILL_FILE_BYTES) {
-      conflicts.push({ kind: "skill-file", name: `${skillName}/${filename}`, reason: `File is ${bytes} bytes; the limit is ${MAX_SKILL_FILE_BYTES}.` });
+    const content = await readFile(path.join(directory, ...filename.split("/"))).catch(() => null);
+    if (content === null) continue;
+    if (content.byteLength > MAX_SKILL_FILE_BYTES) {
+      warnings.push({ kind: "skill-file", name: `${skillName}/${filename}`, reason: `File is ${content.byteLength} bytes; the hosted attachment limit is ${MAX_SKILL_FILE_BYTES}, but it stays in the private snapshot.` });
+      continue;
+    }
+    let normalized;
+    try {
+      if (content.some((byte) => byte < 0x20 && byte !== 0x09 && byte !== 0x0a && byte !== 0x0d)) throw new Error("binary");
+      normalized = normalizeText(new TextDecoder("utf-8", { fatal: true }).decode(content));
+    } catch {
+      warnings.push({ kind: "skill-file", name: `${skillName}/${filename}`, reason: "Binary file stays in the private snapshot but cannot be a hosted text attachment." });
       continue;
     }
     files.push({ filename, content: normalized });
@@ -473,7 +526,7 @@ async function readSkillFiles(skillDocumentPath, skillName, conflicts) {
   return files;
 }
 
-async function localSkillsForPush(report, conflicts) {
+async function localSkillsForPush(report, conflicts, warnings) {
   const groups = new Map();
   for (const skill of report.inventory.skills) {
     const group = groups.get(skill.name) ?? [];
@@ -486,14 +539,15 @@ async function localSkillsForPush(report, conflicts) {
       conflicts.push({ kind: "skill", name, reason: "Skill name is not a safe lowercase kebab-case name; skipped." });
       continue;
     }
-    if (new Set(variants.map((item) => item.digest)).size > 1) {
-      conflicts.push({ kind: "skill", name, reason: "Skill definitions differ across platforms; resolve the drift before pushing." });
+    if (new Set(variants.map((item) => item.treeDigest ?? item.digest)).size > 1) {
+      conflicts.push({ kind: "skill", name, reason: "Skill trees differ across platforms; resolve the drift before pushing." });
       continue;
     }
-    const files = variants[0].absolutePath
-      ? await readSkillFiles(variants[0].absolutePath, name, conflicts)
+    const chosen = variants.find((item) => item.platform === "portable") ?? variants[0];
+    const files = chosen.absolutePath
+      ? await readSkillFiles(chosen.absolutePath, name, warnings)
       : [];
-    skills.push({ name, description: variants[0].description ?? "", content: variants[0].content, source: variants[0].source, files });
+    skills.push({ name, description: chosen.description ?? "", content: chosen.content, source: chosen.source, files });
   }
   return skills;
 }
@@ -509,16 +563,24 @@ function localInstructionsForPush(report, conflicts) {
     && INSTRUCTION_PRECEDENCE.includes(item.source));
   if (candidates.length === 0) return null;
 
-  if (new Set(candidates.map((item) => item.digest)).size > 1) {
+  const canonical = candidates.find((item) => item.source === "AGENTS.md");
+  const substantive = candidates.filter((item) => !(canonical && item.source === "CLAUDE.md"
+    && item.content.trim() === "@AGENTS.md"));
+  if (!canonical && candidates.some((item) => item.source === "CLAUDE.md" && item.content.trim() === "@AGENTS.md")) {
+    conflicts.push({ kind: "instructions", name: "CLAUDE.md", reason: "CLAUDE.md imports AGENTS.md, but AGENTS.md is missing." });
+    return null;
+  }
+
+  if (new Set(substantive.map((item) => item.digest)).size > 1) {
     conflicts.push({
       kind: "instructions",
-      name: candidates.map((item) => item.source).sort().join(", "),
+      name: substantive.map((item) => item.source).sort().join(", "),
       reason: "Project-root instruction files differ from each other; align them before pushing.",
     });
     return null;
   }
 
-  const ordered = [...candidates].sort(
+  const ordered = [...substantive].sort(
     (a, b) => INSTRUCTION_PRECEDENCE.indexOf(a.source) - INSTRUCTION_PRECEDENCE.indexOf(b.source),
   );
   return { source: ordered[0].source, content: ordered[0].content };
@@ -624,7 +686,8 @@ function skillFileActions(skill, remoteSkill) {
 
 async function planPushFrom(report, root, { url, apiKey, fetchImpl, scope = "project", displayName } = {}) {
   const conflicts = [];
-  const skills = await localSkillsForPush(report, conflicts);
+  const warnings = [];
+  const skills = await localSkillsForPush(report, conflicts, warnings);
   const mcpServers = scope === "global" ? [] : localMcpServersForPush(report, conflicts);
   const instructions = localInstructionsForPush(report, conflicts);
 
@@ -641,6 +704,8 @@ async function planPushFrom(report, root, { url, apiKey, fetchImpl, scope = "pro
   }
 
   const manifest = comparableManifest(createManifest(report, { displayName }));
+  const portable = await buildPortableSnapshot(report, root, manifest, instructions, { skipMcp: scope === "global" });
+  conflicts.push(...portable.conflicts);
   const link = await readLink(root);
   let remote = null;
   if (link?.playbookId && link.url === url) {
@@ -648,6 +713,15 @@ async function planPushFrom(report, root, { url, apiKey, fetchImpl, scope = "pro
   }
 
   const actions = [];
+  if (portable.snapshot && conflicts.length === 0) {
+    const latest = remote ? await requestLatestSnapshot(url, apiKey, remote.id, fetchImpl) : null;
+    if (latest?.digest !== portable.digest) {
+      actions.push({
+        kind: "snapshot", action: "create", name: `${portable.snapshot.files.length} portable file(s)`,
+        digest: portable.digest, paths: portable.snapshot.files.map((file) => file.path),
+      });
+    }
+  }
   if (!remote) {
     actions.push({ kind: "playbook", action: "create", name: manifest.metadata.displayName || manifest.metadata.name });
     if (instructions) {
@@ -702,15 +776,20 @@ async function planPushFrom(report, root, { url, apiKey, fetchImpl, scope = "pro
     skills,
     mcpServers,
     instructions,
+    snapshot: portable.snapshot,
     remote: remote ? { id: remote.id, guid: remote.guid, name: remote.name } : null,
     actions,
     conflicts,
+    warnings,
     scope,
     root,
   };
 }
 
 export async function applyPush(root, plan, { apiKey, fetchImpl } = {}) {
+  if (plan.conflicts.length > 0 || !plan.snapshot) {
+    throw new Error("Refusing an incomplete push: resolve all plan conflicts before creating a central backup.");
+  }
   const { url } = plan;
   let playbookId = plan.remote?.id ?? null;
   let guid = plan.remote?.guid ?? null;
@@ -732,6 +811,8 @@ export async function applyPush(root, plan, { apiKey, fetchImpl } = {}) {
     playbookId = created.id;
     guid = created.guid;
     name = created.name;
+    // A failed later upload can resume this playbook instead of duplicating it.
+    await writeLink(root, { url, playbookId, guid, name, pendingSync: true });
   } else {
     // Config and instructions are separate columns but one resource, so a
     // single request carries whichever of them changed.
@@ -820,6 +901,12 @@ export async function applyPush(root, plan, { apiKey, fetchImpl } = {}) {
         },
       });
     }
+  }
+
+  if (plan.actions.some((action) => action.kind === "snapshot")) {
+    await request(url, `/api/manage/playbooks/${playbookId}/snapshots`, {
+      method: "POST", apiKey, fetchImpl, body: { snapshot: plan.snapshot },
+    });
   }
 
   await writeLink(root, { url, playbookId, guid, name, lastSyncedAt: new Date().toISOString() });

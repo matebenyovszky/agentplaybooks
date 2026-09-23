@@ -8,6 +8,7 @@ Welcome to the AgentPlaybooks documentation.
 - [What is a Playbook?](./playbooks.md) - Understanding the core concept
 - [Getting Started](./getting-started.md) - First steps with AgentPlaybooks
 - [Platform Integrations](./platform-integrations.md) - Connect to ChatGPT, Claude, Gemini, Grok & more
+- [Cross-platform Agent Backups](./portable-agent-backups.md) - Migrate and restore complete portable agent configuration
 - [Hermes Memory Provider](./hermes-memory.md) - Native memory setup, profile boundaries, and shared knowledge
 - [Team Collaboration](./team-collaboration.md) - Share playbooks securely with human editors
 - [Roadmap](./ROADMAP.md) - Development roadmap and future plans

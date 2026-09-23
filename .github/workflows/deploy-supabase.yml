@@ -1,0 +1,67 @@
+name: Deploy Supabase
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "supabase/migrations/**"
+      - "supabase/deploy-baseline-versions.txt"
+      - "scripts/prepare-supabase-deploy.mjs"
+      - "scripts/verify-production-schema.sql"
+      - ".github/workflows/deploy-supabase.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PGSSLMODE: require
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - name: Require production database URL
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "::error::Set the SUPABASE_DB_URL GitHub Actions secret to the production Postgres connection string."
+            exit 1
+          fi
+      - run: npm ci
+      - name: Test before deployment
+        run: npm run test:all
+      - name: Prepare production migration history
+        id: stage
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: node scripts/prepare-supabase-deploy.mjs
+      - uses: supabase/setup-cli@v3
+        with:
+          version: 2.117.0
+      - name: Install PostgreSQL client for live verification
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client
+      - name: Preview pending migrations
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: supabase --workdir "${{ steps.stage.outputs.workdir }}" db push --db-url "$SUPABASE_DB_URL" --dry-run
+      - name: Apply pending migrations
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: supabase --workdir "${{ steps.stage.outputs.workdir }}" --yes db push --db-url "$SUPABASE_DB_URL"
+      - name: Verify production schema after deployment
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f scripts/verify-production-schema.sql

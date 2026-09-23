@@ -1,7 +1,8 @@
-import { access, mkdir, copyFile, readFile, rename, writeFile } from "node:fs/promises";
+import { access, mkdir, copyFile, readFile, readdir, rename, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { isMap, parseDocument } from "yaml";
+import { SAFE_AGENT_NAME, serializeAgent } from "./agents.js";
 import { expandConfiguredPath, hermesProfile, normalizePath, normalizeText } from "./discovery.js";
 
 // Platform adapters describe where a deployment target keeps its skills and
@@ -15,9 +16,19 @@ import { expandConfiguredPath, hermesProfile, normalizePath, normalizeText } fro
 // - `profile: true` targets keep their MCP servers and identity in a
 //   home-scoped profile directory instead of in the project.
 const TARGET_ADAPTERS = {
-  claude: { platforms: ["claude"], skillsDir: ".claude/skills", mcpPath: ".mcp.json", format: "json" },
-  cursor: { platforms: ["cursor"], skillsDir: ".cursor/skills", mcpPath: ".cursor/mcp.json", format: "json" },
-  codex: { platforms: ["codex"], skillsDir: ".codex/skills", mcpPath: ".codex/config.toml", format: "toml" },
+  claude: { platforms: ["claude"], mcpPlatforms: ["claude", "copilot", "shared-mcp"], skillsDir: ".claude/skills", agentDir: ".claude/agents", mcpPath: ".mcp.json", format: "json" },
+  cursor: { platforms: ["cursor"], skillsDir: ".cursor/skills", agentDir: ".cursor/agents", mcpPath: ".cursor/mcp.json", format: "json" },
+  codex: { platforms: ["codex"], skillsDir: ".codex/skills", agentDir: ".codex/agents", agentFormat: "toml", mcpPath: ".codex/config.toml", format: "toml" },
+  copilot: {
+    platforms: ["copilot"],
+    mcpPlatforms: ["copilot", "claude", "shared-mcp"],
+    skillsDir: ".github/skills",
+    agentDir: ".github/agents",
+    agentSuffix: ".agent.md",
+    mcpPath: ".mcp.json",
+    format: "json",
+  },
+  gemini: { platforms: ["gemini"], skillsDir: ".gemini/skills", agentDir: ".gemini/agents", mcpPath: ".gemini/settings.json", format: "json" },
   antigravity: { platforms: ["antigravity", "portable"], skillsDir: ".agents/skills" },
   // Grok Bot (xAI) discovers skills from a fixed set of roots that includes the
   // portable `.agents/skills` store, and its system prompt loads `AGENTS.md`
@@ -68,6 +79,8 @@ export const TARGET_HOME_MARKERS = {
   claude: ".claude",
   cursor: ".cursor",
   codex: ".codex",
+  copilot: ".copilot",
+  gemini: ".gemini",
   antigravity: ".gemini",
   hermes: ".hermes",
   grok: ".grokbot",
@@ -79,6 +92,40 @@ function canonicalize(value) {
     return Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonicalize(value[key])]));
   }
   return value;
+}
+
+function agentActions(report, targetIds, conflicts, { root }) {
+  const actions = [];
+  const groups = groupByName(report.inventory.agents ?? []);
+  for (const [name, variants] of groups) {
+    const digests = new Set(variants.map((item) => item.digest));
+    const canonical = variants.find((item) => item.platform === "portable") ?? variants[0];
+    for (const target of targetIds) {
+      const adapter = TARGET_ADAPTERS[target];
+      if (!adapter?.agentDir || variants.some((item) => adapter.platforms.includes(item.platform))) continue;
+      if (digests.size > 1) {
+        conflicts.push(conflict(target, "agent", name, "Custom agent definitions differ across platforms; resolve the drift before syncing.", variants.map((item) => item.source)));
+        continue;
+      }
+      if (!SAFE_AGENT_NAME.test(name)) {
+        conflicts.push(conflict(target, "agent", name, "Agent name is not a safe lowercase kebab-case file name.", variants.map((item) => item.source)));
+        continue;
+      }
+      const suffix = adapter.agentSuffix ?? (adapter.agentFormat === "toml" ? ".toml" : ".md");
+      const relativePath = `${adapter.agentDir}/${name}${suffix}`;
+      actions.push({
+        kind: "agent",
+        target,
+        name,
+        action: "create",
+        path: relativePath,
+        absolutePath: path.join(root, ...relativePath.split("/")),
+        content: serializeAgent(canonical, target),
+        from: canonical.source,
+      });
+    }
+  }
+  return actions;
 }
 
 function canonicalJson(value) {
@@ -108,7 +155,37 @@ function groupByName(items) {
   return groups;
 }
 
-function skillActions(report, targetIds, conflicts, { root }) {
+async function directoryFiles(root) {
+  const files = [];
+  const queue = [root];
+  while (queue.length > 0) {
+    const current = queue.shift();
+    for (const entry of await readdir(current, { withFileTypes: true })) {
+      if (entry.isSymbolicLink()) continue;
+      const absolute = path.join(current, entry.name);
+      if (entry.isDirectory()) queue.push(absolute);
+      else if (entry.isFile()) files.push(absolute);
+    }
+  }
+  return files.sort((a, b) => a.localeCompare(b));
+}
+
+function sameFileContent(left, right) {
+  if (left.equals(right)) return true;
+  if (left.includes(0) || right.includes(0)) return false;
+  return normalizeText(left.toString("utf8")) === normalizeText(right.toString("utf8"));
+}
+
+async function readBufferIfExists(absolutePath) {
+  try {
+    return await readFile(absolutePath);
+  } catch (error) {
+    if (error?.code === "ENOENT") return null;
+    throw error;
+  }
+}
+
+async function skillActions(report, targetIds, conflicts, { root }) {
   const actions = [];
   const groups = groupByName(report.inventory.skills);
   // Two targets can share one store (antigravity and hermes both read
@@ -116,12 +193,15 @@ function skillActions(report, targetIds, conflicts, { root }) {
   const planned = new Set();
 
   for (const [name, variants] of groups) {
-    const digests = new Set(variants.map((item) => item.digest));
+    const canonical = variants.find((item) => item.platform === "portable") ?? variants[0];
+    const skillDigests = new Set(variants.map((item) => item.digest));
+    const treeDigests = new Set(variants.map((item) => item.treeDigest ?? item.digest));
+    const sourceRoot = path.dirname(canonical.absolutePath);
+    const sourceFiles = await directoryFiles(sourceRoot);
     for (const target of targetIds) {
       const adapter = TARGET_ADAPTERS[target];
       if (!adapter?.skillsDir) continue;
-      if (variants.some((item) => adapter.platforms.includes(item.platform))) continue;
-      if (digests.size > 1) {
+      if (skillDigests.size > 1 || (treeDigests.size > 1 && canonical.platform !== "portable")) {
         conflicts.push(conflict(target, "skill", name, "Skill definitions differ across platforms; resolve the drift before syncing.", variants.map((item) => item.source)));
         continue;
       }
@@ -129,20 +209,32 @@ function skillActions(report, targetIds, conflicts, { root }) {
         conflicts.push(conflict(target, "skill", name, "Skill name is not a safe lowercase kebab-case directory name.", variants.map((item) => item.source)));
         continue;
       }
-      const relativePath = `${adapter.skillsDir}/${name}/SKILL.md`;
-      const absolutePath = path.join(root, ...relativePath.split("/"));
-      if (planned.has(absolutePath)) continue;
-      planned.add(absolutePath);
-      actions.push({
-        kind: "skill",
-        target,
-        name,
-        action: "create",
-        path: relativePath,
-        absolutePath,
-        content: variants[0].content,
-        from: variants[0].source,
-      });
+      const targetRoot = path.join(root, ...adapter.skillsDir.split("/"), name);
+      if (path.resolve(targetRoot) === path.resolve(sourceRoot)) continue;
+      for (const sourceFile of sourceFiles) {
+        const member = normalizePath(path.relative(sourceRoot, sourceFile));
+        const relativePath = `${adapter.skillsDir}/${name}/${member}`;
+        const absolutePath = path.join(targetRoot, ...member.split("/"));
+        if (planned.has(absolutePath)) continue;
+        const [content, existing] = await Promise.all([readFile(sourceFile), readBufferIfExists(absolutePath)]);
+        if (existing !== null) {
+          if (!sameFileContent(existing, content)) {
+            conflicts.push(conflict(target, member === "SKILL.md" ? "skill" : "skill-resource", name, `${relativePath} differs from the portable skill and was not overwritten.`, [canonical.source, relativePath]));
+          }
+          continue;
+        }
+        planned.add(absolutePath);
+        actions.push({
+          kind: member === "SKILL.md" ? "skill" : "skill-resource",
+          target,
+          name,
+          action: "create",
+          path: relativePath,
+          absolutePath,
+          content,
+          from: canonical.source,
+        });
+      }
     }
   }
   return actions;
@@ -238,6 +330,7 @@ function mcpAdditionsFor(adapter, groups, target, conflicts) {
 function mcpActions(report, targetIds, conflicts, { root }) {
   const actions = [];
   const groups = groupByName(report.inventory.mcpServers);
+  const planned = new Set();
 
   for (const target of targetIds) {
     const adapter = TARGET_ADAPTERS[target];
@@ -253,6 +346,7 @@ function mcpActions(report, targetIds, conflicts, { root }) {
 
     const additions = mcpAdditionsFor(adapter, groups, target, conflicts);
     if (Object.keys(additions).length === 0) continue;
+    if (planned.has(adapter.mcpPath)) continue;
 
     const existing = report.inventory.mcpConfigs.find((config) => config.source === adapter.mcpPath);
     const existingContent = existing ? existing.content : null;
@@ -271,6 +365,7 @@ function mcpActions(report, targetIds, conflicts, { root }) {
       servers: merged.added.sort(),
       content: merged.content,
     });
+    planned.add(adapter.mcpPath);
   }
   return actions;
 }
@@ -545,7 +640,8 @@ export async function planAdapters(report, targets, {
   const conflicts = [];
   const actions = [
     ...await instructionActions(report, targetIds, conflicts, { root }),
-    ...skillActions(report, targetIds, conflicts, { root }),
+    ...await skillActions(report, targetIds, conflicts, { root }),
+    ...agentActions(report, targetIds, conflicts, { root }),
     ...(skipMcp ? [] : mcpActions(report, targetIds, conflicts, { root })),
     ...await hermesActions(report, targetIds, conflicts, { root, homedir, env, platform, skipMcp, hermesProfileName }),
   ];
