@@ -35,13 +35,15 @@ python -m pip install ./packages/hermes-memory
 hermes memory setup
 ```
 
-The repository subdirectory is also directly installable with
+The plugin is listed in the Hermes catalog and can be installed with
+`hermes plugins install agentplaybooks`. The catalog pins a reviewed source
+commit. Direct repository installation also works with
 `hermes plugins install matebenyovszky/agentplaybooks/packages/hermes-memory/agentplaybooks`.
-Use `--ref <full-commit-sha>` to pin a reviewed version, then run `hermes memory setup`.
+Use `--ref <full-commit-sha>` to pin a direct installation, then run `hermes memory setup`.
 
-Hermes discovers its `hermes_agent.memory_providers` entry point. The plugin store
-submission is pending maintainer review; `hermes plugins install agentplaybooks`
-becomes available only after the catalog entry is merged and published.
+Hermes discovers its `hermes_agent.memory_providers` entry point. The
+[catalog entry](https://github.com/NousResearch/hermes-agent/pull/119450) was
+merged and is present in the live plugin catalog.
 
 Requires Hermes **0.21.4 or later**, with `agent.memory_provider.MemoryProvider`, profile-scoped
 `agent.secret_scope.get_secret`, and memory-write provenance (`old_text`). Tested

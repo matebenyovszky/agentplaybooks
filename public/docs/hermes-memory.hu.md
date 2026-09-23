@@ -18,7 +18,7 @@ fut.
 3. Telepítsd a plugint a megfelelő Hermes-profilba:
 
 ```bash
-hermes plugins install matebenyovszky/agentplaybooks/packages/hermes-memory/agentplaybooks
+hermes plugins install agentplaybooks
 hermes memory setup
 hermes memory status
 ```
@@ -29,14 +29,17 @@ playbook GUID-ját, kulcsát és a szolgáltatás címét (alapértelmezetten
 mezők. A konfiguráció a `$HERMES_HOME/agentplaybooks/config.json` fájlba kerül;
 a kulcs helye a profil titoktárolója, `AGENTPLAYBOOKS_MEMORY_API_KEY` néven,
 nem a JSON-fájl. Több profil esetén telepítés és beállítás előtt válaszd ki a
-megfelelőt a `HERMES_HOME` segítségével. Egy ellenőrzött verziót a
-`--ref <full-commit-sha>` kapcsolóval rögzíthetsz.
+megfelelőt a `HERMES_HOME` segítségével. A katalógusbejegyzés a már ellenőrzött
+forrásverziót rögzíti. Közvetlen repótelepítés is működik a
+`hermes plugins install matebenyovszky/agentplaybooks/packages/hermes-memory/agentplaybooks`
+paranccsal; ennél a `--ref <full-commit-sha>` kapcsolóval rögzíthetsz verziót.
 
-**Plugin-store állapot, 2026. szeptember 22.:** a
-[Hermes-katalógus beküldése](https://github.com/NousResearch/hermes-agent/pull/119450)
-a karbantartók jóváhagyására vár. A közvetlen repótelepítés működik;
-a `hermes plugins install agentplaybooks` rövid parancshoz a katalógusbejegyzés
-elfogadása és közzététele szükséges.
+**Plugin-store állapot, 2026. szeptember 23.:** a Hermes
+[összeolvasztotta a katalógusbejegyzést](https://github.com/NousResearch/hermes-agent/pull/119450),
+és az `agentplaybooks` már szerepel az
+[élő plugin-katalógusban](https://hermes-agent.nousresearch.com/docs/plugins/agentplaybooks).
+Régebbi Hermes
+telepítésnél katalógusfrissítés vagy programfrissítés kellhet a megjelenéséhez.
 
 ### Telepítés az AgentPlaybooks CLI-vel
 
@@ -57,7 +60,7 @@ Az első setup parancs csak tervet készít; az `--apply` telepíti a csomagolt
 plugint és kiválasztja a providert. A profil a `HERMES_HOME` vagy a
 `--hermes-home=<directory>` segítségével adható meg. A parancs megőrzi a többi
 beállítást, jelzi az ütköző pluginfájlokat vagy a már kiválasztott másik
-providert, és nem másol hitelesítő adatokat. Ez a közvetlen repótelepítés
+providert, és nem másol hitelesítő adatokat. Ez a katalógustelepítés
 alternatívája. A meglévő helyi memóriát nem importálja.
 
 ## Használat és kipróbálás

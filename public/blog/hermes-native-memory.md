@@ -61,7 +61,7 @@ agent keeps its personal working memory in a separate playbook.
 With Hermes 0.21.4 or later, install the plugin directly from our repository:
 
 ```bash
-hermes plugins install matebenyovszky/agentplaybooks/packages/hermes-memory/agentplaybooks
+hermes plugins install agentplaybooks
 hermes memory setup
 hermes memory status
 ```
@@ -71,10 +71,13 @@ through Hermes's secret setup. Hermes Desktop also offers native configuration
 fields. The [setup guide](/docs/hermes-memory) covers profile selection, shared
 sources, source-built CLI installation, and a short save/read/correct test.
 
-We have also [submitted AgentPlaybooks to the Hermes plugin catalog](https://github.com/NousResearch/hermes-agent/pull/119450).
-As of September 22, that submission is awaiting maintainer review. The direct
-repository command above is available now; installation by the short catalog
-name depends on that entry being merged and published.
+On September 23, Hermes
+[merged the AgentPlaybooks catalog entry](https://github.com/NousResearch/hermes-agent/pull/119450).
+The plugin now has a [live catalog page](https://hermes-agent.nousresearch.com/docs/plugins/agentplaybooks)
+under the short name above. You
+can also install directly from the
+[repository](https://github.com/matebenyovszky/agentplaybooks/tree/main/packages/hermes-memory/agentplaybooks)
+if your Hermes installation has not picked up the refreshed catalog yet.
 
 ## What this first version does
 

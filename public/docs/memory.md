@@ -28,8 +28,8 @@ hermes memory setup
 ```
 
 Set the playbook-scoped `AGENTPLAYBOOKS_MEMORY_API_KEY` through Hermes's secret
-setup. Source-checkout installation and the pending plugin-catalog submission are
-documented in the provider guide linked above.
+setup. The provider is listed in the Hermes plugin catalog; source-checkout and
+catalog installation are documented in the guide linked above.
 
 ## Memory Tiers
 

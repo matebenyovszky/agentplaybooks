@@ -16,8 +16,8 @@ servers and memory providers, can send data to their services.
 
 > **September 2026 update:** AgentPlaybooks now includes a native Hermes memory
 > provider. Read [Give Hermes a memory you can inspect and share](/blog/hermes-native-memory)
-> and the [setup guide](/docs/hermes-memory). Direct installation is available;
-> the Hermes plugin-store submission is awaiting maintainer review.
+> and the [setup guide](/docs/hermes-memory). The provider is available in the
+> Hermes plugin catalog as `agentplaybooks`.
 
 > **August 2026 update:** Hermes Agent now includes profile-based Bot Mode with
 > persistent bots, routines, group chats, cross-machine peers, Agent Skills,
