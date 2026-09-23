@@ -1,0 +1,13 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "agentplaybooks-portable",
+  "version": "0.1.0",
+  "description": "Audit, sync, package, and restore portable agent configuration with the AgentPlaybooks CLI.",
+  "author": {
+    "name": "AgentPlaybooks",
+    "url": "https://agentplaybooks.ai"
+  },
+  "homepage": "https://agentplaybooks.ai",
+  "repository": "https://github.com/matebenyovszky/agentplaybooks",
+  "license": "MIT"
+}

@@ -3,6 +3,8 @@
 A native Hermes memory provider backed by [AgentPlaybooks](https://agentplaybooks.ai).
 Remember durable facts across sessions, inspect and correct them in AgentPlaybooks,
 and share selected knowledge with other agents through explicitly configured playbooks.
+For portable instructions, skills, and Hermes profiles, see the separate
+[Portable Agents plugin](https://agentplaybooks.ai/docs/hermes-portable-agents).
 
 ## Install
 

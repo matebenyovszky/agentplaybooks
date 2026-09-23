@@ -327,6 +327,9 @@ playbook).
 
 ## Native Hermes memory
 
+For portable instructions, skills, MCP references, and Bot Mode profiles,
+see the separate [Hermes Portable Agents plugin](https://agentplaybooks.ai/docs/hermes-portable-agents).
+
 Install and configure AgentPlaybooks as Hermes's native memory provider. These
 commands require a CLI release containing the provider; for a source build or
 direct Hermes installation, follow the [setup guide](https://agentplaybooks.ai/docs/hermes-memory).
