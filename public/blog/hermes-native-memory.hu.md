@@ -67,7 +67,7 @@ miközben a személyes munkamemóriájuk külön playbookban marad.
 Hermes 0.21.4 vagy újabb verzióval közvetlenül a repónkból telepítheted:
 
 ```bash
-hermes plugins install matebenyovszky/agentplaybooks/packages/hermes-memory/agentplaybooks
+hermes plugins install agentplaybooks
 hermes memory setup
 hermes memory status
 ```
@@ -79,10 +79,13 @@ Desktopban is megjelennek a natív beállítási mezők. A
 megosztott forrásokat, a forrásból épített CLI használatát és egy rövid
 mentés–visszaolvasás–javítás próbát.
 
-Az AgentPlaybookst [beküldtük a Hermes plugin-katalógusába is](https://github.com/NousResearch/hermes-agent/pull/119450).
-A beküldés szeptember 22-én még a karbantartók jóváhagyására vár. A fenti,
-közvetlenül a repóra hivatkozó telepítés már használható; a rövid katalógusnévvel
-történő telepítéshez a bejegyzés elfogadása és közzététele szükséges.
+Szeptember 23-án a Hermes
+[összeolvasztotta az AgentPlaybooks katalógusbejegyzését](https://github.com/NousResearch/hermes-agent/pull/119450).
+A plugin már szerepel az
+[élő katalógusban](https://hermes-agent.nousresearch.com/docs/plugins/agentplaybooks)
+a fenti rövid néven. Közvetlenül a
+[repóból](https://github.com/matebenyovszky/agentplaybooks/tree/main/packages/hermes-memory/agentplaybooks)
+is telepítheted, ha a Hermesed még nem vette át a frissített katalógust.
 
 ## Mit tud ez az első verzió?
 

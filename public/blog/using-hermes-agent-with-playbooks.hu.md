@@ -18,8 +18,8 @@ a szolgáltatásaiknak.
 > **2026. szeptemberi frissítés:** Az AgentPlaybooks már natív Hermes
 > memóriaszolgáltatót is tartalmaz. Olvasd el a
 > [Hermes-memória, amit látsz, javíthatsz és megoszthatsz](/blog/hermes-native-memory)
-> cikket és a [beállítási útmutatót](/docs/hermes-memory). A közvetlen telepítés
-> működik; a Hermes plugin-store beküldése a karbantartók jóváhagyására vár.
+> cikket és a [beállítási útmutatót](/docs/hermes-memory). A provider már
+> `agentplaybooks` néven elérhető a Hermes plugin-katalógusában.
 
 > **2026. augusztusi frissítés:** A Hermes Agent már profilalapú Bot Mode-ot
 > kínál tartós botokkal, rutinokkal, csoportos beszélgetésekkel, többgépes

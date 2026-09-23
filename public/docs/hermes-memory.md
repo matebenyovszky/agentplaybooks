@@ -16,7 +16,7 @@ revision pinned in our [compatibility workflow](https://github.com/matebenyovszk
 3. Install the plugin into the intended Hermes profile:
 
 ```bash
-hermes plugins install matebenyovszky/agentplaybooks/packages/hermes-memory/agentplaybooks
+hermes plugins install agentplaybooks
 hermes memory setup
 hermes memory status
 ```
@@ -27,14 +27,16 @@ also exposes the provider's native memory settings. Configuration lives in
 `$HERMES_HOME/agentplaybooks/config.json`; the key belongs in Hermes's profile
 secret store as `AGENTPLAYBOOKS_MEMORY_API_KEY`, not in that JSON file.
 For multiple profiles, select the intended profile with `HERMES_HOME` before
-installing and configuring the plugin. You can pin installation with
-`--ref <full-commit-sha>`.
+installing and configuring the plugin. The catalog entry pins the reviewed
+source commit. Direct repository installation also works with
+`hermes plugins install matebenyovszky/agentplaybooks/packages/hermes-memory/agentplaybooks`;
+you can pin that route with `--ref <full-commit-sha>`.
 
-**Plugin store status, September 22, 2026:** the
-[Hermes catalog submission](https://github.com/NousResearch/hermes-agent/pull/119450)
-is awaiting maintainer review. Direct repository installation works now;
-`hermes plugins install agentplaybooks` depends on the catalog entry being merged
-and published.
+**Plugin store status, September 23, 2026:**
+[Hermes merged the catalog entry](https://github.com/NousResearch/hermes-agent/pull/119450),
+and `agentplaybooks` has a [live plugin page](https://hermes-agent.nousresearch.com/docs/plugins/agentplaybooks).
+Older Hermes
+installations may need a catalog refresh or update to see the new entry.
 
 ### Install through the AgentPlaybooks CLI
 
@@ -55,7 +57,7 @@ The first setup command previews the plan; `--apply` installs the bundled plugin
 and selects the provider. It honors `HERMES_HOME` or `--hermes-home=<directory>`,
 preserves unrelated settings, reports conflicting plugin files or another
 selected provider, and never copies credentials. This is an alternative to
-direct repository installation. Existing local memory is not imported.
+catalog installation. Existing local memory is not imported.
 
 ## Daily use
 
