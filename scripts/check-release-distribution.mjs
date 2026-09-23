@@ -23,6 +23,10 @@ const variants = await Promise.all([
 check(/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(cli.version), "CLI version must be SemVer.");
 check(packageLock.version === cli.version, "CLI package-lock version differs.");
 check(packageLock.packages?.[""]?.version === cli.version, "CLI package-lock root package version differs.");
+const webLock = await json("package-lock.json");
+for (const dependency of ["@emnapi/core", "@emnapi/runtime", "@emnapi/wasi-threads"]) {
+  check(Boolean(webLock.packages?.[`node_modules/${dependency}`]), `Root lockfile lost Linux/WASM optional dependency ${dependency}.`);
+}
 check(portable.version === cli.version, "Portable plugin version differs.");
 check(registry.version === cli.version, "MCP Registry version differs.");
 for (const [index, manifest] of variants.entries()) {
