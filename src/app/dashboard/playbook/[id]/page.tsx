@@ -11,6 +11,7 @@ import { authFetch } from "@/lib/auth-fetch";
 import { cn } from "@/lib/utils";
 import { createSupabaseAdapter } from "@/lib/storage";
 import { isSafeSkillFile, skillMarkdown } from "@/lib/skill-markdown";
+import { buildPlaybookPluginZip } from "@/lib/playbook-plugin-export";
 import {
   ArrowLeft,
   Brain,
@@ -101,6 +102,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
   const [forking, setForking] = useState(false);
   const [forkSuccess, setForkSuccess] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [exportingPlugin, setExportingPlugin] = useState(false);
 
   // Browse public modals
   const [showBrowseSkills, setShowBrowseSkills] = useState(false);
@@ -835,6 +837,36 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
       setExporting(false);
     }
   }, [playbook, exporting, skills, mcpServers, runs, canvases, memories, markdownPath, buildAgentsMarkdown, getBaseUrl]);
+
+  const handleExportPlugin = useCallback(async () => {
+    if (!playbook || exportingPlugin) return;
+    setExportingPlugin(true);
+    try {
+      const attachmentsBySkill = new Map<string, SkillAttachment[]>();
+      for (const skill of skills) {
+        const response = await authFetch(`/api/manage/skills/${skill.id}/attachments`);
+        if (!response.ok) throw new Error(`A(z) ${skill.name} mellékletei nem tölthetők le (${response.status}).`);
+        const attachments = await response.json();
+        if (!Array.isArray(attachments)) throw new Error(`Hibás mellékletlista: ${skill.name}`);
+        attachmentsBySkill.set(skill.id, attachments as SkillAttachment[]);
+      }
+      const zip = buildPlaybookPluginZip(playbook, skills, attachmentsBySkill);
+      const blob = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `agent-plugin-${playbook.guid}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (error) {
+      console.error("Failed to export Agent Plugin:", error);
+      alert(error instanceof Error ? error.message : "Az Agent Plugin exportálása nem sikerült.");
+    } finally {
+      setExportingPlugin(false);
+    }
+  }, [playbook, exportingPlugin, skills]);
 
   const tabs = [
     { id: "details" as TabType, label: t("editor.tabs.details"), icon: Settings, count: 0, color: "slate" },
@@ -1675,6 +1707,21 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                       <Download className="h-4 w-4" />
                       <span className="font-medium">
                         {exporting ? "Preparing ZIP..." : "Download ZIP"}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleExportPlugin}
+                      disabled={!playbook || exportingPlugin}
+                      className={cn(
+                        "inline-flex items-center gap-2 rounded-lg border border-neutral-300 dark:border-slate-700/50 bg-neutral-50 dark:bg-slate-900/70 text-neutral-700 dark:text-slate-200 transition-colors hover:bg-neutral-100 dark:hover:bg-slate-800/70",
+                        "disabled:opacity-60 disabled:cursor-not-allowed",
+                        "px-3 py-2 text-sm"
+                      )}
+                    >
+                      <Puzzle className="h-4 w-4" />
+                      <span className="font-medium">
+                        {exportingPlugin ? "Preparing Agent Plugin..." : "Export as Agent Plugin"}
                       </span>
                     </button>
                   </div>

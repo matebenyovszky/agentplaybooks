@@ -74,6 +74,14 @@ insecure MCP URLs, cross-platform drift, and a 0-100 health score.
 
 ## Agent Plugins 1.0
 
+The npm package itself ships a portable root `plugin.json`, `mcp.json`, its
+AgentPlaybooks skill, and the same logo as the website. In the web dashboard,
+**Export as Agent Plugin** creates an installable snapshot of one playbook.
+Clients that support the MCP Skills extension can connect directly to that
+playbook's MCP endpoint for live skill discovery; a static package alone does
+not keep already installed skills synchronized. For the release/store checklist,
+see [release distribution](https://agentplaybooks.ai/docs/release-distribution).
+
 `plugin export` creates a standards-compliant package with root `plugin.json`,
 `skills/`, and `mcp.json`. Complete skill directories are copied, including
 their scripts, references, and assets. Portable agents are kept under

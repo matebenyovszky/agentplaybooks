@@ -25,6 +25,7 @@
     "test": "vitest",
     "test:cli": "npm --prefix packages/cli test",
     "test:all": "vitest run && npm run test:cli",
+    "release:check": "node scripts/check-release-distribution.mjs",
     "test:watch": "vitest",
     "audit:production": "node scripts/audit-production.mjs",
     "smoke": "node scripts/smoke-mcp.mjs"
@@ -41,7 +42,8 @@
     "next-intl": "^4.14.3",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "tailwind-merge": "^3.6.0"
+    "tailwind-merge": "^3.6.0",
+    "yaml": "2.9.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "5.20260911.1",

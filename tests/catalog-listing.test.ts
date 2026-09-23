@@ -100,7 +100,8 @@ describe("Cursor plugin catalog manifests", () => {
 
     expect(cursor.name).toBe("agentplaybooks");
     expect(cursor.name).toBe(claude.name);
-    expect(cursor.version).toBe("0.4.0");
+    const cli = JSON.parse(source("packages/cli/package.json")) as { version: string };
+    expect(cursor.version).toBe(cli.version);
     expect(cursor.version).toBe(claude.version);
     expect(codex.version).toBe(claude.version);
     expect(codex.license).toBe("MIT");
@@ -120,13 +121,21 @@ describe("Cursor plugin catalog manifests", () => {
     expect(marketplace.plugins).toHaveLength(1);
     expect(marketplace.plugins[0].source).toBe("./packages/cli");
     expect(marketplace.plugins[0].license).toBe("MIT");
-    expect(marketplace.plugins[0].version).toBe("0.4.0");
-    expect(claudeMarketplace.plugins[0]).toMatchObject(marketplace.plugins[0]);
+    const cli = JSON.parse(source("packages/cli/package.json")) as { version: string };
+    expect(marketplace.plugins[0].version).toBe(cli.version);
+    expect(claudeMarketplace.plugins[0]).toMatchObject({
+      source: marketplace.plugins[0].source,
+      license: marketplace.plugins[0].license,
+      version: marketplace.plugins[0].version,
+    });
   });
 
-  it("publishes the fixed CLI package version", () => {
+  it("keeps portable plugin and MCP Registry versions aligned with the CLI", () => {
     const cli = JSON.parse(source("packages/cli/package.json")) as { version: string };
-    expect(cli.version).toBe("0.4.0");
+    const portable = JSON.parse(source("packages/cli/plugin.json")) as { version: string };
+    const registry = JSON.parse(source("server.json")) as { version: string };
+    expect(portable.version).toBe(cli.version);
+    expect(registry.version).toBe(cli.version);
   });
 });
 

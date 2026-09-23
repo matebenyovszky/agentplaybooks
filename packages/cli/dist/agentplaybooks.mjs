@@ -9325,7 +9325,7 @@ function printSyncPlan(plan) {
 }
 
 // src/agent-plugins.js
-import { copyFile as copyFile3, mkdir as mkdir3, readFile as readFile5, readdir as readdir4, rename as rename3, writeFile as writeFile3 } from "node:fs/promises";
+import { copyFile as copyFile3, mkdir as mkdir3, readFile as readFile5, readdir as readdir4, realpath, rename as rename3, writeFile as writeFile3 } from "node:fs/promises";
 import path8 from "node:path";
 
 // src/snapshot.js
@@ -9524,10 +9524,34 @@ async function assertSafeDestination(root, relative) {
   return current;
 }
 
-// src/agent-plugins.js
+// src/plugin-package.js
 var PLUGIN_SCHEMA = "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json";
 var MCP_SCHEMA = "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json";
 var PLUGIN_NAME = /^(?!.*(?:--|\.\.))[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/;
+function pluginName(value) {
+  const slug = String(value).toLowerCase().replace(/[^a-z0-9.-]+/g, "-").replace(/-+/g, "-").replace(/\.+/g, ".").replace(/^[.-]+|[.-]+$/g, "").slice(0, 64).replace(/[.-]+$/g, "");
+  return PLUGIN_NAME.test(slug) ? slug : "agent-playbook";
+}
+function portablePluginManifest({ name, version = "1.0.0", description, author, homepage, repository, license, keywords, extensions } = {}) {
+  return {
+    $schema: PLUGIN_SCHEMA,
+    name: pluginName(name ?? "agent-playbook"),
+    version: String(version),
+    ...description ? { description } : {},
+    ...author ? { author } : {},
+    ...homepage ? { homepage } : {},
+    ...repository ? { repository } : {},
+    ...license ? { license } : {},
+    ...keywords?.length ? { keywords } : {},
+    ...extensions && Object.keys(extensions).length ? { extensions } : {}
+  };
+}
+function portableMcpConfig(mcpServers) {
+  return { $schema: MCP_SCHEMA, mcpServers };
+}
+
+// src/agent-plugins.js
+var PLUGIN_NAME2 = /^(?!.*(?:--|\.\.))[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/;
 var SECRET_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
 var REF_PATTERNS = [/\$\{([A-Za-z_][A-Za-z0-9_]*)\}/g, /(?<![\w$])\$([A-Za-z_][A-Za-z0-9_]*)/g, /env:([A-Za-z_][A-Za-z0-9_]*)/g];
 function canonicalize2(value) {
@@ -9551,8 +9575,7 @@ function groupBy2(items, keyFor) {
   return groups;
 }
 function slugify2(value) {
-  const result = String(value).toLowerCase().replace(/[^a-z0-9.-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 64);
-  return PLUGIN_NAME.test(result) ? result : "agent-playbook";
+  return pluginName(value);
 }
 async function readJsonIfExists(file) {
   try {
@@ -9734,30 +9757,35 @@ async function planPluginExport(root, { output } = {}) {
     mcpServers[name] = converted.definition;
   }
   if (Object.keys(mcpServers).length > 0) {
-    await addAction(actions, conflicts, outputRoot, "mcp.json", `${JSON.stringify({ $schema: MCP_SCHEMA, mcpServers }, null, 2)}
+    await addAction(actions, conflicts, outputRoot, "mcp.json", `${JSON.stringify(portableMcpConfig(mcpServers), null, 2)}
 `, "MCP inventory");
   }
   const secrets = secretExtension(playbook?.spec?.secrets, bindings);
-  const plugin = {
-    $schema: PLUGIN_SCHEMA,
+  const plugin = portablePluginManifest({
     name: slugify2(playbook?.metadata?.name ?? path8.basename(projectRoot)),
-    version: String(playbook?.metadata?.labels?.version ?? "1.0.0"),
-    ...playbook?.metadata?.description ? { description: playbook.metadata.description } : {},
+    version: playbook?.metadata?.labels?.version ?? "1.0.0",
+    description: playbook?.metadata?.description,
     ...secrets.length > 0 ? { extensions: { "ai.agentplaybooks": { secrets } } } : {}
-  };
+  });
   await addAction(actions, conflicts, outputRoot, "plugin.json", `${JSON.stringify(plugin, null, 2)}
 `, "agentplaybook.json");
   actions.sort((a, b) => a.path.localeCompare(b.path));
   return { kind: "export", root: projectRoot, output: outputRoot, plugin, actions, conflicts };
 }
-function validatePluginManifest(value) {
+function validatePluginManifest(value, conflicts = []) {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("plugin.json must be a JSON object.");
   const allowed = /* @__PURE__ */ new Set(["$schema", "name", "version", "description", "author", "homepage", "repository", "license", "keywords", "extensions"]);
   const extra = Object.keys(value).filter((key) => !allowed.has(key));
-  if (extra.length) throw new Error(`plugin.json contains unsupported fields: ${extra.join(", ")}.`);
+  for (const field of extra) {
+    conflicts.push({ kind: "manifest", name: field, reason: "Unknown plugin.json field was ignored as required by Agent Plugins 1.0.", sources: ["plugin.json"] });
+  }
   if (value.$schema !== PLUGIN_SCHEMA) throw new Error(`plugin.json must target Agent Plugins 1.0 (${PLUGIN_SCHEMA}).`);
-  if (typeof value.name !== "string" || value.name.length > 64 || !PLUGIN_NAME.test(value.name)) throw new Error("plugin.json has an invalid Agent Plugins name.");
-  if (value.extensions !== void 0 && (!value.extensions || typeof value.extensions !== "object" || Array.isArray(value.extensions))) throw new Error("plugin.json extensions must be an object.");
+  if (typeof value.name !== "string" || value.name.length > 64 || !PLUGIN_NAME2.test(value.name)) throw new Error("plugin.json has an invalid Agent Plugins name.");
+  let extensions = value.extensions;
+  if (extensions !== void 0 && (!extensions || typeof extensions !== "object" || Array.isArray(extensions))) {
+    conflicts.push({ kind: "manifest", name: "extensions", reason: "Non-object extensions field was ignored as required by Agent Plugins 1.0.", sources: ["plugin.json"] });
+    extensions = void 0;
+  }
   for (const field of ["version", "description", "homepage", "repository", "license"]) {
     if (value[field] !== void 0 && typeof value[field] !== "string") throw new Error(`plugin.json '${field}' must be a string.`);
   }
@@ -9766,56 +9794,108 @@ function validatePluginManifest(value) {
     if (!value.author || typeof value.author !== "object" || Array.isArray(value.author)) throw new Error("plugin.json author must be an object.");
     if (Object.keys(value.author).some((key) => !["name", "email", "url"].includes(key)) || Object.values(value.author).some((item) => typeof item !== "string")) throw new Error("plugin.json author does not match the Agent Plugins schema.");
   }
-  for (const extension of Object.values(value.extensions ?? {})) {
-    if (!extension || typeof extension !== "object" || Array.isArray(extension)) throw new Error("Every plugin extension value must be an object.");
-  }
-  return value;
+  return { ...Object.fromEntries(Object.entries(value).filter(([key]) => allowed.has(key) && key !== "extensions")), ...extensions ? { extensions } : {} };
 }
 function assertStringMap(value, label) {
   if (!value || typeof value !== "object" || Array.isArray(value) || Object.values(value).some((item) => typeof item !== "string")) {
     throw new Error(`${label} must map strings to strings.`);
   }
 }
-function validateMcpDocument(value) {
+async function validateMcpDocument(value, pluginRoot, conflicts = []) {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("mcp.json must be a JSON object.");
   if (value.$schema !== MCP_SCHEMA) throw new Error(`mcp.json must target Agent Plugins 1.0 (${MCP_SCHEMA}).`);
   if (!value.mcpServers || typeof value.mcpServers !== "object" || Array.isArray(value.mcpServers)) throw new Error("mcp.json must contain mcpServers.");
   if (Object.keys(value).some((key) => key !== "$schema" && key !== "mcpServers")) throw new Error("mcp.json contains fields outside the Agent Plugins 1.0 schema.");
+  const validServers = {};
   for (const [name, server] of Object.entries(value.mcpServers)) {
-    if (!server || typeof server !== "object" || Array.isArray(server)) throw new Error(`MCP server '${name}' must be an object.`);
-    const stdio = server.type === "stdio";
-    const remote = server.type === "streamable-http" || server.type === "sse";
-    if (!stdio && !remote) throw new Error(`MCP server '${name}' has an unsupported type.`);
-    const allowed = stdio ? /* @__PURE__ */ new Set(["type", "command", "args", "env", "cwd"]) : /* @__PURE__ */ new Set(["type", "url", "headers"]);
-    if (Object.keys(server).some((key) => !allowed.has(key))) throw new Error(`MCP server '${name}' has fields outside its Agent Plugins schema.`);
-    if (stdio && (typeof server.command !== "string" || !server.command)) throw new Error(`MCP server '${name}' has no command.`);
-    if (remote && (typeof server.url !== "string" || !server.url)) throw new Error(`MCP server '${name}' has no URL.`);
-    if (stdio && server.args !== void 0 && (!Array.isArray(server.args) || server.args.some((item) => typeof item !== "string"))) throw new Error(`MCP server '${name}' args must be strings.`);
-    if (stdio && server.env !== void 0) {
-      assertStringMap(server.env, `MCP server '${name}' env`);
-      if (server.env.PLUGIN_ROOT !== void 0 || server.env.PLUGIN_DATA !== void 0) throw new Error(`MCP server '${name}' cannot override PLUGIN_ROOT or PLUGIN_DATA.`);
-    }
-    if (stdio && server.cwd !== void 0) {
-      if (typeof server.cwd !== "string" || !/^(?:\.\/|\$\{PLUGIN_ROOT\}(?:\/|$)|\$\{PLUGIN_DATA\}(?:\/|$))/.test(server.cwd) || server.cwd.split("/").includes("..")) {
-        throw new Error(`MCP server '${name}' cwd is not contained in the plugin or plugin data directory.`);
-      }
-    }
-    if (remote) {
-      if (server.headers !== void 0) assertStringMap(server.headers, `MCP server '${name}' headers`);
-      let url;
-      try {
-        url = new URL(server.url);
-      } catch {
-        throw new Error(`MCP server '${name}' URL is invalid.`);
-      }
-      const loopback = ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
-      if (url.protocol !== "https:" && !(url.protocol === "http:" && loopback)) throw new Error(`MCP server '${name}' must use HTTPS outside loopback.`);
+    try {
+      await validateMcpServer(name, server, pluginRoot);
+      validServers[name] = server;
+    } catch (error) {
+      conflicts.push({ kind: "mcp", name, reason: `${error instanceof Error ? error.message : String(error)} Skipped this server, retaining other plugin components.`, sources: ["mcp.json"] });
     }
   }
-  return value;
+  return { $schema: value.$schema, mcpServers: validServers };
 }
-function importedSecrets(plugin) {
-  const secrets = plugin.extensions?.["ai.agentplaybooks"]?.secrets ?? [];
+async function validatePackagePath(pluginRoot, value, label) {
+  const absolute = path8.resolve(pluginRoot, value);
+  const relative = path8.relative(pluginRoot, absolute);
+  if (relative === ".." || relative.startsWith(`..${path8.sep}`) || path8.isAbsolute(relative)) {
+    throw new Error(`${label} escapes the plugin root.`);
+  }
+  try {
+    const resolvedRoot = await realpath(pluginRoot);
+    const resolved = await realpath(absolute);
+    const resolvedRelative = path8.relative(resolvedRoot, resolved);
+    if (resolvedRelative === ".." || resolvedRelative.startsWith(`..${path8.sep}`) || path8.isAbsolute(resolvedRelative)) {
+      throw new Error(`${label} resolves outside the plugin root.`);
+    }
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+  }
+}
+async function validateMcpServer(name, server, pluginRoot) {
+  if (!server || typeof server !== "object" || Array.isArray(server)) throw new Error(`MCP server '${name}' must be an object.`);
+  const stdio = server.type === "stdio";
+  const remote = server.type === "streamable-http" || server.type === "sse";
+  if (!stdio && !remote) throw new Error(`MCP server '${name}' has an unsupported type.`);
+  const allowed = stdio ? /* @__PURE__ */ new Set(["type", "command", "args", "env", "cwd"]) : /* @__PURE__ */ new Set(["type", "url", "headers"]);
+  if (Object.keys(server).some((key) => !allowed.has(key))) throw new Error(`MCP server '${name}' has fields outside its Agent Plugins schema.`);
+  if (stdio && (typeof server.command !== "string" || !server.command)) throw new Error(`MCP server '${name}' has no command.`);
+  if (stdio) {
+    if (/\s|:/.test(server.command) || server.command.includes("\\")) throw new Error(`MCP server '${name}' command is not one executable token.`);
+    if (server.command.startsWith("./")) await validatePackagePath(pluginRoot, server.command, `MCP server '${name}' command`);
+    else if (server.command.includes("/") || server.command.startsWith(".")) throw new Error(`MCP server '${name}' command must be bare or plugin-relative.`);
+  }
+  if (remote && (typeof server.url !== "string" || !server.url)) throw new Error(`MCP server '${name}' has no URL.`);
+  if (stdio && server.args !== void 0 && (!Array.isArray(server.args) || server.args.some((item) => typeof item !== "string"))) throw new Error(`MCP server '${name}' args must be strings.`);
+  if (stdio && server.env !== void 0) {
+    assertStringMap(server.env, `MCP server '${name}' env`);
+    if (server.env.PLUGIN_ROOT !== void 0 || server.env.PLUGIN_DATA !== void 0) throw new Error(`MCP server '${name}' cannot override PLUGIN_ROOT or PLUGIN_DATA.`);
+  }
+  if (stdio && server.cwd !== void 0) {
+    if (typeof server.cwd !== "string" || server.cwd.includes("\\") || !/^(?:\.\/|\$\{PLUGIN_ROOT\}(?:\/|$)|\$\{PLUGIN_DATA\}(?:\/|$))/.test(server.cwd) || server.cwd.split("/").includes("..")) {
+      throw new Error(`MCP server '${name}' cwd is not contained in the plugin or plugin data directory.`);
+    }
+    if (server.cwd.startsWith("./") || server.cwd.startsWith("${PLUGIN_ROOT}")) {
+      const relativeCwd = server.cwd.startsWith("./") ? server.cwd : `.${server.cwd.slice("${PLUGIN_ROOT}".length) || "/"}`;
+      await validatePackagePath(pluginRoot, relativeCwd, `MCP server '${name}' cwd`);
+    }
+  }
+  if (remote) {
+    if (server.headers !== void 0) assertStringMap(server.headers, `MCP server '${name}' headers`);
+    const names = /* @__PURE__ */ new Set();
+    for (const [header, value] of Object.entries(server.headers ?? {})) {
+      const lower = header.toLowerCase();
+      if (names.has(lower)) throw new Error(`MCP server '${name}' repeats a header name.`);
+      names.add(lower);
+      try {
+        new Headers([[header, value]]);
+      } catch {
+        throw new Error(`MCP server '${name}' has an invalid HTTP header.`);
+      }
+      if (/^(?:authorization|proxy-authorization|cookie|x-api-key)$/i.test(header)) {
+        throw new Error(`MCP server '${name}' embeds a credential header; use host-managed authentication.`);
+      }
+    }
+    let url;
+    try {
+      url = new URL(server.url);
+    } catch {
+      throw new Error(`MCP server '${name}' URL is invalid.`);
+    }
+    const loopback = url.hostname === "localhost" || url.hostname === "[::1]" || /^127(?:\.\d{1,3}){3}$/.test(url.hostname);
+    if (url.protocol !== "https:" && !(url.protocol === "http:" && loopback)) throw new Error(`MCP server '${name}' must use HTTPS outside loopback.`);
+    if (url.username || url.password || url.hash) throw new Error(`MCP server '${name}' URL contains credentials or a fragment.`);
+  }
+}
+function importedSecrets(plugin, conflicts = []) {
+  const extension = plugin.extensions?.["ai.agentplaybooks"];
+  if (extension !== void 0 && (!extension || typeof extension !== "object" || Array.isArray(extension))) {
+    conflicts.push({ kind: "extension", name: "ai.agentplaybooks", reason: "Invalid AgentPlaybooks extension was ignored.", sources: ["plugin.json"] });
+    return [];
+  }
+  const secrets = extension?.secrets ?? [];
   if (!Array.isArray(secrets)) throw new Error("ai.agentplaybooks.secrets must be an array.");
   for (const secret of secrets) {
     if (!secret || !SECRET_NAME.test(secret.name) || typeof secret.ref !== "string") throw new Error("AgentPlaybooks secret declarations need a valid name and ref.");
@@ -9871,24 +9951,38 @@ async function mergedPortableMcp(root, definitions, conflicts) {
 async function planPluginImport(pluginDirectory, root) {
   const pluginRoot = path8.resolve(pluginDirectory);
   const projectRoot = path8.resolve(root);
-  const plugin = validatePluginManifest(await readJsonIfExists(path8.join(pluginRoot, "plugin.json")));
-  const mcpRaw = await readJsonIfExists(path8.join(pluginRoot, "mcp.json"));
-  const mcp = mcpRaw === null ? null : validateMcpDocument(mcpRaw);
-  const secrets = importedSecrets(plugin);
   const actions = [];
   const conflicts = [];
+  const plugin = validatePluginManifest(await readJsonIfExists(path8.join(pluginRoot, "plugin.json")), conflicts);
+  let mcp = null;
+  try {
+    const mcpRaw = await readJsonIfExists(path8.join(pluginRoot, "mcp.json"));
+    mcp = mcpRaw === null ? null : await validateMcpDocument(mcpRaw, pluginRoot, conflicts);
+  } catch (error) {
+    conflicts.push({ kind: "mcp", name: "mcp.json", reason: `${error instanceof Error ? error.message : String(error)} MCP was disabled; other components remain available.`, sources: ["mcp.json"] });
+  }
+  const secrets = importedSecrets(plugin, conflicts);
   const skillsRoot = path8.join(pluginRoot, "skills");
   const skillFiles = await filesBelow(skillsRoot);
   const relativeSkillFiles = skillFiles.map((file) => normalizePath(path8.relative(skillsRoot, file)));
+  const invalidSkills = /* @__PURE__ */ new Set();
   for (const directory of new Set(relativeSkillFiles.map((relative) => relative.split("/")[0]))) {
-    if (!relativeSkillFiles.includes(`${directory}/SKILL.md`)) throw new Error(`Plugin skill '${directory}' has no SKILL.md.`);
+    if (relativeSkillFiles.includes(`${directory}/SKILL.md`)) continue;
+    invalidSkills.add(directory);
+    conflicts.push({ kind: "skill", name: directory, reason: "No SKILL.md at the skill root; skipped this skill.", sources: [`skills/${directory}`] });
   }
   const pluginReport = await runDoctor(pluginRoot);
-  const invalidSkill = pluginReport.findings.find((item) => item.severity === "high" && item.code.startsWith("skill."));
-  if (invalidSkill) throw new Error(`Plugin skill is invalid (${invalidSkill.code} at ${invalidSkill.source}).`);
+  for (const finding2 of pluginReport.findings) {
+    if (!["high", "critical"].includes(finding2.severity) || !finding2.code.startsWith("skill.")) continue;
+    const match = finding2.source.match(/(?:^|\/)skills\/([^/]+)\/SKILL\.md$/);
+    if (!match) continue;
+    invalidSkills.add(match[1]);
+    conflicts.push({ kind: "skill", name: match[1], reason: `Invalid skill (${finding2.code}); skipped this skill.`, sources: [finding2.source] });
+  }
   for (const file of skillFiles) {
     const relative = normalizePath(path8.relative(skillsRoot, file));
     const [skillName] = relative.split("/");
+    if (invalidSkills.has(skillName)) continue;
     await addAction(actions, conflicts, projectRoot, `.agents/skills/${skillName}/${relative.split("/").slice(1).join("/")}`, await readFile5(file), `skills/${relative}`);
   }
   const canonicalAgentRoot = path8.join(pluginRoot, "ai.agentplaybooks", "agents");

@@ -1,0 +1,62 @@
+name: Track release distribution
+
+on:
+  push:
+    tags: ["cli-v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  checklist:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - run: node scripts/check-release-distribution.mjs
+      - name: Open or reuse the versioned distribution checklist
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const manifest = require('./packages/cli/package.json');
+            const version = manifest.version;
+            if (context.eventName === 'push' && context.ref !== `refs/tags/cli-v${version}`) {
+              throw new Error(`Tag ${context.ref} does not match ${version}`);
+            }
+            const title = `Release distribution: ${version}`;
+            const { owner, repo } = context.repo;
+            const existing = await github.paginate(github.rest.issues.listForRepo, {
+              owner, repo, state: 'all', per_page: 100,
+            });
+            const issue = existing.find(item => !item.pull_request && item.title === title);
+            if (issue) {
+              core.info(`Checklist already exists: ${issue.html_url}`);
+              return;
+            }
+            const body = [
+              `Release checklist for \`cli-v${version}\`. Verify each live listing, not just the submitted metadata.`,
+              '',
+              '## Automatic package and catalog checks',
+              '- [ ] [npm @agentplaybooks/cli](https://www.npmjs.com/package/@agentplaybooks/cli): version, tarball contents, executable, provenance.',
+              '- [ ] [Official MCP Registry](https://registry.modelcontextprotocol.io): `ai.agentplaybooks/agentplaybooks` version and active/latest status. Requires separately held domain publisher key after website deployment.',
+              '- [ ] [Glama MCP](https://glama.ai/mcp/connectors/ai.agentplaybooks/agentplaybooks): refresh/indexing and endpoint health.',
+              '- [ ] Claude Code, Cursor, and Codex plugin manifests and marketplace entries: version, install, same logo as website.',
+              '- [ ] [Hermes plugin catalog](https://github.com/NousResearch/hermes-agent/tree/main/plugins): check both memory and portable-agent plugins, source pins, compatible Hermes release, and native memory setup.',
+              '- [ ] Agent Skills distributions: npm skill directory, public `/.well-known/skills/`, Skills MCP extension, and relevant client indexes.',
+              '',
+              '## Product, documentation, and outreach',
+              '- [ ] Deploy web and verify playbook “Export as Agent Plugin” for public/private playbooks, without secret values.',
+              '- [ ] Run `apb doctor` and round-trip export/import/sync on Claude, Cursor, Codex, and Hermes fixtures.',
+              '- [ ] Verify private hosted backup and restore separately from plugin export.',
+              '- [ ] Update README, website docs, changelog, blog, sitemap, and SEO copy where the release changes behavior.',
+              '- [ ] Review existing integration issues/PRs; post specific, non-promotional comments only where directly relevant and not already answered.',
+              '- [ ] Add new stores only after checking their current submission rules, permissions, and live verification.',
+              '',
+              'See [`public/docs/release-distribution.md`](https://github.com/matebenyovszky/agentplaybooks/blob/main/public/docs/release-distribution.md) for owners, evidence, and the detailed release procedure.',
+            ].join('\n');
+            const created = await github.rest.issues.create({ owner, repo, title, body });
+            core.info(`Created ${created.data.html_url}`);

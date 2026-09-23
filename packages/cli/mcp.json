@@ -1,0 +1,9 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "agentplaybooks-account": {
+      "type": "streamable-http",
+      "url": "https://agentplaybooks.ai/api/mcp/manage"
+    }
+  }
+}

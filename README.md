@@ -31,11 +31,16 @@ Your agent setup stays in sync across Claude, ChatGPT, Cursor, Codex, Gemini, lo
 
 **Getting it into your tools**
 
-- CLI + Claude Code plugin: audit your local agent config, then sync one playbook
+- CLI + portable Agent Plugin: audit your local agent config, then sync one playbook
   to Claude Code, Cursor, ChatGPT/Codex, Google Antigravity, Grok Bot and Hermes
+- Agent Plugins 1.0: install the project plugin or export a single playbook as
+  `plugin.json`, `mcp.json`, and complete Agent Skills directories. Compatible
+  MCP hosts can also discover hosted playbook skills through the MCP Skills extension.
+- Private, versioned central backups are separate from installable plugin exports;
+  packages contain no vault secret values.
 - Publishing: a public playbook's skills are served as plain markdown over HTTP
   at `/.well-known/skills/` — installable from a URL, no registry, no sign-up
-- Export formats: JSON, OpenAPI, MCP, Anthropic, Markdown
+- Export formats: Agent Plugin ZIP, JSON, OpenAPI, MCP, Anthropic, Markdown
 
 **Working with other people**
 
@@ -63,6 +68,7 @@ Your agent setup stays in sync across Claude, ChatGPT, Cursor, Codex, Gemini, lo
 
 - Website: https://agentplaybooks.ai — the canonical host; https://apbks.com is a short domain for links
 - Docs: https://agentplaybooks.ai/docs
+- [Release distribution checklist](https://agentplaybooks.ai/docs/release-distribution): npm, MCP registry, plugin stores, skill discovery, Hermes memory, and verification
 - GitHub: https://github.com/matebenyovszky/agentplaybooks
 
 ## Getting Started

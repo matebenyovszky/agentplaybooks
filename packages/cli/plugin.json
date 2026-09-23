@@ -1,0 +1,37 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "agentplaybooks",
+  "version": "0.5.0",
+  "description": "Portable agent configuration, skills, MCP tools, memory, and secret-backed workflows.",
+  "author": {
+    "name": "AgentPlaybooks",
+    "url": "https://agentplaybooks.ai"
+  },
+  "homepage": "https://agentplaybooks.ai",
+  "repository": "https://github.com/matebenyovszky/agentplaybooks",
+  "license": "MIT",
+  "keywords": ["agent-skills", "mcp", "playbooks", "portability"],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "AgentPlaybooks",
+        "shortDescription": "Portable agents, connected tools, and secret proxy",
+        "longDescription": "Audit and sync agent configuration, then manage playbooks, skills, memory, canvas, MCP/OpenAPI tools, workflows, and vault-backed API calls.",
+        "developerName": "AgentPlaybooks",
+        "category": "Productivity",
+        "capabilities": ["Interactive", "Write"],
+        "websiteURL": "https://agentplaybooks.ai",
+        "privacyPolicyURL": "https://agentplaybooks.ai/privacy",
+        "termsOfServiceURL": "https://agentplaybooks.ai/terms",
+        "defaultPrompt": [
+          "Audit and synchronize my agent configuration.",
+          "Show my playbooks and their connected tools.",
+          "Call an API with a vault secret without revealing it."
+        ],
+        "brandColor": "#7C3AED",
+        "logo": "./assets/icon.svg",
+        "composerIcon": "./assets/icon.svg"
+      }
+    }
+  }
+}
