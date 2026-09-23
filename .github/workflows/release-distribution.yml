@@ -45,7 +45,7 @@ jobs:
               '- [ ] [Official MCP Registry](https://registry.modelcontextprotocol.io): `ai.agentplaybooks/agentplaybooks` version and active/latest status. Requires separately held domain publisher key after website deployment.',
               '- [ ] [Glama MCP](https://glama.ai/mcp/connectors/ai.agentplaybooks/agentplaybooks): refresh/indexing and endpoint health.',
               '- [ ] Claude Code, Cursor, and Codex plugin manifests and marketplace entries: version, install, same logo as website.',
-              '- [ ] [Hermes plugin catalog](https://github.com/NousResearch/hermes-agent/tree/main/plugins): source pin and compatible Hermes release; test native memory setup.',
+              '- [ ] [Hermes plugin catalog](https://github.com/NousResearch/hermes-agent/tree/main/plugins): check both memory and portable-agent plugins, source pins, compatible Hermes release, and native memory setup.',
               '- [ ] Agent Skills distributions: npm skill directory, public `/.well-known/skills/`, Skills MCP extension, and relevant client indexes.',
               '',
               '## Product, documentation, and outreach',
