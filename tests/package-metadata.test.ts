@@ -24,17 +24,25 @@ function readJson(relativePath: string): Record<string, unknown> {
 
 const rootPackage = readJson("package.json");
 const cliPackage = readJson("packages/cli/package.json");
-const pluginManifest = readJson("packages/cli/.claude-plugin/plugin.json");
+const claudePlugin = readJson("packages/cli/.claude-plugin/plugin.json");
+const cursorPlugin = readJson("packages/cli/.cursor-plugin/plugin.json");
+const codexPlugin = readJson("packages/cli/.codex-plugin/plugin.json");
 const marketplace = readJson(".claude-plugin/marketplace.json") as {
   plugins: Array<{ name: string; version?: string; license?: string }>;
 };
+const cursorMarketplace = readJson(".cursor-plugin/marketplace.json") as {
+  plugins: Array<{ name: string; version?: string; license?: string }>;
+};
+const mcpRegistry = readJson("server.json");
 
 describe("package metadata", () => {
   it("declares the same licence everywhere a consumer can read one", () => {
     expect(rootPackage.license).toBe(LICENCE);
     expect(cliPackage.license).toBe(LICENCE);
-    expect(pluginManifest.license).toBe(LICENCE);
-    for (const plugin of marketplace.plugins) {
+    expect(claudePlugin.license).toBe(LICENCE);
+    expect(cursorPlugin.license).toBe(LICENCE);
+    expect(codexPlugin.license).toBe(LICENCE);
+    for (const plugin of [...marketplace.plugins, ...cursorMarketplace.plugins]) {
       expect(plugin.license, `marketplace plugin '${plugin.name}'`).toBe(LICENCE);
     }
   });
@@ -49,13 +57,20 @@ describe("package metadata", () => {
     expect(cliPackage.files).toContain("LICENSE");
   });
 
-  it("advertises one CLI version, not three", () => {
+  it("advertises one CLI/plugin/MCP identity version", () => {
     const version = cliPackage.version;
     expect(typeof version).toBe("string");
-    expect(pluginManifest.version).toBe(version);
+    expect(claudePlugin.version).toBe(version);
+    expect(cursorPlugin.version).toBe(version);
+    expect(codexPlugin.version).toBe(version);
+    expect(mcpRegistry.version).toBe(version);
 
     const listed = marketplace.plugins.find((plugin) => plugin.name === "agentplaybooks");
     expect(listed, "the marketplace must list the agentplaybooks plugin").toBeDefined();
     expect(listed?.version).toBe(version);
+
+    const cursorListed = cursorMarketplace.plugins.find((plugin) => plugin.name === "agentplaybooks");
+    expect(cursorListed, "the Cursor marketplace must list the agentplaybooks plugin").toBeDefined();
+    expect(cursorListed?.version).toBe(version);
   });
 });

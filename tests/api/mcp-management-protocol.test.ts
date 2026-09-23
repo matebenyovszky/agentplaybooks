@@ -86,6 +86,10 @@ describe("AgentPlaybooks management MCP transport", () => {
     const manifest = await response.json();
 
     expect(response.status).toBe(200);
+    expect(manifest.serverInfo).toMatchObject({
+      name: "agentplaybooks-management",
+      version: "0.4.0",
+    });
     expect(manifest._auth).toMatchObject({ type: "oauth2", actor: "oauth" });
   });
 
@@ -104,6 +108,7 @@ describe("AgentPlaybooks management MCP transport", () => {
     expect(response.status).toBe(200);
     expect(payload.result.protocolVersion).toBe("2025-11-25");
     expect(payload.result.serverInfo.name).toBe("agentplaybooks-management");
+    expect(payload.result.serverInfo.version).toBe("0.4.0");
   });
 
   it("accepts the initialized notification without a JSON-RPC body", async () => {

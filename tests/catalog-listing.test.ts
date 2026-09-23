@@ -92,11 +92,18 @@ describe("Cursor plugin catalog manifests", () => {
       skills: string;
       commands: string;
     };
+    const codex = JSON.parse(source("packages/cli/.codex-plugin/plugin.json")) as {
+      name: string;
+      version: string;
+      license: string;
+    };
 
     expect(cursor.name).toBe("agentplaybooks");
     expect(cursor.name).toBe(claude.name);
     expect(cursor.version).toBe("0.4.0");
     expect(cursor.version).toBe(claude.version);
+    expect(codex.version).toBe(claude.version);
+    expect(codex.license).toBe("MIT");
     expect(cursor.license).toBe("MIT");
     expect(cursor.description).toBe(claude.description);
     expect(cursor.skills).toBe("./skills");

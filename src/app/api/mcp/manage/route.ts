@@ -106,7 +106,7 @@ app.get("/", async (c) => {
     serverInfo: {
       name: "agentplaybooks-management",
       title: "AgentPlaybooks Management",
-      version: "0.3.0",
+      version: "0.4.0",
       description: "Vendor-neutral control plane for portable agents: manage playbooks, skills, memory, canvas, connected MCP/OpenAPI tools, workflows, and encrypted secrets.",
     },
     capabilities: {
@@ -167,7 +167,7 @@ app.post("/", async (c) => {
           serverInfo: {
             name: "agentplaybooks-management",
             title: "AgentPlaybooks Management",
-            version: "0.3.0",
+            version: "0.4.0",
           },
           capabilities: { tools: {} },
           instructions: "Manage the authenticated user's portable agents. Playbook tools require playbook_id. Use list_secrets then use_secret or use_secret_write for server-side credential injection without revealing secret values.",

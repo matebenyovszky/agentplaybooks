@@ -17,7 +17,7 @@ test("Codex plugin uses OAuth discovery for the account MCP", async () => {
   ]);
   const account = manifest.mcpServers["agentplaybooks-account"];
 
-  assert.match(manifest.version, new RegExp(`^${packageJson.version.replaceAll(".", "\\.")}\\+codex\\.`));
+  assert.equal(manifest.version, packageJson.version);
   assert.equal(account.url, "https://agentplaybooks.ai/api/mcp/manage");
   assert.equal(account.bearer_token_env_var, undefined);
   assert.equal(account.headers, undefined);
