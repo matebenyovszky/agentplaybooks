@@ -1,8 +1,12 @@
 # Hermes Memory Provider
 
+![AgentPlaybooks Hermes Memory plugin card](/plugin-catalog/hermes-memory.png)
+
 AgentPlaybooks can be selected as a native memory provider in Hermes Agent. It
 stores durable facts in a private playbook, makes them available across sessions,
 and lets you inspect, correct, archive, or delete them in AgentPlaybooks.
+For portable instructions, skills, and Hermes profiles, see the separate
+[Portable Agents plugin](./hermes-portable-agents.md).
 
 ## Install and configure
 
