@@ -125,6 +125,50 @@ test("Agent Plugins import rejects non-1.0 manifests", async () => {
   await assert.rejects(() => planPluginImport(plugin, target), /Agent Plugins 1\.0/);
 });
 
+test("Agent Plugins import tolerates unknown manifest fields and a non-object extensions field", async () => {
+  const plugin = await fixture();
+  const target = await fixture();
+  await put(plugin, "plugin.json", JSON.stringify({ $schema: PLUGIN_SCHEMA, name: "portable", unknownFutureField: true, extensions: "invalid" }));
+  await put(plugin, "skills/release/SKILL.md", SKILL);
+  const plan = await planPluginImport(plugin, target);
+  assert.equal(plan.actions.some((action) => action.path === ".agents/skills/release/SKILL.md"), true);
+  assert.deepEqual(plan.conflicts.filter((item) => item.kind === "manifest").map((item) => item.name), ["unknownFutureField", "extensions"]);
+  await applyPluginPlan(plan);
+  assert.equal(await readFile(path.join(target, ".agents/skills/release/SKILL.md"), "utf8"), SKILL);
+});
+
+test("Agent Plugins import skips a malformed MCP entry without losing good servers or skills", async () => {
+  const plugin = await fixture();
+  const target = await fixture();
+  await put(plugin, "plugin.json", JSON.stringify({ $schema: PLUGIN_SCHEMA, name: "portable" }));
+  await put(plugin, "skills/release/SKILL.md", SKILL);
+  await put(plugin, "mcp.json", JSON.stringify({
+    $schema: MCP_SCHEMA,
+    mcpServers: {
+      docs: { type: "streamable-http", url: "https://example.com/mcp" },
+      broken: { type: "streamable-http", url: "not-a-url" },
+    },
+  }));
+  const plan = await planPluginImport(plugin, target);
+  assert.equal(plan.conflicts.some((item) => item.kind === "mcp" && item.name === "broken"), true);
+  await applyPluginPlan(plan);
+  const imported = JSON.parse(await readFile(path.join(target, ".agents/mcp.json"), "utf8"));
+  assert.deepEqual(Object.keys(imported.mcpServers), ["docs"]);
+  assert.equal(await readFile(path.join(target, ".agents/skills/release/SKILL.md"), "utf8"), SKILL);
+});
+
+test("Agent Plugins import skips one invalid skill without losing its siblings", async () => {
+  const plugin = await fixture();
+  const target = await fixture();
+  await put(plugin, "plugin.json", JSON.stringify({ $schema: PLUGIN_SCHEMA, name: "portable" }));
+  await put(plugin, "skills/release/SKILL.md", SKILL);
+  await put(plugin, "skills/broken/SKILL.md", "# Missing frontmatter\n");
+  const plan = await planPluginImport(plugin, target);
+  assert.equal(plan.conflicts.some((item) => item.kind === "skill" && item.name === "broken"), true);
+  assert.equal(plan.actions.some((item) => item.path === ".agents/skills/release/SKILL.md"), true);
+  assert.equal(plan.actions.some((item) => item.path === ".agents/skills/broken/SKILL.md"), false);
+});
+
 test("Agent Plugins export refuses credential-bearing skill resources", async () => {
   const source = await fixture();
   const output = path.join(await fixture(), "plugin");

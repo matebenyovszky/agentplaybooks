@@ -58,6 +58,7 @@ import { composePlaybookSystemPrompt } from "@/lib/playbook-prompt";
 import { validateAgentSkillDescription, validateAgentSkillName } from "@/lib/agent-skills";
 import { searchMemories } from "@/app/api/_shared/memory";
 import { memoryWriteFields } from "@/lib/memory";
+import { serveSkill, skillResourceUri, type ServedSkill } from "@/lib/mcp/skill-extension";
 
 type PersonaSource = Pick<Playbook, "id" | "persona_name" | "persona_system_prompt" | "persona_metadata" | "instructions">;
 
@@ -111,6 +112,28 @@ async function federatedResources(servers: MCPServer[], playbookId: string, requ
     listFederatedResources([server], await federationOptions(server, playbookId, requestId)),
   ));
   return groups.flat();
+}
+
+async function servedSkills(playbookId: string, namespace: string, onlyName?: string): Promise<ServedSkill[]> {
+  const database = getServiceSupabase();
+  let query = database.from("skills")
+    .select("id, name, description, content, licence")
+    .eq("playbook_id", playbookId);
+  if (onlyName) query = query.eq("name", onlyName);
+  const { data: skills, error } = await query.order("name");
+  if (error) throw error;
+  if (!skills?.length) return [];
+  const { data: attachments, error: attachmentError } = await database.from("skill_attachments")
+    .select("skill_id, filename, content")
+    .in("skill_id", skills.map(skill => skill.id))
+    .order("filename");
+  if (attachmentError) throw attachmentError;
+  const result = await Promise.all(skills.map(skill => serveSkill(
+    namespace,
+    skill,
+    (attachments || []).filter(attachment => attachment.skill_id === skill.id),
+  )));
+  return result.filter((skill): skill is ServedSkill => skill !== null);
 }
 
 function serverForFederatedTool(servers: MCPServer[], toolName: string) {
@@ -461,7 +484,14 @@ app.post("/", async (c) => {
         id,
         result: discoverResult(
           { name: playbook.name ?? "AgentPlaybooks playbook", version: "1.0.0" },
-          { instructions: playbook.description ?? undefined },
+          {
+            instructions: playbook.description ?? undefined,
+            capabilities: {
+              tools: {},
+              resources: {},
+              extensions: { "io.modelcontextprotocol/skills": {} },
+            },
+          },
         ),
       });
 
@@ -496,6 +526,37 @@ app.post("/", async (c) => {
             ...PLAYBOOK_TOOLS.filter((tool) => toolsetView.includes(tool.name, false)),
             ...tools.filter((tool) => toolsetView.includes(tool.name, true)),
           ],
+        },
+      });
+    }
+
+    case "skills/list": {
+      const skills = await servedSkills(playbook.id, guid);
+      return c.json({
+        jsonrpc: "2.0", id,
+        result: {
+          resultType: "complete",
+          skills: skills.map(skill => skill.entry),
+          ttlMs: 0,
+          cacheScope: privateRowExists ? "private" : "public",
+        },
+      });
+    }
+
+    case "skills/get": {
+      const location = skillResourceUri(guid, rpcParams?.uri);
+      const skills = location?.path === "SKILL.md"
+        ? await servedSkills(playbook.id, guid, location.name)
+        : [];
+      const skill = skills.find(item => item.entry.uri === rpcParams?.uri);
+      if (!skill) return c.json({ jsonrpc: "2.0", id, error: { code: -32602, message: "Skill not found" } });
+      return c.json({
+        jsonrpc: "2.0", id,
+        result: {
+          resultType: "complete",
+          skill: skill.entry,
+          ttlMs: 0,
+          cacheScope: privateRowExists ? "private" : "public",
         },
       });
     }
@@ -575,6 +636,22 @@ app.post("/", async (c) => {
     case "resources/read": {
       const uri = rpcParams?.uri as string;
       const serviceSupabase = getServiceSupabase();
+
+      const skillLocation = skillResourceUri(guid, uri);
+      if (skillLocation) {
+        const skills = await servedSkills(playbook.id, guid, skillLocation.name);
+        const file = skills.flatMap(skill => skill.files).find(candidate => candidate.uri === uri);
+        if (!file) return c.json({ jsonrpc: "2.0", id, error: { code: -32602, message: "Skill resource not found" } });
+        return c.json({
+          jsonrpc: "2.0", id,
+          result: {
+            resultType: "complete",
+            contents: [{ uri, mimeType: "text/plain", text: file.content }],
+            ttlMs: 0,
+            cacheScope: privateRowExists ? "private" : "public",
+          },
+        });
+      }
 
       const federated = parseFederatedResourceUri(uri || "");
       if (federated) {

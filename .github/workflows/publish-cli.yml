@@ -38,6 +38,9 @@ jobs:
         working-directory: packages/cli
     steps:
       - uses: actions/checkout@v5
+      - name: Check release manifests and logo
+        run: node scripts/check-release-distribution.mjs
+        working-directory: .
       - uses: actions/setup-node@v5
         with:
           node-version: 24

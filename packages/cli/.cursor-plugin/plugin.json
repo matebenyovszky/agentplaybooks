@@ -1,7 +1,7 @@
 {
   "name": "agentplaybooks",
   "description": "Portable, vendor-neutral agents: sync configuration and manage skills, tools, memory, canvas, and secrets.",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "author": {
     "name": "AgentPlaybooks",
     "url": "https://agentplaybooks.ai"
@@ -9,6 +9,7 @@
   "homepage": "https://agentplaybooks.ai",
   "repository": "https://github.com/matebenyovszky/agentplaybooks",
   "license": "MIT",
+  "logo": "assets/icon.svg",
   "keywords": ["playbooks", "skills", "mcp", "audit", "sync", "portability"],
   "skills": "./skills",
   "commands": "./commands"

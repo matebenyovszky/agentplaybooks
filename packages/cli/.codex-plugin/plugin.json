@@ -1,7 +1,7 @@
 {
   "name": "agentplaybooks",
   "description": "Portable, vendor-neutral agents: sync configuration and manage skills, tools, memory, canvas, and secrets.",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "author": {
     "name": "AgentPlaybooks",
     "url": "https://agentplaybooks.ai"
@@ -42,6 +42,8 @@
       "Show my playbooks and their connected tools.",
       "Call an API with a vault secret without revealing it."
     ],
-    "brandColor": "#7C3AED"
+    "brandColor": "#7C3AED",
+    "logo": "./assets/icon.svg",
+    "composerIcon": "./assets/icon.svg"
   }
 }

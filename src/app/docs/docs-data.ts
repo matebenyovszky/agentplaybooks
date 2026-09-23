@@ -45,6 +45,12 @@ export const docsEntries: DocEntry[] = [
     section: "guides",
   },
   {
+    slug: "release-distribution",
+    title: "Release Distribution",
+    description: "MCP registry, plugin stores, skill discovery, Hermes memory, npm, and release checks",
+    section: "guides",
+  },
+  {
     slug: "obsidian",
     title: "Obsidian and AgentPlaybooks",
     description: "Where they overlap, what each is better at, and how to use both",
