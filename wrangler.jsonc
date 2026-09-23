@@ -11,6 +11,8 @@
   // nodejs_compat is required by the adapter. global_fetch_strictly_public is
   // documented alongside it and is what lets the app fetch its own URLs.
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  // Let Cloudflare optimize backend-heavy MCP and API requests automatically.
+  "placement": { "mode": "smart" },
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
