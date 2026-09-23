@@ -39,6 +39,8 @@ jobs:
             exit 1
           fi
       - run: npm ci
+      - name: Generate blog index for tests
+        run: npm run prebuild
       - name: Test before deployment
         run: npm run test:all
       - name: Prepare production migration history
