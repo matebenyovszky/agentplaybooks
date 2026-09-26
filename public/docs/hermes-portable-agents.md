@@ -20,7 +20,7 @@ The Hermes catalog package is named `agentplaybooks-tools`:
 ```bash
 hermes plugins install agentplaybooks-tools --no-enable
 hermes plugins enable agentplaybooks-tools
-npm install -g @agentplaybooks/cli@0.5.0
+npm install -g @agentplaybooks/cli@0.6.0
 apb --version
 ```
 
