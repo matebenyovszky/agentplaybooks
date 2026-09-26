@@ -20,7 +20,7 @@
       },
       "homepage": "https://agentplaybooks.ai",
       "license": "MIT",
-      "logo": "packages/cli/assets/icon.svg",
+      "logo": "packages/cli/assets/agentplaybooks-mark.svg",
       "category": "productivity",
       "keywords": ["playbooks", "skills", "mcp", "audit", "sync", "portability"]
     }
