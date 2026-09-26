@@ -25,7 +25,7 @@ hermes memory setup
 hermes memory status
 ```
 
-Select **agentplaybooks** in the setup wizard and enter the private playbook GUID,
+Select **agentplaybooks-memory** in the setup wizard and enter the private playbook GUID,
 API key, and service URL (default `https://agentplaybooks.ai`). Hermes Desktop
 also exposes the provider's native memory settings. Configuration lives in
 `$HERMES_HOME/agentplaybooks/config.json`; the key belongs in Hermes's profile

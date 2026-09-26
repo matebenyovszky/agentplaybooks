@@ -11138,6 +11138,8 @@ import { createHash as createHash3 } from "node:crypto";
 import path12 from "node:path";
 import { fileURLToPath } from "node:url";
 var GUID = /^(?:[a-f\d]{8,}|[a-f\d]{8}(?:-[a-f\d]{4}){3}-[a-f\d]{12})$/i;
+var PROVIDER = "agentplaybooks-memory";
+var LEGACY_PROVIDER = "agentplaybooks";
 var PLUGIN_FILES = ["__init__.py", "client.py", "config_schema.py", "plugin.yaml", "README.md", "LICENSE"];
 var digest2 = (value) => value === null ? null : createHash3("sha256").update(value).digest("hex");
 async function readOptional(filename) {
@@ -11181,13 +11183,13 @@ async function planHermesMemory(options = {}) {
   const memory = yaml.get("memory", true);
   if (memory !== void 0 && !(0, import_yaml6.isMap)(memory)) throw new Error("Hermes memory configuration must be a mapping.");
   const selected = yaml.getIn(["memory", "provider"]);
-  if (selected && !["agentplaybooks", "builtin", "built-in", "none", "default"].includes(selected)) {
+  if (selected && ![PROVIDER, LEGACY_PROVIDER, "builtin", "built-in", "none", "default"].includes(selected)) {
     conflict2("memory.provider", `The profile uses '${selected}'. Select AgentPlaybooks explicitly with 'hermes memory setup' before rerunning.`);
   }
   const disabled = yaml.getIn(["plugins", "disabled"]);
-  if (disabled?.toJSON?.()?.includes("agentplaybooks")) conflict2("plugins.disabled", "AgentPlaybooks is disabled; enable it in Hermes before setup.");
-  if (selected !== "agentplaybooks") {
-    yaml.setIn(["memory", "provider"], "agentplaybooks");
+  if (disabled?.toJSON?.()?.includes(PROVIDER)) conflict2("plugins.disabled", "AgentPlaybooks Memory is disabled; enable it in Hermes before setup.");
+  if (selected !== PROVIDER) {
+    yaml.setIn(["memory", "provider"], PROVIDER);
     add("config.yaml", oldYaml, String(yaml));
   }
   const settingsName = "agentplaybooks/config.json";
@@ -11204,7 +11206,7 @@ async function planHermesMemory(options = {}) {
   const source = fileURLToPath(new URL("../../hermes-memory/agentplaybooks/", import.meta.url));
   const pluginDirectory = options.pluginDirectory ?? (await readOptional(path12.join(bundled, "plugin.yaml")) !== null ? bundled : source);
   for (const name of PLUGIN_FILES) {
-    const relative = `plugins/agentplaybooks/${name}`;
+    const relative = `plugins/${PROVIDER}/${name}`;
     const content = await readFile9(path12.join(pluginDirectory, name), "utf8");
     const old = await readOptional(path12.join(profile.directory, relative));
     if (old !== null && old !== content) conflict2(relative, "An installed plugin file differs; update through Hermes or reconcile it explicitly.");

@@ -1,5 +1,5 @@
 name: agentplaybooks-memory
-version: 0.1.0
+version: 0.2.0
 description: "AgentPlaybooks memory for Hermes: recall, explicit memory writes, archive and history in a private playbook."
 author: Mate Benyovszky
 kind: exclusive

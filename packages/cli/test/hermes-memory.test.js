@@ -13,7 +13,7 @@ async function fixture() {
 
 test("installs a profile-scoped provider, preserves unrelated YAML, and becomes idempotent", async () => {
   const options = await fixture();
-  await writeFile(path.join(options.hermesHome, "config.yaml"), "# keep my comment\nmodel: example\nmemory:\n  memory_enabled: true\n");
+  await writeFile(path.join(options.hermesHome, "config.yaml"), "# keep my comment\nmodel: example\nmemory:\n  provider: agentplaybooks\n  memory_enabled: true\n");
   const plan = await planHermesMemory(options);
   assert.equal(plan.conflicts.length, 0);
   assert.ok(!JSON.stringify(plan).includes("secret-do-not-copy"));
@@ -22,8 +22,8 @@ test("installs a profile-scoped provider, preserves unrelated YAML, and becomes 
   assert.match(yaml, /# keep my comment/);
   assert.match(yaml, /model: example/);
   assert.match(yaml, /memory_enabled: true/);
-  assert.match(yaml, /provider: agentplaybooks/);
-  assert.match(await readFile(path.join(options.hermesHome, "plugins/agentplaybooks/__init__.py"), "utf8"), /register_memory_provider/);
+  assert.match(yaml, /provider: agentplaybooks-memory/);
+  assert.match(await readFile(path.join(options.hermesHome, "plugins/agentplaybooks-memory/__init__.py"), "utf8"), /register_memory_provider/);
   assert.equal((await planHermesMemory(options)).changed, false);
 });
 
@@ -42,9 +42,9 @@ test("does not overwrite a different playbook, disabled plugin, or changed sourc
   const options = await fixture();
   await applyHermesMemory(await planHermesMemory(options));
   assert.ok((await planHermesMemory({ ...options, playbook: "abcdef0123456789" })).conflicts.length);
-  await writeFile(path.join(options.hermesHome, "plugins/agentplaybooks/client.py"), "# user edit\n");
+  await writeFile(path.join(options.hermesHome, "plugins/agentplaybooks-memory/client.py"), "# user edit\n");
   assert.ok((await planHermesMemory(options)).conflicts.some(x => x.name.endsWith("client.py")));
-  await writeFile(path.join(options.hermesHome, "config.yaml"), "plugins:\n  disabled: [agentplaybooks]\n");
+  await writeFile(path.join(options.hermesHome, "config.yaml"), "plugins:\n  disabled: [agentplaybooks-memory]\n");
   assert.ok((await planHermesMemory(options)).conflicts.some(x => x.name === "plugins.disabled"));
 });
 

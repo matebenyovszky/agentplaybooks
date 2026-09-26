@@ -35,5 +35,5 @@ jobs:
         run: |
           python -m unittest discover -s packages/hermes-memory/tests -v
           python packages/hermes-memory/tests/verify_hermes.py
-          python -c "from importlib.metadata import entry_points; assert any(ep.name == 'agentplaybooks' for ep in entry_points(group='hermes_agent.memory_providers'))"
+          python -c "from importlib.metadata import entry_points; assert any(ep.name == 'agentplaybooks-memory' for ep in entry_points(group='hermes_agent.memory_providers'))"
           hermes plugins validate packages/hermes-memory/agentplaybooks
