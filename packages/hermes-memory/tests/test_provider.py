@@ -195,7 +195,7 @@ class ProviderTests(unittest.TestCase):
         register(types.SimpleNamespace(register_memory_provider=collected.append))
         self.assertTrue(collected[0].is_available())
         self.assertFalse(self.service.calls)
-        self.assertEqual(collected[0].name, "agentplaybooks")
+        self.assertEqual(collected[0].name, "agentplaybooks-memory")
 
     def test_setup_saves_no_credentials_and_accepts_native_schema(self):
         p = AgentPlaybooksMemoryProvider()

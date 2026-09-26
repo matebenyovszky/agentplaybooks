@@ -21,7 +21,7 @@ hermes memory setup
 hermes memory status
 ```
 
-Select **agentplaybooks** in the Hermes setup wizard. Create a **private** playbook
+Select **agentplaybooks-memory** in the Hermes setup wizard. Create a **private** playbook
 and a playbook-scoped key with `memory:read` and `memory:write` in its Integrations
 tab. Supply the key through Hermes's secret setup or the profile-scoped
 `AGENTPLAYBOOKS_MEMORY_API_KEY` environment variable. The AgentPlaybooks CLI never

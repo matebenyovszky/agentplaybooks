@@ -27,7 +27,7 @@ hermes memory setup
 hermes memory status
 ```
 
-A beállítóban válaszd az **agentplaybooks** providert, és add meg a privát
+A beállítóban válaszd az **agentplaybooks-memory** providert, és add meg a privát
 playbook GUID-ját, kulcsát és a szolgáltatás címét (alapértelmezetten
 `https://agentplaybooks.ai`). A Hermes Desktopban is vannak natív beállítási
 mezők. A konfiguráció a `$HERMES_HOME/agentplaybooks/config.json` fájlba kerül;

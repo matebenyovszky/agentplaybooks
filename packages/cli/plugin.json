@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "agentplaybooks",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Portable agent configuration, skills, MCP tools, memory, and secret-backed workflows.",
   "author": {
     "name": "AgentPlaybooks",

@@ -57,7 +57,7 @@ class AgentPlaybooksMemoryProvider(MemoryProvider):
 
     @property
     def name(self):
-        return "agentplaybooks"
+        return "agentplaybooks-memory"
 
     def is_available(self):
         try:
@@ -68,7 +68,7 @@ class AgentPlaybooksMemoryProvider(MemoryProvider):
         return bool(get_secret(KEY_ENV, ""))
 
     def unavailable_reason(self):
-        return "Run hermes memory setup and select agentplaybooks; configure a private playbook GUID and its memory API key."
+        return "Run hermes memory setup and select agentplaybooks-memory; configure a private playbook GUID and its memory API key."
 
     def get_config_schema(self):
         return [
@@ -114,8 +114,8 @@ class AgentPlaybooksMemoryProvider(MemoryProvider):
 
     def identity_signature(self):
         config = load_config()
-        return {"agentplaybooks.base_url": config["base_url"], "agentplaybooks.playbook_guid": config["playbook_guid"],
-                "agentplaybooks.shared_playbooks": config.get("shared_playbooks", "")}
+        return {"agentplaybooks-memory.base_url": config["base_url"], "agentplaybooks-memory.playbook_guid": config["playbook_guid"],
+                "agentplaybooks-memory.shared_playbooks": config.get("shared_playbooks", "")}
 
     def system_prompt_block(self):
         return ("AgentPlaybooks supplies persistent memory. Use apb_memory_search/read for prior facts and "

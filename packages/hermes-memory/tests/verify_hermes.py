@@ -59,21 +59,21 @@ set_multiplex_active(True)
 try:
     for index, guid in enumerate((A, B, A)):
         home = Path(scratch.name) / guid
-        destination = home / "plugins" / "agentplaybooks"
+        destination = home / "plugins" / "agentplaybooks-memory"
         if not destination.exists():
             shutil.copytree(PACKAGE / "agentplaybooks", destination,
                             ignore=shutil.ignore_patterns("__pycache__"))
-            (home / "config.yaml").write_text("memory:\n  provider: agentplaybooks\n")
+            (home / "config.yaml").write_text("memory:\n  provider: agentplaybooks-memory\n")
             (home / "agentplaybooks").mkdir()
             (home / "agentplaybooks" / "config.json").write_text(json.dumps({
                 "playbook_guid": guid, "base_url": f"http://127.0.0.1:{server.server_port}"}))
         home_token = set_hermes_home_override(home)
         secret_token = set_secret_scope({"AGENTPLAYBOOKS_MEMORY_API_KEY": f"key-{guid}"})
         try:
-            assert "agentplaybooks" in list_memory_provider_names()
-            panel = get_provider_config_schema("agentplaybooks")
-            assert panel and panel.name == "agentplaybooks"
-            provider = load_memory_provider("agentplaybooks")
+            assert "agentplaybooks-memory" in list_memory_provider_names()
+            panel = get_provider_config_schema("agentplaybooks-memory")
+            assert panel and panel.name == "agentplaybooks-memory"
+            provider = load_memory_provider("agentplaybooks-memory")
             assert provider is not None and provider.is_available()
             manager = MemoryManager()
             manager.add_provider(provider)
