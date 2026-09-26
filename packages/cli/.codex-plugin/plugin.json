@@ -45,8 +45,6 @@
       "Show my playbooks and their connected tools.",
       "Call an API with a vault secret without revealing it."
     ],
-    "brandColor": "#7C3AED",
-    "logo": "./assets/icon.svg",
-    "composerIcon": "./assets/icon.svg"
+    "brandColor": "#7C3AED"
   }
 }
