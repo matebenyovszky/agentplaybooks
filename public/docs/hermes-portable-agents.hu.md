@@ -1,65 +1,72 @@
-# Portolható agentek a Hermesben
+# AgentPlaybooks Tools a Hermeshez
 
-![AgentPlaybooks Portable Agents pluginkép](/plugin-catalog/portable-agents.png)
+![AgentPlaybooks Tools a Hermeshez](/plugin-catalog/hermes-tools.png)
 
-Az AgentPlaybooks segítségével a Hermes-agent ellenőrizheti,
-szinkronizálhatja, csomagolhatja és visszaállíthatja a konfigurációját.
-Az **AgentPlaybooks Portable Agents** Hermes-plugin ehhez ad egy skillt,
-amely a kiadott `apb` CLI-t használja. A plugin különálló a
-[natív memóriaszolgáltatótól](./hermes-memory.md).
+Az **AgentPlaybooks Tools** plugin segít, hogy a Hermes használni tudja a
+playbookok skilljeit és eszközeit. Végigvezet a hosztolt MCP-eszközök – köztük
+a föderált MCP- és OpenAPI-szolgáltatások – csatlakoztatásán, a hitelesítés
+beállításán és a privát skillek kiválasztott Hermes-profilba szinkronizálásán.
+A különálló [AgentPlaybooks Memory](./hermes-memory.md) plugint egészíti ki.
 
-A hordozhatósági plugin kérésre működik. Telepítéskor nem indít háttérben
-ütemezett automatizmust, nem ad új modell-eszközt, és nem írja át a Hermes
-profilját. A katalógusban **Tools** kategóriába illik, mert a CLI
-konfigurációkezelő eszközeinek használatát segíti.
+A plugin egy skillt telepít, nem háttérszolgáltatást. A külön telepített `apb`
+CLI-vel készít előnézetet és alkalmaz ellenőrzött módosításokat a kiválasztott
+Hermes-profilban. A hozzáférési adatokat a profil titoktárolójában vagy az
+AgentPlaybooks vaultban kell megadni; a plugin soha nem kéri, hogy chatben
+küldd el a titkot.
 
 ## Telepítés
 
-Az új Hermes-katalógusbejegyzés karbantartói ellenőrzésre vár. Addig a repó
-megfelelő alkönyvtárából telepítheted:
+A Hermes-katalógus csomagneve `agentplaybooks-tools`:
 
 ```bash
-hermes plugins install matebenyovszky/agentplaybooks/packages/hermes-portable/agentplaybooks-portable --no-enable
-hermes plugins enable agentplaybooks-portable
-npm install -g @agentplaybooks/cli@0.4.0
+hermes plugins install agentplaybooks-tools --no-enable
+hermes plugins enable agentplaybooks-tools
+npm install -g @agentplaybooks/cli@0.5.0
 apb --version
 ```
 
-Node.js 20 vagy újabb szükséges. Aktiválás után a Hermes az
-`agentplaybooks-portable` skillt a `skills_list` és `skill_view` eszközökön
-keresztül éri el. Az npm CLI külön előfeltétel, amelyet a kezelő telepít.
-Helyi ellenőrzéshez és szinkronizáláshoz nem kell távoli fiók; a központi
-playbookok letöltéséhez és feltöltéséhez `apb login` szükséges.
+A CLI-hez Node.js 20 vagy újabb kell. Távoli Hermes gateway esetén a Node.js-nek
+és az `apb` parancsnak is a gateway gépen vagy konténerben kell elérhetőnek
+lennie. A távoli profilba telepített skill nem telepíti a CLI-t sem a Macedre,
+sem a gatewayre.
 
-Ha a katalógusbejegyzést elfogadták és közzétették, az első parancs helyén
-`hermes plugins install agentplaybooks-portable` használható.
+## Playbook-eszközök csatlakoztatása
 
-## Használat
-
-Egy projekt könyvtárából:
+Hitelesítsd a CLI-t, majd nézd át a playbookhoz kötött csatlakoztatási tervet:
 
 ```bash
-apb doctor .                          # konfiguráció és eltérések ellenőrzése
-apb sync . --target=hermes            # Hermes-profil változásainak előnézete
-apb sync . --target=hermes --apply    # az átnézett terv alkalmazása
+apb login
+apb connect <playbook-guid> --target=hermes
 ```
 
-Ha központi playbookból Hermes Bot Mode profilt készítesz, először futtasd
-az `apb login` parancsot, majd nézd át és alkalmazd a letöltési és exportálási
-tervet:
+A terv megmutatja a szükséges, playbookhoz kötött API-kulcs környezeti
+változójának nevét. Add hozzá ezt a titkot a kiválasztott Hermes-profilhoz,
+majd alkalmazd a csatlakoztatást:
 
 ```bash
-apb pull <guid> .
-apb pull <guid> . --apply
-apb export hermes ./bots/research
-apb export hermes ./bots/research --apply
-hermes profile install ./bots/research --name research
-apb sync --target=hermes --profile=research --apply
+apb connect <playbook-guid> --target=hermes --apply
 ```
 
-A CLI szabványos Agent Plugins 1.0 skillfákat, egyéni agenteket és
-MCP-hivatkozásokat is csomagolhat az
-`apb plugin export . --output=<dir>` paranccsal. A titkok értékei helyben
-maradnak. A tervet készítő parancsok csak olvasnak; az `--apply` az átnézett
-terv alapján ír. Részletek a [CLI-útmutatóban](./cli.md) és a
-[Bot Mode telepítési útmutatóban](./bot-platform-integrations.md).
+A kapcsolat elérhetővé teszi a playbook hosztolt MCP-eszközeit, köztük a
+beállított föderált MCP- és OpenAPI-szolgáltatásokat. A külső szolgáltatások
+kulcsai az AgentPlaybooks vaultban maradnak; a Hermes konfigurációjába nem
+másolódnak át.
+
+## Privát skillek hozzáadása
+
+Töltsd le az átnézett skillfájlokat a projektbe, majd szinkronizáld őket a
+Hermesbe:
+
+```bash
+apb pull <playbook-guid> .
+apb pull <playbook-guid> . --apply
+apb sync . --target=hermes
+apb sync . --target=hermes --apply
+```
+
+Az `--apply` nélküli parancsok előnézetet készítenek. Alkalmazás előtt nézd át
+a tervet. Nyilvános skillek közvetlenül a playbook
+`/.well-known/skills/` címéről is telepíthetők.
+
+Részletekért lásd a [CLI-útmutatót](./cli.md) és a
+[Hermes Memory útmutatót](./hermes-memory.md).

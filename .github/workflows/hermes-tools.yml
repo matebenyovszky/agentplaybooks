@@ -1,4 +1,4 @@
-name: Hermes portable agent plugin
+name: Hermes skills and tools plugin
 
 on:
   pull_request:
@@ -27,19 +27,19 @@ jobs:
       - run: pip install -e .tmp/hermes-upstream
       - name: Validate package and discover bundled Hermes skill
         env:
-          HERMES_HOME: ${{ runner.temp }}/hermes-portable-validation
+          HERMES_HOME: ${{ runner.temp }}/hermes-tools-validation
           PYTHONPATH: ${{ github.workspace }}/.tmp/hermes-upstream
         run: |
-          python -m hermes_cli.main plugins validate packages/hermes-portable/agentplaybooks-portable
+          python -m hermes_cli.main plugins validate packages/hermes-portable/agentplaybooks-tools
           python - <<'PY'
           from pathlib import Path
           from tempfile import TemporaryDirectory
           from hermes_cli.agent_plugins import load_agent_plugin
 
-          root = Path("packages/hermes-portable/agentplaybooks-portable").resolve()
+          root = Path("packages/hermes-portable/agentplaybooks-tools").resolve()
           with TemporaryDirectory() as data:
               package = load_agent_plugin(root, Path(data))
-              assert package.name == "agentplaybooks-portable"
-              assert [skill.name for skill in package.skills] == ["agentplaybooks-portable"]
+              assert package.name == "agentplaybooks-tools"
+              assert [skill.name for skill in package.skills] == ["agentplaybooks-tools"]
               assert not package.diagnostics, package.diagnostics
           PY

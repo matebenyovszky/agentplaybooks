@@ -1,6 +1,6 @@
-name: agentplaybooks
+name: agentplaybooks-memory
 version: 0.1.0
-description: "Private, portable memory with AgentPlaybooks: recall, explicit memory writes, archive and history."
+description: "AgentPlaybooks memory for Hermes: recall, explicit memory writes, archive and history in a private playbook."
 author: Mate Benyovszky
 kind: exclusive
 requires_hermes: ">=0.21.4"

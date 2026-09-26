@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="600" viewBox="0 0 1200 600" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="70" y1="25" x2="1120" y2="590" gradientUnits="userSpaceOnUse"><stop stop-color="#10172B"/><stop offset="1" stop-color="#111C2D"/></linearGradient>
+    <linearGradient id="hub" x1="737" y1="194" x2="905" y2="369" gradientUnits="userSpaceOnUse"><stop stop-color="#93E9D0"/><stop offset="1" stop-color="#6382FF"/></linearGradient>
+    <linearGradient id="node" x1="0" y1="0" x2="70" y2="75" gradientUnits="userSpaceOnUse"><stop stop-color="#FFE08A"/><stop offset="1" stop-color="#E8A442"/></linearGradient>
+    <filter id="glow" x="584" y="68" width="482" height="482" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="30"/></filter>
+  </defs>
+  <rect width="1200" height="600" rx="32" fill="url(#bg)"/>
+  <circle cx="826" cy="296" r="158" fill="#41B9D2" opacity=".19" filter="url(#glow)"/>
+  <path d="M0 470c199-64 330 48 502-9 178-58 372-144 698-36v175H0V470Z" fill="#1D334A" opacity=".57"/>
+  <path d="M0 517c210-70 323 41 500-8 181-51 371-106 700-28" stroke="#6ED8D5" stroke-opacity=".22" stroke-width="2"/>
+  <g opacity=".65" stroke="#9BC8DA" stroke-opacity=".35"><path d="M68 92h186M68 112h116M1020 84h112M1042 104h90"/><circle cx="1092" cy="477" r="3" fill="#F9C66A"/><circle cx="1056" cy="451" r="2" fill="#A8D8FF"/><circle cx="1080" cy="510" r="2" fill="#A8D8FF"/></g>
+  <g transform="translate(660 132)" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M128 145 52 69M148 141l83-73M129 203l-75 82M153 203l77 82" stroke="#8BBFD5" stroke-opacity=".8" stroke-width="5"/>
+    <path d="M105 167H35M175 167h70" stroke="#8BBFD5" stroke-opacity=".8" stroke-width="5"/>
+    <circle cx="140" cy="171" r="73" fill="#071320" opacity=".45" stroke="none"/>
+    <path d="m140 104 60 32v66l-60 34-60-34v-66l60-32Z" fill="url(#hub)" stroke="#C7FFF1" stroke-width="2"/>
+    <path d="m128 146 34 21-34 21v-42Z" fill="#11243A"/>
+    <path d="M55 48 91 67v40l-36 20-36-20V67l36-19Z" fill="url(#node)" stroke="#FFF0BF" stroke-width="2"/>
+    <path d="m231 48 36 19v40l-36 20-36-20V67l36-19Z" fill="#233D65" stroke="#90C1FF" stroke-width="2"/>
+    <path d="M35 265 71 284v40l-36 20-36-20v-40l36-19Z" fill="#233D65" stroke="#90C1FF" stroke-width="2"/>
+    <path d="m231 265 36 19v40l-36 20-36-20v-40l36-19Z" fill="url(#node)" stroke="#FFF0BF" stroke-width="2"/>
+    <rect x="1" y="145" width="68" height="47" rx="14" fill="#192E47" stroke="#8CE5DC" stroke-width="2"/>
+    <rect x="211" y="145" width="68" height="47" rx="14" fill="#192E47" stroke="#8CE5DC" stroke-width="2"/>
+    <text x="55" y="93" text-anchor="middle" fill="#201A12" font-family="Inter, system-ui, sans-serif" font-size="22" font-weight="800">S</text>
+    <text x="231" y="93" text-anchor="middle" fill="#D7E9FF" font-family="Inter, system-ui, sans-serif" font-size="20" font-weight="800">MCP</text>
+    <text x="35" y="310" text-anchor="middle" fill="#D7E9FF" font-family="Inter, system-ui, sans-serif" font-size="20" font-weight="800">API</text>
+    <text x="231" y="310" text-anchor="middle" fill="#201A12" font-family="Inter, system-ui, sans-serif" font-size="20" font-weight="800">KEY</text>
+    <circle cx="35" cy="168" r="7" fill="#8CE5DC" stroke="none"/><circle cx="245" cy="168" r="7" fill="#8CE5DC" stroke="none"/>
+  </g>
+  <g font-family="Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif">
+    <text x="76" y="238" fill="#7DE1D1" font-size="19" font-weight="700" letter-spacing="3.6">AGENTPLAYBOOKS  /  HERMES</text>
+    <text x="72" y="316" fill="#FFFDF7" font-size="61" font-weight="760" letter-spacing="-2.4">Tools,</text>
+    <text x="72" y="382" fill="#FFFDF7" font-size="61" font-weight="760" letter-spacing="-2.4">ready to connect.</text>
+    <text x="76" y="434" fill="#B7C7D8" font-size="23" font-weight="450">Skills · MCP · OpenAPI · guided auth</text>
+    <rect x="76" y="474" width="151" height="35" rx="17.5" fill="#203A4B" stroke="#4B8990"/>
+    <text x="98" y="498" fill="#D7FFF6" font-size="15" font-weight="650" letter-spacing="1.4">TOOLS PLUGIN</text>
+  </g>
+</svg>

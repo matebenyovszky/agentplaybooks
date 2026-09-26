@@ -1,5 +1,7 @@
 # AgentPlaybooks CLI
 
+![AgentPlaybooks — portable agent tools](https://agentplaybooks.ai/plugin-catalog/agentplaybooks.png)
+
 Local-first CLI for auditing, synchronizing, and sharing portable agent
 configuration. The published/plugin CLI is self-contained, Node.js >= 20.
 
@@ -327,8 +329,8 @@ playbook).
 
 ## Native Hermes memory
 
-For portable instructions, skills, MCP references, and Bot Mode profiles,
-see the separate [Hermes Portable Agents plugin](https://agentplaybooks.ai/docs/hermes-portable-agents).
+For skills, MCP and OpenAPI tools, and authentication in Hermes, see the
+separate [AgentPlaybooks Tools plugin](https://agentplaybooks.ai/docs/hermes-portable-agents).
 
 Install and configure AgentPlaybooks as Hermes's native memory provider. These
 commands require a CLI release containing the provider; for a source build or

@@ -26,6 +26,9 @@
   },
   "interface": {
     "displayName": "AgentPlaybooks",
+    "composerIcon": "./assets/agentplaybooks-mark.svg",
+    "logo": "./assets/agentplaybooks-mark.png",
+    "logoDark": "./assets/agentplaybooks-mark.png",
     "shortDescription": "Portable agents, connected tools, and secret proxy",
     "longDescription": "Keep agents vendor-neutral across Codex, Claude, Cursor, Hermes, and other clients. Audit and sync local configuration, then manage playbooks, skills, memory, canvas, federated MCP/OpenAPI tools, workflows, and vault-backed API calls through one account connection.",
     "developerName": "AgentPlaybooks",

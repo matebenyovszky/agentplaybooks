@@ -9,7 +9,7 @@
   "homepage": "https://agentplaybooks.ai",
   "repository": "https://github.com/matebenyovszky/agentplaybooks",
   "license": "MIT",
-  "logo": "assets/icon.svg",
+  "logo": "assets/agentplaybooks-mark.svg",
   "keywords": ["playbooks", "skills", "mcp", "audit", "sync", "portability"],
   "skills": "./skills",
   "commands": "./commands"
