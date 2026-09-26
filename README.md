@@ -88,6 +88,26 @@ cd agentplaybooks
 npm install
 ```
 
+### Starters
+
+Copy-paste playbooks under [`examples/`](examples/) — small MIT trees you can
+clone or `cp -R` and install with the CLI. Not a marketplace.
+
+| Starter | One-liner |
+|---|---|
+| [`coding-agent-baseline`](examples/coding-agent-baseline/) | Project instructions, `pr-hygiene` + `commit-message` skills, safe MCP stub |
+| [`doctor-drift-demo`](examples/doctor-drift-demo/) | Mild skill-tree drift: run `doctor`, then `sync --apply` to heal |
+| [`skills-only-starter`](examples/skills-only-starter/) | Three tiny skills + a short `AGENTS.md`; no MCP |
+| [`cursor-hermes-starter`](examples/cursor-hermes-starter/) | Cursor + Hermes instructions, skills, and a portable persona |
+
+```bash
+npx @agentplaybooks/cli@latest doctor examples/coding-agent-baseline
+npx @agentplaybooks/cli@latest sync examples/coding-agent-baseline --target=claude,cursor --apply
+```
+
+See [examples/README.md](examples/README.md), the [CLI docs](https://agentplaybooks.ai/docs/cli),
+and the [Agent Plugins spec](https://agent-plugins.org/specification).
+
 ### Environment Variables
 
 Create a `.env.local` file with:
@@ -453,6 +473,7 @@ agentplaybooks/
     cli/                   # AgentPlaybooks CLI + Claude Code plugin
   .claude-plugin/          # Plugin marketplace manifest
   docs/                    # Contributor-facing notes
+  examples/                # Starter playbooks (fork/clone/sync)
   public/
     blog/  docs/           # Markdown served to the client
   schemas/                 # JSON schemas (agentplaybook.json, …)
