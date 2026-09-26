@@ -42,7 +42,7 @@ test("does not overwrite a different playbook, disabled plugin, or changed sourc
   const options = await fixture();
   await applyHermesMemory(await planHermesMemory(options));
   assert.ok((await planHermesMemory({ ...options, playbook: "abcdef0123456789" })).conflicts.length);
-  await writeFile(path.join(options.hermesHome, "plugins/agentplaybooks/client.py"), "# user edit\n");
+  await writeFile(path.join(options.hermesHome, "plugins/agentplaybooks-memory/client.py"), "# user edit\n");
   assert.ok((await planHermesMemory(options)).conflicts.some(x => x.name.endsWith("client.py")));
   await writeFile(path.join(options.hermesHome, "config.yaml"), "plugins:\n  disabled: [agentplaybooks-memory]\n");
   assert.ok((await planHermesMemory(options)).conflicts.some(x => x.name === "plugins.disabled"));
