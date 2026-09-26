@@ -34,8 +34,8 @@ export const docsEntries: DocEntry[] = [
   },
   {
     slug: "hermes-portable-agents",
-    title: "Portable Agents in Hermes",
-    description: "Audit, sync, and export agent configuration for Hermes",
+    title: "AgentPlaybooks Tools in Hermes",
+    description: "Connect playbook skills, MCP/OpenAPI tools, and credentials",
     section: "guides",
   },
   {

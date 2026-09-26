@@ -5,8 +5,8 @@
 AgentPlaybooks can be selected as a native memory provider in Hermes Agent. It
 stores durable facts in a private playbook, makes them available across sessions,
 and lets you inspect, correct, archive, or delete them in AgentPlaybooks.
-For portable instructions, skills, and Hermes profiles, see the separate
-[Portable Agents plugin](./hermes-portable-agents.md).
+For playbook skills, MCP and OpenAPI tools, and authentication in Hermes, see
+the separate [AgentPlaybooks Tools plugin](./hermes-portable-agents.md).
 
 ## Install and configure
 
@@ -20,7 +20,7 @@ revision pinned in our [compatibility workflow](https://github.com/matebenyovszk
 3. Install the plugin into the intended Hermes profile:
 
 ```bash
-hermes plugins install agentplaybooks
+hermes plugins install agentplaybooks-memory
 hermes memory setup
 hermes memory status
 ```
@@ -38,7 +38,7 @@ you can pin that route with `--ref <full-commit-sha>`.
 
 **Plugin store status, September 23, 2026:**
 [Hermes merged the catalog entry](https://github.com/NousResearch/hermes-agent/pull/119450),
-and `agentplaybooks` has a [live plugin page](https://hermes-agent.nousresearch.com/docs/plugins/agentplaybooks).
+and `agentplaybooks-memory` has a [live plugin page](https://hermes-agent.nousresearch.com/docs/plugins/agentplaybooks-memory).
 Older Hermes
 installations may need a catalog refresh or update to see the new entry.
 

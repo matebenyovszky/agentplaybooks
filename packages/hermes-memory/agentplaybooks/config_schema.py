@@ -3,7 +3,7 @@ from plugins.memory.config_schema import KIND_SECRET, KIND_TEXT, ProviderConfigS
 
 CONFIG_SCHEMA = ProviderConfigSchema(
     name="agentplaybooks",
-    label="AgentPlaybooks",
+    label="AgentPlaybooks Memory",
     docs_url="https://github.com/matebenyovszky/agentplaybooks/tree/main/packages/hermes-memory",
     fields=(
         ProviderField(key="playbook_guid", label="Private memory playbook GUID", kind=KIND_TEXT,

@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="600" viewBox="0 0 1200 600" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="70" y1="25" x2="1120" y2="590" gradientUnits="userSpaceOnUse"><stop stop-color="#10172B"/><stop offset="1" stop-color="#17112D"/></linearGradient>
+    <linearGradient id="mark" x1="695" y1="135" x2="964" y2="447" gradientUnits="userSpaceOnUse"><stop stop-color="#FFE08A"/><stop offset="1" stop-color="#7DDECA"/></linearGradient>
+    <filter id="glow" x="594" y="59" width="476" height="482" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="30"/></filter>
+  </defs>
+  <rect width="1200" height="600" rx="32" fill="url(#bg)"/>
+  <circle cx="832" cy="300" r="154" fill="#7062FF" opacity=".21" filter="url(#glow)"/>
+  <path d="M0 470c200-64 331 48 503-9 178-58 372-144 697-36v175H0V470Z" fill="#25234B" opacity=".55"/>
+  <path d="M0 517c210-70 323 41 500-8 181-51 371-106 700-28" stroke="#8A7CFF" stroke-opacity=".2" stroke-width="2"/>
+  <g opacity=".7" stroke="#A9B8FF" stroke-opacity=".3"><path d="M68 92h186M68 112h116M1020 84h112M1042 104h90"/><circle cx="1100" cy="478" r="3" fill="#F9C66A"/></g>
+  <g transform="translate(690 139)" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M139 148 55 65M161 148l84-83M139 211l-84 83M161 211l84 83" stroke="#A2B4E8" stroke-opacity=".8" stroke-width="5"/>
+    <path d="M103 180H27M175 180h76" stroke="#A2B4E8" stroke-opacity=".8" stroke-width="5"/>
+    <path d="m139 83 98 54v109l-98 55-98-55V137l98-54Z" fill="#14213B" stroke="url(#mark)" stroke-width="8"/>
+    <path d="m139 119 60 33v67l-60 34-60-34v-67l60-33Z" fill="url(#mark)"/>
+    <path d="M139 119v134M79 152l120 67M199 152 79 219" stroke="#19233A" stroke-width="12"/>
+    <circle cx="139" cy="186" r="16" fill="#FFF8E8" stroke="none"/>
+    <circle cx="55" cy="65" r="19" fill="#283557" stroke="#FFE08A" stroke-width="3"/>
+    <circle cx="245" cy="65" r="19" fill="#283557" stroke="#93DDFC" stroke-width="3"/>
+    <circle cx="55" cy="294" r="19" fill="#283557" stroke="#93DDFC" stroke-width="3"/>
+    <circle cx="245" cy="294" r="19" fill="#283557" stroke="#FFE08A" stroke-width="3"/>
+    <circle cx="27" cy="180" r="7" fill="#7DE1D1" stroke="none"/><circle cx="251" cy="180" r="7" fill="#7DE1D1" stroke="none"/>
+  </g>
+  <g font-family="Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif">
+    <text x="76" y="238" fill="#F5C66D" font-size="19" font-weight="700" letter-spacing="3.6">AGENTPLAYBOOKS</text>
+    <text x="72" y="316" fill="#FFFDF7" font-size="61" font-weight="760" letter-spacing="-2.4">One playbook.</text>
+    <text x="72" y="382" fill="#FFFDF7" font-size="61" font-weight="760" letter-spacing="-2.4">Every agent.</text>
+    <text x="76" y="434" fill="#B7C0DB" font-size="23" font-weight="450">Skills · tools · memory · portable setup</text>
+    <rect x="76" y="474" width="198" height="35" rx="17.5" fill="#2B3150" stroke="#56628E"/>
+    <text x="98" y="498" fill="#DAE3FF" font-size="15" font-weight="650" letter-spacing="1.4">AGENT TOOLKIT</text>
+  </g>
+</svg>

@@ -6,8 +6,8 @@ Az AgentPlaybooks natív memóriaszolgáltatóként választható ki a Hermes Ag
 A tartós tényeket privát playbookban tárolja, több munkameneten át elérhetővé
 teszi, és az AgentPlaybooksban is szerkeszthető, archiválható vagy törölhető
 bejegyzésekként kezeli.
-A portolható utasításokhoz, skillekhez és Hermes-profilokhoz lásd a külön
-[Portable Agents plugint](./hermes-portable-agents.md).
+A playbook-skillek, az MCP/OpenAPI-eszközök és a Hermes-hitelesítés beállításához
+lásd az [AgentPlaybooks Tools plugint](./hermes-portable-agents.md).
 
 ## Telepítés és beállítás
 
@@ -22,7 +22,7 @@ fut.
 3. Telepítsd a plugint a megfelelő Hermes-profilba:
 
 ```bash
-hermes plugins install agentplaybooks
+hermes plugins install agentplaybooks-memory
 hermes memory setup
 hermes memory status
 ```
@@ -40,8 +40,8 @@ paranccsal; ennél a `--ref <full-commit-sha>` kapcsolóval rögzíthetsz verzi�
 
 **Plugin-store állapot, 2026. szeptember 23.:** a Hermes
 [összeolvasztotta a katalógusbejegyzést](https://github.com/NousResearch/hermes-agent/pull/119450),
-és az `agentplaybooks` már szerepel az
-[élő plugin-katalógusban](https://hermes-agent.nousresearch.com/docs/plugins/agentplaybooks).
+és az `agentplaybooks-memory` már szerepel az
+[élő plugin-katalógusban](https://hermes-agent.nousresearch.com/docs/plugins/agentplaybooks-memory).
 Régebbi Hermes
 telepítésnél katalógusfrissítés vagy programfrissítés kellhet a megjelenéséhez.
 
