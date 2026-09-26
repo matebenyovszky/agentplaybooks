@@ -1,8 +1,8 @@
 # Skills-only starter
 
-Lowest-friction portable starter: three tiny Agent Skills and a short
-`AGENTS.md` that points at them. No MCP. Compatible with `@agentplaybooks/cli`
-0.4.0+ (Agent Plugins 1.0).
+The smallest portable playbook: three skills and short project instructions.
+You still own the store — persona, MCP, memory, and vault can join this tree
+later. Nothing here is bound to a single host.
 
 ## What it contains
 
@@ -11,7 +11,9 @@ Lowest-friction portable starter: three tiny Agent Skills and a short
 - `.agents/skills/changelog-notes/`
 - `.agents/skills/issue-triage/`
 
-## Install
+Compatible with `@agentplaybooks/cli` 0.4.0+ (Agent Plugins 1.0).
+
+## Install into a host
 
 From this repository:
 
@@ -28,8 +30,8 @@ npx @agentplaybooks/cli@latest sync . --apply
 ```
 
 On a fresh copy, `sync` without `--target` may only write `agentplaybook.json`
-(the portable store is not a deployment target). Pass `--target=` for the
-clients you use.
+(the portable store is not itself a host). Pass `--target=` for the clients
+you use.
 
 Optional Agent Plugins 1.0 round-trip:
 

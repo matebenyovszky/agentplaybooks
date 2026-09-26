@@ -1,8 +1,12 @@
 # Coding agent baseline
 
-Portable coding-agent starter: project instructions, two small skills, and a
-safe MCP stub. Copy it into a repo and run `sync` to fan the layout out to
-Claude Code, Cursor, and other CLI targets.
+A portable playbook for a coding agent you control: project instructions, two
+skills, and an MCP stub. Persona, memory, and vault are part of the same store —
+add them when you need them; this starter keeps them empty except for an
+environment-variable credential ref (never a secret value).
+
+Copy the tree into a repo. The playbook stays in `AGENTS.md` and `.agents/`;
+hosts such as Claude Code and Cursor get their copies from `sync`.
 
 ## What it contains
 
@@ -11,10 +15,10 @@ Claude Code, Cursor, and other CLI targets.
 - `.agents/skills/commit-message/` — commit message conventions
 - `.agents/mcp.json` — example MCP server with **only** an env-var credential ref
 
-No `agentplaybook.json` is checked in. `npx @agentplaybooks/cli@latest sync . --apply`
-creates it. Compatible with `@agentplaybooks/cli` 0.4.0+ (Agent Plugins 1.0).
+No `agentplaybook.json` is checked in. `sync --apply` creates it. Compatible
+with `@agentplaybooks/cli` 0.4.0+ (Agent Plugins 1.0).
 
-## Install
+## Install into a host
 
 From this repository:
 
@@ -22,6 +26,9 @@ From this repository:
 npx @agentplaybooks/cli@latest doctor examples/coding-agent-baseline
 npx @agentplaybooks/cli@latest sync examples/coding-agent-baseline --target=claude,cursor --apply
 ```
+
+`doctor` is optional: it checks the store (and any host copies) for drift and
+unsafe config. `sync --apply` writes the playbook into the named hosts.
 
 Copy into a new project:
 

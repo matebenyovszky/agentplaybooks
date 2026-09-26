@@ -1,16 +1,18 @@
 # Cursor + Hermes starter
 
-Low-effort starter aimed at **Cursor** and **Hermes Agent**. Portable
-instructions and skills live in the project; Hermes profile files (`config.yaml`,
-`SOUL.md`) are written by `sync --target=hermes` on your machine and are **not**
-shipped here.
+A portable playbook you control, shaped for **Cursor** and **Hermes Agent** as
+hosts: persona, project instructions, two skills, and an MCP stub. Memory and
+vault stay in the same store when you add them; this starter ships an
+environment-variable credential ref only (never a secret value).
 
-Compatible with `@agentplaybooks/cli` 0.4.0+ (Agent Plugins 1.0).
+The playbook lives in the project. Hermes profile files (`config.yaml`,
+`SOUL.md`) are written on your machine when you install into that host — they
+are **not** shipped here.
 
 ## What it contains
 
 - `AGENTS.md` — pair-programming project instructions (Hermes and Cursor both read this)
-- `.agents/persona.md` — portable persona; `sync --target=hermes` copies it to `~/.hermes/SOUL.md` when that file is missing
+- `.agents/persona.md` — portable persona; installing into Hermes copies it to `~/.hermes/SOUL.md` when that file is missing
 - `.agents/skills/session-handoff/`
 - `.agents/skills/task-breakdown/`
 - `.agents/mcp.json` — optional example MCP stub (`${EXAMPLE_MCP_TOKEN}` only)
@@ -19,7 +21,9 @@ Hermes loads the first project context file it finds
 (`.hermes.md` → `AGENTS.md` → `CLAUDE.md` → `.cursorrules`). This starter ships
 only `AGENTS.md` so nothing hides it.
 
-## Install
+Compatible with `@agentplaybooks/cli` 0.4.0+ (Agent Plugins 1.0).
+
+## Install into a host
 
 From this repository:
 
@@ -59,7 +63,7 @@ Hermes portable agents: https://agentplaybooks.ai/docs/hermes-portable-agents
 ## What not to put here
 
 - Secrets, API keys, tokens, or `.env` files
-- A Hermes `config.yaml` (sync owns merging that file on the machine)
+- A Hermes `config.yaml` (installing into Hermes merges that file on the machine)
 - Literal MCP headers — keep `${EXAMPLE_MCP_TOKEN}` or delete the stub
 
 ## License

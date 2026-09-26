@@ -90,15 +90,18 @@ npm install
 
 ### Starters
 
-Copy-paste playbooks under [`examples/`](examples/) — small MIT trees you can
-clone or `cp -R` and install with the CLI. Not a marketplace.
+Portable playbooks under [`examples/`](examples/) — persona, instructions,
+skills, MCP, memory, and vault in a tree you control. Small MIT examples you
+can clone or `cp -R`. Not a marketplace.
 
 | Starter | One-liner |
 |---|---|
-| [`coding-agent-baseline`](examples/coding-agent-baseline/) | Project instructions, `pr-hygiene` + `commit-message` skills, safe MCP stub |
-| [`doctor-drift-demo`](examples/doctor-drift-demo/) | Mild skill-tree drift: run `doctor`, then `sync --apply` to heal |
-| [`skills-only-starter`](examples/skills-only-starter/) | Three tiny skills + a short `AGENTS.md`; no MCP |
-| [`cursor-hermes-starter`](examples/cursor-hermes-starter/) | Cursor + Hermes instructions, skills, and a portable persona |
+| [`coding-agent-baseline`](examples/coding-agent-baseline/) | Coding-agent playbook: instructions, two skills, safe MCP stub |
+| [`doctor-drift-demo`](examples/doctor-drift-demo/) | Review playbook with host-folder drift; the portable store stays canonical |
+| [`skills-only-starter`](examples/skills-only-starter/) | Smallest playbook: three skills + instructions; no MCP |
+| [`cursor-hermes-starter`](examples/cursor-hermes-starter/) | Playbook with persona, instructions, and skills for Cursor and Hermes hosts |
+
+Install into a host (optional `doctor` check, then `sync`):
 
 ```bash
 npx @agentplaybooks/cli@latest doctor examples/coding-agent-baseline

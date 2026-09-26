@@ -1,27 +1,29 @@
-# Doctor drift demo
+# Review playbook (host drift)
 
-Intentional, **safe** cross-platform drift so you can see `doctor` findings and
-heal them with `sync --apply`. Compatible with `@agentplaybooks/cli` 0.4.0+
-(Agent Plugins 1.0 layout).
+A portable review playbook you control: instructions and a `review-notes` skill
+with its bundled checklist. The canonical store is `.agents/` — that is the
+playbook. Claude and Cursor folders in this tree are incomplete copies of the
+same skill, so a host can drift from the store without changing the playbook
+itself.
 
-The portable skill under `.agents/skills/review-notes/` includes
-`references/checklist.md`. The Claude and Cursor copies have the same
-`SKILL.md` but **omit that bundled file**. `doctor` reports `skill.drift`
-(medium). `sync` treats the portable tree as canonical and writes the missing
-reference file into each vendor folder. It will not overwrite a `SKILL.md` that
-disagrees — that is a conflict, not a silent heal.
+Use `doctor` to see that drift, then `sync --apply` to heal the host folders
+from the portable skill. `sync` will not overwrite a `SKILL.md` that disagrees
+with the store — that is a conflict, not a silent heal.
 
 No secrets are included. A line such as `API_KEY=sk-` plus 20+ token characters
-would be `secret.hardcoded`; this starter uses structural drift instead.
+would be flagged as hard-coded; this starter uses structural drift instead.
 
 ## What it contains
 
-- `AGENTS.md` — short project instructions
+- `AGENTS.md` — project instructions for the review playbook
 - `.agents/skills/review-notes/` — canonical skill **plus** `references/checklist.md`
-- `.claude/skills/review-notes/SKILL.md` — incomplete copy (drift)
-- `.cursor/skills/review-notes/SKILL.md` — incomplete copy (drift)
+- `.claude/skills/review-notes/SKILL.md` — incomplete host copy (drift)
+- `.cursor/skills/review-notes/SKILL.md` — incomplete host copy (drift)
 
-## Install / try it
+Persona, MCP, memory, and vault are unused here; add them on the playbook when
+you need them.
+
+## Install into a host
 
 From this repository:
 
@@ -58,7 +60,7 @@ Findings: 0 critical, 0 high, 1 medium, 0 low.
 ```
 
 `--json` includes `relatedSources` for the three `SKILL.md` paths. Inventory
-counts three skills because doctor lists each discovered `SKILL.md`.
+counts three skills because each discovered `SKILL.md` is listed.
 
 After a successful `sync --apply`, doctor should report **100/100** and
 `No findings.` The missing `references/checklist.md` files have been created,
@@ -71,7 +73,7 @@ Agent Plugins: https://agent-plugins.org/specification
 ## What not to put here
 
 - Real secrets, API keys, tokens, or `.env` files
-- Fake `sk-…` values (doctor would flag that class; this demo does not need it)
+- Fake `sk-…` values (a hard-coded-secret check would flag that class)
 - Hermes `config.yaml`
 
 ## License
