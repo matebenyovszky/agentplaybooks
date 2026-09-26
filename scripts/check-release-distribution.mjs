@@ -40,10 +40,10 @@ check(cli.files.includes("plugin.json") && cli.files.includes("mcp.json") && cli
 const webIcon = (await read("public/icon.svg")).replace(/\r\n/g, "\n");
 const pluginIcon = (await read("packages/cli/assets/icon.svg")).replace(/\r\n/g, "\n");
 check(webIcon === pluginIcon, "Plugin logo differs from the website logo.");
-check(portable.extensions?.["com.openai"]?.interface?.logo === "./assets/agentplaybooks-mark.png", "Plugin logo path differs.");
-check(portable.extensions?.["com.openai"]?.interface?.composerIcon === "./assets/agentplaybooks-mark.svg", "Plugin composer icon path differs.");
-check(variants[0].interface?.logo === "./assets/agentplaybooks-mark.png", "Codex compatibility logo path differs.");
-check(variants[0].interface?.composerIcon === "./assets/agentplaybooks-mark.svg", "Codex compatibility composer icon path differs.");
+check(portable.extensions?.["com.openai"]?.interface?.logo === "./assets/icon.svg", "Plugin logo path differs.");
+check(portable.extensions?.["com.openai"]?.interface?.composerIcon === "./assets/icon.svg", "Plugin composer icon path differs.");
+check(variants[0].interface?.logo === "./assets/icon.svg", "Codex compatibility logo path differs.");
+check(variants[0].interface?.composerIcon === "./assets/icon.svg", "Codex compatibility composer icon path differs.");
 check(variants[2].logo === "assets/agentplaybooks-mark.svg", "Cursor plugin logo path differs.");
 check(variants[4].plugins?.[0]?.logo === "packages/cli/assets/agentplaybooks-mark.svg", "Cursor marketplace logo path differs.");
 const skillNames = await readdir(resolve(root, "packages/cli/skills"));

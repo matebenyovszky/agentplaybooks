@@ -29,9 +29,8 @@
           "Call an API with a vault secret without revealing it."
         ],
         "brandColor": "#7C3AED",
-        "logo": "./assets/agentplaybooks-mark.png",
-        "logoDark": "./assets/agentplaybooks-mark.png",
-        "composerIcon": "./assets/agentplaybooks-mark.svg"
+        "logo": "./assets/icon.svg",
+        "composerIcon": "./assets/icon.svg"
       }
     }
   }
