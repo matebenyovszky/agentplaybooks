@@ -58,6 +58,7 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "prepack": "npm run build",
+    "pack:openai-skills": "node scripts/pack-openai-skills-zip.mjs",
     "test": "node --test"
   }
 }

@@ -5,6 +5,10 @@ Plugins Directory, the official Claude marketplace, or any other catalog.
 
 Do not submit from this PR. Verified identity (Mate) is outside this change.
 
+The **Skills-only** ZIP (plugin.json + SKILL.md, no account MCP) is a separate
+upload path. How to build it, what it contains, and the Mate-yes hold for
+listing copy: [`openai-skills-directory-zip.md`](./openai-skills-directory-zip.md).
+
 ## Remote MCP (hosted)
 
 - Transport: Streamable HTTP
