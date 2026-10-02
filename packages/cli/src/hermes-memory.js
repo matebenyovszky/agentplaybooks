@@ -34,6 +34,8 @@ export async function planHermesMemory(options = {}) {
   }
   const shared = [...new Set((options.sharedPlaybooks ?? "").split(",").map(x => x.trim()).filter(Boolean))];
   if (shared.some(guid => !GUID.test(guid))) throw new Error("Shared playbooks must be comma-separated GUIDs.");
+  const team = [...new Set((options.teamPlaybooks ?? "").split(",").map(x => x.trim()).filter(Boolean))];
+  if (team.some(guid => !GUID.test(guid))) throw new Error("Team playbooks must be comma-separated GUIDs.");
   const fileActions = [], conflicts = [];
   const add = (name, old, content) => {
     if (old === content) return;
@@ -62,6 +64,9 @@ export async function planHermesMemory(options = {}) {
   const oldSettings = await readOptional(path.join(profile.directory, settingsName));
   const settings = oldSettings === null ? {} : JSON.parse(oldSettings);
   const desired = { base_url: baseUrl, playbook_guid: options.playbook, shared_playbooks: shared.join(",") };
+  // Team playbooks are writable shared case memory; written only when asked for,
+  // so an existing profile's settings do not change shape on a plain re-run.
+  if (team.length) desired.team_playbooks = team.join(",");
   if (url.protocol === "http:" && insecure) desired.allow_insecure_http = true;
   if (Object.entries(desired).some(([key, value]) => settings[key] !== undefined && settings[key] !== value)) {
     conflict(settingsName, "Existing memory settings differ. Edit them in 'hermes memory setup' to switch playbooks; no memory is migrated automatically.");
