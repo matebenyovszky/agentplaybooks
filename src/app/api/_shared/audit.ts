@@ -170,3 +170,34 @@ export async function flushSecretAudit(
   }
   await recordSecretAudit(context, draft);
 }
+
+export type ProposalAuditOperation = "proposal.submit" | "proposal.approve" | "proposal.reject";
+
+/**
+ * Record a proposal event on the same trail. `target` is "<kind>:<target>"
+ * (a skill name or memory key), never the proposed content. Never throws.
+ */
+export async function recordProposalAudit(
+  context: AuditContext,
+  event: { operation: ProposalAuditOperation; status: "success" | "denied" | "error"; target: string; reason?: string | null },
+): Promise<void> {
+  try {
+    const { error } = await getServiceSupabase()
+      .from("audit_logs")
+      .insert({
+        playbook_id: context.playbookId,
+        mcp_server_id: null,
+        operation: event.operation,
+        target: event.target,
+        status: event.status,
+        error_code: event.reason ?? null,
+        actor_type: context.actor.type,
+        actor_id: context.actor.id,
+        secret_name: null,
+        request_id: context.requestId ?? null,
+      });
+    if (error) console.error("Failed to write audit log", error.message);
+  } catch (err) {
+    console.error("Failed to write audit log", err);
+  }
+}

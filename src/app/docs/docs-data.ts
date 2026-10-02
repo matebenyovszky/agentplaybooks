@@ -75,6 +75,12 @@ export const docsEntries: DocEntry[] = [
     section: "concepts",
   },
   {
+    slug: "proposals",
+    title: "Proposals",
+    description: "Suggest skill changes and memories for review, without write access",
+    section: "guides",
+  },
+  {
     slug: "team-collaboration",
     title: "Team Collaboration",
     description: "Securely share playbooks with editors",

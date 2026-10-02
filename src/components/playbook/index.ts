@@ -7,3 +7,4 @@ export { MemoryEditor } from "./MemoryEditor";
 export { CanvasEditor } from "./CanvasEditor";
 export { ApiKeyManager } from "./ApiKeyManager";
 
+export { ProposalsManager } from "./ProposalsManager";

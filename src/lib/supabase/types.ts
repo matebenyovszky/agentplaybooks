@@ -81,6 +81,27 @@ export type PlaybookSnapshotsRow = {
 export type PlaybookSnapshotsInsert = Omit<PlaybookSnapshotsRow, "id" | "created_at">;
 export type PlaybookSnapshotsUpdate = never;
 
+export type PlaybookProposalsRow = {
+  id: string;
+  playbook_id: string;
+  kind: "skill" | "memory";
+  target: string;
+  payload: Record<string, unknown>;
+  rationale: string | null;
+  status: "pending" | "approved" | "rejected";
+  submitted_via: "session" | "user_key" | "playbook_key";
+  submitted_by: string | null;
+  submitter_key_prefix: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  review_note: string | null;
+  applied_ref: string | null;
+  created_at: string;
+};
+export type PlaybookProposalsInsert = Pick<PlaybookProposalsRow, "playbook_id" | "kind" | "target" | "payload" | "submitted_via">
+  & Partial<Pick<PlaybookProposalsRow, "rationale" | "submitted_by" | "submitter_key_prefix">>;
+export type PlaybookProposalsUpdate = Partial<Pick<PlaybookProposalsRow, "status" | "reviewed_by" | "reviewed_at" | "review_note" | "applied_ref">>;
+
 export type PlaybookStarsRow = {
   id: string;
   playbook_id: string;
@@ -263,7 +284,7 @@ export type ApiKeysRow = {
   key_prefix: string;
 
   name: string | null;
-  role: 'viewer' | 'coworker' | 'admin';
+  role: 'viewer' | 'coworker' | 'proposer' | 'admin';
   permissions: string[];
   last_used_at: string | null;
   expires_at: string | null;
@@ -502,6 +523,12 @@ export interface Database {
         Row: PlaybookSnapshotsRow;
         Insert: PlaybookSnapshotsInsert;
         Update: PlaybookSnapshotsUpdate;
+        Relationships: [];
+      };
+      playbook_proposals: {
+        Row: PlaybookProposalsRow;
+        Insert: PlaybookProposalsInsert;
+        Update: PlaybookProposalsUpdate;
         Relationships: [];
       };
       playbook_collaborators: {

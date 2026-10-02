@@ -189,7 +189,8 @@
       "apiKeys": "Integrationen und API",
       "secrets": "Geheimnisse",
       "settings": "Einstellungen",
-      "details": "Details"
+      "details": "Details",
+      "proposals": "Vorschläge"
     },
     "save": "Speichern",
     "publish": "Veröffentlichen",

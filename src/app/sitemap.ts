@@ -41,6 +41,7 @@ const docSlugs = [
   "platform-integrations",
   "playbooks",
   "portable-agent-backups",
+  "proposals",
   "release-distribution",
   "secrets-python-examples",
   "self-hosting",

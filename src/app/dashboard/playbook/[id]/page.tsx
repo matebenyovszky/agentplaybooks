@@ -36,6 +36,7 @@ import {
   Tag,
   Puzzle,
   UsersRound,
+  Inbox,
   FileText,
   ScrollText
 } from "lucide-react";
@@ -53,8 +54,9 @@ import { ApiKeyManager } from "@/components/playbook/ApiKeyManager";
 import { SecretManager } from "@/components/playbook/SecretManager";
 import { McpRegistrySearch } from "@/components/playbook/McpRegistrySearch";
 import { CollaborationManager } from "@/components/playbook/CollaborationManager";
+import { ProposalsManager } from "@/components/playbook/ProposalsManager";
 
-type TabType = "details" | "skills" | "mcp" | "canvas" | "memory" | "secrets" | "apiKeys" | "sharing";
+type TabType = "details" | "skills" | "mcp" | "canvas" | "memory" | "proposals" | "secrets" | "apiKeys" | "sharing";
 type PlaybookWithAccess = Playbook & { current_user_role?: "owner" | "editor" | "viewer" };
 
 // Debounce hook
@@ -874,6 +876,9 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
     { id: "mcp" as TabType, label: t("editor.tabs.mcp"), icon: Server, count: mcpServers.length, color: "pink" },
     { id: "canvas" as TabType, label: t("editor.tabs.canvas"), icon: FileText, count: canvases.length, color: "green" },
     { id: "memory" as TabType, label: t("editor.tabs.memory"), icon: Database, count: memories.length, color: "teal" },
+    ...(canEdit ? [
+      { id: "proposals" as TabType, label: t("editor.tabs.proposals"), icon: Inbox, count: 0, color: "amber" },
+    ] : []),
     ...(isOwner ? [
       { id: "secrets" as TabType, label: t("editor.tabs.secrets") || "Secrets", icon: Shield, count: 0, color: "emerald" },
       { id: "apiKeys" as TabType, label: t("editor.tabs.apiKeys"), icon: Puzzle, count: apiKeys.length, color: "amber" },
@@ -1904,6 +1909,21 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                   </div>
                 </div>
               </div>
+            </motion.div>
+          )}
+
+          {activeTab === "proposals" && canEdit && (
+            <motion.div
+              key="proposals"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+            >
+              <h2 className="text-xl font-semibold mb-6 flex items-center gap-2 text-neutral-900 dark:text-white">
+                <Inbox className="h-5 w-5 text-amber-500" />
+                {t("editor.tabs.proposals")}
+              </h2>
+              <ProposalsManager playbookId={playbook.id} />
             </motion.div>
           )}
 

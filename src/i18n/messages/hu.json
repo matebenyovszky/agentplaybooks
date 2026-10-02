@@ -189,7 +189,8 @@
       "apiKeys": "Integrációk és API",
       "secrets": "Titkok",
       "settings": "Beállítások",
-      "details": "Részletek"
+      "details": "Részletek",
+      "proposals": "Javaslatok"
     },
     "save": "Mentés",
     "publish": "Publikálás",
