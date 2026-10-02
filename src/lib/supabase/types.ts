@@ -263,7 +263,7 @@ export type ApiKeysRow = {
   key_prefix: string;
 
   name: string | null;
-  role: 'viewer' | 'coworker' | 'admin';
+  role: 'viewer' | 'coworker' | 'proposer' | 'admin';
   permissions: string[];
   last_used_at: string | null;
   expires_at: string | null;

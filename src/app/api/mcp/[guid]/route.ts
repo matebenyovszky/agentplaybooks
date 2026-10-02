@@ -57,6 +57,7 @@ import {
 import { composePlaybookSystemPrompt } from "@/lib/playbook-prompt";
 import { validateAgentSkillDescription, validateAgentSkillName } from "@/lib/agent-skills";
 import { searchMemories } from "@/app/api/_shared/memory";
+import { proposeMemory, proposeSkill } from "@/app/api/_shared/proposals";
 import { memoryWriteFields } from "@/lib/memory";
 import { serveSkill, skillResourceUri, type ServedSkill } from "@/lib/mcp/skill-extension";
 
@@ -1181,10 +1182,13 @@ use_secret_write({
           }
 
           case "write_memory": {
-            // Requires API key
+            // Requires API key; one with only memory:propose stores a proposal
             const apiKeyData = await validateApiKey(c.req.raw, "memory:write");
-            if (!apiKeyData || apiKeyData.playbooks.id !== playbook.id) {
-              throw new Error("API key with memory:write permission required");
+            const writer = apiKeyData?.playbooks.id === playbook.id ? apiKeyData : null;
+            const proposerKey = writer ? null : await validateApiKey(c.req.raw, "memory:propose");
+            const proposer = proposerKey?.playbooks.id === playbook.id ? proposerKey : null;
+            if (!writer && !proposer) {
+              throw new Error("API key with memory:write or memory:propose permission required");
             }
 
             const key = args.key as string;
@@ -1216,6 +1220,12 @@ use_secret_write({
             if (memoryType !== undefined) upsertData.memory_type = memoryType;
             if (status !== undefined) upsertData.status = status;
             if (metadata !== undefined) upsertData.metadata = metadata;
+
+            if (proposer) {
+              if (value === undefined) throw new Error("value is required");
+              result = await proposeMemory(serviceSupabase, playbook.id, key, upsertData, proposer);
+              break;
+            }
 
             const { data, error } = await serviceSupabase
               .from("memories")
@@ -1993,8 +2003,11 @@ use_secret_write({
 
           case "create_skill": {
             const apiKeyData = await validateApiKey(c.req.raw, "skills:write");
-            if (!apiKeyData || apiKeyData.playbooks.id !== playbook.id) {
-              throw new Error("API key with skills:write permission required");
+            const writer = apiKeyData?.playbooks.id === playbook.id ? apiKeyData : null;
+            const proposerKey = writer ? null : await validateApiKey(c.req.raw, "skills:propose");
+            const proposer = proposerKey?.playbooks.id === playbook.id ? proposerKey : null;
+            if (!writer && !proposer) {
+              throw new Error("API key with skills:write or skills:propose permission required");
             }
 
             const name = args.name as string;
@@ -2006,6 +2019,11 @@ use_secret_write({
             if (nameError) throw new Error(nameError);
             const descriptionError = validateAgentSkillDescription(description);
             if (descriptionError) throw new Error(descriptionError);
+
+            if (proposer) {
+              result = await proposeSkill(serviceSupabase, playbook.id, { id: null, name, description: description ?? null, content: content ?? null }, proposer);
+              break;
+            }
 
             const { data, error } = await serviceSupabase
               .from("skills")
@@ -2026,8 +2044,11 @@ use_secret_write({
 
           case "update_skill": {
             const apiKeyData = await validateApiKey(c.req.raw, "skills:write");
-            if (!apiKeyData || apiKeyData.playbooks.id !== playbook.id) {
-              throw new Error("API key with skills:write permission required");
+            const writer = apiKeyData?.playbooks.id === playbook.id ? apiKeyData : null;
+            const proposerKey = writer ? null : await validateApiKey(c.req.raw, "skills:propose");
+            const proposer = proposerKey?.playbooks.id === playbook.id ? proposerKey : null;
+            if (!writer && !proposer) {
+              throw new Error("API key with skills:write or skills:propose permission required");
             }
 
             const skillId = args.skill_id as string;
@@ -2053,7 +2074,7 @@ use_secret_write({
 
             let query = serviceSupabase
               .from("skills")
-              .select("id")
+              .select("id, name, description, content")
               .eq("playbook_id", playbook.id);
 
             if (isUuid) {
@@ -2070,6 +2091,18 @@ use_secret_write({
 
             if (!targetSkill) {
               throw new Error("Skill not found");
+            }
+
+            if (proposer) {
+              // A proposal carries the whole proposed version, so approving it
+              // applies exactly what the reviewer saw.
+              result = await proposeSkill(serviceSupabase, playbook.id, {
+                id: targetSkill.id,
+                name: (updates.name ?? targetSkill.name) as string,
+                description: (updates.description ?? targetSkill.description ?? null) as string | null,
+                content: (updates.content ?? targetSkill.content ?? null) as string | null,
+              }, proposer);
+              break;
             }
 
             const { data, error } = await serviceSupabase
@@ -2145,6 +2178,7 @@ use_secret_write({
               .select("*")
               .eq("playbook_id", playbook.id)
               .eq("skill_id", actualSkillId)
+              .is("review_status", null)
               .order("recorded_at", { ascending: false })
               .limit(limit);
 
@@ -2167,6 +2201,7 @@ use_secret_write({
               .select("*")
               .eq("id", versionId)
               .eq("playbook_id", playbook.id)
+              .is("review_status", null)
               .single();
 
             if (fetchErr || !oldVersion) throw new Error("Version not found or access denied");

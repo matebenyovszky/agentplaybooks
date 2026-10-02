@@ -28,11 +28,13 @@ interface ApiKeyManagerProps {
 const ROLES = [
   { value: "viewer", label: "Viewer", description: "Read-only access to values" },
   { value: "coworker", label: "Coworker", description: "Read and write access" },
+  { value: "proposer", label: "Proposer", description: "Read access; memory and skill changes wait for your review" },
   { value: "admin", label: "Admin", description: "Full access to modify playbook structure" },
 ];
 
 const ROLE_PERMISSIONS: Record<string, string[]> = {
   viewer: ["memory:read", "canvas:read", "skills:read", "personas:read", "secrets:read"],
+  proposer: ["memory:read", "memory:propose", "canvas:read", "skills:read", "skills:propose", "personas:read", "secrets:read"],
   coworker: ["memory:read", "memory:write", "canvas:read", "canvas:write", "skills:read", "skills:write", "personas:read", "personas:write", "secrets:read", "secrets:write"],
   admin: ["full"],
 };
@@ -45,7 +47,7 @@ export function ApiKeyManager({ playbook_id, apiKeys, onUpdate }: ApiKeyManagerP
 
   // Create form state
   const [keyName, setKeyName] = useState("");
-  const [selectedRole, setSelectedRole] = useState<'viewer' | 'coworker' | 'admin'>("viewer");
+  const [selectedRole, setSelectedRole] = useState<'viewer' | 'coworker' | 'proposer' | 'admin'>("viewer");
 
   const handleCreateKey = async () => {
     // Role always selected
@@ -273,6 +275,7 @@ export function ApiKeyManager({ playbook_id, apiKeys, onUpdate }: ApiKeyManagerP
                           "px-2 py-0.5 rounded text-xs font-medium",
                           apiKey.role === 'admin' ? "bg-red-500/20 text-red-400 border border-red-500/30" :
                             apiKey.role === 'coworker' ? "bg-amber-500/20 text-amber-400 border border-amber-500/30" :
+                            apiKey.role === 'proposer' ? "bg-purple-500/20 text-purple-400 border border-purple-500/30" :
                               "bg-blue-500/20 text-blue-400 border border-blue-500/30"
                         )}>
                           {apiKey.role ? apiKey.role.charAt(0).toUpperCase() + apiKey.role.slice(1) : 'Viewer'}
@@ -395,7 +398,7 @@ export function ApiKeyManager({ playbook_id, apiKeys, onUpdate }: ApiKeyManagerP
                             name="role"
                             value={role.value}
                             checked={selectedRole === role.value}
-                            onChange={() => setSelectedRole(role.value as 'viewer' | 'coworker' | 'admin')}
+                            onChange={() => setSelectedRole(role.value as 'viewer' | 'coworker' | 'proposer' | 'admin')}
                             className="mt-0.5 rounded-full border-slate-600 text-amber-500 focus:ring-amber-500/20"
                           />
                           <div>
