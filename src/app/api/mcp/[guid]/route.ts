@@ -58,6 +58,7 @@ import { composePlaybookSystemPrompt } from "@/lib/playbook-prompt";
 import { validateAgentSkillDescription, validateAgentSkillName } from "@/lib/agent-skills";
 import { searchMemories } from "@/app/api/_shared/memory";
 import { memoryWriteFields } from "@/lib/memory";
+import { findPlaybookSkill } from "@/lib/repositories/skills";
 import { serveSkill, skillResourceUri, type ServedSkill } from "@/lib/mcp/skill-extension";
 
 type PersonaSource = Pick<Playbook, "id" | "persona_name" | "persona_system_prompt" | "persona_metadata" | "instructions">;
@@ -2031,7 +2032,6 @@ use_secret_write({
             }
 
             const skillId = args.skill_id as string;
-            const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(skillId);
 
             const updates: SkillsUpdate = {};
             if (args.name !== undefined) updates.name = args.name;
@@ -2051,23 +2051,7 @@ use_secret_write({
               if (descriptionError) throw new Error(descriptionError);
             }
 
-            let query = serviceSupabase
-              .from("skills")
-              .select("id")
-              .eq("playbook_id", playbook.id);
-
-            if (isUuid) {
-              query = query.eq("id", skillId);
-            } else {
-              query = query.ilike("name", skillId);
-            }
-
-            // Fetch the skill first to get its ID if we only have a name
-            const { data: targetSkill } = await query
-              .order("created_at", { ascending: false })
-              .limit(1)
-              .maybeSingle();
-
+            const targetSkill = await findPlaybookSkill(serviceSupabase, playbook.id, skillId);
             if (!targetSkill) {
               throw new Error("Skill not found");
             }
@@ -2090,34 +2074,21 @@ use_secret_write({
               throw new Error("API key with skills:write permission required");
             }
 
-            const skillId = args.skill_id as string;
-            const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(skillId);
-
-            if (isUuid) {
-              query = query.eq("id", skillId);
-            } else {
-              query = query.ilike("name", skillId);
+            // This used to narrow the outer *playbooks* query, so it never
+            // matched a skill, deleted nothing, and still reported success.
+            const skillToDelete = await findPlaybookSkill(serviceSupabase, playbook.id, args.skill_id as string);
+            if (!skillToDelete) {
+              throw new Error("Skill not found");
             }
 
-            // Fetch the skill first to get its ID if we only have a name
-            const { data: skillToDelete } = await query
-              .select("id")
-              .order("created_at", { ascending: false })
-              .limit(1)
-              .maybeSingle();
+            const { error } = await serviceSupabase
+              .from("skills")
+              .delete()
+              .eq("id", skillToDelete.id)
+              .eq("playbook_id", playbook.id);
 
-            if (skillToDelete) {
-
-              const { error } = await serviceSupabase
-                .from("skills")
-                .delete()
-                .eq("id", skillToDelete.id)
-                .eq("playbook_id", playbook.id);
-
-              if (error) throw new Error(error.message);
-            }
-
-            result = { success: true, deleted: true };
+            if (error) throw new Error(error.message);
+            result = { success: true, deleted: true, skill_id: skillToDelete.id };
             break;
           }
 
