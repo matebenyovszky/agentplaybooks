@@ -1,6 +1,13 @@
 import { handle } from "hono/vercel";
 import { createApiApp } from "@/app/api/_shared/hono";
-import { canAccessPrivatePlaybook, validatePlaybookCredential } from "@/app/api/_shared/auth";
+import {
+  actorMayRead,
+  canAccessPrivatePlaybook,
+  resolvePrivatePlaybookActor,
+  validatePlaybookCredential,
+  type PrivatePlaybookActor,
+} from "@/app/api/_shared/auth";
+import { READ_TOOL_PERMISSIONS, readPermissionForResource } from "@/app/api/_shared/private-read-scopes";
 import { getServiceSupabase, getSupabase } from "@/app/api/_shared/supabase";
 import { loadFederationSecrets } from "@/app/api/_shared/federation-secrets";
 import {
@@ -411,8 +418,11 @@ app.post("/", async (c) => {
     .eq("visibility", "public")
     .maybeSingle();
 
-  // If not found as public, try API key auth for private playbooks
+  // If not found as public, try API key auth for private playbooks. Any key
+  // of this playbook gets in -- a write-only or propose-only key must reach
+  // its tools -- and what it may read is checked per tool and resource.
   let privateRowExists = false;
+  let privateActor: PrivatePlaybookActor | null = null;
   if (!playbook) {
     let privateQuery = getServiceSupabase()
       .from("playbooks")
@@ -420,10 +430,12 @@ app.post("/", async (c) => {
     privateQuery = isUuid ? privateQuery.eq("id", guid) : privateQuery.eq("guid", guid);
     const { data: privatePlaybook } = await privateQuery.maybeSingle();
     privateRowExists = Boolean(privatePlaybook);
-    if (privatePlaybook && await canAccessPrivatePlaybook(c.req.raw, privatePlaybook.id)) {
+    privateActor = privatePlaybook ? await resolvePrivatePlaybookActor(c.req.raw, privatePlaybook.id) : null;
+    if (privatePlaybook && privateActor) {
       playbook = privatePlaybook;
     }
   }
+  const mayRead = (permission: string) => actorMayRead(privateActor, permission);
 
   if (!playbook) {
     // Establishing the connection is not reading the playbook. Refusing the
@@ -532,6 +544,9 @@ app.post("/", async (c) => {
     }
 
     case "skills/list": {
+      if (!mayRead("skills:read")) {
+        return c.json({ jsonrpc: "2.0", id, error: { code: -32001, message: "Playbook API key with skills:read permission required" } });
+      }
       const skills = await servedSkills(playbook.id, guid);
       return c.json({
         jsonrpc: "2.0", id,
@@ -545,6 +560,9 @@ app.post("/", async (c) => {
     }
 
     case "skills/get": {
+      if (!mayRead("skills:read")) {
+        return c.json({ jsonrpc: "2.0", id, error: { code: -32001, message: "Playbook API key with skills:read permission required" } });
+      }
       const location = skillResourceUri(guid, rpcParams?.uri);
       const skills = location?.path === "SKILL.md"
         ? await servedSkills(playbook.id, guid, location.name)
@@ -599,7 +617,7 @@ app.post("/", async (c) => {
       ];
 
       // Add skill attachment resources
-      if (skills?.length) {
+      if (skills?.length && mayRead("skills:read")) {
         const serviceSupabase = getServiceSupabase();
         const { data: attachments } = await serviceSupabase
           .from("skill_attachments")
@@ -617,10 +635,9 @@ app.post("/", async (c) => {
         }
       }
 
-      const { data: mcpRows } = await serviceSupabase
-        .from("mcp_servers")
-        .select("*")
-        .eq("playbook_id", playbook.id);
+      const { data: mcpRows } = mayRead("playbooks:read")
+        ? await serviceSupabase.from("mcp_servers").select("*").eq("playbook_id", playbook.id)
+        : { data: [] };
       resources.push(...await federatedResources(
         (mcpRows || []) as MCPServer[],
         playbook.id,
@@ -636,6 +653,14 @@ app.post("/", async (c) => {
 
     case "resources/read": {
       const uri = rpcParams?.uri as string;
+      const resourcePermission = parseFederatedResourceUri(uri || "") ? null : readPermissionForResource(uri || "");
+      if (resourcePermission && !mayRead(resourcePermission)) {
+        return c.json({
+          jsonrpc: "2.0",
+          id,
+          error: { code: -32001, message: `Playbook API key with ${resourcePermission} permission required` },
+        });
+      }
       const serviceSupabase = getServiceSupabase();
 
       const skillLocation = skillResourceUri(guid, uri);
@@ -1087,6 +1112,11 @@ use_secret_write({
 
       try {
         let result: unknown;
+
+        const readPermission = READ_TOOL_PERMISSIONS[toolName];
+        if (readPermission && !mayRead(readPermission)) {
+          throw new Error(`API key with ${readPermission} permission required`);
+        }
 
         switch (toolName) {
           case "find_tools": {
