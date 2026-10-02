@@ -17,9 +17,11 @@ KEY_ENV = "AGENTPLAYBOOKS_MEMORY_API_KEY"
 
 
 def load_config(home=None):
-    config = {"base_url": "https://agentplaybooks.ai", "playbook_guid": "", "shared_playbooks": ""}
+    config = {"base_url": "https://agentplaybooks.ai", "playbook_guid": "", "shared_playbooks": "",
+              "allow_insecure_http": False}
     config.update(read_json_or_empty(Path(home or get_hermes_home()) / CONFIG_FILE))
-    validate_url(config["base_url"])
+    config["allow_insecure_http"] = config.get("allow_insecure_http") is True
+    validate_url(config["base_url"], config["allow_insecure_http"])
     return config
 
 
@@ -83,7 +85,7 @@ class AgentPlaybooksMemoryProvider(MemoryProvider):
         allowed = {k: v for k, v in values.items() if k in {"playbook_guid", "base_url", "shared_playbooks"}}
         config = {**load_config(hermes_home), **allowed}
         validate_guid(config["playbook_guid"])
-        validate_url(config["base_url"])
+        validate_url(config["base_url"], config["allow_insecure_http"])
         for guid in config.get("shared_playbooks", "").split(","):
             if guid.strip():
                 validate_guid(guid.strip())
@@ -91,14 +93,15 @@ class AgentPlaybooksMemoryProvider(MemoryProvider):
 
     def initialize(self, session_id, **kwargs):
         config = load_config(kwargs.get("hermes_home"))
-        self.client = Client(config["base_url"], config["playbook_guid"], get_secret(KEY_ENV, ""))
+        insecure = config["allow_insecure_http"]
+        self.client = Client(config["base_url"], config["playbook_guid"], get_secret(KEY_ENV, ""), insecure)
         self.client.assert_private()
         self.shared = {}
         for guid in config.get("shared_playbooks", "").split(","):
             guid = guid.strip()
             if guid and guid != self.client.guid:
                 env_name = "AGENTPLAYBOOKS_SHARED_" + guid.replace("-", "").upper() + "_API_KEY"
-                self.shared[guid] = Client(config["base_url"], guid, get_secret(env_name, ""))
+                self.shared[guid] = Client(config["base_url"], guid, get_secret(env_name, ""), insecure)
         self.session_id = session_id
         self.agent_id = str(kwargs.get("agent_identity") or Path(kwargs.get("hermes_home") or get_hermes_home()).name)
         self.user_id = self.initial_user_id = str(kwargs.get("user_id") or "")

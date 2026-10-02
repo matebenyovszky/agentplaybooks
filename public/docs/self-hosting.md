@@ -4,7 +4,7 @@ Deploy AgentPlaybooks on your own infrastructure.
 
 > ## Current limitations — read this first
 >
-> *Last verified: 2026-08-01.*
+> *Last verified: 2026-10-01.*
 >
 > **1. Start a new project from `supabase/schema.sql`, not from
 > `supabase/migrations/`.** The migrations folder is incremental only — it has
@@ -12,6 +12,13 @@ Deploy AgentPlaybooks on your own infrastructure.
 > empty database fails on the first statement. `supabase/schema.sql` is a
 > snapshot of the whole current schema and is all a new project needs; the
 > migrations are the forward history from that snapshot onward.
+>
+> Databases initialized from a `schema.sql` older than October 2026 lack the
+> memory history objects (`memory_entries`, `memory_history`, `memory_at`,
+> `is_archived`), and memory search fails on them. Apply
+> `20260911042912_memory_time_and_history.sql`, then
+> `20260913173449_harden_public_functions.sql`, if
+> `select to_regclass('public.memory_entries')` returns null.
 >
 > **2. "Self-hosted" means running your own Supabase, not just your own
 > Postgres.** Every API route queries the Supabase Data API and authentication
@@ -142,6 +149,26 @@ build arguments as well as runtime variables — Next.js bakes them into the
 client bundle. They must be the values the *browser* can reach, and changing
 them requires a rebuild rather than a restart.
 
+Set `NEXT_PUBLIC_APP_URL` to the instance's own origin (for example
+`https://agents.example.org`) before building, for the same reason. Without it
+the image advertises `https://agentplaybooks.ai` as the MCP OAuth resource in
+`/.well-known/oauth-protected-resource`, and in generated links.
+
+### Intranet instance without TLS
+
+The Hermes memory provider and `apb memory setup` refuse plain HTTP except on
+localhost, because the playbook key travels with every request. For an
+internal test instance that has no certificate yet, opt in explicitly per
+Hermes profile:
+
+```bash
+apb memory setup <guid> --target=hermes --url=http://agents.intranet:8007 --allow-insecure-http --apply
+```
+
+This records `"allow_insecure_http": true` in the profile's
+`agentplaybooks/config.json`. Put the instance behind HTTPS before production
+use.
+
 ### Run
 
 ```bash
@@ -162,22 +189,18 @@ While optimized for Cloudflare, the app works on Vercel too.
 
 ### Initial Setup
 
-Run the migration in `supabase/migrations/` or use Supabase CLI:
+Run `supabase/schema.sql` once on the empty database, in the Supabase SQL
+editor or with `psql`:
 
 ```bash
-# Install Supabase CLI
-npm install -g supabase
-
-# Link to your project
-supabase link --project-ref YOUR_PROJECT_REF
-
-# Push migrations
-supabase db push
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 --single-transaction -f supabase/schema.sql
 ```
 
-### Manual Migration
+### Upgrades
 
-Copy the SQL from `supabase/migrations/initial_schema.sql` and run in Supabase SQL Editor.
+Apply, in filename order, each file in `supabase/migrations/` that is newer than
+the schema the database was built from. Do not run `supabase db push` against
+an empty database: the incremental history cannot create the core tables.
 
 ## Environment Variables
 
@@ -186,6 +209,7 @@ Copy the SQL from `supabase/migrations/initial_schema.sql` and run in Supabase S
 | `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase anon (public) key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes | Supabase service role key (secret) |
+| `NEXT_PUBLIC_APP_URL` | Yes for self-hosting | This instance's own origin. Baked in at build time; unset, OAuth metadata and generated links point at `https://agentplaybooks.ai`. |
 | `SECRETS_ENCRYPTION_KEY` | Yes for the secrets vault | 64 hexadecimal characters. Rotating it makes existing secrets undecryptable — there is no re-encryption tooling yet. |
 | `ALLOWED_ORIGINS` | No | Comma-separated origins allowed to make credentialed cross-origin API calls. Setting it **replaces** the default list, which is what a self-hosted instance wants — otherwise the project's own domains stay trusted. Unset keeps the previous behaviour. |
 | `SECRETS_REQUIRE_ALLOWED_HOSTS` | No | Set to `true` to refuse outbound use of any secret that has not declared `allowed_hosts`. Off by default. |

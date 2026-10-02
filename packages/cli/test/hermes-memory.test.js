@@ -61,6 +61,21 @@ test("refuses a stale preview and malformed identifiers/endpoints", async () => 
   }
 });
 
+test("an intranet HTTP instance needs --allow-insecure-http and records the opt-in", async () => {
+  const options = await fixture();
+  const url = "http://intranet.example:8007";
+  await assert.rejects(planHermesMemory({ ...options, url }), /HTTPS/);
+  await assert.rejects(planHermesMemory({ ...options, url: "http://key@intranet.example", allowInsecureHttp: true }), /HTTPS/);
+  await applyHermesMemory(await planHermesMemory({ ...options, url, allowInsecureHttp: true }));
+  const settings = JSON.parse(await readFile(path.join(options.hermesHome, "agentplaybooks/config.json"), "utf8"));
+  assert.equal(settings.base_url, url);
+  assert.equal(settings.allow_insecure_http, true);
+  const https = await fixture();
+  await applyHermesMemory(await planHermesMemory({ ...https, url: "https://example.com", allowInsecureHttp: true }));
+  const httpsSettings = JSON.parse(await readFile(path.join(https.hermesHome, "agentplaybooks/config.json"), "utf8"));
+  assert.equal(httpsSettings.allow_insecure_http, undefined);
+});
+
 test("HERMES_HOME and shared sources stay in their chosen profile", async () => {
   const options = await fixture();
   const other = path.join(options.hermesHome, "second");

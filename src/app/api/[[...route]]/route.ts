@@ -27,6 +27,7 @@ import {
   getUserFromAuthOrApiKey as getUserFromAuthOrApiKeyFromRequest,
 } from "@/app/api/_shared/auth";
 import { getServiceSupabase, getSupabase } from "@/app/api/_shared/supabase";
+import { resolveAllowedOrigins } from "@/app/api/_shared/hono";
 import { checkPlaybookWriteAccess, getPlaybookAccessRole } from "@/app/api/_shared/guards";
 import { buildPlaybookUpdate } from "@/lib/playbook-access";
 import { validateAgentSkillDescription, validateAgentSkillName } from "@/lib/agent-skills";
@@ -92,21 +93,13 @@ type StarredPlaybookRow = { playbooks?: Playbook | null };
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>().basePath("/api");
 
-// CORS middleware
-const ALLOWED_ORIGINS = [
-  process.env.NEXT_PUBLIC_APP_URL || "https://agentplaybooks.ai",
-  "https://agentplaybooks.ai",
-  "https://www.agentplaybooks.ai",
-  "https://apbks.com",
-  "https://www.apbks.com",
-  "https://apbks.online",
-  "https://www.apbks.online",
-].filter(Boolean);
-
+// CORS middleware. Same allow-list as the other API apps, so a self-hosted
+// instance's ALLOWED_ORIGINS also governs this catch-all route.
 app.use("*", cors({
   origin: (origin) => {
-    if (!origin) return ALLOWED_ORIGINS[0];
-    if (ALLOWED_ORIGINS.includes(origin)) return origin;
+    const allowedOrigins = resolveAllowedOrigins();
+    if (!origin) return allowedOrigins[0];
+    if (allowedOrigins.includes(origin)) return origin;
     if (process.env.NODE_ENV === "development" && origin.startsWith("http://localhost")) return origin;
     return null as unknown as string;
   },

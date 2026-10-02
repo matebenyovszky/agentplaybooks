@@ -26,18 +26,22 @@ def validate_guid(guid):
     return guid
 
 
-def validate_url(url):
+def validate_url(url, allow_insecure_http=False):
+    # allow_insecure_http is an explicit, per-profile opt-in for an intranet
+    # self-hosted instance that has no TLS yet; the key then travels in clear.
     parsed = urlsplit(url)
     if (parsed.scheme not in ("https", "http") or not parsed.hostname or parsed.username
             or parsed.password or parsed.query or parsed.fragment
-            or (parsed.scheme == "http" and parsed.hostname not in ("localhost", "127.0.0.1", "::1"))):
-        raise ValueError("Use an HTTPS AgentPlaybooks URL (HTTP is allowed only on localhost).")
+            or (parsed.scheme == "http" and not allow_insecure_http
+                and parsed.hostname not in ("localhost", "127.0.0.1", "::1"))):
+        raise ValueError("Use an HTTPS AgentPlaybooks URL (HTTP is allowed only on localhost, "
+                         "or with allow_insecure_http for an intranet instance).")
     return url.rstrip("/")
 
 
 class Client:
-    def __init__(self, base_url, guid, api_key=""):
-        self.base_url = validate_url(base_url)
+    def __init__(self, base_url, guid, api_key="", allow_insecure_http=False):
+        self.base_url = validate_url(base_url, allow_insecure_http)
         self.guid = validate_guid(guid)
         self.api_key = api_key
         self.path = f"/api/playbooks/{quote(guid, safe='')}/memory"
