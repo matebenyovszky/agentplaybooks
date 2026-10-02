@@ -25,9 +25,11 @@ vi.mock("@/app/api/_shared/supabase", () => ({
   getServiceSupabase: vi.fn(),
 }));
 
-vi.mock("@/app/api/_shared/auth", () => ({
+vi.mock("@/app/api/_shared/auth", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/app/api/_shared/auth")>()),
   canAccessPrivatePlaybook: vi.fn(),
   validatePlaybookCredential: vi.fn(),
+  resolvePrivatePlaybookActor: vi.fn(),
 }));
 
 vi.mock("@/lib/mcp/federation", () => ({

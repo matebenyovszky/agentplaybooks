@@ -440,6 +440,14 @@ Authorization: Bearer apb_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 **Write-back operations** (writing memory, canvas, etc.) always require an API key, even for public playbooks. The key must have the appropriate permissions (e.g. `memory:write`).
 
+On a private playbook, any active key of that playbook reaches the MCP endpoint. Each operation then checks its own permission:
+
+- Memory reads need `memory:read`, skill reads `skills:read`, canvas and run reads `canvas:read`, and the connected servers list `playbooks:read`.
+- A key that holds `memory:read` can read everything, as it always could.
+- A write-only key, for example one with only `memory:write`, can write but reads nothing.
+
+The read-only manifest (`GET /api/mcp/:guid`) and `llms.txt` still need a key with `memory:read`.
+
 | Access Level | Public Playbook | Private Playbook |
 |---|---|---|
 | Read tools/resources | No auth needed | API key required |
