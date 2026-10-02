@@ -48,6 +48,7 @@ import { InstructionsEditor } from "@/components/playbook/InstructionsEditor";
 import { SkillEditor } from "@/components/playbook/SkillEditor";
 import { McpServerEditor } from "@/components/playbook/McpServerEditor";
 import { MemoryEditor } from "@/components/playbook/MemoryEditor";
+import { ProposalsPanel } from "@/components/playbook/ProposalsPanel";
 import { CanvasEditor } from "@/components/playbook/CanvasEditor";
 import { ApiKeyManager } from "@/components/playbook/ApiKeyManager";
 import { SecretManager } from "@/components/playbook/SecretManager";
@@ -1151,6 +1152,10 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                 )}
               </div>
 
+              {canEdit && playbook?.guid && (
+                <ProposalsPanel playbookGuid={playbook.guid} kind="skill" onApproved={loadPlaybook} />
+              )}
+
               {skills.length === 0 ? (
                 <EmptyState
                   icon={Zap}
@@ -1284,6 +1289,9 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
             >
+              {canEdit && playbook?.guid && (
+                <ProposalsPanel playbookGuid={playbook.guid} kind="memory" onApproved={loadPlaybook} />
+              )}
               <MemoryEditor
                 storage={storage}
                 memories={memories}

@@ -110,7 +110,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   {
     name: "write_memory",
     title: "Write memory",
-    description: "Create or update a memory by key; previous contents are saved automatically and readable with get_memory_history. memory_at is optional and defaults to this save's time; supply an ISO timestamp to preserve an earlier time. is_archived=true hides the entry from normal search/context; false restores it. Tier controls context priority independently of archiving. Requires memory:write or full permission.",
+    description: "Create or update a memory by key; previous contents are saved automatically and readable with get_memory_history. memory_at is optional and defaults to this save's time; supply an ISO timestamp to preserve an earlier time. is_archived=true hides the entry from normal search/context; false restores it. Tier controls context priority independently of archiving. Requires memory:write or full permission; with memory:propose the write is saved as a proposal (status pending_review) that changes nothing until the owner or an editor approves it.",
     inputSchema: {
       type: "object",
       properties: {
@@ -385,7 +385,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   {
     name: "create_skill",
     title: "Create skill",
-    description: "Create a new skill for this playbook. Use this to expand capabilities. Requires full or skills:write permission. Use update_skill to change an existing skill and list_skills to check for name collisions first.",
+    description: "Create a new skill for this playbook. Use this to expand capabilities. Requires full or skills:write permission; with skills:propose the skill is saved as a proposal (status pending_review) that the owner or an editor approves before it exists. Use update_skill to change an existing skill and list_skills to check for name collisions first.",
     inputSchema: {
       type: "object",
       properties: {
@@ -401,7 +401,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   {
     name: "update_skill",
     title: "Update skill",
-    description: "Update an existing skill in this playbook. Requires full or skills:write permission. Use create_skill to add a skill, list_skill_versions before a risky edit, and rollback_skill to restore a previous version. Do not use this to delete a skill.",
+    description: "Update an existing skill in this playbook. Requires full or skills:write permission; with skills:propose the change is saved as a proposal (status pending_review) and the skill stays unchanged until it is approved. Use create_skill to add a skill, list_skill_versions before a risky edit, and rollback_skill to restore a previous version. Do not use this to delete a skill.",
     inputSchema: {
       type: "object",
       properties: {
