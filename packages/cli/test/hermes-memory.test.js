@@ -86,3 +86,15 @@ test("HERMES_HOME and shared sources stay in their chosen profile", async () => 
   const settings = JSON.parse(await readFile(path.join(other, "agentplaybooks/config.json"), "utf8"));
   assert.equal(settings.shared_playbooks, "abcdef0123456789");
 });
+
+test("--team records writable team playbooks and rejects malformed ones", async () => {
+  const options = await fixture();
+  await assert.rejects(planHermesMemory({ ...options, teamPlaybooks: "not-a-guid" }), /Team playbooks/);
+  await applyHermesMemory(await planHermesMemory({ ...options, teamPlaybooks: "abcdef0123456789, fedcba9876543210" }));
+  const settings = JSON.parse(await readFile(path.join(options.hermesHome, "agentplaybooks/config.json"), "utf8"));
+  assert.equal(settings.team_playbooks, "abcdef0123456789,fedcba9876543210");
+  const plain = await fixture();
+  await applyHermesMemory(await planHermesMemory(plain));
+  const plainSettings = JSON.parse(await readFile(path.join(plain.hermesHome, "agentplaybooks/config.json"), "utf8"));
+  assert.equal(plainSettings.team_playbooks, undefined);
+});

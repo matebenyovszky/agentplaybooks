@@ -11165,6 +11165,8 @@ async function planHermesMemory(options = {}) {
   }
   const shared = [...new Set((options.sharedPlaybooks ?? "").split(",").map((x) => x.trim()).filter(Boolean))];
   if (shared.some((guid) => !GUID.test(guid))) throw new Error("Shared playbooks must be comma-separated GUIDs.");
+  const team = [...new Set((options.teamPlaybooks ?? "").split(",").map((x) => x.trim()).filter(Boolean))];
+  if (team.some((guid) => !GUID.test(guid))) throw new Error("Team playbooks must be comma-separated GUIDs.");
   const fileActions = [], conflicts = [];
   const add = (name, old, content) => {
     if (old === content) return;
@@ -11200,6 +11202,7 @@ async function planHermesMemory(options = {}) {
   const oldSettings = await readOptional(path12.join(profile.directory, settingsName));
   const settings = oldSettings === null ? {} : JSON.parse(oldSettings);
   const desired = { base_url: baseUrl, playbook_guid: options.playbook, shared_playbooks: shared.join(",") };
+  if (team.length) desired.team_playbooks = team.join(",");
   if (url.protocol === "http:" && insecure) desired.allow_insecure_http = true;
   if (Object.entries(desired).some(([key, value]) => settings[key] !== void 0 && settings[key] !== value)) {
     conflict2(settingsName, "Existing memory settings differ. Edit them in 'hermes memory setup' to switch playbooks; no memory is migrated automatically.");
@@ -12091,7 +12094,7 @@ Usage:
   agentplaybooks connect --account [path] [--apply] [--json] [--target=<types>]
   agentplaybooks login [--url=<base>]
   agentplaybooks memory setup <guid> --target=hermes [--hermes-home=<directory>]
-                             [--shared=<guids>] [--url=<base>] [--allow-insecure-http]
+                             [--shared=<guids>] [--team=<guids>] [--url=<base>] [--allow-insecure-http]
                              [--apply] [--json]
   agentplaybooks hermes sync <bundle-guid> [--url=<base>] [--memory=<guid>]
                              [--managed-dir=<directory>] [--hermes-home=<directory>]
@@ -12549,6 +12552,7 @@ async function run(args) {
       playbook: positional[1],
       hermesHome: option("--hermes-home"),
       sharedPlaybooks: option("--shared"),
+      teamPlaybooks: option("--team"),
       url: option("--url"),
       allowInsecureHttp: flags.has("--allow-insecure-http")
     });

@@ -117,6 +117,26 @@ Tartsd a playbookot privátként: láthatóságának későbbi módosítása a m
 tartalmakat is elérhetővé teszi a szolgáltatás hozzáférési szabályai szerint.
 A láthatóság ellenőrzése és az írás külön kérés, nem egyetlen atomi művelet.
 
+### Csapatmemória
+
+Egy ügyön dolgozó csapat **írható** közös memóriát is használhat: egy privát
+playbookot a csapatnak. Vedd fel a `team_playbooks` mezőbe (CLI:
+`--team=<guid>`), és minden tag profiljában add meg a kulcsát
+`AGENTPLAYBOOKS_TEAM_<GUID_WITHOUT_HYPHENS_UPPERCASE>_API_KEY` néven. Egy
+`memory:read` és `memory:write` jogú, playbook-szintű kulcs megfelel.
+
+- Írni, archiválni és törölni a `source` paraméterrel lehet benne, ennek értéke
+  a csapat GUID-ja. `source` nélkül az írás továbbra is a személyes memóriába megy.
+- Az automatikus visszakeresés a személyes memóriában és minden csapatmemóriában
+  keres. A csapat találatait a csapat GUID-ja jelöli.
+- Nyilvános vagy nem listázott csapat-playbookba az írást a provider visszautasítja,
+  ugyanúgy, mint a személyesnél. A megosztottként felvett forrás csak olvasható
+  marad. Ha egy GUID mindkét listában szerepel, csapatforrásnak számít.
+- A Hermes beépített memóriájának tükrözése mindig a személyes memóriába megy.
+
+Az ügy lezárásakor archiváld vagy töröld a csapat-playbookot, és vedd ki a
+`team_playbooks` listából.
+
 ## Keresés és jelenlegi korlátok
 
 Az automatikus visszakeresés a teljes kérdéssel futó **szó szerinti

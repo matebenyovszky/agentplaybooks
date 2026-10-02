@@ -33,13 +33,13 @@ else:
 from agentplaybooks import AgentPlaybooksMemoryProvider, CONFIG_FILE, KEY_ENV, register
 from agentplaybooks.client import Client, MemoryAPIError, NoRedirects
 
-A, B = "0123456789abcdef", "abcdef0123456789"
+A, B, C = "0123456789abcdef", "abcdef0123456789", "fedcba9876543210"
 
 
 class Service:
     """Fake existing REST API behind urllib; records auth and mimics version history."""
     def __init__(self):
-        self.books = {guid: {"visibility": "private", "key": f"key-{guid}", "entries": {}, "history": {}} for guid in (A, B)}
+        self.books = {guid: {"visibility": "private", "key": f"key-{guid}", "entries": {}, "history": {}} for guid in (A, B, C)}
         self.calls = []
 
     def open(self, req, timeout=None):
@@ -108,9 +108,10 @@ class ProviderTests(unittest.TestCase):
         self.addCleanup(self.home_patch.stop)
         self.config(A)
 
-    def config(self, guid, shared=""):
+    def config(self, guid, shared="", team=""):
         (self.home / CONFIG_FILE).parent.mkdir(parents=True, exist_ok=True)
-        (self.home / CONFIG_FILE).write_text(json.dumps({"playbook_guid": guid, "base_url": "https://example.test", "shared_playbooks": shared}))
+        (self.home / CONFIG_FILE).write_text(json.dumps({"playbook_guid": guid, "base_url": "https://example.test",
+                                                         "shared_playbooks": shared, "team_playbooks": team}))
 
     def provider(self, session="session-1", **kwargs):
         p = AgentPlaybooksMemoryProvider()
@@ -175,6 +176,33 @@ class ProviderTests(unittest.TestCase):
         self.call(q, "write", key="private", value="Bob's memory")
         self.assertEqual(self.call(p, "read", key="private")["value"], "Alice's memory")
         self.assertTrue(all(auth in (None, f"key-{guid}") for _, guid, auth, _ in self.service.calls))
+
+    def test_team_memory_is_writable_shared_private_and_recalled(self):
+        self.config(A, B, C)
+        team_env = f"AGENTPLAYBOOKS_TEAM_{C.upper()}_API_KEY"
+        self.secrets = {KEY_ENV: f"key-{A}", team_env: f"key-{C}", f"AGENTPLAYBOOKS_SHARED_{B.upper()}_API_KEY": f"key-{B}"}
+        p = self.provider()
+        self.assertIn(C, p.system_prompt_block())
+        self.call(p, "write", key="case/lead", value="Company X is the lead tenderer", source=C)
+        self.call(p, "write", key="note", value="personal note")
+        self.assertIn("case/lead", self.service.books[C]["entries"])
+        self.assertNotIn("case/lead", self.service.books[A]["entries"])
+        self.assertNotIn("note", self.service.books[C]["entries"])
+        self.assertEqual(self.call(p, "read", key="case/lead", source=C)["value"], "Company X is the lead tenderer")
+        self.assertIn("tenderer", p.prefetch("tenderer"))
+        self.assertIn("Team memory " + C, p.prefetch("tenderer"))
+        self.call(p, "archive", key="case/lead", source=C)
+        self.assertTrue(self.service.books[C]["entries"]["case/lead"]["is_archived"])
+        self.call(p, "delete", key="case/lead", source=C)
+        self.assertNotIn("case/lead", self.service.books[C]["entries"])
+        # Shared stays read-only; an unconfigured team is refused; team writes use the team key only.
+        self.assertIn("read-only", self.call(p, "write", key="x", value=1, source=B)["error"])
+        self.assertIn("error", self.call(p, "write", key="x", value=1, source="9999999999999999"))
+        self.assertTrue(all(auth in (None, f"key-{guid}") for _, guid, auth, _ in self.service.calls))
+        # A team playbook that turns public is refused for writes, like personal memory.
+        self.service.books[C]["visibility"] = "public"
+        self.assertIn("error", self.call(p, "write", key="leak", value="must not upload", source=C))
+        self.assertNotIn("leak", self.service.books[C]["entries"])
 
     def test_public_unlisted_wrong_key_and_visibility_change_fail_closed(self):
         for visibility in ("public", "unlisted"):
