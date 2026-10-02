@@ -5,9 +5,11 @@ import { resolvePrivatePlaybookActor, type PrivatePlaybookActor } from "@/app/ap
 
 /**
  * A private playbook's MCP endpoint used to admit only memory:read keys, so a
- * key that may only write (or propose) could not reach its own tools. Now any
- * key of the playbook gets in, and every read is checked per tool and resource.
- * These pin that a write-only key reaches the endpoint but reads nothing.
+ * key that may only write, propose or use a secret could not reach its own
+ * tools. Now any key of the playbook gets in, and every read is checked per
+ * tool and resource.
+ * These pin that a key with no read permission reaches the endpoint but reads
+ * nothing, and that a write key reads only the area it writes.
  */
 
 vi.mock("@/app/api/_shared/supabase", () => ({ getSupabase: vi.fn(), getServiceSupabase: vi.fn() }));
@@ -55,16 +57,16 @@ beforeEach(() => {
   vi.mocked(getServiceSupabase).mockReturnValue(client(privatePlaybook) as unknown as ReturnType<typeof getServiceSupabase>);
 });
 
-describe("private playbook MCP with a write-only key", () => {
+describe("private playbook MCP with a key that has no read permission", () => {
   it("reaches the endpoint: tools are listed", async () => {
-    asKey(["memory:write"]);
+    asKey(["secrets:read"]);
     const body = await (await rpc("tools/list")).json();
     expect(body.error).toBeUndefined();
-    expect(body.result.tools.some((tool: { name: string }) => tool.name === "write_memory")).toBe(true);
+    expect(body.result.tools.some((tool: { name: string }) => tool.name === "use_secret")).toBe(true);
   });
 
   it("cannot read memory, skills or canvas through tools", async () => {
-    asKey(["memory:write"], "proposer");
+    asKey(["proposals:write"], "proposer");
     for (const [name, permission] of [["read_memory", "memory:read"], ["search_memory", "memory:read"],
       ["list_skills", "skills:read"], ["get_skill", "skills:read"], ["read_canvas", "canvas:read"], ["list_mcp_servers", "playbooks:read"]]) {
       const body = await (await rpc("tools/call", { name, arguments: { key: "x", skill_id: "x", slug: "x" } })).json();
@@ -74,7 +76,7 @@ describe("private playbook MCP with a write-only key", () => {
   });
 
   it("cannot read skills or memory through the skills extension or resources", async () => {
-    asKey(["memory:write"]);
+    asKey(["secrets:write"]);
     expect((await (await rpc("skills/list")).json()).error?.code).toBe(-32001);
     expect((await (await rpc("skills/get", { uri: "skill://private-guid/x/SKILL.md" })).json()).error?.code).toBe(-32001);
     for (const uri of ["playbook://private-guid/memory", "playbook://other/memory", "playbook://private-guid/skills", "skill://private-guid/x/SKILL.md"]) {
@@ -99,5 +101,16 @@ describe("private playbook MCP with a scoped read key", () => {
     expect(JSON.stringify(memory)).toContain("memory:read permission required");
     const skills = await (await rpc("tools/call", { name: "list_skills", arguments: {} })).json();
     expect(JSON.stringify(skills)).not.toContain("skills:read permission required");
+  });
+});
+
+describe("private playbook MCP with a write key", () => {
+  it("reads the area it writes, and nothing else", async () => {
+    asKey(["memory:write"]);
+    const memory = await (await rpc("tools/call", { name: "read_memory", arguments: { key: "x" } })).json();
+    expect(JSON.stringify(memory)).not.toContain("memory:read permission required");
+    const skills = await (await rpc("tools/call", { name: "list_skills", arguments: {} })).json();
+    expect(JSON.stringify(skills)).toContain("skills:read permission required");
+    expect((await (await rpc("resources/read", { uri: "playbook://private-guid/skills" })).json()).error?.code).toBe(-32001);
   });
 });

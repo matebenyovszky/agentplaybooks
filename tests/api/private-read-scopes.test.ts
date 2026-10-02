@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { actorMayRead, type PrivatePlaybookActor } from "@/app/api/_shared/auth";
+import { grantsPermission } from "@/app/api/_shared/permissions";
 import { PLAYBOOK_TOOLS } from "@/app/api/_shared/playbook-tools";
 import {
   NO_DATA_TOOLS,
@@ -25,15 +26,51 @@ describe("actorMayRead", () => {
     }
   });
 
-  it("gives a write-only key no reads, and a scoped key only its scope", () => {
-    for (const writeOnly of [key(["memory:write"]), key(["skills:write"]), key(["proposals:write"], "proposer"), key(["secrets:read"])]) {
-      expect(actorMayRead(writeOnly, "memory:read")).toBe(false);
-      expect(actorMayRead(writeOnly, "skills:read")).toBe(false);
+  it("gives a key with no read or write of an area no reads, and a scoped key only its scope", () => {
+    for (const noReads of [key(["proposals:write"], "proposer"), key(["secrets:read"]), key(["secrets:write"]), key(["tools:call"])]) {
+      expect(actorMayRead(noReads, "memory:read")).toBe(false);
+      expect(actorMayRead(noReads, "skills:read")).toBe(false);
     }
     const skillsOnly = key(["skills:read", "skills:write"]);
     expect(actorMayRead(skillsOnly, "skills:read")).toBe(true);
     expect(actorMayRead(skillsOnly, "memory:read")).toBe(false);
     expect(actorMayRead(skillsOnly, "canvas:read")).toBe(false);
+  });
+
+  it("lets a write key read the area it writes, and nothing else", () => {
+    const skillsWriter = key(["skills:write"]);
+    expect(actorMayRead(skillsWriter, "skills:read")).toBe(true);
+    expect(actorMayRead(skillsWriter, "memory:read")).toBe(false);
+    expect(actorMayRead(key(["canvas:write"]), "canvas:read")).toBe(true);
+    expect(actorMayRead(key(["canvas:write"]), "skills:read")).toBe(false);
+  });
+});
+
+describe("grantsPermission", () => {
+  it("grants an exact match and everything to full", () => {
+    expect(grantsPermission(["memory:read"], "memory:read")).toBe(true);
+    expect(grantsPermission(["full"], "secrets:write")).toBe(true);
+    expect(grantsPermission([], "memory:read")).toBe(false);
+    expect(grantsPermission(null, "memory:read")).toBe(false);
+  });
+
+  it("lets X:write imply X:read for memory, skills, personas, canvas and playbooks", () => {
+    for (const area of ["memory", "skills", "personas", "canvas", "playbooks"]) {
+      expect(grantsPermission([`${area}:write`], `${area}:read`), area).toBe(true);
+    }
+  });
+
+  it("never lets a read imply a write, or a write leak into another area", () => {
+    expect(grantsPermission(["memory:read"], "memory:write")).toBe(false);
+    expect(grantsPermission(["memory:write"], "skills:read")).toBe(false);
+    expect(grantsPermission(["skills:write"], "skills:delete")).toBe(false);
+  });
+
+  it("keeps secret use separate from secret management", () => {
+    // secrets:read authorizes outbound requests through the proxy; a key that
+    // may only store or rotate a credential must not gain the right to use it.
+    expect(grantsPermission(["secrets:write"], "secrets:read")).toBe(false);
+    expect(grantsPermission(["secrets:read"], "secrets:write")).toBe(false);
   });
 });
 

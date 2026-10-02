@@ -3,6 +3,7 @@ import { presentedApiKey } from "./api-key-header";
 import { getServiceSupabase, getSupabase } from "./supabase";
 import type { ApiKey, UserApiKeysRow } from "@/lib/supabase/types";
 import { getPlaybookAccessRole } from "./guards";
+import { grantsPermission } from "./permissions";
 
 type ApiKeyWithPlaybook = ApiKey & {
   playbooks: { id: string; guid: string };
@@ -90,7 +91,7 @@ export async function validateApiKey(
 
   if (apiKeyData.role === 'admin' || requiredPermission === null) {
     // Admin has full access; a null permission is an identity check only.
-  } else if (!apiKeyData.permissions.includes(requiredPermission) && !apiKeyData.permissions.includes("full")) {
+  } else if (!grantsPermission(apiKeyData.permissions, requiredPermission)) {
     return null;
   }
 
@@ -140,8 +141,7 @@ export async function validateUserApiKey(
 
   if (
     requiredPermission
-    && !userKeyData.permissions.includes(requiredPermission)
-    && !userKeyData.permissions.includes("full")
+    && !grantsPermission(userKeyData.permissions, requiredPermission)
   ) {
     return null;
   }
@@ -286,13 +286,12 @@ export async function resolvePrivatePlaybookActor(
 /**
  * May this caller read data guarded by `permission`? `null` is a public
  * playbook, where reads need no credential. The owner and editors read
- * everything. A playbook key needs the permission, `full`, or the admin role;
- * a key holding memory:read keeps the access it had when that permission was
- * the gate for every private read.
+ * everything. A playbook key needs the permission (or the matching write, see
+ * grantsPermission), `full`, or the admin role; a key holding memory:read keeps
+ * the access it had when that permission was the gate for every private read.
  */
 export function actorMayRead(actor: PrivatePlaybookActor | null, permission: string): boolean {
   if (!actor || actor.kind === "member" || actor.role === "admin") return true;
-  return actor.permissions.includes("full")
-    || actor.permissions.includes(permission)
+  return grantsPermission(actor.permissions, permission)
     || actor.permissions.includes("memory:read");
 }
