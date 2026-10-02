@@ -19,12 +19,17 @@ services:
         # the browser can reach. Changing it requires a rebuild, not a restart.
         NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-}
         NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}
+        # This instance's own origin, e.g. https://agents.example.org. Also
+        # baked in at build time; left empty, OAuth metadata and generated
+        # links fall back to the hosted https://agentplaybooks.ai.
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-}
     restart: unless-stopped
     ports:
       - "${APP_PORT:-3000}:3000"
     environment:
       NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-}
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
       # Secrets vault (64 hex characters). Rotating this makes existing
       # secrets undecryptable -- there is no re-encryption tooling yet.

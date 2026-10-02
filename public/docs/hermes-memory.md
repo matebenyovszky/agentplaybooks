@@ -112,6 +112,26 @@ changing its visibility later exposes existing contents according to the
 service's access model. Visibility checks and writes are separate requests, not
 an atomic visibility lock.
 
+### Team memory
+
+A team working on the same matter can share a **writable** memory: a private
+playbook for that team. List it in `team_playbooks` (CLI: `--team=<guid>`) and
+give each member's profile its key as
+`AGENTPLAYBOOKS_TEAM_<GUID_WITHOUT_HYPHENS_UPPERCASE>_API_KEY`. A playbook-scoped
+key with `memory:read` and `memory:write` works.
+
+- Write, archive and delete reach it with `source` set to the team GUID.
+  Without `source`, writes still go to personal memory.
+- Automatic recall searches personal memory and every team playbook. Team
+  results are labelled with the team GUID.
+- Team writes are refused if the playbook is public or unlisted, like personal
+  ones. A source listed as shared stays read-only. A GUID listed both as shared
+  and as team counts as team.
+- Mirroring of Hermes's built-in memory always goes to personal memory.
+
+When the matter is closed, archive or delete the team playbook and remove it
+from `team_playbooks`.
+
 ## Search and current limits
 
 Automatic recall uses the existing **literal text search** with the full query,
