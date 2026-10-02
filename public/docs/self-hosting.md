@@ -84,10 +84,25 @@ Fork [github.com/matebenyovszky/agentplaybooks](https://github.com/matebenyovszk
 In Supabase Dashboard > Authentication > Providers:
 
 1. Enable Email/Password
-2. (Optional) Configure Google OAuth
-3. (Optional) Configure GitHub OAuth
+2. (Optional) Configure Google, GitHub, LinkedIn (OIDC) or Microsoft (Azure) OAuth
 
 Set redirect URLs to `https://your-domain.pages.dev/*`
+
+The login page asks Supabase Auth which providers are enabled (`/auth/v1/settings`) and shows only those. An instance with only email login shows only the email form; one with only Microsoft shows only the Microsoft button. Turning off email login hides the email form, and turning off sign-ups hides the sign-up link.
+
+#### Microsoft Entra ID (self-hosted Supabase)
+
+Register a web application in Microsoft Entra ID with the redirect URI `https://<your-supabase-auth-host>/auth/v1/callback`, create a client secret, then set these on the Supabase Auth (GoTrue) container and restart it:
+
+```bash
+GOTRUE_EXTERNAL_AZURE_ENABLED=true
+GOTRUE_EXTERNAL_AZURE_CLIENT_ID=<application (client) id>
+GOTRUE_EXTERNAL_AZURE_SECRET=<client secret value>
+GOTRUE_EXTERNAL_AZURE_URL=https://login.microsoftonline.com/<tenant id>
+GOTRUE_EXTERNAL_AZURE_REDIRECT_URI=https://<your-supabase-auth-host>/auth/v1/callback
+```
+
+Setting the tenant in `GOTRUE_EXTERNAL_AZURE_URL` limits sign-in to your organisation. Entra ID requires an HTTPS redirect URI for anything but localhost, so the Supabase Auth endpoint needs a certificate. Add your app's URL to `GOTRUE_URI_ALLOW_LIST` so the login can return to it.
 
 ## Option 2: Docker
 
@@ -257,6 +272,7 @@ supabase db dump > backup.sql
 1. Verify Supabase URL and keys
 2. Check redirect URLs in Supabase Auth settings
 3. Ensure RLS policies are applied
+4. A provider button is missing: the login page shows only providers that `/auth/v1/settings` reports as enabled. If that endpoint cannot be reached, only the email form is shown.
 
 ### API Returns 500
 

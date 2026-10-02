@@ -22,7 +22,7 @@ async function put(root, relativePath, content) {
 }
 
 /** A project in the state `pull --apply` leaves it in. */
-async function pulledProject(name = "Vambery bot") {
+async function pulledProject(name = "Research bot") {
   const root = await fixture("apb-hermes-");
   await put(root, ".agentplaybooks/remote.json", `${JSON.stringify({
     url: "https://agentplaybooks.ai",
@@ -30,7 +30,7 @@ async function pulledProject(name = "Vambery bot") {
     guid: "abc123",
     name,
   })}\n`);
-  await put(root, ".agents/persona.md", "You are Vambery, an internal data analyst.\n");
+  await put(root, ".agents/persona.md", "You are Rhea, a research assistant.\n");
   await put(root, ".agents/skills/office-live/SKILL.md",
     "---\nname: office-live\ndescription: Drive the open Office document.\n---\n\nImport scripts/office.py.\n");
   await put(root, ".agents/skills/office-live/scripts/office.py", "def attach():\n    return 1\n");
@@ -43,7 +43,7 @@ test("exports the layout hermes profile install expects", async () => {
   const destination = await fixture("apb-dist-");
 
   const plan = await planHermesExport(root, destination);
-  assert.equal(plan.profileName, "vambery-bot");
+  assert.equal(plan.profileName, "research-bot");
   assert.deepEqual(plan.files.map((file) => file.path).sort(), [
     "SOUL.md",
     "distribution.yaml",
@@ -57,18 +57,18 @@ test("exports the layout hermes profile install expects", async () => {
   assert.equal(script, "def attach():\n    return 1\n");
   assert.equal(
     await readFile(path.join(destination, "SOUL.md"), "utf8"),
-    "You are Vambery, an internal data analyst.\n",
+    "You are Rhea, a research assistant.\n",
   );
 });
 
 test("the manifest declares only what it ships, and never config.yaml", async () => {
   const root = await pulledProject();
   const destination = await fixture("apb-dist-");
-  const plan = await planHermesExport(root, destination, { name: "vambery", version: "1.2.0" });
+  const plan = await planHermesExport(root, destination, { name: "rhea", version: "1.2.0" });
   await applyHermesExport(plan);
 
   const manifest = await readFile(path.join(destination, "distribution.yaml"), "utf8");
-  assert.match(manifest, /^name: vambery$/m);
+  assert.match(manifest, /^name: rhea$/m);
   assert.match(manifest, /^version: 1\.2\.0$/m);
   assert.match(manifest, /^hermes_requires: ">=0\.20\.0"$/m);
   assert.match(manifest, /^distribution_owned:$/m);
@@ -95,11 +95,11 @@ test("a playbook with no persona does not claim to own SOUL.md", async () => {
 
 test("derives a profile name from the playbook, and takes one that is given", async () => {
   const destination = await fixture("apb-dist-");
-  const fancy = await pulledProject("Vámbéry: Data Analyst!");
-  assert.equal((await planHermesExport(fancy, destination)).profileName, "v-mb-ry-data-analyst");
+  const fancy = await pulledProject("Péter: Data Analyst!");
+  assert.equal((await planHermesExport(fancy, destination)).profileName, "p-ter-data-analyst");
 
   const plain = await pulledProject();
-  assert.equal((await planHermesExport(plain, destination, { name: "Vambery" })).profileName, "vambery");
+  assert.equal((await planHermesExport(plain, destination, { name: "Rhea" })).profileName, "rhea");
 });
 
 test("refuses a project that has nothing to export", async () => {
