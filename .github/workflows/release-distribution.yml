@@ -19,7 +19,7 @@ jobs:
           node-version: 24
       - run: node scripts/check-release-distribution.mjs
       - name: Open or reuse the versioned distribution checklist
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const manifest = require('./packages/cli/package.json');
