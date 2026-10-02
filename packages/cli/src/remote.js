@@ -11,7 +11,7 @@ import { isMap, parseDocument, stringify } from "yaml";
 export const DEFAULT_BASE_URL = "https://agentplaybooks.ai";
 const LINK_FILE = [".agentplaybooks", "remote.json"];
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const SAFE_SKILL_NAME = /^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/;
+export const SAFE_SKILL_NAME = /^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/;
 
 // A skill is a directory: SKILL.md plus the files its instructions reach for.
 // Those files travel with it, and the shape of their names is fixed in three
@@ -27,7 +27,7 @@ const SAFE_SKILL_FILE = new RegExp(
 const MAX_SKILL_FILE_NAME = 100;
 const MAX_SKILL_FILE_BYTES = 262144;
 
-function isSafeSkillFile(filename) {
+export function isSafeSkillFile(filename) {
   if (typeof filename !== "string" || filename.length === 0) return false;
   if (filename.length > MAX_SKILL_FILE_NAME) return false;
   if (filename.includes("..") || filename.startsWith("/") || filename.includes("\\")) return false;
@@ -151,7 +151,7 @@ async function writeLink(root, link) {
   await writePrivateJson(linkPath(root), link);
 }
 
-function skillFileContent(skill) {
+export function skillFileContent(skill) {
   const content = normalizeText(skill.content ?? "");
   const match = content.match(/^---\n([\s\S]*?)\n---(?:\n|$)/);
   let body = content;
@@ -225,9 +225,9 @@ const PORTABLE_INSTRUCTIONS_PATH = "AGENTS.md";
 const PORTABLE_PERSONA_PATH = ".agents/persona.md";
 // What the API answers with for a playbook that has never set a persona. Writing
 // it out would put a stock sentence in front of every agent's identity.
-const DEFAULT_PERSONA_PROMPT = "You are a helpful AI assistant.";
+export const DEFAULT_PERSONA_PROMPT = "You are a helpful AI assistant.";
 
-function localMcpDefinition(server) {
+export function localMcpDefinition(server) {
   const config = server.transport_config ?? {};
   if (server.transport_type === "stdio") {
     if (typeof config.command !== "string") return null;
@@ -778,6 +778,9 @@ async function planPushFrom(report, root, { url, apiKey, fetchImpl, scope = "pro
     instructions,
     snapshot: portable.snapshot,
     remote: remote ? { id: remote.id, guid: remote.guid, name: remote.name } : null,
+    // Other keys in the remote config (config.hermes of a bundle, for one) are
+    // not this manifest's to drop; the update below writes them back unchanged.
+    remoteConfig: remote?.config && typeof remote.config === "object" && !Array.isArray(remote.config) ? remote.config : {},
     actions,
     conflicts,
     warnings,
@@ -818,7 +821,7 @@ export async function applyPush(root, plan, { apiKey, fetchImpl } = {}) {
     // single request carries whichever of them changed.
     const update = {};
     if (plan.actions.some((action) => action.kind === "playbook" && action.action === "update-config")) {
-      update.config = { agentplaybook: plan.manifest };
+      update.config = { ...(plan.remoteConfig ?? {}), agentplaybook: plan.manifest };
     }
     if (instructionsAction) update.instructions = plan.instructions.content;
     if (Object.keys(update).length > 0) {

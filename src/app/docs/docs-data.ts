@@ -33,6 +33,12 @@ export const docsEntries: DocEntry[] = [
     section: "guides",
   },
   {
+    slug: "hermes-organizations",
+    title: "Hermes for Organisations",
+    description: "One bundle playbook for every employee's Hermes: providers, MCP, skills, bots",
+    section: "guides",
+  },
+  {
     slug: "hermes-portable-agents",
     title: "AgentPlaybooks Tools in Hermes",
     description: "Connect playbook skills, MCP/OpenAPI tools, and credentials",
