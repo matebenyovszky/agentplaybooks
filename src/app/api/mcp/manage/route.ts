@@ -3,6 +3,7 @@ import { createApiApp } from "@/app/api/_shared/hono";
 import { getServiceSupabase } from "@/app/api/_shared/supabase";
 import type { UserApiKeysRow, Playbook, PlaybooksUpdate } from "@/lib/supabase/types";
 import { getAuthenticatedUser, validateUserApiKey } from "@/app/api/_shared/auth";
+import { grantsPermission } from "@/app/api/_shared/permissions";
 import {
   isPlaybookTool,
   projectPlaybookToolsForUser,
@@ -40,7 +41,7 @@ type ManagementActor = Pick<UserApiKeysRow, "user_id" | "permissions"> & {
 };
 
 function hasPermission(actor: ManagementActor, permission: string): boolean {
-  return actor.permissions.includes(permission) || actor.permissions.includes("full");
+  return grantsPermission(actor.permissions, permission);
 }
 
 async function authenticateManagementRequest(request: Request): Promise<ManagementActor | null> {
