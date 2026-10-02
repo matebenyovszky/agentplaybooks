@@ -17,6 +17,15 @@ See the [Hermes memory guide](./hermes-memory.md) for source-build commands,
 direct installation without the AgentPlaybooks CLI, credential scope, and plugin
 store status. An older installed npm release may not contain this command.
 
+## Hermes for organisations
+
+`apb hermes sync <bundle-guid> --managed-dir=<dir> [--memory=<guid>] --apply`
+applies an organisation's bundle playbook to this machine's Hermes. The
+bundle's `config.hermes` becomes Hermes's managed layer, its skills become a
+pinned skills directory, and each bot playbook becomes a profile that Hermes
+installs or updates. `--memory` configures personal memory in every one of
+those profiles. See [Hermes for Organisations](./hermes-organizations.md).
+
 ## Doctor: audit your agent configuration
 
 ```bash

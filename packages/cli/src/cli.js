@@ -20,6 +20,7 @@ import {
 } from "./hermes-distribution.js";
 import { applyConnect, planConnect, printConnectPlan } from "./connect.js";
 import { applyHermesMemory, planHermesMemory, printHermesMemoryPlan } from "./hermes-memory.js";
+import { applyHermesSync, planHermesSync, printHermesSyncPlan, publicSyncPlan } from "./hermes-bundle.js";
 import {
   applyPull,
   applyPush,
@@ -72,6 +73,10 @@ Usage:
   agentplaybooks memory setup <guid> --target=hermes [--hermes-home=<directory>]
                              [--shared=<guids>] [--url=<base>] [--allow-insecure-http]
                              [--apply] [--json]
+  agentplaybooks hermes sync <bundle-guid> [--url=<base>] [--memory=<guid>]
+                             [--managed-dir=<directory>] [--hermes-home=<directory>]
+                             [--hermes-bin=<path>] [--env-file=<file>] [--allow-insecure-http]
+                             [--apply] [--json]
   agentplaybooks logout [--url=<base>]
   agentplaybooks playbooks [--url=<base>] [--json]
   agentplaybooks backups <guid> [--url=<base>] [--json]
@@ -93,6 +98,15 @@ Usage:
 Commands:
   memory     Install and configure the native Hermes memory provider for a private
              playbook. Plan-only without --apply; credentials are never copied.
+  hermes     'hermes sync' applies an organisation's bundle playbook to this
+             machine's Hermes: config.hermes becomes Hermes's managed layer
+             (point HERMES_MANAGED_DIR at --managed-dir), the bundle's skills a
+             pinned skills directory, each bot playbook a profile installed or
+             updated by Hermes, and --memory the personal memory of every one
+             of those profiles (key from AGENTPLAYBOOKS_MEMORY_API_KEY, kept in
+             the managed .env). --env-file adds credentials from a protected
+             file; they are kept for later syncs. Bundle and bot playbooks are read anonymously,
+             so they must be public or unlisted. Plan-only without --apply.
   doctor     Audit agent instructions, skills, MCP configuration, secrets, and drift.
   sync       Plan or apply the canonical manifest and missing platform files
              for enabled targets (claude, cursor, codex, copilot, gemini,
@@ -554,6 +568,37 @@ export async function run(args) {
   const { command, flags, positional, rest } = parse(args);
   if (!command || flags.has("--help") || command === "help") {
     console.log(HELP);
+    return;
+  }
+
+  if (command === "hermes") {
+    if (positional[0] !== "sync" || !positional[1]) {
+      throw new Error("Usage: apb hermes sync <bundle-guid> [--memory=<guid>] [--apply]");
+    }
+    const option = (name) => typeof flags.get(name) === "string" ? flags.get(name) : undefined;
+    const plan = await planHermesSync({
+      bundle: positional[1],
+      url: option("--url"),
+      memory: option("--memory"),
+      managedDir: option("--managed-dir"),
+      hermesHome: option("--hermes-home"),
+      hermesBin: option("--hermes-bin"),
+      envFile: option("--env-file"),
+      allowInsecureHttp: flags.has("--allow-insecure-http"),
+    });
+    if (flags.has("--json") && !flags.has("--apply")) console.log(JSON.stringify(publicSyncPlan(plan), null, 2));
+    else if (!flags.has("--json")) printHermesSyncPlan(plan);
+    if (flags.has("--apply")) {
+      const result = await applyHermesSync(plan);
+      if (flags.has("--json")) console.log(JSON.stringify({ plan: publicSyncPlan(plan), result }, null, 2));
+      else {
+        for (const entry of [...result.written, ...result.installed]) console.log(`Done: ${entry}`);
+        for (const entry of result.plugins ?? []) console.log(`Plugin installed: ${entry}`);
+        if (result.memory.length) console.log(`Personal memory configured for: ${result.memory.join(", ")}`);
+        for (const failure of result.failures) console.log(`Failed: ${failure}`);
+      }
+      if (result.failures.length) process.exitCode = 2;
+    }
     return;
   }
 
