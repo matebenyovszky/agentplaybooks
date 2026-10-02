@@ -70,7 +70,8 @@ Usage:
   agentplaybooks connect --account [path] [--apply] [--json] [--target=<types>]
   agentplaybooks login [--url=<base>]
   agentplaybooks memory setup <guid> --target=hermes [--hermes-home=<directory>]
-                             [--shared=<guids>] [--url=<base>] [--apply] [--json]
+                             [--shared=<guids>] [--url=<base>] [--allow-insecure-http]
+                             [--apply] [--json]
   agentplaybooks logout [--url=<base>]
   agentplaybooks playbooks [--url=<base>] [--json]
   agentplaybooks backups <guid> [--url=<base>] [--json]
@@ -562,7 +563,7 @@ export async function run(args) {
     }
     const option = (name) => typeof flags.get(name) === "string" ? flags.get(name) : undefined;
     const plan = await planHermesMemory({ playbook: positional[1], hermesHome: option("--hermes-home"),
-      sharedPlaybooks: option("--shared"), url: option("--url") });
+      sharedPlaybooks: option("--shared"), url: option("--url"), allowInsecureHttp: flags.has("--allow-insecure-http") });
     if (flags.has("--json")) console.log(JSON.stringify({ ...plan, fileActions: plan.fileActions.map(withoutContent) }, null, 2));
     else printHermesMemoryPlan(plan);
     if (flags.has("--apply")) {

@@ -11156,8 +11156,9 @@ async function planHermesMemory(options = {}) {
   const profile = await hermesProfile({ ...options, env: options.hermesHome ? { ...env, HERMES_HOME: options.hermesHome } : env });
   const baseUrl = resolveBaseUrl(options.url, env);
   const url = new URL(baseUrl);
-  if (url.username || url.password || url.search || url.hash || !(url.protocol === "https:" || url.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname))) {
-    throw new Error("Use HTTPS (HTTP is allowed only on localhost).");
+  const insecure = options.allowInsecureHttp === true;
+  if (url.username || url.password || url.search || url.hash || !(url.protocol === "https:" || url.protocol === "http:" && (insecure || ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)))) {
+    throw new Error("Use HTTPS (HTTP is allowed only on localhost, or with --allow-insecure-http for an intranet instance).");
   }
   const shared = [...new Set((options.sharedPlaybooks ?? "").split(",").map((x) => x.trim()).filter(Boolean))];
   if (shared.some((guid) => !GUID.test(guid))) throw new Error("Shared playbooks must be comma-separated GUIDs.");
@@ -11196,6 +11197,7 @@ async function planHermesMemory(options = {}) {
   const oldSettings = await readOptional(path12.join(profile.directory, settingsName));
   const settings = oldSettings === null ? {} : JSON.parse(oldSettings);
   const desired = { base_url: baseUrl, playbook_guid: options.playbook, shared_playbooks: shared.join(",") };
+  if (url.protocol === "http:" && insecure) desired.allow_insecure_http = true;
   if (Object.entries(desired).some(([key, value]) => settings[key] !== void 0 && settings[key] !== value)) {
     conflict2(settingsName, "Existing memory settings differ. Edit them in 'hermes memory setup' to switch playbooks; no memory is migrated automatically.");
   }
@@ -11545,7 +11547,8 @@ Usage:
   agentplaybooks connect --account [path] [--apply] [--json] [--target=<types>]
   agentplaybooks login [--url=<base>]
   agentplaybooks memory setup <guid> --target=hermes [--hermes-home=<directory>]
-                             [--shared=<guids>] [--url=<base>] [--apply] [--json]
+                             [--shared=<guids>] [--url=<base>] [--allow-insecure-http]
+                             [--apply] [--json]
   agentplaybooks logout [--url=<base>]
   agentplaybooks playbooks [--url=<base>] [--json]
   agentplaybooks backups <guid> [--url=<base>] [--json]
@@ -11959,7 +11962,8 @@ async function run(args) {
       playbook: positional[1],
       hermesHome: option("--hermes-home"),
       sharedPlaybooks: option("--shared"),
-      url: option("--url")
+      url: option("--url"),
+      allowInsecureHttp: flags.has("--allow-insecure-http")
     });
     if (flags.has("--json")) console.log(JSON.stringify({ ...plan, fileActions: plan.fileActions.map(withoutContent) }, null, 2));
     else printHermesMemoryPlan(plan);

@@ -243,6 +243,12 @@ class ProviderTests(unittest.TestCase):
             with self.assertRaises(ValueError): Client(url, A, "key")
         self.assertIsNone(NoRedirects().redirect_request(None, None, 302, "", {}, "https://evil.example"))
 
+    def test_insecure_http_requires_explicit_opt_in(self):
+        with self.assertRaises(ValueError): Client("http://intranet.example:8007", A, "key")
+        self.assertEqual(Client("http://intranet.example:8007/", A, "key", True).base_url, "http://intranet.example:8007")
+        for url in ("https://user:secret@example.com", "http://intranet.example?key=secret", "file:///tmp"):
+            with self.assertRaises(ValueError): Client(url, A, "key", True)
+
 
 if __name__ == "__main__":
     unittest.main()

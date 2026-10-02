@@ -24,9 +24,13 @@ export async function planHermesMemory(options = {}) {
   const profile = await hermesProfile({ ...options, env: options.hermesHome ? { ...env, HERMES_HOME: options.hermesHome } : env });
   const baseUrl = resolveBaseUrl(options.url, env);
   const url = new URL(baseUrl);
+  // --allow-insecure-http is an explicit opt-in for an intranet self-hosted
+  // instance without TLS; it is recorded in the profile so the plugin honours it.
+  const insecure = options.allowInsecureHttp === true;
   if (url.username || url.password || url.search || url.hash ||
-      !(url.protocol === "https:" || (url.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)))) {
-    throw new Error("Use HTTPS (HTTP is allowed only on localhost).");
+      !(url.protocol === "https:" || (url.protocol === "http:" &&
+        (insecure || ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname))))) {
+    throw new Error("Use HTTPS (HTTP is allowed only on localhost, or with --allow-insecure-http for an intranet instance).");
   }
   const shared = [...new Set((options.sharedPlaybooks ?? "").split(",").map(x => x.trim()).filter(Boolean))];
   if (shared.some(guid => !GUID.test(guid))) throw new Error("Shared playbooks must be comma-separated GUIDs.");
@@ -58,6 +62,7 @@ export async function planHermesMemory(options = {}) {
   const oldSettings = await readOptional(path.join(profile.directory, settingsName));
   const settings = oldSettings === null ? {} : JSON.parse(oldSettings);
   const desired = { base_url: baseUrl, playbook_guid: options.playbook, shared_playbooks: shared.join(",") };
+  if (url.protocol === "http:" && insecure) desired.allow_insecure_http = true;
   if (Object.entries(desired).some(([key, value]) => settings[key] !== undefined && settings[key] !== value)) {
     conflict(settingsName, "Existing memory settings differ. Edit them in 'hermes memory setup' to switch playbooks; no memory is migrated automatically.");
   }
