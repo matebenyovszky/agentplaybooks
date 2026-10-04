@@ -60,10 +60,14 @@ function params(path?: string[], guid?: string) {
   return { params: Promise.resolve({ ...(guid ? { guid } : {}), path }) } as never;
 }
 
+let clientTestSequence = 0;
+
 beforeEach(() => {
   vi.clearAllMocks();
   process.env.NEXT_PUBLIC_SUPABASE_URL = "https://db.test";
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key";
+  // Each case installs a different mock response; rotate the config so the
+  // process-wide stateless client cache creates that case's mocked client.
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = `anon-key-${++clientTestSequence}`;
   process.env.SUPABASE_SERVICE_ROLE_KEY = "service-key";
 });
 
@@ -96,7 +100,7 @@ describe("GET /.well-known/skills", () => {
 
     await siteGet(new Request("https://apbks.test/.well-known/skills/index.json"), params(["index.json"]));
 
-    expect(createServerClient).toHaveBeenCalledWith("https://db.test", "anon-key");
+    expect(createServerClient).toHaveBeenCalledWith("https://db.test", process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
   });
 
   it("serves SKILL.md as markdown, keeping fields outside the spec", async () => {
