@@ -1,4 +1,5 @@
 import { handle } from "hono/vercel";
+import { logMcpDiscovery } from "@/app/api/_shared/mcp-observability";
 import { createApiApp } from "@/app/api/_shared/hono";
 import {
   actorMayRead,
@@ -526,6 +527,8 @@ app.post("/", async (c) => {
       error: { code: -32602, message: toolsetView.error },
     }, 400);
   }
+
+  logMcpDiscovery(c.req.raw, method, playbook.id, privateActor, rpcParams);
 
   // Handle MCP methods
   switch (method) {

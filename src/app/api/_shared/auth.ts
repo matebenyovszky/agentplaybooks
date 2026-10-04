@@ -296,7 +296,7 @@ export async function canAccessPrivatePlaybook(
  */
 export type PrivatePlaybookActor =
   | { kind: "member" }
-  | { kind: "playbook_key"; role: string; permissions: string[] };
+  | { kind: "playbook_key"; role: string; permissions: string[]; keyPrefix?: string };
 
 export async function resolvePrivatePlaybookActor(
   request: Request,
@@ -304,7 +304,7 @@ export async function resolvePrivatePlaybookActor(
 ): Promise<PrivatePlaybookActor | null> {
   const playbookKey = await validateApiKey(request, null);
   if (playbookKey?.playbooks.id === playbookId) {
-    return { kind: "playbook_key", role: playbookKey.role, permissions: playbookKey.permissions ?? [] };
+    return { kind: "playbook_key", role: playbookKey.role, permissions: playbookKey.permissions ?? [], keyPrefix: playbookKey.key_prefix };
   }
 
   const userKey = await validateUserApiKey(request, "playbooks:read");
