@@ -83,6 +83,7 @@ const MCP_TOOLS = [
   ...ACCOUNT_TOOLS,
   ...projectPlaybookToolsForUser(),
 ];
+const MCP_TOOLS_JSON = JSON.stringify(MCP_TOOLS);
 
 const app = createApiApp("/api/mcp/manage");
 
@@ -182,11 +183,11 @@ app.post("/", async (c) => {
       return c.json({ jsonrpc: "2.0", id, result: {} });
 
     case "tools/list":
-      return c.json({
-        jsonrpc: "2.0",
-        id,
-        result: { tools: MCP_TOOLS },
-      });
+      return c.body(
+        `{"jsonrpc":"2.0","id":${JSON.stringify(id) ?? "null"},"result":{"tools":${MCP_TOOLS_JSON}}}`,
+        200,
+        { "Content-Type": "application/json; charset=UTF-8" },
+      );
 
     case "tools/call": {
       const toolName = params?.name as string;

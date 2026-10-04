@@ -14,7 +14,7 @@
  * this path — an unlisted or private playbook is reachable with `apb pull`, and
  * that is deliberate rather than an omission.
  */
-import { createServerClient } from "@/lib/supabase/client";
+import { getServerAnonSupabase } from "@/lib/supabase/server";
 import {
   contentTypeFor,
   isSafeSkillFile,
@@ -47,12 +47,6 @@ type SkillRow = SkillDocument & {
  * the row-level policies are a second lock behind the visibility filter rather
  * than something to route around.
  */
-function anonSupabase() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-  return createServerClient(url, key);
-}
-
 const SKILL_COLUMNS = `
   name, description, content, licence, created_at,
   skill_attachments(filename, content),
@@ -60,7 +54,7 @@ const SKILL_COLUMNS = `
 `;
 
 async function fetchSkills(playbookGuid?: string): Promise<SkillRow[]> {
-  let query = anonSupabase()
+  let query = getServerAnonSupabase()
     .from("skills")
     .select(SKILL_COLUMNS)
     .eq("playbook.visibility", "public");
