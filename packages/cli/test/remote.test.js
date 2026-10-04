@@ -403,6 +403,21 @@ test("push updates only changed skills on a linked playbook", async () => {
   assert.equal(state.playbooks[0].skills[0].content, `${skillContent}More.\n`);
 });
 
+test("push keeps other keys of the remote config, such as a Hermes bundle", async () => {
+  const root = await fixture("agentplaybooks-push-config-");
+  await put(root, ".claude/skills/release/SKILL.md", "---\nname: release\ndescription: Prepare a release.\n---\nChecklist.\n");
+  const playbookId = "11111111-2222-4333-8444-666666666666";
+  await put(root, ".agentplaybooks/remote.json", JSON.stringify({ url: URL_BASE, playbookId, guid: "bundle1", name: "Bundle" }));
+  const hermes = { managed: { mcp_servers: { sql: { url: "http://sql.example/mcp" } } }, bots: ["2222222222222222"] };
+  const state = { playbooks: [{ id: playbookId, guid: "bundle1", name: "Bundle", config: { hermes }, skills: [] }] };
+  const { fetchImpl } = fakeApi(state);
+  const plan = await planPush(root, { url: URL_BASE, apiKey: API_KEY, fetchImpl });
+  assert.ok(plan.actions.some((action) => action.kind === "playbook" && action.action === "update-config"));
+  await applyPush(root, plan, { apiKey: API_KEY, fetchImpl });
+  assert.deepEqual(state.playbooks[0].config.hermes, hermes);
+  assert.ok(state.playbooks[0].config.agentplaybook);
+});
+
 test("push refuses when a skill contains a likely hard-coded credential", async () => {
   const root = await fixture("agentplaybooks-push-secret-");
   await put(root, ".claude/skills/deploy/SKILL.md", "---\nname: deploy\ndescription: Deploy.\n---\napi_key = \"sk-ABCDEFGHIJKLMNOPQRSTUVWX1234\"\n");

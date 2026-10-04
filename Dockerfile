@@ -21,9 +21,14 @@ COPY . .
 # Build arguments for environment variables needed at build time
 ARG NEXT_PUBLIC_SUPABASE_URL
 ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+# The instance's own public origin. Next.js inlines NEXT_PUBLIC_* at build
+# time, server code included, so without it a self-hosted image advertises
+# https://agentplaybooks.ai in OAuth metadata, OpenAPI and generated links.
+ARG NEXT_PUBLIC_APP_URL
 
 ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
 ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
+ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN npm run build

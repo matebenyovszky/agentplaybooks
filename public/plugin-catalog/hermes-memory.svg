@@ -1,35 +1,35 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="AgentPlaybooks Hermes Memory plugin card">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="600" viewBox="0 0 1200 600" fill="none">
   <defs>
-    <linearGradient id="background" x2="1" y2="1">
-      <stop stop-color="#0b172b"/>
-      <stop offset="1" stop-color="#101b32"/>
-    </linearGradient>
-    <linearGradient id="gold" x2="1" y2="1">
-      <stop stop-color="#fbbf24"/>
-      <stop offset="1" stop-color="#d97706"/>
-    </linearGradient>
-    <linearGradient id="blue" x2="1" y2="1">
-      <stop stop-color="#60a5fa"/>
-      <stop offset="1" stop-color="#2563eb"/>
-    </linearGradient>
+    <linearGradient id="bg" x1="70" y1="30" x2="1120" y2="590" gradientUnits="userSpaceOnUse"><stop stop-color="#10172B"/><stop offset="1" stop-color="#17112D"/></linearGradient>
+    <linearGradient id="gold" x1="660" y1="170" x2="920" y2="420" gradientUnits="userSpaceOnUse"><stop stop-color="#FFE08A"/><stop offset="1" stop-color="#F6A935"/></linearGradient>
+    <linearGradient id="blue" x1="672" y1="235" x2="908" y2="436" gradientUnits="userSpaceOnUse"><stop stop-color="#9CD9FF"/><stop offset="1" stop-color="#6278FF"/></linearGradient>
+    <filter id="glow" x="580" y="70" width="470" height="470" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="28"/></filter>
   </defs>
-  <rect width="1200" height="630" rx="44" fill="url(#background)"/>
-  <path d="M0 500H1200M0 550H1200M100 0V630M1100 0V630" fill="none" stroke="#3b82f6" stroke-opacity=".12"/>
-  <rect x="56" y="56" width="1088" height="518" rx="32" fill="none" stroke="#60a5fa" stroke-opacity=".32" stroke-width="2"/>
-  <g fill="none" stroke="url(#blue)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M150 262h160l85-87h148l84 87h151"/>
-    <path d="M150 400h160l85 88h148l84-88h151"/>
-    <path d="M395 175v313M627 262v138" stroke-opacity=".54"/>
-    <circle cx="150" cy="262" r="13" fill="#0b172b"/>
-    <circle cx="150" cy="400" r="13" fill="#0b172b"/>
-    <circle cx="778" cy="262" r="13" fill="#0b172b"/>
-    <circle cx="778" cy="400" r="13" fill="#0b172b"/>
+  <rect width="1200" height="600" rx="32" fill="url(#bg)"/>
+  <circle cx="815" cy="305" r="150" fill="#7062FF" opacity=".22" filter="url(#glow)"/>
+  <path d="M0 474C194 405 331 523 502 466s330-151 698-38v172H0V474Z" fill="#25234B" opacity=".55"/>
+  <path d="M0 514c206-69 324 44 495-4 166-47 359-107 705-26" stroke="#8A7CFF" stroke-opacity=".2" stroke-width="2"/>
+  <g opacity=".7" stroke="#A9B8FF" stroke-opacity=".3"><path d="M68 92h186M68 112h116M1020 84h112M1042 104h90"/><circle cx="1100" cy="478" r="3" fill="#F9C66A"/><circle cx="1064" cy="452" r="2" fill="#A8B6FF"/><circle cx="1084" cy="508" r="2" fill="#A8B6FF"/></g>
+  <g transform="translate(676 150)">
+    <ellipse cx="126" cy="270" rx="142" ry="26" fill="#070B18" opacity=".48"/>
+    <path d="M25 83 126 31l102 52-102 53L25 83Z" fill="url(#gold)"/>
+    <path d="M25 83v57l101 53v-57L25 83Z" fill="#E49B32"/>
+    <path d="M228 83v57l-102 53v-57l102-53Z" fill="#BB722D"/>
+    <path d="m25 151 101 53 102-53v56l-102 53-101-53v-56Z" fill="url(#blue)"/>
+    <path d="m25 207 101 53 102-53v37l-102 53-101-53v-37Z" fill="#4658CB"/>
+    <path d="m78 84 48-25 49 25-49 25-48-25Z" fill="#FFF0BD" opacity=".7"/>
+    <path d="M125 60v49" stroke="#FFF8DF" stroke-opacity=".75" stroke-width="3"/>
+    <circle cx="126" cy="164" r="9" fill="#EAF4FF"/><path d="M126 174v33" stroke="#EAF4FF" stroke-width="3"/>
+    <circle cx="126" cy="231" r="5" fill="#DDE3FF"/>
+    <path d="M25 83h-25M228 83h28" stroke="#F6C968" stroke-width="2" stroke-linecap="round" opacity=".8"/>
+    <circle cx="0" cy="83" r="4" fill="#F6C968"/><circle cx="256" cy="83" r="4" fill="#F6C968"/>
   </g>
-  <rect x="423" y="239" width="176" height="186" rx="34" fill="#15253e" stroke="#60a5fa" stroke-width="4"/>
-  <path d="M477 284v94h70v-94M469 298h86M469 330h86M469 362h86" fill="none" stroke="url(#gold)" stroke-width="9" stroke-linecap="round"/>
-  <circle cx="395" cy="175" r="10" fill="#fbbf24"/><circle cx="395" cy="488" r="10" fill="#fbbf24"/>
-  <text x="850" y="272" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#93c5fd" letter-spacing="3">AGENTPLAYBOOKS</text>
-  <text x="846" y="349" font-family="Segoe UI, Arial, sans-serif" font-size="36" font-weight="700" fill="#ffffff">Hermes Memory</text>
-  <text x="849" y="404" font-family="Segoe UI, Arial, sans-serif" font-size="23" fill="#cbd5e1">Private memory you control.</text>
-  <rect x="848" y="440" width="172" height="6" rx="3" fill="url(#gold)"/>
+  <g font-family="Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif">
+    <text x="76" y="238" fill="#F5C66D" font-size="19" font-weight="700" letter-spacing="3.6">AGENTPLAYBOOKS  /  HERMES</text>
+    <text x="72" y="316" fill="#FFFDF7" font-size="61" font-weight="760" letter-spacing="-2.4">Memory,</text>
+    <text x="72" y="382" fill="#FFFDF7" font-size="61" font-weight="760" letter-spacing="-2.4">kept yours.</text>
+    <text x="76" y="434" fill="#B7C0DB" font-size="23" font-weight="450">Private recall · explicit writes · full history</text>
+    <rect x="76" y="474" width="157" height="35" rx="17.5" fill="#2B3150" stroke="#56628E"/>
+    <text x="98" y="498" fill="#DAE3FF" font-size="15" font-weight="650" letter-spacing="1.4">MEMORY PLUGIN</text>
+  </g>
 </svg>

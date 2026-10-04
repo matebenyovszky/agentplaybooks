@@ -10,7 +10,7 @@ Welcome to the AgentPlaybooks documentation.
 - [Platform Integrations](./platform-integrations.md) - Connect to ChatGPT, Claude, Gemini, Grok & more
 - [Cross-platform Agent Backups](./portable-agent-backups.md) - Migrate and restore complete portable agent configuration
 - [Hermes Memory Provider](./hermes-memory.md) - Native memory setup, profile boundaries, and shared knowledge
-- [Portable Agents in Hermes](./hermes-portable-agents.md) - Audit and deploy agent configuration with the AgentPlaybooks CLI
+- [AgentPlaybooks Tools in Hermes](./hermes-portable-agents.md) - Connect playbook skills, MCP/OpenAPI tools, and credentials
 - [Team Collaboration](./team-collaboration.md) - Share playbooks securely with human editors
 - [Roadmap](./ROADMAP.md) - Development roadmap and future plans
 

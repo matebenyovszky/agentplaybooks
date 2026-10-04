@@ -5,8 +5,8 @@
 AgentPlaybooks can be selected as a native memory provider in Hermes Agent. It
 stores durable facts in a private playbook, makes them available across sessions,
 and lets you inspect, correct, archive, or delete them in AgentPlaybooks.
-For portable instructions, skills, and Hermes profiles, see the separate
-[Portable Agents plugin](./hermes-portable-agents.md).
+For playbook skills, MCP and OpenAPI tools, and authentication in Hermes, see
+the separate [AgentPlaybooks Tools plugin](./hermes-portable-agents.md).
 
 ## Install and configure
 
@@ -20,12 +20,12 @@ revision pinned in our [compatibility workflow](https://github.com/matebenyovszk
 3. Install the plugin into the intended Hermes profile:
 
 ```bash
-hermes plugins install agentplaybooks
+hermes plugins install agentplaybooks-memory
 hermes memory setup
 hermes memory status
 ```
 
-Select **agentplaybooks** in the setup wizard and enter the private playbook GUID,
+Select **agentplaybooks-memory** in the setup wizard and enter the private playbook GUID,
 API key, and service URL (default `https://agentplaybooks.ai`). Hermes Desktop
 also exposes the provider's native memory settings. Configuration lives in
 `$HERMES_HOME/agentplaybooks/config.json`; the key belongs in Hermes's profile
@@ -38,7 +38,7 @@ you can pin that route with `--ref <full-commit-sha>`.
 
 **Plugin store status, September 23, 2026:**
 [Hermes merged the catalog entry](https://github.com/NousResearch/hermes-agent/pull/119450),
-and `agentplaybooks` has a [live plugin page](https://hermes-agent.nousresearch.com/docs/plugins/agentplaybooks).
+and `agentplaybooks-memory` has a [live plugin page](https://hermes-agent.nousresearch.com/docs/plugins/agentplaybooks-memory).
 Older Hermes
 installations may need a catalog refresh or update to see the new entry.
 
@@ -111,6 +111,26 @@ Personal writes reject public and unlisted playbooks. Keep the playbook private:
 changing its visibility later exposes existing contents according to the
 service's access model. Visibility checks and writes are separate requests, not
 an atomic visibility lock.
+
+### Team memory
+
+A team working on the same matter can share a **writable** memory: a private
+playbook for that team. List it in `team_playbooks` (CLI: `--team=<guid>`) and
+give each member's profile its key as
+`AGENTPLAYBOOKS_TEAM_<GUID_WITHOUT_HYPHENS_UPPERCASE>_API_KEY`. A playbook-scoped
+key with `memory:read` and `memory:write` works.
+
+- Write, archive and delete reach it with `source` set to the team GUID.
+  Without `source`, writes still go to personal memory.
+- Automatic recall searches personal memory and every team playbook. Team
+  results are labelled with the team GUID.
+- Team writes are refused if the playbook is public or unlisted, like personal
+  ones. A source listed as shared stays read-only. A GUID listed both as shared
+  and as team counts as team.
+- Mirroring of Hermes's built-in memory always goes to personal memory.
+
+When the matter is closed, archive or delete the team playbook and remove it
+from `team_playbooks`.
 
 ## Search and current limits
 

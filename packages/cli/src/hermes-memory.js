@@ -8,6 +8,8 @@ import { hermesProfile } from "./discovery.js";
 import { resolveBaseUrl } from "./remote.js";
 
 const GUID = /^(?:[a-f\d]{8,}|[a-f\d]{8}(?:-[a-f\d]{4}){3}-[a-f\d]{12})$/i;
+const PROVIDER = "agentplaybooks-memory";
+const LEGACY_PROVIDER = "agentplaybooks";
 const PLUGIN_FILES = ["__init__.py", "client.py", "config_schema.py", "plugin.yaml", "README.md", "LICENSE"];
 const digest = (value) => value === null ? null : createHash("sha256").update(value).digest("hex");
 
@@ -22,12 +24,18 @@ export async function planHermesMemory(options = {}) {
   const profile = await hermesProfile({ ...options, env: options.hermesHome ? { ...env, HERMES_HOME: options.hermesHome } : env });
   const baseUrl = resolveBaseUrl(options.url, env);
   const url = new URL(baseUrl);
+  // --allow-insecure-http is an explicit opt-in for an intranet self-hosted
+  // instance without TLS; it is recorded in the profile so the plugin honours it.
+  const insecure = options.allowInsecureHttp === true;
   if (url.username || url.password || url.search || url.hash ||
-      !(url.protocol === "https:" || (url.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)))) {
-    throw new Error("Use HTTPS (HTTP is allowed only on localhost).");
+      !(url.protocol === "https:" || (url.protocol === "http:" &&
+        (insecure || ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname))))) {
+    throw new Error("Use HTTPS (HTTP is allowed only on localhost, or with --allow-insecure-http for an intranet instance).");
   }
   const shared = [...new Set((options.sharedPlaybooks ?? "").split(",").map(x => x.trim()).filter(Boolean))];
   if (shared.some(guid => !GUID.test(guid))) throw new Error("Shared playbooks must be comma-separated GUIDs.");
+  const team = [...new Set((options.teamPlaybooks ?? "").split(",").map(x => x.trim()).filter(Boolean))];
+  if (team.some(guid => !GUID.test(guid))) throw new Error("Team playbooks must be comma-separated GUIDs.");
   const fileActions = [], conflicts = [];
   const add = (name, old, content) => {
     if (old === content) return;
@@ -42,13 +50,13 @@ export async function planHermesMemory(options = {}) {
   const memory = yaml.get("memory", true);
   if (memory !== undefined && !isMap(memory)) throw new Error("Hermes memory configuration must be a mapping.");
   const selected = yaml.getIn(["memory", "provider"]);
-  if (selected && !["agentplaybooks", "builtin", "built-in", "none", "default"].includes(selected)) {
+  if (selected && ![PROVIDER, LEGACY_PROVIDER, "builtin", "built-in", "none", "default"].includes(selected)) {
     conflict("memory.provider", `The profile uses '${selected}'. Select AgentPlaybooks explicitly with 'hermes memory setup' before rerunning.`);
   }
   const disabled = yaml.getIn(["plugins", "disabled"]);
-  if (disabled?.toJSON?.()?.includes("agentplaybooks")) conflict("plugins.disabled", "AgentPlaybooks is disabled; enable it in Hermes before setup.");
-  if (selected !== "agentplaybooks") {
-    yaml.setIn(["memory", "provider"], "agentplaybooks");
+  if (disabled?.toJSON?.()?.includes(PROVIDER)) conflict("plugins.disabled", "AgentPlaybooks Memory is disabled; enable it in Hermes before setup.");
+  if (selected !== PROVIDER) {
+    yaml.setIn(["memory", "provider"], PROVIDER);
     add("config.yaml", oldYaml, String(yaml));
   }
 
@@ -56,6 +64,10 @@ export async function planHermesMemory(options = {}) {
   const oldSettings = await readOptional(path.join(profile.directory, settingsName));
   const settings = oldSettings === null ? {} : JSON.parse(oldSettings);
   const desired = { base_url: baseUrl, playbook_guid: options.playbook, shared_playbooks: shared.join(",") };
+  // Team playbooks are writable shared case memory; written only when asked for,
+  // so an existing profile's settings do not change shape on a plain re-run.
+  if (team.length) desired.team_playbooks = team.join(",");
+  if (url.protocol === "http:" && insecure) desired.allow_insecure_http = true;
   if (Object.entries(desired).some(([key, value]) => settings[key] !== undefined && settings[key] !== value)) {
     conflict(settingsName, "Existing memory settings differ. Edit them in 'hermes memory setup' to switch playbooks; no memory is migrated automatically.");
   }
@@ -67,7 +79,7 @@ export async function planHermesMemory(options = {}) {
   const source = fileURLToPath(new URL("../../hermes-memory/agentplaybooks/", import.meta.url));
   const pluginDirectory = options.pluginDirectory ?? ((await readOptional(path.join(bundled, "plugin.yaml"))) !== null ? bundled : source);
   for (const name of PLUGIN_FILES) {
-    const relative = `plugins/agentplaybooks/${name}`;
+    const relative = `plugins/${PROVIDER}/${name}`;
     const content = await readFile(path.join(pluginDirectory, name), "utf8");
     const old = await readOptional(path.join(profile.directory, relative));
     if (old !== null && old !== content) conflict(relative, "An installed plugin file differs; update through Hermes or reconcile it explicitly.");

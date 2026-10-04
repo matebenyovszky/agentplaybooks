@@ -6,8 +6,8 @@ Az AgentPlaybooks natív memóriaszolgáltatóként választható ki a Hermes Ag
 A tartós tényeket privát playbookban tárolja, több munkameneten át elérhetővé
 teszi, és az AgentPlaybooksban is szerkeszthető, archiválható vagy törölhető
 bejegyzésekként kezeli.
-A portolható utasításokhoz, skillekhez és Hermes-profilokhoz lásd a külön
-[Portable Agents plugint](./hermes-portable-agents.md).
+A playbook-skillek, az MCP/OpenAPI-eszközök és a Hermes-hitelesítés beállításához
+lásd az [AgentPlaybooks Tools plugint](./hermes-portable-agents.md).
 
 ## Telepítés és beállítás
 
@@ -22,12 +22,12 @@ fut.
 3. Telepítsd a plugint a megfelelő Hermes-profilba:
 
 ```bash
-hermes plugins install agentplaybooks
+hermes plugins install agentplaybooks-memory
 hermes memory setup
 hermes memory status
 ```
 
-A beállítóban válaszd az **agentplaybooks** providert, és add meg a privát
+A beállítóban válaszd az **agentplaybooks-memory** providert, és add meg a privát
 playbook GUID-ját, kulcsát és a szolgáltatás címét (alapértelmezetten
 `https://agentplaybooks.ai`). A Hermes Desktopban is vannak natív beállítási
 mezők. A konfiguráció a `$HERMES_HOME/agentplaybooks/config.json` fájlba kerül;
@@ -40,8 +40,8 @@ paranccsal; ennél a `--ref <full-commit-sha>` kapcsolóval rögzíthetsz verzi�
 
 **Plugin-store állapot, 2026. szeptember 23.:** a Hermes
 [összeolvasztotta a katalógusbejegyzést](https://github.com/NousResearch/hermes-agent/pull/119450),
-és az `agentplaybooks` már szerepel az
-[élő plugin-katalógusban](https://hermes-agent.nousresearch.com/docs/plugins/agentplaybooks).
+és az `agentplaybooks-memory` már szerepel az
+[élő plugin-katalógusban](https://hermes-agent.nousresearch.com/docs/plugins/agentplaybooks-memory).
 Régebbi Hermes
 telepítésnél katalógusfrissítés vagy programfrissítés kellhet a megjelenéséhez.
 
@@ -116,6 +116,26 @@ A személyes írások visszautasítják a nyilvános és nem listázott playbook
 Tartsd a playbookot privátként: láthatóságának későbbi módosítása a meglévő
 tartalmakat is elérhetővé teszi a szolgáltatás hozzáférési szabályai szerint.
 A láthatóság ellenőrzése és az írás külön kérés, nem egyetlen atomi művelet.
+
+### Csapatmemória
+
+Egy ügyön dolgozó csapat **írható** közös memóriát is használhat: egy privát
+playbookot a csapatnak. Vedd fel a `team_playbooks` mezőbe (CLI:
+`--team=<guid>`), és minden tag profiljában add meg a kulcsát
+`AGENTPLAYBOOKS_TEAM_<GUID_WITHOUT_HYPHENS_UPPERCASE>_API_KEY` néven. Egy
+`memory:read` és `memory:write` jogú, playbook-szintű kulcs megfelel.
+
+- Írni, archiválni és törölni a `source` paraméterrel lehet benne, ennek értéke
+  a csapat GUID-ja. `source` nélkül az írás továbbra is a személyes memóriába megy.
+- Az automatikus visszakeresés a személyes memóriában és minden csapatmemóriában
+  keres. A csapat találatait a csapat GUID-ja jelöli.
+- Nyilvános vagy nem listázott csapat-playbookba az írást a provider visszautasítja,
+  ugyanúgy, mint a személyesnél. A megosztottként felvett forrás csak olvasható
+  marad. Ha egy GUID mindkét listában szerepel, csapatforrásnak számít.
+- A Hermes beépített memóriájának tükrözése mindig a személyes memóriába megy.
+
+Az ügy lezárásakor archiváld vagy töröld a csapat-playbookot, és vedd ki a
+`team_playbooks` listából.
 
 ## Keresés és jelenlegi korlátok
 

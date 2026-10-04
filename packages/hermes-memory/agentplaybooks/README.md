@@ -1,10 +1,12 @@
-# AgentPlaybooks for Hermes
+# AgentPlaybooks Memory for Hermes
+
+![AgentPlaybooks Memory for Hermes](https://agentplaybooks.ai/plugin-catalog/hermes-memory.png)
 
 A native Hermes memory provider backed by [AgentPlaybooks](https://agentplaybooks.ai).
 Remember durable facts across sessions, inspect and correct them in AgentPlaybooks,
 and share selected knowledge with other agents through explicitly configured playbooks.
-For portable instructions, skills, and Hermes profiles, see the separate
-[Portable Agents plugin](https://agentplaybooks.ai/docs/hermes-portable-agents).
+For playbook skills, MCP and OpenAPI tools, and authentication in Hermes, see
+the [AgentPlaybooks Tools plugin](https://agentplaybooks.ai/docs/hermes-portable-agents).
 
 ## Install
 
@@ -19,7 +21,7 @@ hermes memory setup
 hermes memory status
 ```
 
-Select **agentplaybooks** in the Hermes setup wizard. Create a **private** playbook
+Select **agentplaybooks-memory** in the Hermes setup wizard. Create a **private** playbook
 and a playbook-scoped key with `memory:read` and `memory:write` in its Integrations
 tab. Supply the key through Hermes's secret setup or the profile-scoped
 `AGENTPLAYBOOKS_MEMORY_API_KEY` environment variable. The AgentPlaybooks CLI never
@@ -38,7 +40,7 @@ hermes memory setup
 ```
 
 The plugin is listed in the Hermes catalog and can be installed with
-`hermes plugins install agentplaybooks`. The catalog pins a reviewed source
+`hermes plugins install agentplaybooks-memory`. The catalog pins a reviewed source
 commit. Direct repository installation also works with
 `hermes plugins install matebenyovszky/agentplaybooks/packages/hermes-memory/agentplaybooks`.
 Use `--ref <full-commit-sha>` to pin a direct installation, then run `hermes memory setup`.

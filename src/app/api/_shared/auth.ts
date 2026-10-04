@@ -3,6 +3,7 @@ import { presentedApiKey } from "./api-key-header";
 import { getServiceSupabase, getSupabase } from "./supabase";
 import type { ApiKey, UserApiKeysRow } from "@/lib/supabase/types";
 import { getPlaybookAccessRole } from "./guards";
+import { grantsPermission } from "./permissions";
 
 type ApiKeyWithPlaybook = ApiKey & {
   playbooks: { id: string; guid: string };
@@ -131,16 +132,21 @@ export async function requireAuth(request: Request): Promise<{ id: string } | nu
 // api-key-header.ts for why the `Bearer` prefix is optional.
 export { presentedApiKey };
 
+/**
+ * Validate a playbook-scoped API key. `requiredPermission: null` checks
+ * identity only (an active, unexpired key and its playbook); every caller that
+ * passes null must check the permission of each operation itself.
+ */
 export async function validateApiKey(
   request: Request,
-  requiredPermission: string
+  requiredPermission: string | null
 ): Promise<ApiKeyWithPlaybook | null> {
   const apiKeyData = await lookupPlaybookKey(request);
   if (!apiKeyData) return null;
 
-  if (apiKeyData.role === 'admin') {
-    // Admin has full access
-  } else if (!apiKeyData.permissions.includes(requiredPermission) && !apiKeyData.permissions.includes("full")) {
+  if (apiKeyData.role === 'admin' || requiredPermission === null) {
+    // Admin has full access; a null permission is an identity check only.
+  } else if (!grantsPermission(apiKeyData.permissions, requiredPermission)) {
     return null;
   }
 
@@ -170,8 +176,7 @@ export async function validateUserApiKey(
 
   if (
     requiredPermission
-    && !userKeyData.permissions.includes(requiredPermission)
-    && !userKeyData.permissions.includes("full")
+    && !grantsPermission(userKeyData.permissions, requiredPermission)
   ) {
     return null;
   }
@@ -280,4 +285,45 @@ export async function canAccessPrivatePlaybook(
 
   const user = await getAuthenticatedUser(request);
   return !!user && !!await getPlaybookAccessRole(user.id, playbookId);
+}
+
+/**
+ * Who is calling a private playbook's MCP endpoint. Unlike
+ * canAccessPrivatePlaybook (which the read-only GET manifest and llms.txt keep
+ * using), any active key of this playbook gets through: a key that may only
+ * write, propose, or use a secret still needs to reach the endpoint. What it
+ * may then read is decided per tool and resource by actorMayRead.
+ */
+export type PrivatePlaybookActor =
+  | { kind: "member" }
+  | { kind: "playbook_key"; role: string; permissions: string[] };
+
+export async function resolvePrivatePlaybookActor(
+  request: Request,
+  playbookId: string,
+): Promise<PrivatePlaybookActor | null> {
+  const playbookKey = await validateApiKey(request, null);
+  if (playbookKey?.playbooks.id === playbookId) {
+    return { kind: "playbook_key", role: playbookKey.role, permissions: playbookKey.permissions ?? [] };
+  }
+
+  const userKey = await validateUserApiKey(request, "playbooks:read");
+  if (userKey && await getPlaybookAccessRole(userKey.user_id, playbookId)) return { kind: "member" };
+
+  const user = await getAuthenticatedUser(request);
+  if (user && await getPlaybookAccessRole(user.id, playbookId)) return { kind: "member" };
+  return null;
+}
+
+/**
+ * May this caller read data guarded by `permission`? `null` is a public
+ * playbook, where reads need no credential. The owner and editors read
+ * everything. A playbook key needs the permission (or the matching write, see
+ * grantsPermission), `full`, or the admin role; a key holding memory:read keeps
+ * the access it had when that permission was the gate for every private read.
+ */
+export function actorMayRead(actor: PrivatePlaybookActor | null, permission: string): boolean {
+  if (!actor || actor.kind === "member" || actor.role === "admin") return true;
+  return grantsPermission(actor.permissions, permission)
+    || actor.permissions.includes("memory:read");
 }

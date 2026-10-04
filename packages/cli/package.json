@@ -1,6 +1,6 @@
 {
   "name": "@agentplaybooks/cli",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Sync vendor-neutral agent configuration and connect skills, MCP tools, memory, canvas, and secret-backed APIs",
   "type": "module",
   "license": "MIT",
@@ -60,5 +60,8 @@
     "prepack": "npm run build",
     "pack:openai-skills": "node scripts/pack-openai-skills-zip.mjs",
     "test": "node --test"
+  },
+  "allowScripts": {
+    "esbuild@0.25.12": true
   }
 }

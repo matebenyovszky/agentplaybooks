@@ -2,8 +2,8 @@
 from plugins.memory.config_schema import KIND_SECRET, KIND_TEXT, ProviderConfigSchema, ProviderField
 
 CONFIG_SCHEMA = ProviderConfigSchema(
-    name="agentplaybooks",
-    label="AgentPlaybooks",
+    name="agentplaybooks-memory",
+    label="AgentPlaybooks Memory",
     docs_url="https://github.com/matebenyovszky/agentplaybooks/tree/main/packages/hermes-memory",
     fields=(
         ProviderField(key="playbook_guid", label="Private memory playbook GUID", kind=KIND_TEXT,
@@ -15,5 +15,8 @@ CONFIG_SCHEMA = ProviderConfigSchema(
                       default="https://agentplaybooks.ai"),
         ProviderField(key="shared_playbooks", label="Shared playbook GUIDs", kind=KIND_TEXT,
                       description="Optional comma-separated read-only sources."),
+        ProviderField(key="team_playbooks", label="Team playbook GUIDs", kind=KIND_TEXT,
+                      description="Optional comma-separated private playbooks a team writes together; "
+                                  "each needs AGENTPLAYBOOKS_TEAM_<GUID>_API_KEY."),
     ),
 )

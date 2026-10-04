@@ -3,7 +3,7 @@
   "name": "ai.agentplaybooks/agentplaybooks",
   "title": "AgentPlaybooks",
   "description": "Vendor-neutral home for portable agents: skills, MCP tools, memory, canvas, and secret proxy.",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "websiteUrl": "https://agentplaybooks.ai",
   "repository": {
     "url": "https://github.com/matebenyovszky/agentplaybooks",

@@ -1,8 +1,8 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
-  "name": "agentplaybooks-portable",
+  "name": "agentplaybooks-tools",
   "version": "0.1.0",
-  "description": "Audit, sync, package, and restore portable agent configuration with the AgentPlaybooks CLI.",
+  "description": "Connect AgentPlaybooks skills, MCP servers, and federated OpenAPI tools to Hermes, with guided authentication setup.",
   "author": {
     "name": "AgentPlaybooks",
     "url": "https://agentplaybooks.ai"

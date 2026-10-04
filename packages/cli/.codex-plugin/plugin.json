@@ -1,7 +1,7 @@
 {
   "name": "agentplaybooks",
   "description": "Portable, vendor-neutral agents: sync configuration and manage skills, tools, memory, canvas, and secrets.",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "author": {
     "name": "AgentPlaybooks",
     "url": "https://agentplaybooks.ai"

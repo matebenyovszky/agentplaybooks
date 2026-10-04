@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agentplaybooks-hermes-memory"
-version = "0.1.0"
+version = "0.2.0"
 description = "AgentPlaybooks native memory provider for Hermes Agent"
 requires-python = ">=3.11"
 license = {file = "agentplaybooks/LICENSE"}
@@ -17,7 +17,7 @@ Homepage = "https://agentplaybooks.ai"
 Repository = "https://github.com/matebenyovszky/agentplaybooks"
 
 [project.entry-points."hermes_agent.memory_providers"]
-agentplaybooks = "agentplaybooks:AgentPlaybooksMemoryProvider"
+agentplaybooks-memory = "agentplaybooks:AgentPlaybooksMemoryProvider"
 
 [tool.setuptools]
 packages = ["agentplaybooks"]
