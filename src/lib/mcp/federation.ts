@@ -818,14 +818,78 @@ async function timedFetch(
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeout);
   try {
-    return await fetchImpl(url, { ...init, signal: controller.signal });
+    const response = await fetchImpl(url, { ...init, signal: controller.signal });
+    const envelope = typeof init.body === "string" ? parseMaybeJson(init.body) : null;
+    const rpc = isRecord(envelope) && envelope.jsonrpc === "2.0" ? envelope : null;
+    // Notification acknowledgements have no RPC result to read. Release their
+    // bodies immediately, even when a peer incorrectly leaves a stream open.
+    if (rpc && rpc.id === undefined) {
+      void response.body?.cancel().catch(() => {});
+      return new Response(null, { status: response.status, headers: response.headers });
+    }
+    const body = await readBoundedResponse(response, controller.signal, rpc?.id);
+    return new Response([204, 205, 304].includes(response.status) ? null : body, {
+      status: response.status, statusText: response.statusText, headers: response.headers,
+    });
   } catch (error) {
-    if (error instanceof Error && error.name === "AbortError") {
+    if (controller.signal.aborted || (error instanceof Error && error.name === "AbortError")) {
       throw new FederationError(`Upstream timed out after ${timeout}ms`, "UPSTREAM_TIMEOUT", 504);
     }
+    if (error instanceof FederationError) throw error;
     throw new FederationError(error instanceof Error ? error.message : "Upstream request failed", "UPSTREAM_NETWORK_ERROR");
   } finally {
     clearTimeout(timer);
+  }
+}
+
+const MAX_UPSTREAM_BODY_BYTES = 8 * 1024 * 1024;
+
+/** Bound the whole response, not just the time until its headers arrive. */
+async function readBoundedResponse(response: Response, signal: AbortSignal, rpcId: unknown): Promise<string> {
+  if (!response.body) return "";
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  const sse = rpcId !== undefined && response.headers.get("content-type")?.includes("text/event-stream");
+  let bytes = 0;
+  let text = "";
+  let onAbort: () => void = () => {};
+  const aborted = new Promise<never>((_resolve, reject) => {
+    onAbort = () => reject(new DOMException("Upstream body timed out", "AbortError"));
+    signal.addEventListener("abort", onAbort, { once: true });
+    if (signal.aborted) onAbort();
+  });
+  try {
+    while (true) {
+      const { done, value } = await Promise.race([reader.read(), aborted]);
+      if (value) {
+        bytes += value.byteLength;
+        if (bytes > MAX_UPSTREAM_BODY_BYTES) throw new FederationError("Upstream response exceeds 8 MiB", "UPSTREAM_RESPONSE_TOO_LARGE");
+        text += decoder.decode(value, { stream: true });
+      }
+      if (done) text += decoder.decode();
+      if (sse) {
+        // Events can span chunks and multiple data lines. Ignore notifications
+        // and other RPC IDs, then cancel as soon as our response is complete.
+        const events = text.split(/\r?\n\r?\n/);
+        text = done ? "" : events.pop() ?? "";
+        for (const event of events) {
+          const data = event.split(/\r?\n/).filter((line) => line.startsWith("data:"))
+            .map((line) => line.slice(5).trimStart()).join("\n");
+          if (!data || data === "[DONE]") continue;
+          const payload = parseMaybeJson(data);
+          if (isRecord(payload) && payload.id === rpcId && ("result" in payload || "error" in payload)) {
+            return `data: ${JSON.stringify(payload)}\n\n`;
+          }
+        }
+        if (done) throw new FederationError("SSE response contained no matching JSON-RPC result", "INVALID_UPSTREAM_RESPONSE");
+      } else if (done) {
+        return text;
+      }
+    }
+  } finally {
+    signal.removeEventListener("abort", onAbort);
+    // Do not wait for the remote peer to close an otherwise long-lived SSE.
+    void reader.cancel().catch(() => {});
   }
 }
 

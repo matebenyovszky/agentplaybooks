@@ -34,4 +34,5 @@ jobs:
       - run: npm run test:all
       - run: npx tsc --noEmit
       - run: npm run audit:production
-      - run: npm run build
+      - run: npm run build:worker
+      - run: npx wrangler deploy --dry-run
