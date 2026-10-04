@@ -61,6 +61,7 @@ yarn-error.log*
 
 # auto-generated
 src/lib/blog-slugs.generated.ts
+src/worker/build-env.generated.ts
 
 # OpenAI Skills-only submit ZIP (rebuild with packages/cli/scripts/pack-openai-skills-zip.mjs)
 /packages/cli/dist/*.zip
