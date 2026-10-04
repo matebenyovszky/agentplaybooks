@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+// Native Request/Response handler: shared by Next.js and the Worker dispatcher.
+// @worker-native
 import { requireAuth } from "../_shared/auth";
 import {
     createPlaybook,
@@ -6,37 +7,37 @@ import {
     parseCreatePlaybookInput,
 } from "@/lib/repositories/playbooks";
 
-export async function GET(request: NextRequest) {
+export async function GET(request: Request) {
     const user = await requireAuth(request);
     if (!user) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     try {
-        return NextResponse.json(await listAccessiblePlaybooks(user.id));
+        return Response.json(await listAccessiblePlaybooks(user.id));
     } catch (error) {
         const message = error instanceof Error ? error.message : "Database error";
-        return NextResponse.json({ error: message }, { status: 500 });
+        return Response.json({ error: message }, { status: 500 });
     }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
     const user = await requireAuth(request);
     if (!user) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await request.json().catch(() => null);
     const parsed = parseCreatePlaybookInput(body);
     if ("error" in parsed) {
-        return NextResponse.json({ error: parsed.error }, { status: 400 });
+        return Response.json({ error: parsed.error }, { status: 400 });
     }
 
     try {
         const data = await createPlaybook(user.id, parsed.input);
-        return NextResponse.json(data, { status: 201 });
+        return Response.json(data, { status: 201 });
     } catch (error) {
         const message = error instanceof Error ? error.message : "Database error";
-        return NextResponse.json({ error: message }, { status: 500 });
+        return Response.json({ error: message }, { status: 500 });
     }
 }

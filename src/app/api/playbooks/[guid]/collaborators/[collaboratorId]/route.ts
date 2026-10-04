@@ -1,14 +1,15 @@
-import { NextRequest, NextResponse } from "next/server";
+// Native Request/Response handler: shared by Next.js and the Worker dispatcher.
+// @worker-native
 import { getAuthenticatedUser } from "@/app/api/_shared/auth";
 import { checkPlaybookOwnership } from "@/app/api/_shared/guards";
 import { getServiceSupabase } from "@/app/api/_shared/supabase";
 
 export async function DELETE(
-  request: NextRequest,
+  request: Request,
   { params }: { params: Promise<{ guid: string; collaboratorId: string }> }
 ) {
   const user = await getAuthenticatedUser(request);
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const { guid: idOrGuid, collaboratorId } = await params;
   const supabase = getServiceSupabase();
@@ -18,9 +19,9 @@ export async function DELETE(
   const { data: playbook } = await playbookQuery.single();
   const playbookId = playbook?.id;
 
-  if (!playbookId) return NextResponse.json({ error: "Playbook not found" }, { status: 404 });
+  if (!playbookId) return Response.json({ error: "Playbook not found" }, { status: 404 });
   if (!(await checkPlaybookOwnership(user.id, playbookId))) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return Response.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const { data, error } = await supabase
@@ -32,7 +33,7 @@ export async function DELETE(
     .single();
 
   if (error || !data) {
-    return NextResponse.json({ error: "Collaborator or invite not found" }, { status: 404 });
+    return Response.json({ error: "Collaborator or invite not found" }, { status: 404 });
   }
-  return NextResponse.json({ success: true });
+  return Response.json({ success: true });
 }

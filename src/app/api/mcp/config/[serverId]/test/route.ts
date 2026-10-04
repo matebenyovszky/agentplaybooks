@@ -6,4 +6,5 @@
  * a file of its own or the request never reaches Hono — it 404s with an HTML
  * error page, which is what the dashboard was trying to parse as JSON.
  */
+// @worker-native
 export { POST } from "../route";

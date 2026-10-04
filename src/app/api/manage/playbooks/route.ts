@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+// Native Request/Response handler: shared by Next.js and the Worker dispatcher.
+// @worker-native
 import { getUserFromAuthOrApiKey } from "../../_shared/auth";
 import {
   createPlaybook,
@@ -17,35 +18,35 @@ import {
  * the guid, gets 401 here, and reports "Unauthorized" while `apb pull <uuid>`
  * on the very same key works, because that path does reach the Hono app.
  */
-export async function GET(request: NextRequest) {
+export async function GET(request: Request) {
   const user = await getUserFromAuthOrApiKey(request, "playbooks:read");
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
-    return NextResponse.json(await listAccessiblePlaybooks(user.id));
+    return Response.json(await listAccessiblePlaybooks(user.id));
   } catch (error) {
     const message = error instanceof Error ? error.message : "Database error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return Response.json({ error: message }, { status: 500 });
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   const user = await getUserFromAuthOrApiKey(request, "playbooks:write");
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const body = await request.json().catch(() => null);
   const parsed = parseCreatePlaybookInput(body);
-  if ("error" in parsed) return NextResponse.json({ error: parsed.error }, { status: 400 });
+  if ("error" in parsed) return Response.json({ error: parsed.error }, { status: 400 });
 
   try {
     const playbook = await createPlaybook(user.id, parsed.input);
-    return NextResponse.json(playbook, { status: 201 });
+    return Response.json(playbook, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Database error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return Response.json({ error: message }, { status: 500 });
   }
 }

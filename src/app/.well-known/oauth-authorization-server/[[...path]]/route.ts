@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+// Native Request/Response handler: shared by Next.js and the Worker dispatcher.
+// @worker-native
 import { oauthAuthorizationServer } from "@/lib/mcp-oauth";
 
 /**
@@ -16,5 +17,5 @@ export async function GET() {
     issuer.origin,
   );
 
-  return NextResponse.redirect(metadataUrl, 307);
+  return Response.redirect(metadataUrl.toString(), 307);
 }
