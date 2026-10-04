@@ -33,10 +33,21 @@ describe("public document cache", () => {
       { Accept: "text/x-component" }, { Cookie: "NEXT_LOCALE=%ZZ" },
     ];
     for (const headers of excludedHeaders) expect(publicPageCacheKey(new Request("https://example.com/", { headers }), "v1")).toBeNull();
-    for (const path of ["/dashboard", "/api/playbooks", "/playbooks/private", "/docs?page=secrets", "/?utm_source=x"])
+    for (const path of ["/dashboard", "/api/playbooks", "/playbooks/private", "/docs?page=secrets", "/?utm_source=x",
+      "/docs/unknown-private-page", "/blog/unknown-private-page", "/docs/playbooks/private", "/blog/hermes-native-memory.md"])
       expect(publicPageCacheKey(new Request(`https://example.com${path}`), "v1")).toBeNull();
     expect(publicPageCacheKey(new Request("https://example.com/", { method: "HEAD" }), "v1")).toBeNull();
     expect(publicPageCacheKey(new Request("https://example.com/"), undefined)).toBeNull();
+  });
+
+  it("admits published public documents and posts with the same credential exclusions", () => {
+    const credentialHeaders: HeadersInit[] = [{ Authorization: "Bearer secret" }, { Cookie: "session=secret" }, { RSC: "1" }];
+    for (const path of ["/docs/playbooks", "/docs/mcp-registry-publishing", "/blog", "/blog/hermes-native-memory"]) {
+      expect(publicPageCacheKey(new Request(`https://example.com${path}`), "v1")?.url).toContain(path);
+      for (const headers of credentialHeaders) {
+        expect(publicPageCacheKey(new Request(`https://example.com${path}`, { headers }), "v1")).toBeNull();
+      }
+    }
   });
 
   it("serves successful HTML without rendering again and prevents browser cache mixing", async () => {

@@ -1,4 +1,5 @@
 import { resolveLocale } from "../i18n/resolve-locale";
+import { publicPagePaths } from "./public-page-paths";
 
 export interface PublicPageCache {
   match(request: Request): Promise<Response | undefined>;
@@ -11,7 +12,7 @@ const BROWSER_CACHE_CONTROL = "private, no-cache, no-store, max-age=0, must-reva
 export function publicPageCacheKey(request: Request, version: unknown): Request | null {
   if (typeof version !== "string" || !version || version.length > 128 || request.method !== "GET") return null;
   const url = new URL(request.url);
-  if ((url.pathname !== "/" && url.pathname !== "/docs") || url.search) return null;
+  if (!publicPagePaths.has(url.pathname) || url.search) return null;
   for (const [name] of request.headers) {
     if (name === "authorization" || name === "x-api-key" || name === "rsc" || name === "range"
       || name === "upgrade" || name === "x-matched-path"
