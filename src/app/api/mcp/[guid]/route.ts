@@ -44,7 +44,7 @@ import {
 } from "@/app/api/_shared/audit";
 import { PLAYBOOK_TOOLS } from "@/app/api/_shared/playbook-tools";
 import { structuredToolResult } from "@/app/api/_shared/mcp-tool-hints";
-import { resolveToolset, searchToolCatalog } from "@/app/api/_shared/toolsets";
+import { resolveToolset, searchToolCatalog, type ToolsetView } from "@/app/api/_shared/toolsets";
 import {
   callFederatedTool,
   federatedCallPrefixes,
@@ -100,18 +100,71 @@ async function federationOptions(server: MCPServer, playbookId: string, requestI
   };
 }
 
+// Connected server discovery is identical for callers of the same playbook.
+// Keep only resolved capability metadata, never credentials or in-flight I/O,
+// for a short period in each Worker isolate.
+const DISCOVERY_TTL_MS = 30_000;
+const DISCOVERY_CACHE_MAX = 32;
+type DiscoveryEntry<T> = { expiresAt: number; value: T };
+const toolDiscovery = new Map<string, DiscoveryEntry<McpTool[]>>();
+const resourceDiscovery = new Map<string, DiscoveryEntry<McpResource[]>>();
+const toolListBodies = new Map<string, DiscoveryEntry<string>>();
+
+async function cachedDiscovery<T>(
+  cache: Map<string, DiscoveryEntry<T>>,
+  key: string,
+  load: () => Promise<T>,
+): Promise<T> {
+  const now = Date.now();
+  const cached = cache.get(key);
+  if (cached && cached.expiresAt > now) return cached.value;
+  const value = await load();
+  cache.delete(key);
+  cache.set(key, { expiresAt: Date.now() + DISCOVERY_TTL_MS, value });
+  if (cache.size > DISCOVERY_CACHE_MAX) {
+    cache.delete(cache.keys().next().value!);
+  }
+  return value;
+}
+
 async function federatedTools(servers: MCPServer[], playbookId: string, requestId?: string) {
-  const groups = await Promise.all(servers.map(async (server) =>
-    listFederatedTools([server], await federationOptions(server, playbookId, requestId)),
+  const groups = await Promise.all(servers.map((server) =>
+    cachedDiscovery(toolDiscovery, `${playbookId}:${server.id}`, async () =>
+      listFederatedTools([server], await federationOptions(server, playbookId, requestId))),
   ));
   return groups.flat();
 }
 
 async function federatedResources(servers: MCPServer[], playbookId: string, requestId?: string) {
-  const groups = await Promise.all(servers.map(async (server) =>
-    listFederatedResources([server], await federationOptions(server, playbookId, requestId)),
+  const groups = await Promise.all(servers.filter((server) => server.transport_type !== "openapi").map((server) =>
+    cachedDiscovery(resourceDiscovery, `${playbookId}:${server.id}`, async () =>
+      listFederatedResources([server], await federationOptions(server, playbookId, requestId))),
   ));
   return groups.flat();
+}
+
+function invalidateFederatedDiscovery(playbookId: string, serverId?: string) {
+  for (const view of ["full", "runtime", "memory", "admin"]) {
+    toolListBodies.delete(`${playbookId}:${view}`);
+  }
+  if (serverId) {
+    toolDiscovery.delete(`${playbookId}:${serverId}`);
+    resourceDiscovery.delete(`${playbookId}:${serverId}`);
+  }
+}
+
+async function toolListJson(playbookId: string, view: ToolsetView, requestId?: string): Promise<string> {
+  return cachedDiscovery(toolListBodies, `${playbookId}:${view.name}`, async () => {
+    const builtins = PLAYBOOK_TOOLS.filter((tool) => view.includes(tool.name, false));
+    if (view.name === "memory" || view.name === "admin") return JSON.stringify(builtins);
+
+    const { data: mcpRows } = await getServiceSupabase()
+      .from("mcp_servers")
+      .select("*")
+      .eq("playbook_id", playbookId);
+    const federated = await federatedTools((mcpRows || []) as MCPServer[], playbookId, requestId);
+    return JSON.stringify([...builtins, ...federated.filter((tool) => view.includes(tool.name, true))]);
+  });
 }
 
 async function servedSkills(playbookId: string, namespace: string, onlyName?: string): Promise<ServedSkill[]> {
@@ -509,25 +562,16 @@ app.post("/", async (c) => {
     case "tools/list": {
       // Skills are accessible via list_skills / get_skill tools and the Skills resource.
       // They are NOT exposed as separate skill_* tools (they are instructions, not executables).
-      const { data: mcpRows } = await getServiceSupabase()
-        .from("mcp_servers")
-        .select("*")
-        .eq("playbook_id", playbook.id);
-      const tools = await federatedTools(
-        (mcpRows || []) as MCPServer[],
+      const toolsJson = await toolListJson(
         playbook.id,
+        toolsetView,
         c.req.header("cf-ray") || c.req.header("x-request-id"),
       );
-      return c.json({
-        jsonrpc: "2.0",
-        id,
-        result: {
-          tools: [
-            ...PLAYBOOK_TOOLS.filter((tool) => toolsetView.includes(tool.name, false)),
-            ...tools.filter((tool) => toolsetView.includes(tool.name, true)),
-          ],
-        },
-      });
+      return c.body(
+        `{"jsonrpc":"2.0","id":${JSON.stringify(id) ?? "null"},"result":{"tools":${toolsJson}}}`,
+        200,
+        { "Content-Type": "application/json; charset=UTF-8" },
+      );
     }
 
     case "skills/list": {
@@ -1091,15 +1135,20 @@ use_secret_write({
           case "find_tools": {
             const query = String(args.query ?? "");
             const limit = typeof args.limit === "number" ? args.limit : 10;
-            const { data: catalogRows } = await serviceSupabase
-              .from("mcp_servers")
-              .select("*")
-              .eq("playbook_id", playbook.id);
-            const federated = await federatedTools(
-              (catalogRows || []) as MCPServer[],
-              playbook.id,
-              c.req.header("cf-ray") || c.req.header("x-request-id"),
-            );
+            const includesFederated = toolsetView.name === "full" || toolsetView.name === "runtime";
+            const federated = includesFederated
+              ? await (async () => {
+                const { data: catalogRows } = await serviceSupabase
+                  .from("mcp_servers")
+                  .select("*")
+                  .eq("playbook_id", playbook.id);
+                return federatedTools(
+                  (catalogRows || []) as MCPServer[],
+                  playbook.id,
+                  c.req.header("cf-ray") || c.req.header("x-request-id"),
+                );
+              })()
+              : [];
             // The searchable catalog respects the view: a pinned connection
             // must not discover tools it would then be refused.
             result = searchToolCatalog([
@@ -2318,6 +2367,7 @@ use_secret_write({
               .select()
               .single();
             if (error || !data) throw new Error(error?.message || "Failed to connect MCP server");
+            invalidateFederatedDiscovery(playbook.id);
             result = data;
             break;
           }
@@ -2357,6 +2407,7 @@ use_secret_write({
               .select()
               .single();
             if (error || !data) throw new Error(error?.message || "MCP server not found");
+            invalidateFederatedDiscovery(playbook.id, serverId);
             result = data;
             break;
           }
@@ -2374,6 +2425,7 @@ use_secret_write({
               .eq("id", serverId)
               .eq("playbook_id", playbook.id);
             if (error) throw new Error(error.message);
+            invalidateFederatedDiscovery(playbook.id, serverId);
             result = { success: true, deleted: serverId };
             break;
           }

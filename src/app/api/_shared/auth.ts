@@ -10,6 +10,82 @@ type ApiKeyWithPlaybook = ApiKey & {
 
 type UserApiKeyData = UserApiKeysRow & { user_id: string };
 
+// A single MCP invocation may check discovery access and then a tool-specific
+// permission. Share lookups only within that Request so revocation still takes
+// effect on the next invocation.
+const playbookKeyLookups = new WeakMap<Request, Promise<ApiKey | null>>();
+const playbookLookups = new WeakMap<Request, Promise<{ id: string; guid: string } | null>>();
+const userKeyLookups = new WeakMap<Request, Promise<UserApiKeyData | null>>();
+const userLookups = new WeakMap<Request, Promise<{ id: string } | null>>();
+const keyHashes = new WeakMap<Request, Promise<string | null>>();
+const usageUpdates = new WeakMap<Request, Map<string, Promise<void>>>();
+const LAST_USE_INTERVAL_MS = 60_000;
+
+function keyHashForRequest(request: Request): Promise<string | null> {
+  const cached = keyHashes.get(request);
+  if (cached) return cached;
+  const apiKey = presentedApiKey(request);
+  const hash = apiKey ? hashApiKey(apiKey) : Promise.resolve(null);
+  keyHashes.set(request, hash);
+  return hash;
+}
+
+function recordKeyUse(
+  request: Request,
+  table: "api_keys" | "user_api_keys",
+  id: string,
+  lastUsedAt: string | null,
+): Promise<void> {
+  const now = Date.now();
+  if (lastUsedAt && now - Date.parse(lastUsedAt) < LAST_USE_INTERVAL_MS) return Promise.resolve();
+  let updates = usageUpdates.get(request);
+  if (!updates) {
+    updates = new Map();
+    usageUpdates.set(request, updates);
+  }
+  const cacheKey = `${table}:${id}`;
+  let update = updates.get(cacheKey);
+  if (!update) {
+    update = (async () => {
+      await getServiceSupabase().from(table)
+        .update({ last_used_at: new Date(now).toISOString() })
+        .eq("id", id);
+    })();
+    updates.set(cacheKey, update);
+  }
+  return update;
+}
+
+function lookupPlaybookKey(request: Request): Promise<ApiKey | null> {
+  const cached = playbookKeyLookups.get(request);
+  if (cached) return cached;
+  const lookup = (async () => {
+    const keyHash = await keyHashForRequest(request);
+    if (!keyHash) return null;
+    const { data, error } = await getServiceSupabase().from("api_keys")
+      .select("*").eq("key_hash", keyHash).eq("is_active", true).maybeSingle();
+    if (error || !data || (data.expires_at && Date.parse(data.expires_at) <= Date.now())) return null;
+    return data as ApiKey;
+  })();
+  playbookKeyLookups.set(request, lookup);
+  return lookup;
+}
+
+function lookupUserKey(request: Request): Promise<UserApiKeyData | null> {
+  const cached = userKeyLookups.get(request);
+  if (cached) return cached;
+  const lookup = (async () => {
+    const keyHash = await keyHashForRequest(request);
+    if (!keyHash) return null;
+    const { data, error } = await getServiceSupabase().from("user_api_keys")
+      .select("*").eq("key_hash", keyHash).eq("is_active", true).maybeSingle();
+    if (error || !data || (data.expires_at && Date.parse(data.expires_at) <= Date.now())) return null;
+    return data as UserApiKeyData;
+  })();
+  userKeyLookups.set(request, lookup);
+  return lookup;
+}
+
 export type PlaybookRequestActor = {
   kind: "playbook_key" | "user_key" | "session";
   playbookId: string;
@@ -32,20 +108,18 @@ export type PlaybookCredential = PlaybookRequestActor & {
  * on this domain could impersonate a user. It has been removed.
  */
 export async function getAuthenticatedUser(request?: Request): Promise<{ id: string } | null> {
-  const supabase = getSupabase();
-
-  if (request) {
+  if (!request) return null;
+  const cached = userLookups.get(request);
+  if (cached) return cached;
+  const lookup = (async () => {
     const authHeader = request.headers.get("Authorization");
-    if (authHeader?.startsWith("Bearer ") && !authHeader.startsWith("Bearer apb_")) {
-      const token = authHeader.replace("Bearer ", "");
-      const { data: { user }, error } = await supabase.auth.getUser(token);
-      if (!error && user) {
-        return { id: user.id };
-      }
-    }
-  }
-
-  return null;
+    if (!authHeader?.startsWith("Bearer ") || authHeader.startsWith("Bearer apb_")) return null;
+    const token = authHeader.slice("Bearer ".length);
+    const { data: { user }, error } = await getSupabase().auth.getUser(token);
+    return !error && user ? { id: user.id } : null;
+  })();
+  userLookups.set(request, lookup);
+  return lookup;
 }
 
 export async function requireAuth(request: Request): Promise<{ id: string } | null> {
@@ -61,27 +135,8 @@ export async function validateApiKey(
   request: Request,
   requiredPermission: string
 ): Promise<ApiKeyWithPlaybook | null> {
-  const apiKey = presentedApiKey(request);
-  if (!apiKey) {
-    return null;
-  }
-
-  const keyHash = await hashApiKey(apiKey);
-  const supabase = getServiceSupabase();
-  const { data: apiKeyData, error } = await supabase
-    .from("api_keys")
-    .select("*")
-    .eq("key_hash", keyHash)
-    .eq("is_active", true)
-    .maybeSingle();
-
-  if (error || !apiKeyData) {
-    return null;
-  }
-
-  if (apiKeyData.expires_at && new Date(apiKeyData.expires_at) < new Date()) {
-    return null;
-  }
+  const apiKeyData = await lookupPlaybookKey(request);
+  if (!apiKeyData) return null;
 
   if (apiKeyData.role === 'admin') {
     // Admin has full access
@@ -89,20 +144,19 @@ export async function validateApiKey(
     return null;
   }
 
-  const { data: playbook, error: playbookError } = await supabase
-    .from("playbooks")
-    .select("id, guid")
-    .eq("id", apiKeyData.playbook_id)
-    .maybeSingle();
-
-  if (playbookError || !playbook) {
-    return null;
+  let playbookLookup = playbookLookups.get(request);
+  if (!playbookLookup) {
+    playbookLookup = (async () => {
+      const { data, error } = await getServiceSupabase().from("playbooks")
+        .select("id, guid").eq("id", apiKeyData.playbook_id).maybeSingle();
+      return error ? null : data;
+    })();
+    playbookLookups.set(request, playbookLookup);
   }
+  const playbook = await playbookLookup;
+  if (!playbook) return null;
 
-  await supabase
-    .from("api_keys")
-    .update({ last_used_at: new Date().toISOString() })
-    .eq("id", apiKeyData.id);
+  await recordKeyUse(request, "api_keys", apiKeyData.id, apiKeyData.last_used_at);
 
   return { ...apiKeyData, playbooks: playbook } as ApiKeyWithPlaybook;
 }
@@ -111,27 +165,8 @@ export async function validateUserApiKey(
   request: Request,
   requiredPermission?: string
 ): Promise<UserApiKeyData | null> {
-  const apiKey = presentedApiKey(request);
-  if (!apiKey) {
-    return null;
-  }
-
-  const keyHash = await hashApiKey(apiKey);
-  const supabase = getServiceSupabase();
-  const { data: userKeyData, error } = await supabase
-    .from("user_api_keys")
-    .select("*")
-    .eq("key_hash", keyHash)
-    .eq("is_active", true)
-    .maybeSingle();
-
-  if (error || !userKeyData) {
-    return null;
-  }
-
-  if (userKeyData.expires_at && new Date(userKeyData.expires_at) < new Date()) {
-    return null;
-  }
+  const userKeyData = await lookupUserKey(request);
+  if (!userKeyData) return null;
 
   if (
     requiredPermission
@@ -141,10 +176,7 @@ export async function validateUserApiKey(
     return null;
   }
 
-  await supabase
-    .from("user_api_keys")
-    .update({ last_used_at: new Date().toISOString() })
-    .eq("id", userKeyData.id);
+  await recordKeyUse(request, "user_api_keys", userKeyData.id, userKeyData.last_used_at);
 
   return userKeyData as UserApiKeyData;
 }
