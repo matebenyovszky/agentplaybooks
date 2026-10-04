@@ -4,12 +4,17 @@
 route exports and authorization helpers as Next.js. MCP, operation HTTP
 projections, memory, canvas, secrets, runs, and the Hono REST catch-all therefore
 avoid the Next server wrapper and its response lifecycle `waitUntil` task.
-Frontend pages and Next-specific API handlers still use OpenNext.
+The playbook export, collaboration, snapshot, backup, connection catalogue,
+registry search, and site-wide/per-playbook OAuth/skill discovery routes also use native
+Request/Response handlers. Frontend pages still use OpenNext.
 
 `scripts/generate-worker-api-routes.mjs` generates the dispatch manifest during
 prebuild. It includes reservations for Next-specific routes so the REST catch-all
-cannot shadow them. Specific routes take precedence over dynamic segments;
-unsupported methods, HEAD, and OPTIONS retain route-handler semantics. API
+cannot shadow them. Specific routes take precedence over dynamic segments.
+Handler modules are loaded lazily: public metadata does not initialize the MCP,
+snapshot, secret, or Next page implementations. Catch-all parameters retain their
+array shape, including optional empty paths. The configuration test re-export is
+included explicitly. Unsupported methods, HEAD, and OPTIONS retain route-handler semantics. API
 responses use the same security headers as Next and default to `Cache-Control:
 no-store`. Authentication is checked on every request before cached discovery
 content is returned; this is not a response cache or an authentication cache.
@@ -26,3 +31,23 @@ validated key prefixes (never tokens or request arguments). Discovery logs are
 sampled at 2%; they can help diagnose reconnect/discovery loops without logging
 every tool call. Client-declared identity is an attribution hint, not proof of
 which program or person sent a request.
+
+Only full-document GETs of `/` and `/docs` without query strings, credentials,
+session cookies, conditional/range headers, or Next/RSC headers are eligible for
+the public HTML Cache API. `NEXT_LOCALE` is the only accepted cookie; cache keys
+use the same locale selector as SSR plus the origin and Worker version ID.
+Successful HTML is retained for five minutes, concurrent fills are coalesced,
+and errors, redirects, Set-Cookie, JSON, and Vary-star responses are not stored.
+Browser/CDN responses remain `no-store`, avoiding implicit locale or RSC mixing.
+Authenticated pages and all API responses bypass this HTML cache. Changes that
+introduce personalized server rendering on either allowlisted page require
+removing that page from the cache allowlist.
+
+Registry search has its own bounded five-minute public-data cache with eight
+entries and concurrent-load coalescing; upstream headers and bodies share a
+ten-second timeout and a 2 MiB body limit. Credentials are never forwarded to
+the registry or stored in cache keys.
+
+The first uncached SSR render in a location still needs Next initialization.
+This design reduces repeat and new-isolate work after a page has been cached;
+it does not promise that every cold render fits the free-plan CPU allowance.

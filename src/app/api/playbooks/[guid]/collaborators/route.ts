@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+// Native Request/Response handler: shared by Next.js and the Worker dispatcher.
+// @worker-native
 import { getAuthenticatedUser } from "@/app/api/_shared/auth";
 import { checkPlaybookOwnership } from "@/app/api/_shared/guards";
 import { getServiceSupabase } from "@/app/api/_shared/supabase";
@@ -21,15 +22,15 @@ async function resolveOwnedPlaybook(userId: string, idOrGuid: string) {
 }
 
 export async function GET(
-  request: NextRequest,
+  request: Request,
   { params }: { params: Promise<{ guid: string }> }
 ) {
   const user = await getAuthenticatedUser(request);
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const { guid } = await params;
   const playbook = await resolveOwnedPlaybook(user.id, guid);
-  if (!playbook) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!playbook) return Response.json({ error: "Forbidden" }, { status: 403 });
 
   const supabase = getServiceSupabase();
   const { data, error } = await supabase
@@ -38,7 +39,7 @@ export async function GET(
     .eq("playbook_id", playbook.id)
     .order("created_at", { ascending: false });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return Response.json({ error: error.message }, { status: 500 });
 
   const userIds = (data || []).flatMap((row) => row.user_id ? [row.user_id] : []);
   const profileNames = new Map<string, string>();
@@ -52,7 +53,7 @@ export async function GET(
     }
   }
 
-  return NextResponse.json((data || []).map((row) => ({
+  return Response.json((data || []).map((row) => ({
     ...row,
     display_name: row.user_id ? profileNames.get(row.user_id) || null : null,
     status: row.accepted_at ? "active" : new Date(row.invite_expires_at) <= new Date() ? "expired" : "pending",
@@ -60,15 +61,15 @@ export async function GET(
 }
 
 export async function POST(
-  request: NextRequest,
+  request: Request,
   { params }: { params: Promise<{ guid: string }> }
 ) {
   const user = await getAuthenticatedUser(request);
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const { guid } = await params;
   const playbook = await resolveOwnedPlaybook(user.id, guid);
-  if (!playbook) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!playbook) return Response.json({ error: "Forbidden" }, { status: 403 });
 
   const supabase = getServiceSupabase();
   await supabase
@@ -83,7 +84,7 @@ export async function POST(
     .select("id", { count: "exact", head: true })
     .eq("playbook_id", playbook.id);
   if ((count || 0) >= MAX_COLLABORATION_ROWS) {
-    return NextResponse.json({ error: "Collaboration limit reached" }, { status: 409 });
+    return Response.json({ error: "Collaboration limit reached" }, { status: 409 });
   }
 
   const token = generateInviteToken();
@@ -100,9 +101,9 @@ export async function POST(
     .select("id, invite_expires_at, created_at")
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return Response.json({ error: error.message }, { status: 500 });
 
-  return NextResponse.json({
+  return Response.json({
     ...data,
     status: "pending",
     invite_path: `/invite/${token}`,

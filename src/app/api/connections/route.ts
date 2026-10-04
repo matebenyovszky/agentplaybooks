@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+// Native Request/Response handler: shared by Next.js and the Worker dispatcher.
+// @worker-native
 import {
   CONNECTION_TEMPLATES,
   connectionTemplate,
@@ -17,16 +18,16 @@ import {
  *   GET /api/connections?id=gmail        one template
  */
 export async function GET(request: Request) {
-  // Read from request.url rather than NextRequest.nextUrl: the handler then
+  // Read from request.url: the handler then
   // works against a plain Request, which is what the tests hand it.
   const params = new URL(request.url).searchParams;
   const id = params.get("id");
   if (id) {
     const template = connectionTemplate(id);
     if (!template) {
-      return NextResponse.json({ error: `No connection template '${id}'.` }, { status: 404 });
+      return Response.json({ error: `No connection template '${id}'.` }, { status: 404 });
     }
-    return NextResponse.json(template);
+    return Response.json(template);
   }
 
   const category = params.get("category") as ConnectionCategory | null;
@@ -34,5 +35,5 @@ export async function GET(request: Request) {
     ? CONNECTION_TEMPLATES.filter((template) => template.category === category)
     : CONNECTION_TEMPLATES;
 
-  return NextResponse.json({ templates, total: templates.length });
+  return Response.json({ templates, total: templates.length });
 }

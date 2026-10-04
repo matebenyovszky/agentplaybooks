@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+// Native Request/Response handler: shared by Next.js and the Worker dispatcher.
+// @worker-native
 import { getServiceSupabase } from "../../_shared/supabase";
 import { getAuthenticatedUser } from "../../_shared/auth";
 import { getPlaybookAccessRole } from "../../_shared/guards";
@@ -39,12 +40,13 @@ function playbookToPersona(playbook: {
 }
 
 export async function GET(
-    request: NextRequest,
+    request: Request,
     { params }: { params: Promise<{ guid: string }> }
 ) {
     const { guid: idOrGuid } = await params;
-    const searchParams = request.nextUrl.searchParams;
+    const searchParams = new URL(request.url).searchParams;
     const format = searchParams.get("format") || "json";
+    const includeAttachments = !["openapi", "mcp", "anthropic", "markdown"].includes(format);
     const supabase = getServiceSupabase();
 
     // Try to get user (optional auth)
@@ -67,7 +69,7 @@ export async function GET(
     const { data: playbook, error } = await query.single();
 
     if (error || !playbook) {
-        return NextResponse.json({ error: "Playbook not found" }, { status: 404 });
+        return Response.json({ error: "Playbook not found" }, { status: 404 });
     }
 
     // Check access: Public/Unlisted OR Owner
@@ -75,7 +77,7 @@ export async function GET(
     const isPublicOrUnlisted = playbook.visibility === 'public' || playbook.visibility === 'unlisted';
 
     if (!isPublicOrUnlisted && !accessRole) {
-        return NextResponse.json({ error: "Playbook not found" }, { status: 404 });
+        return Response.json({ error: "Playbook not found" }, { status: 404 });
     }
 
     // Get related data. The attachments come along with the skills because a
@@ -86,7 +88,7 @@ export async function GET(
     const [skillsRes, mcpRes] = await Promise.all([
         supabase
             .from("skills")
-            .select("*, skill_attachments(id, filename, content)")
+            .select(includeAttachments ? "*, skill_attachments(id, filename, content)" : "*")
             .eq("playbook_id", playbook.id),
         supabase.from("mcp_servers").select("*").eq("playbook_id", playbook.id),
     ]);
@@ -119,27 +121,27 @@ export async function GET(
     // Format output
     switch (format) {
         case "openapi":
-            return NextResponse.json(formatAsOpenAPI(fullPlaybook));
+            return Response.json(formatAsOpenAPI(fullPlaybook));
         case "mcp":
-            return NextResponse.json(formatAsMCP(fullPlaybook));
+            return Response.json(formatAsMCP(fullPlaybook));
         case "anthropic":
-            return NextResponse.json(formatAsAnthropic(fullPlaybook));
+            return Response.json(formatAsAnthropic(fullPlaybook));
         case "markdown":
-            return new NextResponse(formatAsMarkdown(fullPlaybook), {
+            return new Response(formatAsMarkdown(fullPlaybook), {
                 headers: { "Content-Type": "text/markdown" },
             });
         default:
-            return NextResponse.json({ ...fullPlaybook, skills: skillsWithFiles });
+            return Response.json({ ...fullPlaybook, skills: skillsWithFiles });
     }
 }
 
 export async function PUT(
-    request: NextRequest,
+    request: Request,
     { params }: { params: Promise<{ guid: string }> }
 ) {
     const user = await getAuthenticatedUser(request);
     if (!user) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { guid: idOrGuid } = await params;
@@ -156,18 +158,18 @@ export async function PUT(
 
     const { data: playbook, error: findError } = await query.single();
     if (findError || !playbook) {
-        return NextResponse.json({ error: "Playbook not found" }, { status: 404 });
+        return Response.json({ error: "Playbook not found" }, { status: 404 });
     }
 
     const accessRole = await getPlaybookAccessRole(user.id, playbook.id);
     if (!accessRole) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        return Response.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const body = await request.json();
     const updateData = buildPlaybookUpdate(body, accessRole);
     if (Object.keys(updateData).length === 0) {
-        return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
+        return Response.json({ error: "No valid fields to update" }, { status: 400 });
     }
 
     const { data, error } = await supabase
@@ -178,19 +180,19 @@ export async function PUT(
         .single();
 
     if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return Response.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json(data);
+    return Response.json(data);
 }
 
 export async function DELETE(
-    request: NextRequest,
+    request: Request,
     { params }: { params: Promise<{ guid: string }> }
 ) {
     const user = await getAuthenticatedUser(request);
     if (!user) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { guid: idOrGuid } = await params;
@@ -207,12 +209,12 @@ export async function DELETE(
 
     const { data: playbook, error: findError } = await query.single();
     if (findError || !playbook) {
-        return NextResponse.json({ error: "Playbook not found" }, { status: 404 });
+        return Response.json({ error: "Playbook not found" }, { status: 404 });
     }
 
     // Check ownership
     if (playbook.user_id !== user.id) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        return Response.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const { error } = await supabase
@@ -221,8 +223,8 @@ export async function DELETE(
         .eq("id", playbook.id);
 
     if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return Response.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true });
+    return Response.json({ success: true });
 }

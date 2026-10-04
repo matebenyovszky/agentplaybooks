@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+// Native Request/Response handler: shared by Next.js and the Worker dispatcher.
+// @worker-native
 import { getAuthenticatedUser } from "@/app/api/_shared/auth";
 import { getServiceSupabase } from "@/app/api/_shared/supabase";
 import { hashToken } from "@/lib/utils";
@@ -15,35 +16,35 @@ async function findInvite(token: string) {
 }
 
 export async function GET(
-  _request: NextRequest,
+  _request: Request,
   { params }: { params: Promise<{ token: string }> }
 ) {
   const { token } = await params;
   const invite = await findInvite(token);
   if (!invite || invite.accepted_at || invite.user_id || new Date(invite.invite_expires_at) <= new Date()) {
-    return NextResponse.json({ error: "Invite is invalid or expired" }, { status: 404 });
+    return Response.json({ error: "Invite is invalid or expired" }, { status: 404 });
   }
 
   const joined = invite.playbooks as unknown as { id: string; name: string; user_id: string };
-  return NextResponse.json({ playbook_name: joined.name, expires_at: invite.invite_expires_at });
+  return Response.json({ playbook_name: joined.name, expires_at: invite.invite_expires_at });
 }
 
 export async function POST(
-  request: NextRequest,
+  request: Request,
   { params }: { params: Promise<{ token: string }> }
 ) {
   const user = await getAuthenticatedUser(request);
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const { token } = await params;
   const invite = await findInvite(token);
   if (!invite || invite.accepted_at || invite.user_id || new Date(invite.invite_expires_at) <= new Date()) {
-    return NextResponse.json({ error: "Invite is invalid or expired" }, { status: 404 });
+    return Response.json({ error: "Invite is invalid or expired" }, { status: 404 });
   }
 
   const joined = invite.playbooks as unknown as { id: string; name: string; user_id: string };
   if (joined.user_id === user.id) {
-    return NextResponse.json({ error: "The owner cannot accept their own invite" }, { status: 409 });
+    return Response.json({ error: "The owner cannot accept their own invite" }, { status: 409 });
   }
 
   const supabase = getServiceSupabase();
@@ -56,7 +57,7 @@ export async function POST(
     .maybeSingle();
   if (existing) {
     await supabase.from("playbook_collaborators").delete().eq("id", invite.id);
-    return NextResponse.json({ playbook_id: invite.playbook_id, already_member: true });
+    return Response.json({ playbook_id: invite.playbook_id, already_member: true });
   }
 
   const { data, error } = await supabase
@@ -70,7 +71,7 @@ export async function POST(
     .single();
 
   if (error || !data) {
-    return NextResponse.json({ error: "Invite was already used" }, { status: 409 });
+    return Response.json({ error: "Invite was already used" }, { status: 409 });
   }
-  return NextResponse.json({ playbook_id: data.playbook_id });
+  return Response.json({ playbook_id: data.playbook_id });
 }

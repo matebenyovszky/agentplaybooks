@@ -9,3 +9,12 @@ declare module "*/.open-next/worker.js" {
   export const DOShardedTagCache: unknown;
   export const BucketCachePurge: unknown;
 }
+declare module "*/.open-next/.build/durable-objects/queue.js" {
+  export const DOQueueHandler: unknown;
+}
+declare module "*/.open-next/.build/durable-objects/sharded-tag-cache.js" {
+  export const DOShardedTagCache: unknown;
+}
+declare module "*/.open-next/.build/durable-objects/bucket-cache-purge.js" {
+  export const BucketCachePurge: unknown;
+}

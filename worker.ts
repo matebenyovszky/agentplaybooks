@@ -4,8 +4,12 @@ import { apiRoutes } from "./src/worker/api-routes";
 import { publicBuildEnv } from "./src/worker/build-env.generated";
 import { applyPublicBuildEnv } from "./src/worker/environment";
 import { rejectProbeRequest } from "./src/worker/probe-paths";
+import { servePublicPage, type PublicPageCache } from "./src/worker/public-page-cache";
 
-export { DOQueueHandler, DOShardedTagCache, BucketCachePurge } from "./.open-next/worker.js";
+// Export the adapter bindings without eagerly evaluating its Next middleware.
+export { DOQueueHandler } from "./.open-next/.build/durable-objects/queue.js";
+export { DOShardedTagCache } from "./.open-next/.build/durable-objects/sharded-tag-cache.js";
+export { BucketCachePurge } from "./.open-next/.build/durable-objects/bucket-cache-purge.js";
 
 const worker = {
   async fetch(request: Request, env: Record<string, unknown>, ctx: unknown): Promise<Response> {
@@ -15,8 +19,12 @@ const worker = {
       applyPublicBuildEnv(process.env, publicBuildEnv);
       const response = await dispatchApi(request, apiRoutes);
       if (response) return response;
-      const { default: next } = await import("./.open-next/worker.js");
-      return next.fetch(request, env, ctx);
+      const version = (env.CF_VERSION_METADATA as { id?: string } | undefined)?.id;
+      const cache = (globalThis.caches as unknown as { default?: PublicPageCache } | undefined)?.default;
+      return servePublicPage(request, version, cache, async () => {
+        const { default: next } = await import("./.open-next/worker.js");
+        return next.fetch(request, env, ctx);
+      });
     });
   },
 };
