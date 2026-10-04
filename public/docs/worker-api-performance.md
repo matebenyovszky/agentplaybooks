@@ -32,7 +32,8 @@ sampled at 2%; they can help diagnose reconnect/discovery loops without logging
 every tool call. Client-declared identity is an attribution hint, not proof of
 which program or person sent a request.
 
-Only full-document GETs of `/` and `/docs` without query strings, credentials,
+Only full-document GETs of `/`, `/docs`, `/blog`, and published public Markdown
+document/post paths without query strings, credentials,
 session cookies, conditional/range headers, or Next/RSC headers are eligible for
 the public HTML Cache API. `NEXT_LOCALE` is the only accepted cookie; cache keys
 use the same locale selector as SSR plus the origin and Worker version ID.
@@ -40,8 +41,14 @@ Successful HTML is retained for five minutes, concurrent fills are coalesced,
 and errors, redirects, Set-Cookie, JSON, and Vary-star responses are not stored.
 Browser/CDN responses remain `no-store`, avoiding implicit locale or RSC mixing.
 Authenticated pages and all API responses bypass this HTML cache. Changes that
-introduce personalized server rendering on either allowlisted page require
-removing that page from the cache allowlist.
+introduce personalized server rendering on any allowlisted page require
+removing that page from the cache allowlist. `generate-public-page-paths.mjs`
+builds this exact path list from public Markdown filenames; unknown slugs,
+subroutes, and asset requests are excluded. The manifest contains paths only,
+so loading the Worker does not load the embedded blog content index.
+
+The unpublished `/.well-known/traffic-advice` policy answers its existing 404
+directly, without initializing Next to render a not-found page.
 
 Registry search has its own bounded five-minute public-data cache with eight
 entries and concurrent-load coalescing; upstream headers and bodies share a
