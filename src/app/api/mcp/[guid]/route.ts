@@ -67,6 +67,7 @@ import { searchMemories } from "@/app/api/_shared/memory";
 import { memoryWriteFields } from "@/lib/memory";
 import { findPlaybookSkill } from "@/lib/repositories/skills";
 import { serveSkill, skillResourceUri, type ServedSkill } from "@/lib/mcp/skill-extension";
+import { cachedSingleFlight, type SingleFlightEntry } from "@/lib/cache/single-flight";
 
 type PersonaSource = Pick<Playbook, "id" | "persona_name" | "persona_system_prompt" | "persona_metadata" | "instructions">;
 
@@ -109,30 +110,16 @@ async function federationOptions(server: MCPServer, playbookId: string, requestI
 }
 
 // Connected server discovery is identical for callers of the same playbook.
-// Keep only resolved capability metadata, never credentials or in-flight I/O,
-// for a short period in each Worker isolate.
+// Share in-flight discovery within an isolate to avoid a burst of duplicate
+// database reads, secret decryptions, and upstream MCP requests.
 const DISCOVERY_TTL_MS = 30_000;
 const DISCOVERY_CACHE_MAX = 32;
-type DiscoveryEntry<T> = { expiresAt: number; value: T };
-const toolDiscovery = new Map<string, DiscoveryEntry<McpTool[]>>();
-const resourceDiscovery = new Map<string, DiscoveryEntry<McpResource[]>>();
-const toolListBodies = new Map<string, DiscoveryEntry<string>>();
+const toolDiscovery = new Map<string, SingleFlightEntry<McpTool[]>>();
+const resourceDiscovery = new Map<string, SingleFlightEntry<McpResource[]>>();
+const toolListBodies = new Map<string, SingleFlightEntry<string>>();
 
-async function cachedDiscovery<T>(
-  cache: Map<string, DiscoveryEntry<T>>,
-  key: string,
-  load: () => Promise<T>,
-): Promise<T> {
-  const now = Date.now();
-  const cached = cache.get(key);
-  if (cached && cached.expiresAt > now) return cached.value;
-  const value = await load();
-  cache.delete(key);
-  cache.set(key, { expiresAt: Date.now() + DISCOVERY_TTL_MS, value });
-  if (cache.size > DISCOVERY_CACHE_MAX) {
-    cache.delete(cache.keys().next().value!);
-  }
-  return value;
+function cachedDiscovery<T>(cache: Map<string, SingleFlightEntry<T>>, key: string, load: () => Promise<T>) {
+  return cachedSingleFlight(cache, key, DISCOVERY_TTL_MS, DISCOVERY_CACHE_MAX, load);
 }
 
 async function federatedTools(servers: MCPServer[], playbookId: string, requestId?: string) {
