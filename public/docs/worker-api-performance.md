@@ -55,6 +55,29 @@ entries and concurrent-load coalescing; upstream headers and bodies share a
 ten-second timeout and a 2 MiB body limit. Credentials are never forwarded to
 the registry or stored in cache keys.
 
-The first uncached SSR render in a location still needs Next initialization.
-This design reduces repeat and new-isolate work after a page has been cached;
-it does not promise that every cold render fits the free-plan CPU allowance.
+## Public HTML produced during deployment
+
+`generate-public-html.ts` starts the built standalone Next server on loopback
+during the Worker build and produces complete HTML for every reviewed public
+path in English, Hungarian, German and Spanish. Only public Markdown and
+localized README files are supplied. Requests have no cookies or credentials;
+private secret/token/password environment variables are removed from the
+renderer's environment and their values are checked against the generated HTML.
+The build fails for non-200 responses, cookies, an incorrect locale, missing
+client assets, loopback URLs or HTML exceeding 2 MiB. The output is deployment
+assets, not embedded Worker source; no snapshot content is loaded by API calls.
+
+Eligible anonymous GET/HEAD requests read the locale-specific file through the
+ASSETS binding before initializing Next or using the fallback HTML Cache API.
+This also avoids Next rendering on the first request in a new location when
+the asset cache is empty. `X-APB-Page-Source: STATIC` and
+`X-APB-Page-Cache: ASSET` identify this path. The same private-cookie, credential,
+query, router/RSC and conditional/range exclusions apply. HEAD has no body,
+security headers are restored, and browser responses remain `no-store` to
+prevent locale mixing. Asset ETags/Last-Modified are not exposed as validators
+for the locale-varying public URL.
+
+Missing/unavailable assets fall back to Next and the bounded HTML Cache API.
+Private pages, RSC navigation and requests excluded from the public policy still
+need Next; this change does not promise every such cold render fits the
+free-plan CPU allowance.
