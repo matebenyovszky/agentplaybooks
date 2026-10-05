@@ -3,7 +3,9 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const paths = ["/", "/docs", "/docs/readme", "/blog", "/enterprise", "/privacy", "/terms"];
+// Login and Explore render public empty UI only; their auth/data requests run
+// in browser effects against the existing authenticated APIs after hydration.
+const paths = ["/", "/docs", "/docs/readme", "/blog", "/enterprise", "/privacy", "/terms", "/login", "/explore"];
 for (const section of ["docs", "blog"]) {
   for (const file of await readdir(resolve(root, "public", section))) {
     // Only deployment-owned public Markdown documents qualify. Unknown slugs,
