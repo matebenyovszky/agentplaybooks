@@ -79,6 +79,9 @@ public build-owned content: credentials, session cookies, router trees and query
 strings are never forwarded to ASSETS. Only `NEXT_LOCALE` affects the asset
 selection. These exact pages have no personalized server data or query-dependent
 server content. `/docs?page=...` redirects to the published canonical doc path;
+`/login` and `/explore` snapshots contain only their public initial UI, not
+sessions, user stars or playbook rows. Their existing browser effects load auth
+settings and live data after hydration; their API authorization is unchanged.
 other query values do not change their server content. Private page paths and
 all API paths are excluded. Draft mode, conditional/range requests, server actions
 and unsupported Next internal protocols still reach Next. HEAD has no body,

@@ -54,6 +54,16 @@ describe("deployment-time public HTML snapshots", () => {
     expect(await response?.text()).not.toContain("secret");
   });
 
+  it("serves the public login/explore UI without admitting dashboard or OAuth content", async () => {
+    for (const path of ["/login", "/explore"]) {
+      expect(publicSnapshotRequest(new Request(`https://example.com${path}`, {
+        headers: { Cookie: "session=secret" },
+      }), "v1")?.pathname).toBe(path);
+    }
+    for (const path of ["/dashboard", "/oauth/consent", "/invite/private-token"])
+      expect(publicSnapshotRequest(new Request(`https://example.com${path}`), "v1")).toBeNull();
+  });
+
   it("keeps HTML, full navigation Flight and prefetch Flight assets separate", async () => {
     const fetch = vi.fn<PublicAssetBinding["fetch"]>(async () => new Response("public-flight"));
     for (const prefetch of [false, true]) {
