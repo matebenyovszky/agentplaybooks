@@ -5,6 +5,7 @@ import { dirname, join, resolve } from "node:path";
 import { locales } from "../src/i18n/config";
 import { publicPagePaths } from "../src/worker/public-page-paths";
 import { publicSnapshotPath } from "../src/worker/public-html-snapshot";
+import { SECURITY_HEADERS } from "../src/lib/security-headers";
 
 // npm runs this build step from the project root.
 const root = resolve(process.cwd());
@@ -88,6 +89,38 @@ async function generateSnapshots() {
       await new Promise(done => setTimeout(done, 100));
     }
     if (!ready) throw new Error("The public snapshot server did not become ready within 30 seconds.");
+
+    // Locale-independent, build-owned metadata can be served directly by the
+    // assets service, without a Worker invocation or a Next cold start.
+    const metadataHeaders: string[] = [];
+    for (const [path, type, required] of [
+      ["/robots.txt", "text/plain; charset=utf-8", "Sitemap:"],
+      ["/sitemap.xml", "application/xml; charset=utf-8", "<urlset"],
+    ]) {
+      const response = await fetch(origin + path, {
+        headers: { "User-Agent": "AgentPlaybooks-Build-Snapshot" },
+        redirect: "manual", signal: AbortSignal.timeout(30_000),
+      });
+      const content = await response.text();
+      if (response.status !== 200 || response.headers.has("Set-Cookie")
+        || !content.includes(required) || content.includes(origin)
+        || privateValues.some(value => content.includes(value))
+        || Buffer.byteLength(content) > 2 * 1024 * 1024) {
+        throw new Error(`Unsafe or invalid public metadata asset: ${path}.`);
+      }
+      await writeFile(join(assets, path), content);
+      metadataHeaders.push(path, `  Content-Type: ${type}`, "  Cache-Control: public, max-age=3600",
+        "  X-APB-Page-Source: STATIC-METADATA",
+        ...SECURITY_HEADERS.map(({ key, value }) => `  ${key}: ${value}`));
+    }
+    const headerFile = join(assets, "_headers");
+    let existingHeaders = "";
+    try { existingHeaders = await readFile(headerFile, "utf8"); }
+    catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }
+    // OpenNext rebuilds this directory before generation. Replace only this
+    // build step's marked block if the postbuild step is run a second time.
+    const preservedHeaders = existingHeaders.replace(/\n?# APB public metadata\n[\s\S]*?# END APB public metadata\n?/g, "");
+    await writeFile(headerFile, `${preservedHeaders.trimEnd()}\n# APB public metadata\n${metadataHeaders.join("\n")}\n# END APB public metadata\n`);
 
     const jobs = [...publicPagePaths].flatMap(path => locales.map(locale => ({ path, locale })));
     let cursor = 0;

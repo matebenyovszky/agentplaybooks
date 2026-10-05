@@ -37,6 +37,10 @@ export async function routePageRequest(request: Request, routes: ApiRoute[], ass
   let pathname: string;
   try { pathname = normalized.split("/").map(decodeURIComponent).join("/"); }
   catch { return pageResponse(request, 400, "Bad Request"); }
+  // API dispatch has already handled real path parameters (including encoded
+  // values). A remaining encoded separator must not turn a dispatch miss into
+  // a reserved API route and initialize Next just to produce a 404.
+  if (/%(?:2f|5c)/i.test(normalized)) return pageResponse(request, 400, "Bad Request");
   const redirect = (target: string, status: number) => {
     // Build from the current origin, never interpret a query value as a URL.
     url.pathname = target;

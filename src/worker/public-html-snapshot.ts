@@ -37,8 +37,9 @@ export function publicSnapshotRequest(request: Request, version: unknown) {
   const segment = request.headers.get("next-router-segment-prefetch");
   if (segment !== null && (segment !== "/_tree" || rsc !== "1" || prefetch !== "1")) return null;
   const variant: SnapshotVariant = segment === "/_tree" ? "tree" : rsc === "1" ? (prefetch === "1" ? "prefetch" : "rsc") : "html";
-  const accept = request.headers.get("accept");
-  if (variant === "html" && accept && !accept.includes("text/html") && !accept.includes("*/*")) return null;
+  // These routes always return HTML for document requests, even when a crawler
+  // advertises JSON. Accept is not a content-negotiation mechanism here; using
+  // it as an escape hatch unnecessarily initializes Next for public content.
   return { pathname: url.pathname, locale: resolveLocale(cookieLocale, request.headers.get("accept-language")), variant };
 }
 

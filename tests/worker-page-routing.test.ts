@@ -7,6 +7,15 @@ const routes: ApiRoute[] = [{ basePath: "/api", segments: ["[[...route]]"], meth
 const request = (path: string, method = "GET", headers?: HeadersInit) => new Request(`https://example.com${path}`, { method, headers });
 
 describe("native page routing", () => {
+  it("rejects encoded separators after an API dispatch miss without rendering Next", async () => {
+    for (const path of ["/api%2F.env", "/api%2fmcp/manage", "/api%5c.env", "/docs%2Funknown"]) {
+      const fetch = vi.fn(async () => new Response("missing", { status: 404 }));
+      const response = await routePageRequest(request(path), routes, { fetch });
+      expect(response?.status).toBe(400);
+      expect(response?.headers.get("X-APB-Page-Source")).toBe("NATIVE");
+      expect(fetch).not.toHaveBeenCalled();
+    }
+  });
   it("preserves every declared private/dynamic page and reserved API route", async () => {
     for (const path of ["/dashboard", "/dashboard/settings", "/dashboard/favorites", "/dashboard/playbook/private-id",
       "/login", "/explore", "/oauth/consent?authorization_id=private", "/invite/private-token", "/api/private/endpoint",
