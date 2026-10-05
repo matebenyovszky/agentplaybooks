@@ -6,6 +6,7 @@ import { applyPublicBuildEnv } from "./src/worker/environment";
 import { rejectProbeRequest } from "./src/worker/probe-paths";
 import { servePublicPage, type PublicPageCache } from "./src/worker/public-page-cache";
 import { servePublicSnapshot, type PublicAssetBinding } from "./src/worker/public-html-snapshot";
+import { routePageRequest } from "./src/worker/page-routing";
 
 // Export the adapter bindings without eagerly evaluating its Next middleware.
 export { DOQueueHandler } from "./.open-next/.build/durable-objects/queue.js";
@@ -20,6 +21,8 @@ const worker = {
       applyPublicBuildEnv(process.env, publicBuildEnv);
       const response = await dispatchApi(request, apiRoutes);
       if (response) return response;
+      const routed = await routePageRequest(request, apiRoutes, env.ASSETS as PublicAssetBinding | undefined);
+      if (routed) return routed;
       const version = (env.CF_VERSION_METADATA as { id?: string } | undefined)?.id;
       const snapshot = await servePublicSnapshot(request, version, env.ASSETS as PublicAssetBinding | undefined);
       if (snapshot) return snapshot;

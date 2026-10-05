@@ -6,7 +6,8 @@ projections, memory, canvas, secrets, runs, and the Hono REST catch-all therefor
 avoid the Next server wrapper and its response lifecycle `waitUntil` task.
 The playbook export, collaboration, snapshot, backup, connection catalogue,
 registry search, and site-wide/per-playbook OAuth/skill discovery routes also use native
-Request/Response handlers. Frontend pages still use OpenNext.
+Request/Response handlers. Frontend pages use reviewed build-owned assets,
+with OpenNext as fallback.
 
 `scripts/generate-worker-api-routes.mjs` generates the dispatch manifest during
 prebuild. It includes reservations for Next-specific routes so the REST catch-all
@@ -59,7 +60,8 @@ the registry or stored in cache keys.
 
 `generate-public-html.ts` starts the built standalone Next server on loopback
 during the Worker build and produces complete HTML for every reviewed public
-path in English, Hungarian, German and Spanish. Only public Markdown and
+path in English, Hungarian, German and Spanish, plus separate full RSC and
+prefetch and route-tree payloads from the same Next build. Only public Markdown and
 localized README files are supplied. Requests have no cookies or credentials;
 private secret/token/password environment variables are removed from the
 renderer's environment and their values are checked against the generated HTML.
@@ -67,17 +69,43 @@ The build fails for non-200 responses, cookies, an incorrect locale, missing
 client assets, loopback URLs or HTML exceeding 2 MiB. The output is deployment
 assets, not embedded Worker source; no snapshot content is loaded by API calls.
 
-Eligible anonymous GET/HEAD requests read the locale-specific file through the
+Eligible GET/HEAD requests read the locale-specific file through the
 ASSETS binding before initializing Next or using the fallback HTML Cache API.
 This also avoids Next rendering on the first request in a new location when
 the asset cache is empty. `X-APB-Page-Source: STATIC` and
-`X-APB-Page-Cache: ASSET` identify this path. The same private-cookie, credential,
-query, router/RSC and conditional/range exclusions apply. HEAD has no body,
+`X-APB-Page-Cache: ASSET` identify this path. `X-APB-Page-Variant` distinguishes
+HTML, navigation RSC, prefetch RSC and route-tree RSC. A signed-in visitor receives the same
+public build-owned content: credentials, session cookies, router trees and query
+strings are never forwarded to ASSETS. Only `NEXT_LOCALE` affects the asset
+selection. These exact pages have no personalized server data or query-dependent
+server content. `/docs?page=...` redirects to the published canonical doc path;
+other query values do not change their server content. Private page paths and
+all API paths are excluded. Draft mode, conditional/range requests, server actions
+and unsupported Next internal protocols still reach Next. HEAD has no body,
 security headers are restored, and browser responses remain `no-store` to
 prevent locale mixing. Asset ETags/Last-Modified are not exposed as validators
 for the locale-varying public URL.
 
 Missing/unavailable assets fall back to Next and the bounded HTML Cache API.
-Private pages, RSC navigation and requests excluded from the public policy still
+Private pages and requests excluded from the public policy still
 need Next; this change does not promise every such cold render fits the
 free-plan CPU allowance.
+
+Normal navigation receives a full build-owned RSC payload rather than a response
+tailored to a client router tree. Prefetch has its own payload; HTML is never
+returned as RSC. The browser policy is `no-store` for all variants, and `Vary`
+declares locale, cookies and router representation. There are no interception
+routes in this application. Personalization or interception added to a reviewed
+page requires removing it from the snapshot allowlist or extending the policy.
+
+## Native page redirects and misses
+
+`generate-page-route-patterns.mjs` reserves the application's declared page
+routes, including dynamic dashboard and invite paths. Existing API reservations
+and metadata routes retain their handlers. Unknown public blog/doc slugs and
+other missing URLs receive a small native 404, without Next initialization,
+credentials or request data in the body. Static asset aliases are checked before
+declaring a miss, and a binding failure falls back to Next. Canonical trailing
+slashes, legal redirects and legacy documentation URLs use native redirects.
+RSC misses return non-RSC 404 HTML so Next's browser router can perform a full
+navigation to the error page; it is never a successful cached Flight response.
