@@ -151,10 +151,11 @@ async function generateSnapshots() {
         records.push({ path, locale, variant: "html", bytes });
         // Full Flight payloads are build-owned too. Keep prefetch and normal
         // navigation distinct; never capture a client's partial router tree.
-        for (const variant of ["rsc", "prefetch", "tree"] as const) {
+        for (const variant of ["rsc", "prefetch", "tree", "metadata"] as const) {
           const flightResponse = await fetch(origin + path, {
             headers: { "Accept-Language": locale, "User-Agent": "AgentPlaybooks-Build-Snapshot", RSC: "1",
               ...(variant !== "rsc" ? { "Next-Router-Prefetch": "1" } : {}),
+              ...(variant === "metadata" ? { "Next-Router-State-Tree": encodeURIComponent(JSON.stringify(["", {}, null, "metadata-only"])) } : {}),
               ...(variant === "tree" ? { "Next-Router-Segment-Prefetch": "/_tree" } : {}) },
             redirect: "follow", signal: AbortSignal.timeout(30_000),
           });
@@ -165,6 +166,7 @@ async function generateSnapshots() {
             || new URL(flightResponse.url).origin !== origin
             || !flightResponse.headers.get("Content-Type")?.startsWith("text/x-component")
             || !flight.includes(buildId) || (variant === "rsc" && !flight.includes(`"lang":"${locale}"`))
+            || (variant === "metadata" && !flight.includes('"name":"Next.Metadata"'))
             || flight.includes(origin) || privateValues.some(value => flight.includes(value))
             || flightBytes > 2 * 1024 * 1024) {
             throw new Error(`Unsafe or invalid public Flight snapshot: ${path} (${locale}, ${variant}).`);
