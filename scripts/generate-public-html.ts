@@ -40,6 +40,14 @@ async function isListening(port: number): Promise<boolean> {
 }
 
 async function generateSnapshots() {
+  // A future middleware/proxy may add auth, interception or rewrites before a
+  // public page. Require a policy review instead of silently bypassing it.
+  for (const source of ["middleware.ts", "middleware.js", "proxy.ts", "proxy.js", "src/middleware.ts", "src/middleware.js", "src/proxy.ts", "src/proxy.js"]) {
+    let present = false;
+    try { await readFile(join(root, source)); present = true; }
+    catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }
+    if (present) throw new Error("Review middleware/proxy behavior before generating public snapshots.");
+  }
   // Trace output is not guaranteed to include every dynamic Markdown read.
   // Copy only public content, including localized README variants, for rendering.
   for (const section of ["docs", "blog"]) {
@@ -71,7 +79,7 @@ async function generateSnapshots() {
   let spawnFailed = false;
   child.once("error", () => { spawnFailed = true; });
 
-  const records: { path: string; locale: string; bytes: number }[] = [];
+  const records: { path: string; locale: string; variant: string; bytes: number }[] = [];
   try {
     let ready = false;
     for (let attempt = 0; attempt < 300; attempt++) {
@@ -107,12 +115,33 @@ async function generateSnapshots() {
         const target = join(assets, publicSnapshotPath(locale, path));
         await mkdir(dirname(target), { recursive: true });
         await writeFile(target, html);
-        records.push({ path, locale, bytes });
+        records.push({ path, locale, variant: "html", bytes });
+        // Full Flight payloads are build-owned too. Keep prefetch and normal
+        // navigation distinct; never capture a client's partial router tree.
+        for (const variant of ["rsc", "prefetch"] as const) {
+          const flightResponse = await fetch(origin + path, {
+            headers: { "Accept-Language": locale, "User-Agent": "AgentPlaybooks-Build-Snapshot", RSC: "1",
+              ...(variant === "prefetch" ? { "Next-Router-Prefetch": "1" } : {}) },
+            redirect: "follow", signal: AbortSignal.timeout(30_000),
+          });
+          const flight = await flightResponse.text();
+          const flightBytes = Buffer.byteLength(flight);
+          if (flightResponse.status !== 200 || flightResponse.headers.has("Set-Cookie")
+            || new URL(flightResponse.url).origin !== origin
+            || !flightResponse.headers.get("Content-Type")?.startsWith("text/x-component")
+            || !flight.includes(buildId) || (variant === "rsc" && !flight.includes(`"lang":"${locale}"`))
+            || flight.includes(origin) || privateValues.some(value => flight.includes(value))
+            || flightBytes > 2 * 1024 * 1024) {
+            throw new Error(`Unsafe or invalid public Flight snapshot: ${path} (${locale}, ${variant}).`);
+          }
+          await writeFile(join(assets, publicSnapshotPath(locale, path, variant)), flight);
+          records.push({ path, locale, variant, bytes: flightBytes });
+        }
       }
     }));
     records.sort((left, right) => left.path.localeCompare(right.path) || left.locale.localeCompare(right.locale));
     await writeFile(join(root, ".open-next", "public-html-manifest.json"), JSON.stringify({ buildId, pages: records }, null, 2));
-    console.log(`Generated ${records.length} anonymous public HTML snapshots for ${publicPagePaths.size} paths and ${locales.length} locales.`);
+    console.log(`Generated ${records.length} public HTML/Flight snapshots for ${publicPagePaths.size} paths and ${locales.length} locales.`);
   } finally {
     child.kill();
   }

@@ -44,5 +44,8 @@ export const publicPagePaths = new Set<string>([
   "/docs/self-hosting",
   "/docs/skills",
   "/docs/team-collaboration",
-  "/docs/worker-api-performance"
+  "/docs/worker-api-performance",
+  "/enterprise",
+  "/privacy",
+  "/terms"
 ]);

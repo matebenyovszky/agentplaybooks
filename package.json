@@ -9,7 +9,7 @@
   "author": "AgentPlaybooks",
   "scripts": {
     "dev": "next dev",
-    "prebuild": "node scripts/generate-worker-api-routes.mjs && node scripts/generate-worker-build-env.mjs && node scripts/generate-public-page-paths.mjs && tsx scripts/generate-blog-slugs.ts",
+    "prebuild": "node scripts/generate-worker-api-routes.mjs && node scripts/generate-worker-build-env.mjs && node scripts/generate-public-page-paths.mjs && node scripts/generate-page-route-patterns.mjs && tsx scripts/generate-blog-slugs.ts",
     "build": "next build",
     "postbuild:worker": "tsx scripts/copy-markdown-assets.ts && tsx scripts/generate-public-html.ts",
     "start": "next start",

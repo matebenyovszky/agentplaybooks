@@ -3,7 +3,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const paths = ["/", "/docs", "/docs/readme", "/blog"];
+const paths = ["/", "/docs", "/docs/readme", "/blog", "/enterprise", "/privacy", "/terms"];
 for (const section of ["docs", "blog"]) {
   for (const file of await readdir(resolve(root, "public", section))) {
     // Only deployment-owned public Markdown documents qualify. Unknown slugs,
