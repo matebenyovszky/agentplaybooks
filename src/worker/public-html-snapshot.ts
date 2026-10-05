@@ -6,7 +6,7 @@ export interface PublicAssetBinding {
   fetch(request: Request): Promise<Response>;
 }
 
-export type SnapshotVariant = "html" | "rsc" | "prefetch" | "tree";
+export type SnapshotVariant = "html" | "rsc" | "prefetch" | "tree" | "metadata";
 
 export function publicSnapshotPath(locale: string, pathname: string, variant: SnapshotVariant = "html"): string {
   return `/__apb_public_html/${locale}${pathname === "/" ? "/index" : pathname}${variant === "html" ? "" : `.${variant}`}.snapshot`;
@@ -36,7 +36,23 @@ export function publicSnapshotRequest(request: Request, version: unknown) {
   if (prefetch !== null && (prefetch !== "1" || rsc !== "1")) return null;
   const segment = request.headers.get("next-router-segment-prefetch");
   if (segment !== null && (segment !== "/_tree" || rsc !== "1" || prefetch !== "1")) return null;
-  const variant: SnapshotVariant = segment === "/_tree" ? "tree" : rsc === "1" ? (prefetch === "1" ? "prefetch" : "rsc") : "html";
+  // Next requests missing page-head data separately. Returning an ordinary
+  // prefetch (whose head is null) leaves that cache entry pending and causes
+  // repeated metadata requests. Only the exact build-owned stub is reusable.
+  let metadataOnly = false;
+  const stateTree = request.headers.get("next-router-state-tree");
+  if (stateTree?.includes("metadata-only")) {
+    if (rsc !== "1" || segment !== null || stateTree.length > 512) return null;
+    try {
+      const state = JSON.parse(decodeURIComponent(stateTree));
+      if (!Array.isArray(state) || state.length !== 4 || state[0] !== "" || state[2] !== null
+        || state[3] !== "metadata-only" || !state[1] || typeof state[1] !== "object"
+        || Array.isArray(state[1]) || Object.keys(state[1]).length !== 0) return null;
+      metadataOnly = true;
+    } catch { return null; }
+  }
+  const variant: SnapshotVariant = metadataOnly ? "metadata" : segment === "/_tree" ? "tree"
+    : rsc === "1" ? (prefetch === "1" ? "prefetch" : "rsc") : "html";
   // These routes always return HTML for document requests, even when a crawler
   // advertises JSON. Accept is not a content-negotiation mechanism here; using
   // it as an escape hatch unnecessarily initializes Next for public content.

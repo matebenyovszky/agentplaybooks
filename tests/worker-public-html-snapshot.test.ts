@@ -6,6 +6,32 @@ const html = () => new Response("<html lang=\"hu\">public</html>", {
 });
 
 describe("deployment-time public HTML snapshots", () => {
+  it("serves metadata-only requests from their own page-head snapshot", async () => {
+    for (const encoded of [false, true]) for (const prefetch of [false, true]) {
+      const state = JSON.stringify(["", {}, null, "metadata-only"]);
+      const fetch = vi.fn<PublicAssetBinding["fetch"]>(async () => new Response("public metadata"));
+      const response = await servePublicSnapshot(new Request("https://example.com/docs?_rsc=client", {
+        headers: { RSC: "1", "Next-Router-State-Tree": encoded ? encodeURIComponent(state) : state,
+          "Accept-Language": "hu", ...(prefetch ? { "Next-Router-Prefetch": "1" } : {}) },
+      }), "v1", { fetch });
+      expect(fetch.mock.calls[0][0].url).toBe("https://example.com/__apb_public_html/hu/docs.metadata.snapshot");
+      expect([...fetch.mock.calls[0][0].headers]).toEqual([]);
+      expect(response?.headers.get("X-APB-Page-Variant")).toBe("metadata");
+      expect(response?.headers.get("Content-Type")).toBe("text/x-component");
+    }
+  });
+  it("does not reuse metadata for arbitrary, malformed or conflicting router states", () => {
+    for (const state of ['["",{"children":["private"]},null,"metadata-only"]', 'metadata-only',
+      '["private",{},null,"metadata-only"]', '["",{},null,"metadata-only","extra"]']) {
+      expect(publicSnapshotRequest(new Request("https://example.com/docs", {
+        headers: { RSC: "1", "Next-Router-Prefetch": "1", "Next-Router-State-Tree": encodeURIComponent(state) },
+      }), "v1")).toBeNull();
+    }
+    expect(publicSnapshotRequest(new Request("https://example.com/docs", {
+      headers: { RSC: "1", "Next-Router-Prefetch": "1", "Next-Router-Segment-Prefetch": "/_tree",
+        "Next-Router-State-Tree": encodeURIComponent('["",{},null,"metadata-only"]') },
+    }), "v1")).toBeNull();
+  });
   it("serves HTML for crawler Accept values just like the public Next pages", async () => {
     for (const accept of ["application/json", "text/plain", "text/html;q=0", "TEXT/HTML"]) {
       const fetch = vi.fn<PublicAssetBinding["fetch"]>(async () => html());
