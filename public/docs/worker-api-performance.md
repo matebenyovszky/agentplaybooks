@@ -61,7 +61,7 @@ the registry or stored in cache keys.
 `generate-public-html.ts` starts the built standalone Next server on loopback
 during the Worker build and produces complete HTML for every reviewed public
 path in English, Hungarian, German and Spanish, plus separate full RSC and
-prefetch payloads from the same Next build. Only public Markdown and
+prefetch and route-tree payloads from the same Next build. Only public Markdown and
 localized README files are supplied. Requests have no cookies or credentials;
 private secret/token/password environment variables are removed from the
 renderer's environment and their values are checked against the generated HTML.
@@ -74,7 +74,7 @@ ASSETS binding before initializing Next or using the fallback HTML Cache API.
 This also avoids Next rendering on the first request in a new location when
 the asset cache is empty. `X-APB-Page-Source: STATIC` and
 `X-APB-Page-Cache: ASSET` identify this path. `X-APB-Page-Variant` distinguishes
-HTML, navigation RSC and prefetch RSC. A signed-in visitor receives the same
+HTML, navigation RSC, prefetch RSC and route-tree RSC. A signed-in visitor receives the same
 public build-owned content: credentials, session cookies, router trees and query
 strings are never forwarded to ASSETS. Only `NEXT_LOCALE` affects the asset
 selection. These exact pages have no personalized server data or query-dependent

@@ -118,15 +118,17 @@ async function generateSnapshots() {
         records.push({ path, locale, variant: "html", bytes });
         // Full Flight payloads are build-owned too. Keep prefetch and normal
         // navigation distinct; never capture a client's partial router tree.
-        for (const variant of ["rsc", "prefetch"] as const) {
+        for (const variant of ["rsc", "prefetch", "tree"] as const) {
           const flightResponse = await fetch(origin + path, {
             headers: { "Accept-Language": locale, "User-Agent": "AgentPlaybooks-Build-Snapshot", RSC: "1",
-              ...(variant === "prefetch" ? { "Next-Router-Prefetch": "1" } : {}) },
+              ...(variant !== "rsc" ? { "Next-Router-Prefetch": "1" } : {}),
+              ...(variant === "tree" ? { "Next-Router-Segment-Prefetch": "/_tree" } : {}) },
             redirect: "follow", signal: AbortSignal.timeout(30_000),
           });
           const flight = await flightResponse.text();
           const flightBytes = Buffer.byteLength(flight);
           if (flightResponse.status !== 200 || flightResponse.headers.has("Set-Cookie")
+            || flightResponse.headers.has("x-nextjs-postponed")
             || new URL(flightResponse.url).origin !== origin
             || !flightResponse.headers.get("Content-Type")?.startsWith("text/x-component")
             || !flight.includes(buildId) || (variant === "rsc" && !flight.includes(`"lang":"${locale}"`))

@@ -6,7 +6,7 @@ export interface PublicAssetBinding {
   fetch(request: Request): Promise<Response>;
 }
 
-export type SnapshotVariant = "html" | "rsc" | "prefetch";
+export type SnapshotVariant = "html" | "rsc" | "prefetch" | "tree";
 
 export function publicSnapshotPath(locale: string, pathname: string, variant: SnapshotVariant = "html"): string {
   return `/__apb_public_html/${locale}${pathname === "/" ? "/index" : pathname}${variant === "html" ? "" : `.${variant}`}.snapshot`;
@@ -23,7 +23,7 @@ export function publicSnapshotRequest(request: Request, version: unknown) {
     if (name === "range" || name === "upgrade" || name === "x-matched-path" || name === "next-action"
       || name.startsWith("if-") || name.startsWith("x-middleware-") || name.startsWith("x-nextjs-")
       || name.startsWith("x-invoke-") || (name.startsWith("next-")
-        && !["next-router-state-tree", "next-router-prefetch", "next-url"].includes(name))) return null;
+        && !["next-router-state-tree", "next-router-prefetch", "next-router-segment-prefetch", "next-url"].includes(name))) return null;
   }
   const cookies = (request.headers.get("cookie") ?? "").split(";").map(value => value.trim());
   if (cookies.some(value => /^__prerender_bypass=/.test(value))) return null;
@@ -34,7 +34,9 @@ export function publicSnapshotRequest(request: Request, version: unknown) {
   if (rsc !== null && rsc !== "1") return null;
   const prefetch = request.headers.get("next-router-prefetch");
   if (prefetch !== null && (prefetch !== "1" || rsc !== "1")) return null;
-  const variant: SnapshotVariant = rsc === "1" ? (prefetch === "1" ? "prefetch" : "rsc") : "html";
+  const segment = request.headers.get("next-router-segment-prefetch");
+  if (segment !== null && (segment !== "/_tree" || rsc !== "1" || prefetch !== "1")) return null;
+  const variant: SnapshotVariant = segment === "/_tree" ? "tree" : rsc === "1" ? (prefetch === "1" ? "prefetch" : "rsc") : "html";
   const accept = request.headers.get("accept");
   if (variant === "html" && accept && !accept.includes("text/html") && !accept.includes("*/*")) return null;
   return { pathname: url.pathname, locale: resolveLocale(cookieLocale, request.headers.get("accept-language")), variant };
@@ -69,7 +71,7 @@ export async function servePublicSnapshot(
   headers.set("X-APB-Page-Source", "STATIC");
   headers.set("X-APB-Page-Cache", "ASSET");
   headers.set("X-APB-Page-Variant", snapshot.variant);
-  headers.set("Vary", "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Url, Accept-Language, Cookie");
+  headers.set("Vary", "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch, Accept-Language, Cookie");
   // Asset-service metadata is not Next's document metadata. In particular a
   // browser must not validate a locale-varying URL against one asset's ETag.
   headers.delete("ETag");

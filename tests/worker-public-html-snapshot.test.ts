@@ -33,7 +33,7 @@ describe("deployment-time public HTML snapshots", () => {
   it("does not fetch snapshots for draft, conditional, unsupported protocols, private or unknown paths", async () => {
     const fetch = vi.fn(async () => html());
     const headers: HeadersInit[] = [{ Cookie: "__prerender_bypass=secret" }, { RSC: "invalid" },
-      { "Next-Router-Prefetch": "1" }, { "Next-Router-Segment-Prefetch": "/_tree" }, { "Next-Action": "action" },
+      { "Next-Router-Prefetch": "1" }, { "Next-Router-Segment-Prefetch": "/unsupported" }, { "Next-Action": "action" },
       { "If-None-Match": "tag" }, { Range: "bytes=0-9" }];
     for (const values of headers) expect(await servePublicSnapshot(new Request("https://example.com/docs/playbooks", { headers: values }), "v1", { fetch })).toBeNull();
     for (const path of ["/dashboard", "/playbooks/private", "/api/connections", "/docs/unknown-private", "/docs?page=playbooks"])
@@ -68,6 +68,16 @@ describe("deployment-time public HTML snapshots", () => {
       expect(response?.headers.get("Vary")).toContain("RSC");
       expect(response?.headers.get("Cache-Control")).toContain("no-store");
     }
+  });
+
+  it("serves the declared route-tree prefetch separately from other Flight protocols", async () => {
+    const fetch = vi.fn<PublicAssetBinding["fetch"]>(async () => new Response("public-tree"));
+    const response = await servePublicSnapshot(new Request("https://example.com/docs/playbooks?_rsc=tree", {
+      headers: { RSC: "1", "Next-Router-Prefetch": "1", "Next-Router-Segment-Prefetch": "/_tree" },
+    }), "v1", { fetch });
+    expect(fetch.mock.calls[0][0].url).toBe("https://example.com/__apb_public_html/en/docs/playbooks.tree.snapshot");
+    expect(response?.headers.get("X-APB-Page-Variant")).toBe("tree");
+    expect(response?.headers.get("Vary")).not.toContain("Next-Url");
   });
 
   it("serves public HEAD requests from assets without an HTML body or a Next render", async () => {
