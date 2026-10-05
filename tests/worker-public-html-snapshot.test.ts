@@ -1,11 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
-import { publicSnapshotPath, servePublicSnapshot, type PublicAssetBinding } from "@/worker/public-html-snapshot";
+import { publicSnapshotPath, publicSnapshotRequest, servePublicSnapshot, type PublicAssetBinding } from "@/worker/public-html-snapshot";
 
 const html = () => new Response("<html lang=\"hu\">public</html>", {
   headers: { "Content-Type": "application/octet-stream", ETag: "asset-tag", "Last-Modified": "yesterday" },
 });
 
 describe("deployment-time public HTML snapshots", () => {
+  it("uses the same last cookie value as Next when cookie scopes overlap", () => {
+    expect(publicSnapshotRequest(new Request("https://example.com/docs", {
+      headers: { Cookie: "NEXT_LOCALE=de; NEXT_LOCALE=hu", "Accept-Language": "en" },
+    }), "v1")?.locale).toBe("hu");
+  });
   it("serves the requested locale with native security headers and no browser cache", async () => {
     const fetch = vi.fn<PublicAssetBinding["fetch"]>(async () => html());
     const response = await servePublicSnapshot(new Request("https://example.com/docs/playbooks", {

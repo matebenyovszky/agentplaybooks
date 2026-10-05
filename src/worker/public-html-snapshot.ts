@@ -27,7 +27,7 @@ export function publicSnapshotRequest(request: Request, version: unknown) {
   }
   const cookies = (request.headers.get("cookie") ?? "").split(";").map(value => value.trim());
   if (cookies.some(value => /^__prerender_bypass=/.test(value))) return null;
-  const encodedLocale = cookies.find(value => value.startsWith("NEXT_LOCALE="))?.slice("NEXT_LOCALE=".length);
+  const encodedLocale = cookies.filter(value => value.startsWith("NEXT_LOCALE=")).at(-1)?.slice("NEXT_LOCALE=".length);
   let cookieLocale: string | undefined;
   try { cookieLocale = encodedLocale === undefined ? undefined : decodeURIComponent(encodedLocale); } catch { return null; }
   const rsc = request.headers.get("rsc");
