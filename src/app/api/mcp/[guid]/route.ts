@@ -1,5 +1,6 @@
 import { handle } from "hono/vercel";
 import { logMcpDiscovery } from "@/app/api/_shared/mcp-observability";
+import { startMcpPerformance, parsedMcpPerformance, authorizedMcpPerformance, finishMcpPerformance } from "@/app/api/_shared/mcp-performance";
 import { createApiApp } from "@/app/api/_shared/hono";
 import {
   actorMayRead,
@@ -118,6 +119,10 @@ const DISCOVERY_CACHE_MAX = 32;
 const toolDiscovery = new Map<string, SingleFlightEntry<McpTool[]>>();
 const resourceDiscovery = new Map<string, SingleFlightEntry<McpResource[]>>();
 const toolListBodies = new Map<string, SingleFlightEntry<string>>();
+// These views contain only build-owned built-ins. Their JSON is independent of
+// the playbook and can outlive the per-playbook federation TTL. Authorization
+// still runs freshly for every request before returning this public schema.
+const builtinToolListBodies = new Map<string, string>();
 
 function cachedDiscovery<T>(cache: Map<string, SingleFlightEntry<T>>, key: string, load: () => Promise<T>) {
   return cachedSingleFlight(cache, key, DISCOVERY_TTL_MS, DISCOVERY_CACHE_MAX, load);
@@ -150,9 +155,16 @@ function invalidateFederatedDiscovery(playbookId: string, serverId?: string) {
 }
 
 async function toolListJson(playbookId: string, view: ToolsetView, requestId?: string): Promise<string> {
+  if (view.name === "memory" || view.name === "admin") {
+    let body = builtinToolListBodies.get(view.name);
+    if (body === undefined) {
+      body = JSON.stringify(PLAYBOOK_TOOLS.filter(tool => view.includes(tool.name, false)));
+      builtinToolListBodies.set(view.name, body);
+    }
+    return body;
+  }
   return cachedDiscovery(toolListBodies, `${playbookId}:${view.name}`, async () => {
     const builtins = PLAYBOOK_TOOLS.filter((tool) => view.includes(tool.name, false));
-    if (view.name === "memory" || view.name === "admin") return JSON.stringify(builtins);
 
     const { data: mcpRows } = await getServiceSupabase()
       .from("mcp_servers")
@@ -260,6 +272,12 @@ function parseMarkdownSections(content: string): CanvasSection[] {
 }
 
 const app = createApiApp("/api/mcp/:guid");
+app.use("*", async (c, next) => {
+  if (c.req.method !== "POST") return next();
+  startMcpPerformance(c.req.raw);
+  try { await next(); }
+  finally { finishMcpPerformance(c.req.raw, c.res.status); }
+});
 
 // GET /api/mcp/:guid - Return MCP server manifest
 app.get("/", async (c) => {
@@ -401,6 +419,8 @@ app.post("/", async (c) => {
   const body = await c.req.json();
 
   const { method, params: rpcParams, id } = body;
+  parsedMcpPerformance(c.req.raw, method, method === "tools/call"
+    && PLAYBOOK_TOOLS.some(tool => tool.name === rpcParams?.name) ? rpcParams.name : undefined);
 
   // A JSON-RPC notification carries no `id` and MUST NOT be answered; the
   // Streamable HTTP transport spells that as 202 with an empty body. Clients
@@ -477,6 +497,7 @@ app.post("/", async (c) => {
     }
   }
   const mayRead = (permission: string) => actorMayRead(privateActor, permission);
+  authorizedMcpPerformance(c.req.raw);
 
   if (!playbook) {
     // Establishing the connection is not reading the playbook. Refusing the

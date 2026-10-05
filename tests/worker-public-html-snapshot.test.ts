@@ -6,6 +6,18 @@ const html = () => new Response("<html lang=\"hu\">public</html>", {
 });
 
 describe("deployment-time public HTML snapshots", () => {
+  it("serves HTML for crawler Accept values just like the public Next pages", async () => {
+    for (const accept of ["application/json", "text/plain", "text/html;q=0", "TEXT/HTML"]) {
+      const fetch = vi.fn<PublicAssetBinding["fetch"]>(async () => html());
+      const response = await servePublicSnapshot(new Request("https://example.com/", {
+        headers: { Accept: accept },
+      }), "v1", { fetch });
+      expect(response?.status).toBe(200);
+      expect(response?.headers.get("Content-Type")).toBe("text/html; charset=utf-8");
+      expect(response?.headers.get("X-APB-Page-Source")).toBe("STATIC");
+      expect([...fetch.mock.calls[0][0].headers]).toEqual([]);
+    }
+  });
   it("uses the same last cookie value as Next when cookie scopes overlap", () => {
     expect(publicSnapshotRequest(new Request("https://example.com/docs", {
       headers: { Cookie: "NEXT_LOCALE=de; NEXT_LOCALE=hu", "Accept-Language": "en" },
