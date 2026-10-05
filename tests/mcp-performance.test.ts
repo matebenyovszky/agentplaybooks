@@ -1,9 +1,22 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { startMcpPerformance, parsedMcpPerformance, authorizedMcpPerformance, finishMcpPerformance } from "@/app/api/_shared/mcp-performance";
+import { POST } from "@/app/api/mcp/[guid]/route";
 
 afterEach(() => vi.restoreAllMocks());
 
 describe("MCP wall-time diagnostics", () => {
+  it("runs through the actual Hono endpoint middleware", async () => {
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    const response = await POST(new Request("http://localhost/api/mcp/test", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }),
+    }));
+    expect(response.status).toBe(202);
+    expect(log.mock.calls.map(call => JSON.parse(call[0] as string))).toContainEqual(expect.objectContaining({
+      event: "mcp.performance", method: "notifications/initialized", status: 202,
+    }));
+  });
   it("records phases for slow requests without credentials, URLs or request contents", () => {
     const now = vi.spyOn(performance, "now");
     const log = vi.spyOn(console, "info").mockImplementation(() => {});
