@@ -302,8 +302,12 @@ export async function resolvePrivatePlaybookActor(
   request: Request,
   playbookId: string,
 ): Promise<PrivatePlaybookActor | null> {
-  const playbookKey = await validateApiKey(request, null);
-  if (playbookKey?.playbooks.id === playbookId) {
+  // The MCP caller has just loaded this private playbook from the database.
+  // Match the fresh active/unexpired key directly to that trusted identity;
+  // validateApiKey would fetch the same playbook again only to obtain its GUID.
+  const playbookKey = await lookupPlaybookKey(request);
+  if (playbookKey?.playbook_id === playbookId) {
+    await recordKeyUse(request, "api_keys", playbookKey.id, playbookKey.last_used_at);
     return { kind: "playbook_key", role: playbookKey.role, permissions: playbookKey.permissions ?? [], keyPrefix: playbookKey.key_prefix };
   }
 
