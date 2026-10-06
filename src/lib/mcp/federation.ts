@@ -679,6 +679,12 @@ async function resolveTool(server: MCPServer, namespacedName: string, options: F
     throw new FederationError(`Tool does not belong to ${server.name}`, "TOOL_NOT_FOUND", 404);
   }
   const remainder = namespacedName.slice(prefix.length);
+  // The freshly loaded server row already contains declared tool names. Calling
+  // one does not require another upstream tools/list round trip. Upstream auth
+  // and tool execution remain unchanged; stale declarations fail at execution.
+  const declared = (server.tools || []).find(candidate =>
+    sanitizeName(candidate.name) === remainder || candidate.name === remainder);
+  if (declared) return { originalName: declared.name };
   const tools = server.transport_type === "openapi"
     ? await discoverOpenApiTools(server, options)
     : await mcpListTools(server, options).catch(() => server.tools || []);

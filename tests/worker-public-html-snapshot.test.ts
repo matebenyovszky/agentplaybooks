@@ -6,6 +6,31 @@ const html = () => new Response("<html lang=\"hu\">public</html>", {
 });
 
 describe("deployment-time public HTML snapshots", () => {
+  it("handles validators and optional ranges without initializing Next", async () => {
+    const request = (headers: HeadersInit = {}) => new Request("https://example.com/docs", { headers });
+    const assets = { fetch: vi.fn<PublicAssetBinding["fetch"]>(async () => html()) };
+    const first = await servePublicSnapshot(request(), "v1", assets);
+    const tag = first!.headers.get("ETag")!;
+    for (const headers of [{ "If-None-Match": tag }, { "If-None-Match": tag.slice(2) },
+      { "If-None-Match": '"old", ' + tag }, { "If-None-Match": "*" }]) {
+      const response = await servePublicSnapshot(request(headers), "v1", assets);
+      expect(response?.status).toBe(304);
+      expect(await response?.text()).toBe("");
+      expect(response?.headers.has("Content-Length")).toBe(false);
+    }
+    for (const headers of [{ "If-None-Match": '"old"' }, { "If-Modified-Since": "Mon, 05 Oct 2026 12:00:00 GMT" },
+      { "Range": "bytes=0-9" }, { "Range": "bytes=0-9", "If-Range": tag }, { "If-Match": "*" }] as HeadersInit[]) {
+      const response = await servePublicSnapshot(request(headers), "v1", assets);
+      expect(response?.status).toBe(200);
+      expect(await response?.text()).toContain("public");
+    }
+    expect((await servePublicSnapshot(request({ "If-Match": tag }), "v1", assets))?.status).toBe(412);
+    expect((await servePublicSnapshot(request({ "If-Match": '"old"', "If-None-Match": "*" }), "v1", assets))?.status).toBe(412);
+    for (const [version, headers] of [["v2", {}], ["v1", { Cookie: "NEXT_LOCALE=hu" }], ["v1", { RSC: "1" }]] as const) {
+      expect((await servePublicSnapshot(request({ ...headers, "If-None-Match": tag }), version, assets))?.status).toBe(200);
+    }
+    for (const [assetRequest] of assets.fetch.mock.calls) expect([...assetRequest.headers]).toEqual([]);
+  });
   it("serves metadata-only requests from their own page-head snapshot", async () => {
     for (const encoded of [false, true]) for (const prefetch of [false, true]) {
       const state = JSON.stringify(["", {}, null, "metadata-only"]);
@@ -62,7 +87,7 @@ describe("deployment-time public HTML snapshots", () => {
     expect(response?.headers.get("X-Content-Type-Options")).toBe("nosniff");
     expect(response?.headers.get("X-Frame-Options")).toBe("DENY");
     expect(response?.headers.get("Cache-Control")).toContain("no-store");
-    expect(response?.headers.has("ETag")).toBe(false);
+    expect(response?.headers.get("ETag")).toContain('W/"apb-v1-hu-');
     expect(response?.headers.has("Last-Modified")).toBe(false);
     expect(await response?.text()).toContain("public");
     expect(publicSnapshotPath("en", "/")).toBe("/__apb_public_html/en/index.snapshot");
@@ -72,7 +97,7 @@ describe("deployment-time public HTML snapshots", () => {
     const fetch = vi.fn(async () => html());
     const headers: HeadersInit[] = [{ Cookie: "__prerender_bypass=secret" }, { RSC: "invalid" },
       { "Next-Router-Prefetch": "1" }, { "Next-Router-Segment-Prefetch": "/unsupported" }, { "Next-Action": "action" },
-      { "If-None-Match": "tag" }, { Range: "bytes=0-9" }];
+      { "Next-Hmr-Refresh": "1" }];
     for (const values of headers) expect(await servePublicSnapshot(new Request("https://example.com/docs/playbooks", { headers: values }), "v1", { fetch })).toBeNull();
     for (const path of ["/dashboard", "/playbooks/private", "/api/connections", "/docs/unknown-private", "/docs?page=playbooks"])
       expect(await servePublicSnapshot(new Request(`https://example.com${path}`), "v1", { fetch })).toBeNull();
