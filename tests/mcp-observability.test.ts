@@ -10,15 +10,19 @@ describe("MCP connection attribution", () => {
     expect(JSON.parse(text)).toMatchObject({ event: "mcp.connection", clientName: "HermesAgent", keyPrefix: "apb_live_123" });
     expect(text).not.toContain("SECRET");
   });
-  it("samples discovery without logging tools/call or unknown methods", () => {
+  it("records the first discovery in each window, then samples repeats", () => {
     const log = vi.spyOn(console, "info").mockImplementation(() => {});
     vi.spyOn(Math, "random").mockReturnValue(0.5);
-    const request = new Request("https://example.com");
+    const request = new Request("https://example.com", { headers: { "User-Agent": "discovery-test" } });
+    logMcpDiscovery(request, "tools/list", "pb", null, {});
+    expect(log).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(log.mock.calls[0][0] as string)).toMatchObject({ sampleRate: 1, observationWindowMs: 300000 });
+    log.mockClear();
     logMcpDiscovery(request, "tools/list", "pb", null, {});
     logMcpDiscovery(request, "tools/call", "pb", null, {});
     expect(log).not.toHaveBeenCalled();
     vi.spyOn(Math, "random").mockReturnValue(0);
-    logMcpDiscovery(request, "resources/list", "pb", null, {});
-    expect(JSON.parse(log.mock.calls[0][0] as string)).toMatchObject({ event: "mcp.discovery", method: "resources/list", sampleRate: 0.02 });
+    logMcpDiscovery(request, "tools/list", "pb", null, {});
+    expect(JSON.parse(log.mock.calls[0][0] as string)).toMatchObject({ event: "mcp.discovery", method: "tools/list", sampleRate: 0.02 });
   });
 });

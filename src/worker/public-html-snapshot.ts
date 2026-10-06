@@ -20,8 +20,8 @@ export function publicSnapshotRequest(request: Request, version: unknown) {
   if (!publicPagePaths.has(url.pathname) || (url.pathname === "/docs" && url.searchParams.has("page"))) return null;
   // Draft content and unsupported internal protocols must still reach Next.
   for (const [name] of request.headers) {
-    if (name === "range" || name === "upgrade" || name === "x-matched-path" || name === "next-action"
-      || name.startsWith("if-") || name.startsWith("x-middleware-") || name.startsWith("x-nextjs-")
+    if (name === "upgrade" || name === "x-matched-path" || name === "next-action"
+      || name.startsWith("x-middleware-") || name.startsWith("x-nextjs-")
       || name.startsWith("x-invoke-") || (name.startsWith("next-")
         && !["next-router-state-tree", "next-router-prefetch", "next-router-segment-prefetch", "next-url"].includes(name))) return null;
   }
@@ -89,11 +89,27 @@ export async function servePublicSnapshot(
   headers.set("X-APB-Page-Cache", "ASSET");
   headers.set("X-APB-Page-Variant", snapshot.variant);
   headers.set("Vary", "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch, Accept-Language, Cookie");
-  // Asset-service metadata is not Next's document metadata. In particular a
-  // browser must not validate a locale-varying URL against one asset's ETag.
-  headers.delete("ETag");
+  // A weak validator identifies this deployed, locale/protocol-specific
+  // representation independently of asset-service compression and metadata.
+  const etag = `W/"apb-${encodeURIComponent(String(version))}-${snapshot.locale}-${encodeURIComponent(snapshot.pathname)}-${snapshot.variant}"`;
+  headers.set("ETag", etag);
   headers.delete("Last-Modified");
+  // Range is optional: return the entire representation, never a partial Flight
+  // document. Without Last-Modified, date preconditions are ignored per HTTP.
+  headers.set("Accept-Ranges", "none");
   for (const { key: name, value } of SECURITY_HEADERS) headers.set(name, value);
+  const ifMatch = request.headers.get("if-match");
+  const ifNoneMatch = request.headers.get("if-none-match");
+  // Weak tags never satisfy the strong comparison required by If-Match.
+  const status = ifMatch !== null && ifMatch.trim() !== "*" ? 412
+    : ifNoneMatch?.split(",").some(tag => tag.trim() === "*"
+      || tag.trim().replace(/^W\//, "") === etag.slice(2)) ? 304 : 200;
+  if (status !== 200) {
+    await response.body?.cancel().catch(() => {});
+    headers.delete("Content-Length");
+    headers.delete("Content-Encoding");
+    return new Response(null, { status, headers });
+  }
   if (request.method === "HEAD") await response.body?.cancel().catch(() => {});
   return new Response(request.method === "HEAD" ? null : response.body, { status: 200, headers });
 }

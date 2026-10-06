@@ -24,6 +24,19 @@ function json(value: unknown, status = 200, headers: Record<string, string> = {}
 }
 
 describe("federation cache isolation", () => {
+  it("calls a declared tool without rediscovering the entire upstream catalog", async () => {
+    vi.resetModules();
+    const { callFederatedTool, federatedServerPrefix } = await import("@/lib/mcp/federation");
+    const target = server("declared", "https://declared.example.com/mcp");
+    target.tools = [{ name: "search", description: "Search", inputSchema: { type: "object" } }];
+    const methods: string[] = [];
+    const fetchMock = vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
+      methods.push(JSON.parse(String(init?.body)).method);
+      return json({ jsonrpc: "2.0", result: { content: [{ type: "text", text: "ok" }] } });
+    });
+    await callFederatedTool(target, `${federatedServerPrefix(target)}search`, {}, { fetch: fetchMock as typeof fetch });
+    expect(methods).toEqual(["tools/call"]);
+  });
   it("reuses one legacy session but opens another after a credential change", async () => {
     vi.resetModules();
     const { listFederatedTools } = await import("@/lib/mcp/federation");

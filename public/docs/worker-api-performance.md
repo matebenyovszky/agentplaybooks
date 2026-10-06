@@ -83,11 +83,16 @@ server content. `/docs?page=...` redirects to the published canonical doc path;
 sessions, user stars or playbook rows. Their existing browser effects load auth
 settings and live data after hydration; their API authorization is unchanged.
 other query values do not change their server content. Private page paths and
-all API paths are excluded. Draft mode, conditional/range requests, server actions
+all API paths are excluded. Draft mode, server actions
 and unsupported Next internal protocols still reach Next. HEAD has no body,
 security headers are restored, and browser responses remain `no-store` to
 prevent locale mixing. Asset ETags/Last-Modified are not exposed as validators
-for the locale-varying public URL.
+for the locale-varying public URL. The snapshot uses its own weak ETag bound to
+the Worker version, locale, path and HTML/Flight variant. Matching If-None-Match
+returns 304; non-wildcard If-Match returns 412 because weak tags cannot strongly
+match. Date conditions are ignored without Last-Modified. Range is optional and
+receives the complete 200 representation with Accept-Ranges: none, never partial
+Flight or a cold Next render. These headers are not forwarded to ASSETS.
 
 Missing/unavailable assets fall back to Next and the bounded HTML Cache API.
 Private pages and requests excluded from the public policy still
@@ -112,3 +117,27 @@ declaring a miss, and a binding failure falls back to Next. Canonical trailing
 slashes, legal redirects and legacy documentation URLs use native redirects.
 RSC misses return non-RSC 404 HTML so Next's browser router can perform a full
 navigation to the error page; it is never a successful cached Flight response.
+
+## Avoiding repeated client and upstream requests
+
+Explore waits 300 ms after nonempty search input before fetching playbooks.
+A new query cancels the previous timer/fetch, and a superseded response cannot
+replace current results even if its transport ignores cancellation. Loading
+Skills or MCP catalogue data no longer refetches the Playbooks tab.
+
+Federated calls to tool names already declared in the freshly loaded server
+row skip an extra upstream tools/list discovery request. Upstream authentication
+and execution still run; undeclared names retain discovery and fallback behavior.
+A stale declaration fails at execution rather than bypassing upstream checks.
+
+Discovery observability logs the first tools/list or resources/list event per
+five-minute identity/method/user-agent window in each Worker isolate; repeats
+are sampled at 2%. The window map is bounded to 128 entries. Initialize events
+remain logged. Only bounded client metadata and key prefixes are recorded;
+credentials, tool arguments, content and IP addresses are excluded. Window
+events are observations, not an exact client census or request counter.
+
+MCP transport alone does not imply polling. Local audits should compare global
+MCP entries with plugin-bundled entries and inspect client initialization logs.
+Native Hermes memory uses REST memory routes and has no periodic tools/list
+poller. Other Hermes MCP clients or remote integrations require separate evidence.
