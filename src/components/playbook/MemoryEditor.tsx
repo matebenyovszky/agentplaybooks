@@ -300,6 +300,8 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
     catch { return "Invalid JSON"; }
   }, [editValue, editingMemory]);
   const [saving, setSaving] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
@@ -307,6 +309,7 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
   const [typeFilter, setTypeFilter] = useState<MemoryType | "all">("all");
 
   useEffect(() => {
+    if (resetting) return;
     const serial = ++requestSerial.current;
     let cancelled = false;
     const timer = setTimeout(() => {
@@ -328,7 +331,7 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
       });
     }, 200);
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [storage, searchQuery, scope, historyKey, tierFilter, typeFilter, after, before, offset, refreshId]);
+  }, [storage, searchQuery, scope, historyKey, tierFilter, typeFilter, after, before, offset, refreshId, resetting]);
 
   // The server searches the entire memory store before applying pagination.
   const filteredMemories = entries;
@@ -422,6 +425,35 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
     }
   };
 
+  const handleResetMemories = async () => {
+    if (readOnly || saving || resetting) return;
+    if (!confirm("Permanently delete ALL memories in this playbook, including archived memories and previous versions? This applies to every page and ignores search filters. This cannot be undone.")) return;
+
+    ++requestSerial.current;
+    setResetting(true);
+    setResetError(null);
+    try {
+      if (!(await storage.resetMemories())) throw new Error("Could not reset memories. Please try again.");
+      onUpdate([]);
+      setEntries([]);
+      setEditingMemory(null);
+      setExpandedKeys(new Set());
+      setSearchQuery("");
+      setScope("active");
+      setHistoryKey(null);
+      setTierFilter("all");
+      setTypeFilter("all");
+      setAfter("");
+      setBefore("");
+      setOffset(0);
+      setRefreshId(value => value + 1);
+    } catch (error) {
+      setResetError(error instanceof Error ? error.message : "Could not reset memories.");
+    } finally {
+      setResetting(false);
+    }
+  };
+
   const handleArchive = async (memory: Memory) => {
     if (readOnly) return;
     const updated = await storage.updateMemory(memory.id, { is_archived: !memory.is_archived });
@@ -480,7 +512,7 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
   const allTags = useMemo(() => Array.from(new Set(memories.flatMap((m) => m.tags || []))), [memories]);
 
   return (
-    <div className="space-y-4">
+    <fieldset disabled={resetting} className="min-w-0 space-y-4">
       <datalist id="parent-keys">
         {allParentKeys.map((k) => <option key={k} value={k} />)}
       </datalist>
@@ -587,6 +619,14 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
           <Plus className="h-4 w-4" />
           Add Memory
         </button>
+        {!readOnly && <button
+          onClick={handleResetMemories}
+          disabled={saving || resetting}
+          className="px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {resetting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+          {resetting ? "Resetting…" : "Reset all memories"}
+        </button>}
       </div>
 
       <div className="flex flex-wrap items-center gap-3 text-sm">
@@ -607,6 +647,7 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
         <button onClick={() => { setHistoryKey(null); setOffset(0); }} className="underline">Back to memories</button>
       </div>}
       {loadError && <p role="alert" className="text-sm text-red-400">{loadError}</p>}
+      {resetError && <p role="alert" className="text-sm text-red-400">{resetError}</p>}
       {loading && <p role="status" className="text-sm text-slate-400">Loading memories…</p>}
       {/* Empty State */}
       {entries.length === 0 && !historyKey && scope === "active" && !searchQuery && !after && !before && tierFilter === "all" && typeFilter === "all" && offset === 0 && !loading && !loadError && (
@@ -892,7 +933,7 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </fieldset>
   );
 }
 

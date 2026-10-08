@@ -45,7 +45,9 @@ app.get("/", async (c) => {
 
   const { data, error } = await getServiceSupabase()
     .from("canvas")
-    .select("id, name, slug, metadata, sort_order, version, created_at, updated_at")
+    .select(c.req.query("includeContent") === "true"
+      ? "*"
+      : "id, playbook_id, run_id, name, slug, metadata, sort_order, version, created_at, updated_at")
     .eq("playbook_id", playbook.id)
     .eq("run_id", runId)
     .order("sort_order")
