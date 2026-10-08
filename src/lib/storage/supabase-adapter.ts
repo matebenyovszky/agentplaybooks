@@ -204,7 +204,7 @@ export function createSupabaseAdapter(playbookId: string, playbookGuid?: string)
         ? [runId]
         : ((await requestJson<PlaybookRun[]>(`/api/playbooks/${guid}/runs`)) || []).map((run) => run.id);
       const groups = await Promise.all(
-        runIds.map((id) => requestJson<Canvas[]>(`/api/playbooks/${guid}/canvas?runId=${encodeURIComponent(id)}`)),
+        runIds.map((id) => requestJson<Canvas[]>(`/api/playbooks/${guid}/canvas?runId=${encodeURIComponent(id)}&includeContent=true`)),
       );
       return groups.flatMap((group) => group || []);
     },
@@ -318,6 +318,13 @@ export function createSupabaseAdapter(playbookId: string, playbookGuid?: string)
       }
 
       const data = await requestJson<{ success: boolean }>(`/api/manage/playbooks/${playbookId}/memory/${encodeURIComponent(target.key)}`, {
+        method: "DELETE",
+      });
+      return data?.success === true;
+    },
+
+    async resetMemories(): Promise<boolean> {
+      const data = await requestJson<{ success: boolean }>(`/api/manage/playbooks/${playbookId}/memory`, {
         method: "DELETE",
       });
       return data?.success === true;
@@ -454,4 +461,3 @@ export function createSupabaseAdapter(playbookId: string, playbookGuid?: string)
     },
   };
 }
-
