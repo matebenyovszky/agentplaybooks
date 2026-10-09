@@ -13,19 +13,30 @@ listing copy: [`openai-skills-directory-zip.md`](./openai-skills-directory-zip.m
 
 - Transport: Streamable HTTP
 - URL: `https://agentplaybooks.ai/api/mcp/manage`
-- Auth: `Authorization: Bearer <user API key>`
-- Key shape: `apb_live_…` (also accepted as `apb_…`)
-- This is **not** OAuth. There is no OAuth protected-resource metadata on this
-  endpoint. Do not describe it as OAuth.
+- Auth, two modes on the same endpoint:
+  - **OAuth 2.1 with PKCE (default).** An unauthenticated call returns `401`
+    with `WWW-Authenticate: Bearer resource_metadata="https://agentplaybooks.ai/.well-known/oauth-protected-resource/api/mcp/manage"`.
+    That metadata names the Supabase Auth authorization server, which
+    advertises dynamic client registration, `authorization_code` +
+    `refresh_token`, and `S256` PKCE. The user approves on `/oauth/consent`.
+  - **API key.** `Authorization: Bearer <user API key>`, for automation and CI.
+    Key shape: `apb_live_…` (also accepted as `apb_…`).
 
-Playbook-scoped MCP (`/api/mcp/<guid>`) uses the same Bearer key pattern.
+Playbook-scoped MCP (`/api/mcp/<guid>`) answers with the same OAuth challenge
+(pointing at its own protected-resource metadata) and accepts the same Bearer
+key pattern.
+
+An earlier version of this file said the endpoint was not OAuth and had no
+protected-resource metadata. That was true when it was written and is not any
+more; describe OAuth as the default.
 
 ## Tool surface (do not shrink)
 
-`tools/list` on `/api/mcp/manage` advertises **49** tools:
+`tools/list` on `/api/mcp/manage` advertises **50** tools:
 
 - 7 account tools
-- 42 playbook tools, including `find_tools` and `use_secret_write`
+- 43 playbook tools, including `find_tools`, `use_secret_write` and
+  `get_memory_history`
 
 Playbook tools on the manage endpoint require `playbook_id`.
 
@@ -50,10 +61,10 @@ Use a valid user API key with at least `playbooks:read`, `skills:read`, and
 ## Negative test cases (3)
 
 1. **Missing Bearer / missing key.** Call `list_playbooks` with no
-   `Authorization` (and no `X-API-Key`). Expect authentication required; the
-   tool must not run.
+   `Authorization` (and no `X-API-Key`). Expect `401` with the OAuth
+   `WWW-Authenticate` challenge; the tool must not run.
 2. **Invalid key.** Call `list_playbooks` with `Authorization: Bearer apb_live_not-a-real-key`.
-   Expect rejection. Do not treat this as OAuth.
+   Expect rejection; the tool must not run.
 3. **Mutating method on `use_secret`.** Call `use_secret` with
    `method: "POST"` (or PUT/PATCH/DELETE). Expect refusal. Writes go through
    `use_secret_write` only (`method` enum GET/HEAD on `use_secret`).
