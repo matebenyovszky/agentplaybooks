@@ -102,6 +102,17 @@ describe("connectors directory requirements", () => {
     }
   });
 
+  it("describes every input parameter", () => {
+    // Glama scores parameter quality on schema description coverage; one tool
+    // at 40% was the lowest-rated on the server.
+    for (const tool of ALL_TOOLS) {
+      const properties = (tool.inputSchema as { properties?: Record<string, { description?: string }> }).properties ?? {};
+      for (const [name, property] of Object.entries(properties)) {
+        expect(property.description, `${tool.name}.${name} needs a description`).toBeTruthy();
+      }
+    }
+  });
+
   it("keeps every tool name within the 64-character limit", () => {
     for (const tool of ALL_TOOLS) {
       expect(tool.name.length, `${tool.name} is ${tool.name.length} characters`).toBeLessThanOrEqual(64);
