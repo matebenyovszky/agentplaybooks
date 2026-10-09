@@ -456,10 +456,28 @@ The read-only manifest (`GET /api/mcp/:guid`) and `llms.txt` still need a key wi
 | Write memory/canvas | API key required | API key required |
 | Manage playbook | User API key | User API key |
 
-API keys come in three roles:
+API keys come in four roles:
 - **Viewer** — Read-only access
+- **Proposer** — Read access; memory and skill changes wait for review
 - **Coworker** — Read and write access
 - **Admin** — Full access to modify playbook structure
+
+### Proposals
+
+A key with `memory:propose` or `skills:propose` (the Proposer role) may suggest changes it is not allowed to make. `write_memory`, `create_skill` and `update_skill` (and `PUT /api/playbooks/:guid/memory/:key`, which answers `202`) then save the change as a proposal instead of applying it:
+
+```json
+{ "status": "pending_review", "kind": "memory", "proposal_id": "…", "target": "lesson/check-the-register" }
+```
+
+A proposal changes nothing until it is approved. It is not returned by memory reads, search, context or history, nor listed as a skill version. The owner and editors see pending proposals at the top of the Memory and Skills tabs and approve or reject them there. Approving applies the proposal as an ordinary write, so the previous content stays in the history. Keys can review too: a key with `memory:write` reviews memory proposals, and one with `skills:write` reviews skill proposals:
+
+```bash
+GET  /api/playbooks/:guid/proposals?kind=memory|skill
+POST /api/playbooks/:guid/proposals/:id   {"kind": "memory", "decision": "approve" | "reject"}
+```
+
+A propose permission never grants reading. Give a proposer `memory:read` / `skills:read` as well when it needs to see what is already there; the Proposer role does.
 
 ## Best Practices
 
