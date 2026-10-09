@@ -59,14 +59,15 @@ This document outlines the development roadmap for AgentPlaybooks — the open s
 > Status as of October 2026; the step-by-step lives in
 > `docs/claude-directory-notes.md`.
 
-- [x] **OAuth on the MCP endpoints** - `/api/mcp/manage` and `/api/mcp/<guid>` are OAuth protected resources with dynamic client registration
+- [x] **Claude plugin** - `plugins/agentplaybooks`: account connector, a playbooks skill that works in chat and Cowork, `doctor` / `sync` commands; no `bin/`, so claude.ai and Cowork accept it
+- [x] **Integrations tab for Claude, Cursor, VS Code** - custom-connector steps and one-click editor install links, replacing the `claude_desktop_config.json` advice that never worked
+- [x] **Self-service account deletion** - Settings → Delete account, in one transaction; also fixed playbook deletion
+- [x] **Complete privacy notice** - collection, processors, retention, rights, contact
 - [x] **Tool annotations** - every tool has a title and read-only / destructive hints, enforced by tests
-- [ ] **Claude plugin** - `plugins/agentplaybooks`: account connector, a playbooks skill that works in chat and Cowork, `doctor` / `sync` commands; no `bin/`, so claude.ai and Cowork accept it (in review: PR #173)
-- [ ] **Integrations tab for Claude, Cursor, VS Code** - custom-connector steps and one-click editor links, replacing the `claude_desktop_config.json` advice that never worked (PR #173)
-- [ ] **Self-service account deletion** - Settings → Delete account, in one transaction; also fixes playbook deletion (PR #173)
-- [ ] **Complete privacy notice** - collection, processors, retention, rights, contact (drafted, awaiting sign-off)
-- [ ] **Directory submissions** - plugin bundle and MCP connector at claude.ai/directory/manage, with a populated reviewer account
-- [ ] **Profile name editing** - a UI for the public display name, which starts as the email's local part
+- [ ] **OAuth sign-in on OrioleDB** ← *continue here* - the endpoints advertise OAuth (protected-resource metadata, dynamic client registration), but sign-in fails while the database runs on OrioleDB; being fixed separately. Then test the connector from claude.ai and Claude Code
+- [ ] **Reviewer account** - populated with `npm run seed:reviewer`
+- [ ] **Directory submissions** - MCP connector, then plugin bundle, at claude.ai/directory/manage
+- [ ] **Profile name editing** - a UI for the public display name, which starts as the local part of the email address
 
 ### API Security Enhancements 📋
 

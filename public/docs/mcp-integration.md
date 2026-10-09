@@ -43,6 +43,31 @@ https://apbks.com/api/mcp/YOUR_GUID
 
 ### 2. Configure Your MCP Client
 
+#### One-click install (Cursor, VS Code)
+
+Both editors accept an install link that opens their own dialog with the
+server already filled in. The endpoint signs you in with your AgentPlaybooks
+account (OAuth), so the link carries only the URL — no key is written into the
+editor's config.
+
+**Your whole account** — every playbook you own or have been given:
+
+- [Add AgentPlaybooks to Cursor](cursor://anysphere.cursor-deeplink/mcp/install?name=agentplaybooks&config=eyJ0eXBlIjoiaHR0cCIsInVybCI6Imh0dHBzOi8vYWdlbnRwbGF5Ym9va3MuYWkvYXBpL21jcC9tYW5hZ2UifQ%3D%3D)
+- [Add AgentPlaybooks to VS Code](vscode:mcp/install?%7B%22name%22%3A%22agentplaybooks%22%2C%22type%22%3A%22http%22%2C%22url%22%3A%22https%3A%2F%2Fagentplaybooks.ai%2Fapi%2Fmcp%2Fmanage%22%7D)
+
+**One playbook** — open the playbook's **Integrations** tab and use **Add to
+Cursor** or **Add to VS Code** there; those links carry that playbook's own URL.
+
+To build a link yourself, the formats are:
+
+```text
+cursor://anysphere.cursor-deeplink/mcp/install?name=<entry>&config=<base64 of {"type":"http","url":"<endpoint>"}>
+vscode:mcp/install?<URL-encoded {"name":"<entry>","type":"http","url":"<endpoint>"}>
+```
+
+`src/lib/mcp-install-links.ts` builds both, with tests. If the editor's sign-in
+does not open, use the manual configuration below with an API key instead.
+
 #### Cursor IDE
 
 Add to your project's `.cursor/mcp.json` or global `~/.cursor/mcp.json`:

@@ -35,6 +35,9 @@ Your agent setup stays in sync across Claude, ChatGPT, Cursor, Codex, Gemini, lo
   Claude Desktop, Cowork, Claude Code, and mobile, signing in with OAuth — no
   API key. Or add a single playbook as a custom connector. See
   [AgentPlaybooks in Claude](https://agentplaybooks.ai/docs/claude).
+- Cursor and VS Code: one-click install links for the account or a single
+  playbook — on each playbook's Integrations tab, and in
+  [MCP Integration](https://agentplaybooks.ai/docs/mcp-integration).
 - CLI + portable Agent Plugin: audit your local agent config, then sync one playbook
   to Claude Code, Cursor, ChatGPT/Codex, Google Antigravity, Grok Bot and Hermes
 - Agent Plugins 1.0: install the project plugin or export a single playbook as

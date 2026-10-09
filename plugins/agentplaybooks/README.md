@@ -57,7 +57,7 @@ your account, and everything it owns, under Settings → Delete account on
 agentplaybooks.ai.
 
 Full policy: https://agentplaybooks.ai/privacy. Questions go to the maintainers
-through https://github.com/matebenyovszky/agentplaybooks.
+through https://github.com/matebenyovszky/agentplaybooks/issues.
 
 ## Self-hosted instances
 

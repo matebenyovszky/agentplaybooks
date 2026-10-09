@@ -613,6 +613,8 @@ These are instructions for developers integrating playbooks into their applicati
 
 Cursor is an AI-powered code editor with native MCP support. Connecting an AgentPlaybooks playbook gives Cursor's AI agent access to your playbook's tools, resources, and memory.
 
+**One click:** [Add your AgentPlaybooks account to Cursor](cursor://anysphere.cursor-deeplink/mcp/install?name=agentplaybooks&config=eyJ0eXBlIjoiaHR0cCIsInVybCI6Imh0dHBzOi8vYWdlbnRwbGF5Ym9va3MuYWkvYXBpL21jcC9tYW5hZ2UifQ%3D%3D), or use **Add to Cursor** on a playbook's **Integrations** tab for just that playbook. VS Code has the same links — see [one-click install](/docs/mcp-integration). The steps below are the manual route, with an API key.
+
 ### Step 1: Get Your MCP Endpoint
 
 Your playbook's MCP endpoint:

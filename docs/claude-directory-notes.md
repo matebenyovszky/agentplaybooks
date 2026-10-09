@@ -11,9 +11,10 @@ that are not code are listed at the end as blockers.
 ## Where this stands (10 October 2026)
 
 Paused here, to be picked up later. The public summary is the *Claude Plugin &
-Directory Listing* section of `public/docs/ROADMAP.md`.
+Directory Listing* section of `public/docs/ROADMAP.md`. Nothing about this work
+lives only on a local machine: everything below is on `main`.
 
-**Done, in PR #173 (`feat/claude-plugin-everywhere`), not merged:**
+**Done (PR #173, merged):**
 
 - `plugins/agentplaybooks` — the lean Claude plugin; `.claude-plugin/marketplace.json`
   points at it. `claude plugin validate` passes for the plugin and the marketplace.
@@ -23,30 +24,32 @@ Directory Listing* section of `public/docs/ROADMAP.md`.
 - Settings → Delete account (`public.delete_account`, one transaction), and the
   fix for playbook deletion, which a delete trigger had been rolling back in
   production. Both migrations deploy automatically on merge.
+- A complete privacy notice (`src/lib/legal-copy.ts`), with no email address by
+  the owner's decision: contact goes through the repository's issues.
 - `npm run seed:reviewer` to populate a reviewer account.
+- The 2026-08 Claude Desktop extension (`.mcpb`) experiment is deleted; OAuth
+  and the directory's end of MCPB listings made it pointless.
 
-**Held back on purpose:** the full privacy notice is committed on the local-only
-branch `draft/privacy-notice` (744ef8e), not pushed. It waits for the owner to
-sign off the controller line and the contact address, and for that address to
-deliver. Push it onto the PR branch once signed off.
+**Continue here — the OAuth sign-in is not working yet.** There is a known
+OAuth bug when the database runs on OrioleDB (the production Supabase project
+does, `17-oriole`), being fixed separately. Until it is fixed, everything from
+step 1 down waits on it.
 
-**Next, in order:**
-
-1. Owner signs off the privacy notice; the contact address is set up; the draft
-   branch is pushed onto #173.
-2. Test the OAuth connector from claude.ai (*Customize → Connectors → Add custom
-   connector*, the URL above). This works before the merge.
-3. CI green → merge #173 → confirm the Supabase deploy and its schema
-   verification passed; try deleting a throwaway playbook and a throwaway account.
-4. Sign up the reviewer account and run `npm run seed:reviewer`.
-5. Add the plugin on claude.ai through *Customize → Plugins → Add marketplace*
+1. Fix the OAuth bug on OrioleDB, then test the connector from claude.ai
+   (*Customize → Connectors → Add custom connector*,
+   `https://agentplaybooks.ai/api/mcp/manage`) and from Claude Code (`/mcp`).
+2. Confirm that deleting a throwaway playbook and a throwaway account works in
+   production.
+3. Sign up the reviewer account and run `npm run seed:reviewer`.
+4. Add the plugin on claude.ai through *Customize → Plugins → Add marketplace*
    (`matebenyovszky/agentplaybooks`), connect it, try each skill and command.
-6. Submit both in the portal — **MCP connector** first, then **Plugin bundle** —
+5. Submit both in the portal — **MCP connector** first, then **Plugin bundle** —
    from the account that should own the listings for good.
 
 **Open decisions:** whether to mark the 17 non-destructive writes destructive
 (only if the portal's Tools step flags them, see the tool table above); a UI for
-the profile display name; deleting the superseded `feat/desktop-extension` branch.
+the profile display name; whether a repository link is enough as the privacy
+contact once the directory reviews it.
 
 ## What gets submitted
 
@@ -144,12 +147,13 @@ Negative:
 
 ## Blockers (not code)
 
-- **Privacy policy — drafted, awaiting sign-off.** The live `/privacy` copy is
-  four short paragraphs, and the directory rejects a policy that does not cover
-  data collection, usage and storage, third-party sharing, retention, and
-  contact. A complete notice — processors (Supabase in Frankfurt, Cloudflare),
-  legal bases, retention, rights, account deletion, a contact address — is on
-  the local branch `draft/privacy-notice`; see *Where this stands* above.
+- **Privacy policy — written.** `src/lib/legal-copy.ts` covers what the
+  directory lists: collection, use and legal basis, processors (Supabase in
+  Frankfurt, Cloudflare), sharing, retention, rights, contact, and account
+  deletion. The contact is the repository's issue tracker, not an email
+  address — the owner's decision. The directory asks for "contact
+  information"; if a reviewer finds a repository link insufficient, that is the
+  thing to revisit.
 - **Who submits.** Pro, Max, Team, or Enterprise; Free cannot. On Pro and Max you
   submit from your own account; on Team and Enterprise an Owner does, or on
   Enterprise a member with the Directory permission. The first account or
