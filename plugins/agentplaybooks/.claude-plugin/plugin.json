@@ -1,0 +1,20 @@
+{
+  "name": "agentplaybooks",
+  "displayName": "AgentPlaybooks",
+  "version": "0.6.0",
+  "description": "Your portable agent setup in Claude: playbooks with persona, instructions, skills, memory, canvas, connected tools, and a secret vault that never reveals values.",
+  "author": {
+    "name": "AgentPlaybooks",
+    "url": "https://agentplaybooks.ai"
+  },
+  "homepage": "https://agentplaybooks.ai/docs/claude",
+  "repository": "https://github.com/matebenyovszky/agentplaybooks",
+  "license": "MIT",
+  "keywords": ["playbooks", "skills", "memory", "persona", "portability", "secrets"],
+  "mcpServers": {
+    "agentplaybooks-account": {
+      "type": "http",
+      "url": "https://agentplaybooks.ai/api/mcp/manage"
+    }
+  }
+}

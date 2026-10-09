@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -117,19 +117,11 @@ describe("Cursor plugin catalog manifests", () => {
     const marketplace = JSON.parse(source(".cursor-plugin/marketplace.json")) as {
       plugins: Array<{ source: string; license: string; version: string }>;
     };
-    const claudeMarketplace = JSON.parse(source(".claude-plugin/marketplace.json")) as {
-      plugins: Array<{ source: string; license: string; version: string }>;
-    };
     expect(marketplace.plugins).toHaveLength(1);
     expect(marketplace.plugins[0].source).toBe("./packages/cli");
     expect(marketplace.plugins[0].license).toBe("MIT");
     const cli = JSON.parse(source("packages/cli/package.json")) as { version: string };
     expect(marketplace.plugins[0].version).toBe(cli.version);
-    expect(claudeMarketplace.plugins[0]).toMatchObject({
-      source: marketplace.plugins[0].source,
-      license: marketplace.plugins[0].license,
-      version: marketplace.plugins[0].version,
-    });
   });
 
   it("keeps portable plugin and MCP Registry versions aligned with the CLI", () => {
@@ -166,5 +158,48 @@ describe("ChatGPT directory reviewer notes", () => {
     expect(notes).toContain(`**${total}** tools`);
     expect(notes).toContain(`${ACCOUNT_TOOLS.length} account tools`);
     expect(notes).toContain(`${PLAYBOOK_TOOLS.length} playbook tools`);
+  });
+});
+
+/**
+ * The Claude marketplace points somewhere else on purpose. claude.ai chat and
+ * Cowork refuse a plugin that has a top-level `bin/` directory, which the CLI
+ * package has, so Claude gets the lean `plugins/agentplaybooks` folder instead —
+ * and that folder is also what Anthropic's directory reads.
+ * See https://claude.com/docs/plugins/platform-support
+ */
+describe("Claude plugin catalog manifests", () => {
+  const pluginRoot = "plugins/agentplaybooks";
+
+  it("resolves the Claude marketplace to the lean plugin, at the CLI's version", () => {
+    const claudeMarketplace = JSON.parse(source(".claude-plugin/marketplace.json")) as {
+      plugins: Array<{ name: string; source: string; license: string; version: string }>;
+    };
+    const cli = JSON.parse(source("packages/cli/package.json")) as { version: string };
+    expect(claudeMarketplace.plugins).toHaveLength(1);
+    expect(claudeMarketplace.plugins[0]).toMatchObject({
+      name: "agentplaybooks",
+      source: `./${pluginRoot}`,
+      license: "MIT",
+      version: cli.version,
+    });
+  });
+
+  it("keeps the folder installable on every Claude surface", () => {
+    const entries = readdirSync(path.join(process.cwd(), pluginRoot));
+    expect(entries, "a top-level bin/ makes claude.ai and Cowork refuse the plugin").not.toContain("bin");
+    expect(entries, "a lockfile is held for manual directory review").not.toContain("package-lock.json");
+    expect(entries).toContain("README.md");
+    expect(entries).toContain("LICENSE");
+  });
+
+  it("bundles the account connector as a remote server with no credential in it", () => {
+    const plugin = JSON.parse(source(`${pluginRoot}/.claude-plugin/plugin.json`)) as {
+      name: string;
+      mcpServers: Record<string, { type: string; url: string; headers?: unknown }>;
+    };
+    const server = plugin.mcpServers["agentplaybooks-account"];
+    expect(plugin.name).toBe("agentplaybooks");
+    expect(server).toEqual({ type: "http", url: "https://agentplaybooks.ai/api/mcp/manage" });
   });
 });

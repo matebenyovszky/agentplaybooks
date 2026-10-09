@@ -76,42 +76,33 @@ After saving, restart Cursor or reload the window. Your playbook's tools and res
 
 > **Tip:** You can find the ready-to-copy config in the **Integrations** tab of your playbook's dashboard. The server name uses the short `apb-` prefix to stay within Cursor's 60-character combined name limit.
 
-#### Claude Desktop
+#### Claude (web, Desktop, Cowork, mobile)
 
-Add to your `claude_desktop_config.json`:
+Add the endpoint as a custom connector — no API key needed, because the endpoint
+signs you in with your AgentPlaybooks account over OAuth:
 
-```json
-{
-  "mcpServers": {
-    "apb-my-playbook": {
-      "transport": "http",
-      "url": "https://apbks.com/api/mcp/YOUR_GUID"
-    }
-  }
-}
-```
+1. Open [Customize → Connectors](https://claude.ai/customize/connectors) and
+   choose **Add custom connector**.
+2. Paste `https://agentplaybooks.ai/api/mcp/YOUR_GUID`, or
+   `https://agentplaybooks.ai/api/mcp/manage` for every playbook in your account.
+3. Select **Add**, then **Connect**, and sign in.
 
-For **private playbooks**, add authentication:
+Or install the **AgentPlaybooks plugin**, which adds the account connector and a
+skill for using it. [AgentPlaybooks in Claude](/docs/claude) covers both routes,
+Team and Enterprise plans, and self-hosted servers.
 
-```json
-{
-  "mcpServers": {
-    "apb-my-playbook": {
-      "transport": "http",
-      "url": "https://apbks.com/api/mcp/YOUR_GUID",
-      "headers": {
-        "Authorization": "Bearer YOUR_API_KEY"
-      }
-    }
-  }
-}
-```
+> **Not `claude_desktop_config.json`.** That file describes local stdio servers
+> only — a `command` and its arguments. A `url` and `headers` written there are
+> ignored, and nothing reports an error: the server never appears. Earlier
+> versions of this page recommended it; it could not have worked.
 
 #### Claude Code (CLI)
 
 ```bash
-claude mcp add apb-my-playbook https://apbks.com/api/mcp/YOUR_GUID --transport http
+claude mcp add --transport http apb-my-playbook https://agentplaybooks.ai/api/mcp/YOUR_GUID
 ```
+
+Then run `/mcp` and choose **Authenticate** to sign in.
 
 Verify the connection:
 
@@ -526,12 +517,19 @@ A propose permission never grants reading. Give a proposer `memory:read` / `skil
 - Verify the playbook has data (skills, memory, etc.) — use `list_skills` or `get_memory_context` to confirm
 - Test the endpoint directly: `curl -s https://apbks.com/api/mcp/YOUR_GUID | head -c 200`
 
-### Claude Desktop Issues
+### Claude Issues
 
-**Server not connecting**
-- Ensure `transport: "http"` is set in the config
-- Restart Claude Desktop after configuration changes
-- Check that the endpoint URL is reachable from your network
+**Nothing appears after editing `claude_desktop_config.json`**
+- That file cannot hold a remote server. Add the endpoint as a custom connector
+  or install the plugin instead — see [AgentPlaybooks in Claude](/docs/claude).
+
+**The connector shows Connect or Reconnect, not Connected**
+- The sign-in did not finish. Select it again and complete the AgentPlaybooks
+  sign-in in the window that opens.
+
+**A tool call is refused**
+- The refusal names the missing permission or the reason. A playbook shared with
+  you as a viewer, for example, cannot be written.
 
 ---
 

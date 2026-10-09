@@ -26,6 +26,7 @@ const docSlugs = [
   "api-reference",
   "architecture",
   "bot-platform-integrations",
+  "claude",
   "cli",
   "demonstrations",
   "developer-guide",

@@ -310,18 +310,26 @@ codex
 
 ## Claude Code / Claude Cowork plugin
 
-This package doubles as a Claude Code plugin: it ships an `agentplaybooks`
-skill plus `/agentplaybooks:doctor`, `:sync`, `:login`, `:connect`, `:pull`, and `:push` commands
-that drive this CLI. Install from the repository root marketplace:
+The plugin that the repository marketplace installs into Claude is not this
+package but the lean folder `plugins/agentplaybooks`: claude.ai and Cowork refuse
+a plugin with a top-level `bin/` directory, which this package has. That plugin
+carries the account MCP connector, a playbooks skill, and `doctor` / `sync`
+commands that run this CLI through a pinned `npx`. Install it with:
 
 ```text
 /plugin marketplace add matebenyovszky/agentplaybooks
 /plugin install agentplaybooks@agentplaybooks
 ```
 
-The bundled account MCP also uses interactive OAuth discovery. Open `/mcp` if
-Claude does not immediately offer to authenticate the new connection. A manual
-API-key header remains a fallback for non-interactive environments.
+See [AgentPlaybooks in Claude](https://agentplaybooks.ai/docs/claude).
+
+This package still works as a Claude Code plugin in its own right — the
+`agentplaybooks` skill plus `/agentplaybooks:doctor`, `:sync`, `:login`,
+`:connect`, `:pull`, and `:push`, driving the bundled CLI. Load it directly in
+Claude Code with `claude --plugin-dir ./packages/cli`. Its account MCP uses
+interactive OAuth discovery: open `/mcp` if Claude does not offer to
+authenticate. A manual API-key header remains a fallback for non-interactive
+environments.
 
 The skill also works standalone: copy `skills/agentplaybooks/` into a
 project's `.claude/skills/` (or let `sync` do it once it is part of a

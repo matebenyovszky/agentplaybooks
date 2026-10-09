@@ -246,8 +246,13 @@ Export your playbook skills for Claude Coworker:
 # Export skills in Anthropic format
 curl -s "https://apbks.com/api/playbooks/YOUR_GUID?format=anthropic" \
   | jq '.tools' > ~/Documents/CoworkerSkills/my_skills.json
-
-# Or connect via MCP (recommended)
-# Add to claude_desktop_config.json:
-# "mcpServers": {"playbook": {"transport": "http", "url": "https://apbks.com/api/mcp/YOUR_GUID"}}
 ```
+
+Connecting over MCP is the better route, because skills and memory stay live
+instead of being copied once. Cowork reads plugins and connectors from your
+claude.ai account: install the AgentPlaybooks plugin from
+[Customize → Plugins](https://claude.ai/customize/plugins), or add
+`https://agentplaybooks.ai/api/mcp/YOUR_GUID` as a custom connector — see
+[AgentPlaybooks in Claude](/docs/claude). `claude_desktop_config.json` does not
+work for this: it holds local stdio servers only, and a `url` there is ignored
+without an error.
