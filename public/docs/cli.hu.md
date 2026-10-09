@@ -20,7 +20,8 @@ A doctor csak olvas, és csak lokálisan dolgozik. Felderíti az `AGENTS.md`,
 platformmappákban, és jelenti:
 
 - Agent Skills specifikációsértéseket (hiányzó name/description, rossz nevek)
-- Valószínűleg beégetett hitelesítőadatokat (értéket sosem ír ki, csak sorszámot)
+- Valószínűleg beégetett hitelesítőadatokat, a skillekhez csatolt scriptekben és
+  referenciákban is (értéket sosem ír ki, csak sorszámot)
 - Nem biztonságos, localhoston kívüli `http://` MCP URL-eket
 - Azonos nevű, de platformonként eltérő definíciójú skilleket/MCP-szervereket
 - Determinisztikus 0–100 közötti egészségpontszámot

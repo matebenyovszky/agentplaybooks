@@ -20,7 +20,8 @@ Doctor ist rein lesend und arbeitet nur lokal. Er entdeckt `AGENTS.md`,
 den Plattformordnern und meldet:
 
 - Verstöße gegen die Agent-Skills-Spezifikation (fehlender Name/Beschreibung)
-- Wahrscheinlich hartkodierte Zugangsdaten (nie Werte, nur Zeilennummern)
+- Wahrscheinlich hartkodierte Zugangsdaten, auch in den Skripten und Referenzen,
+  die ein Skill mitbringt (nie Werte, nur Zeilennummern)
 - Unsichere `http://`-MCP-URLs außerhalb von localhost
 - Gleichnamige Skills oder MCP-Server mit abweichenden Definitionen (Drift)
 - Einen deterministischen Gesundheitswert von 0–100

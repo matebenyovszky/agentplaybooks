@@ -39,7 +39,8 @@ Doctor is read-only and local-only. It discovers `AGENTS.md`, `CLAUDE.md`,
 reports:
 
 - Agent Skills specification violations (missing name/description, bad names)
-- Likely hard-coded credentials (values are never printed, only line numbers)
+- Likely hard-coded credentials, including in the scripts and references a
+  skill bundles (values are never printed, only line numbers)
 - Insecure `http://` MCP URLs outside localhost
 - Same-named skills or MCP servers whose definitions drift between platforms
 - A deterministic 0–100 health score

@@ -308,6 +308,30 @@ export function analyze(inventory) {
     }));
   }
 
+  // A skill is its whole directory: the scripts and references it bundles go
+  // wherever SKILL.md goes, so a key in `scripts/deploy.py` is as exposed as
+  // one in the skill text. Files already scanned as something else — an
+  // AGENTS.md or MCP config that happens to sit inside a skill — are not
+  // reported twice.
+  const scanned = new Set([
+    ...inventory.instructions,
+    ...inventory.skills,
+    ...(inventory.agents ?? []),
+    ...inventory.mcpConfigs,
+  ].map((item) => normalizePath(item.source)));
+  for (const skill of inventory.skills) {
+    const directory = normalizePath(skill.source).replace(/[^/]*$/, "");
+    for (const file of skill.bundled ?? []) {
+      const source = `${directory}${file.path}`;
+      if (scanned.has(source)) continue;
+      scanned.add(source);
+      const lines = credentialLines(file.content);
+      if (lines.length) {
+        findings.push(finding("critical", "secret.hardcoded", "Possible hard-coded credential found in a file bundled with a skill; only line numbers are reported.", source, { lines }));
+      }
+    }
+  }
+
   const penalty = findings.reduce((total, item) => total + ({ critical: 25, high: 10, medium: 4, low: 1 }[item.severity] ?? 0), 0);
   const score = Math.max(0, 100 - penalty);
   const severityRank = { critical: 0, high: 1, medium: 2, low: 3 };

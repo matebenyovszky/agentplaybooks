@@ -20,7 +20,8 @@ Doctor es de solo lectura y solo local. Descubre archivos `AGENTS.md`,
 de plataforma, e informa:
 
 - Violaciones de la especificación de Agent Skills (name/description ausentes)
-- Credenciales probablemente incrustadas (nunca imprime valores, solo líneas)
+- Credenciales probablemente incrustadas, también en los scripts y referencias
+  que incluye una habilidad (nunca imprime valores, solo líneas)
 - URLs MCP `http://` inseguras fuera de localhost
 - Skills o servidores MCP homónimos con definiciones divergentes (drift)
 - Una puntuación de salud determinista de 0 a 100
