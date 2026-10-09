@@ -13,6 +13,13 @@ control plane that can create a playbook and immediately apply it.
 |-------|--------------|-------------------|
 | User control plane | `https://agentplaybooks.ai/api/mcp/manage` | Required `playbook_id` tool argument |
 | Direct playbook | `https://agentplaybooks.ai/api/mcp/YOUR_GUID` | Bound in the URL |
+| Scripts, no MCP | `https://agentplaybooks.ai/api/mcp/YOUR_GUID/llms.txt` | Bound in the URL |
+
+The third row is for agents that write code instead of calling tools one at a
+time — some of them cannot call MCP tools from inside their scripts at all.
+`llms.txt` is one fetch that explains authentication and the one-POST calling
+convention (`POST /api/mcp/YOUR_GUID/tools/TOOL_NAME` with JSON arguments), with a
+one-shot example per tool. The dashboard's Integrations tab shows all three.
 
 OAuth 2.1 with PKCE is the default for interactive clients. The endpoint
 publishes protected-resource metadata, discovers the AgentPlaybooks

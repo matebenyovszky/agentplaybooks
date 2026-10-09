@@ -11,6 +11,42 @@ Jedes playbook auf AgentPlaybooks ist zugleich ein live **MCP (Model Context Pro
 
 Heute machen wir das noch einfacher: mit einem neuen Tab **Integrationen** im playbook-Dashboard und aktualisierter Dokumentation, in der die Einrichtung in Cursor IDE klar im Vordergrund steht.
 
+## Update (Oktober 2026): drei Zugänge
+
+Seit dieser Beitrag geschrieben wurde, ist ein Playbook auf drei Wegen
+erreichbar. Wähle nach *Umfang* und nach *Client*:
+
+| Du möchtest | Nutze | Authentifizierung |
+|---|---|---|
+| **Dein ganzes Konto** — alle Playbooks, inklusive Anlegen und Verwalten aus dem Agenten | `https://apbks.com/api/mcp/manage` | OAuth-Anmeldung (der Client öffnet einen Zustimmungsdialog) oder ein User API Key |
+| **Ein einzelnes Playbook** — genau seine Tools, sein Memory und seine Skills | `https://apbks.com/api/mcp/YOUR_GUID` | Ein Playbook API Key — für Lesezugriff auf ein öffentliches Playbook keiner |
+| **Skripte und codeausführende Agenten** — ganz ohne MCP | `https://apbks.com/api/mcp/YOUR_GUID/llms.txt` | Derselbe Playbook API Key |
+
+**Konto-Endpunkt.** Eine Verbindung deckt alle Playbooks ab, auf die du Zugriff
+hast; die Tools erhalten ein `playbook_id`-Argument. Er ist eine echte OAuth-2.1-
+geschützte Ressource: Wähle in Claudes Dialog *Add custom connector* die Option
+**Always required** und melde dich an — kein Schlüssel zum Kopieren. Headless-
+Automatisierung kann stattdessen einen User API Key senden.
+
+**Playbook-Endpunkt.** Über die URL an genau ein Playbook gebunden,
+authentifiziert mit einem Playbook API Key. Der Schlüssel darf in
+`Authorization` (mit oder ohne `Bearer `-Präfix) oder in `X-API-Key` stehen —
+praktisch, wenn ein Client `Authorization` für sich selbst reserviert. Mit
+`?toolset=runtime` (oder `memory`, `admin`) werden weniger Tools angeboten; auf
+einer nicht festgelegten Verbindung erreicht der Agent über `find_tools` trotzdem
+alles.
+
+**Skripte.** Manche Agenten schreiben Code, statt Tools einzeln aufzurufen, und
+einige davon können aus ihren Skripten keine MCP-Tools aufrufen. Für sie ist
+`llms.txt` ein einziger Abruf, der die Authentifizierung und die Ein-POST-
+Aufrufkonvention (`POST .../tools/TOOL_NAME` mit JSON-Argumenten) erklärt und
+jedem Tool ein One-Shot-Beispiel mitgibt — danach verkettet der Agent in einem
+Skript so viele Aufrufe wie nötig und hält Zwischenergebnisse aus seinem Kontext
+heraus.
+
+Der Tab **Integrationen** im Dashboard zeigt jetzt alle drei, jeweils mit
+Kopierknopf.
+
 ## Was ist MCP?
 
 Das [Model Context Protocol](https://modelcontextprotocol.io/) ist ein offener Standard (ursprünglich von Anthropic entwickelt), mit dem KI-Assistenten über eine einfache JSON-RPC-Schnittstelle an externe Tools und Datenquellen angebunden werden können. Stell es dir als universelles Plugin-System für KI vor.
@@ -135,7 +171,7 @@ Wenn du JSON mit `protocolVersion` und `serverInfo` siehst, passt alles.
 
 - **Cursor Marketplace** — Wir arbeiten daran, AgentPlaybooks im Cursor-Extension-/MCP-Marketplace zu listen
 - **Windsurf** und andere MCP-kompatible IDEs — Derselbe Endpunkt funktioniert überall
-- **Management MCP Server** — Nutze `https://apbks.com/api/mcp/manage` mit einem User API Key, um playbooks direkt aus deinem KI-Agenten heraus anzulegen und zu verwalten
+- **Management MCP Server** — Verfügbar: den Konto-Endpunkt mit OAuth-Anmeldung siehe oben unter *Update (Oktober 2026)*
 
 Die vollständige Referenz findest du in der [MCP-Integration-Dokumentation](/docs/mcp-integration) und im [Leitfaden zu Plattform-Integrationen](/docs/platform-integrations).
 
