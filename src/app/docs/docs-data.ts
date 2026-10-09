@@ -63,12 +63,6 @@ export const docsEntries: DocEntry[] = [
     section: "guides",
   },
   {
-    slug: "obsidian",
-    title: "Obsidian and AgentPlaybooks",
-    description: "Where they overlap, what each is better at, and how to use both",
-    section: "guides",
-  },
-  {
     slug: "architecture",
     title: "Architecture",
     description: "System design and components",

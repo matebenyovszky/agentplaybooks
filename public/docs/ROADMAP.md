@@ -150,9 +150,8 @@ Open, in rough order of value:
 - [ ] **Comparison pages (`/compare/...`)** — "X vs Y" and "X alternative" are
   the highest-intent, lowest-competition queries for a new developer tool, and
   answer engines cite comparison pages disproportionately because they are
-  structured and explicitly contrastive. [Obsidian and
-  AgentPlaybooks](./obsidian.md) is the first one, but it is buried in the docs;
-  a `/compare` hub with short paths would rank better. Candidates: raw dotfiles,
+  structured and explicitly contrastive. None exist yet; a `/compare` hub with
+  short paths would rank better than pages buried in the docs. Candidates: raw dotfiles,
   Claude Code plugin marketplaces, Cursor rules alone, Notion, prompt
   registries, the MCP registry. Non-negotiable rule: every page must contain
   visible rows where the alternative wins. Without them both readers and models
@@ -182,8 +181,7 @@ Open, in rough order of value:
 
 > **Set aside for now (October 2026).** A vault already works with the CLI as
 > it is: a folder laid out as `<name>/SKILL.md` is what `apb push` reads, and
-> `apb sync` fans it out to every agent tool — see [Obsidian and
-> AgentPlaybooks](./obsidian.md). A plugin would add a second distribution
+> `apb sync` fans it out to every agent tool. A plugin would add a second distribution
 > channel (Obsidian's community directory needs a dedicated repository with one
 > release per version), a second place the skill rules must stay correct, and
 > a credential problem of its own (plugin settings live inside the vault, so in

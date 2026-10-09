@@ -34,7 +34,6 @@ export const publicPagePaths = new Set<string>([
   "/docs/mcp-integration",
   "/docs/mcp-registry-publishing",
   "/docs/memory",
-  "/docs/obsidian",
   "/docs/platform-integrations",
   "/docs/playbooks",
   "/docs/portable-agent-backups",
