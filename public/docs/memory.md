@@ -217,7 +217,32 @@ When using AgentPlaybooks via MCP, these tools are available:
 | `summary` | string | null | Compact text summary |
 | `memory_type` | flat/hierarchical | flat | Memory structure type |
 | `status` | pending/running/completed/failed/blocked | null | Task status |
-| `metadata` | JSON | `{}` | Graph data: dependencies, progress |
+| `metadata` | JSON | `{}` | Free-form. Two keys have a defined shape — see below |
+
+### Episodic memories
+
+`metadata` is free-form, with two conventions that the tools understand:
+
+- **`metadata.episode`** — `{ time, location, task, outcome }`. `get_memory_context` filters on these with `location`, `task`, `since` and `until`, which is how an agent recalls what it did somewhere. `time` takes any ISO 8601 timestamp and is stored normalized to UTC so the range filter compares correctly; a value that is not a timestamp is rejected.
+- **`metadata.recording`** — a recording of the episode, in the same shape a skill's `demonstrations` use. Returned with its links resolved.
+
+```json
+{
+  "key": "2026-08-20-fire-door-B2",
+  "summary": "Opened the B2 fire door on the second attempt.",
+  "metadata": {
+    "episode": {
+      "time": "2026-08-20T14:32:00Z",
+      "location": "building-B/floor-2",
+      "task": "open-fire-door",
+      "outcome": "completed"
+    },
+    "recording": [{ "provider": "youtube", "ref": "dQw4w9WgXcQ", "role": "reference" }]
+  }
+}
+```
+
+Keep the written summary either way. It is what the full-text index searches and what a text-only agent reads; the recording is a pointer beside it, never a replacement. See [Demonstrations](./demonstrations.md).
 
 ## Best Practices
 

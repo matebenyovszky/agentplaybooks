@@ -80,6 +80,11 @@ export function createManifest(report, { displayName } = {}) {
         ...sourceRef({ ...item, digest: item.treeDigest ?? item.digest }),
         name: item.name,
         ...(item.description ? { description: item.description } : {}),
+        // Listed for the same reason `secrets` is: a playbook should say what
+        // it needs from outside itself before anyone tries to run it. The
+        // digest already covers the recordings' content; this says which hosts
+        // an agent has to be able to reach.
+        ...(item.demonstrations?.length ? { demonstrations: item.demonstrations } : {}),
       })).sort((a, b) => a.name.localeCompare(b.name) || a.source.localeCompare(b.source)),
       agents: (report.inventory.agents ?? []).map((item) => ({
         ...sourceRef(item),

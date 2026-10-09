@@ -31,6 +31,7 @@ import { resolveAllowedOrigins } from "@/app/api/_shared/hono";
 import { checkPlaybookWriteAccess, getPlaybookAccessRole } from "@/app/api/_shared/guards";
 import { buildPlaybookUpdate } from "@/lib/playbook-access";
 import { validateAgentSkillDescription, validateAgentSkillName } from "@/lib/agent-skills";
+import { demonstrationsError } from "@/lib/demonstrations";
 import { DEFAULT_USER_API_KEY_PERMISSIONS } from "@/lib/user-api-key-permissions";
 import {
   createPlaybook,
@@ -422,6 +423,8 @@ app.post("/playbooks/:id/skills", async (c) => {
   if (nameError) return c.json({ error: nameError }, 400);
   const descriptionError = validateAgentSkillDescription(description);
   if (descriptionError) return c.json({ error: descriptionError }, 400);
+  const demonstrationError = demonstrationsError(content);
+  if (demonstrationError) return c.json({ error: demonstrationError }, 400);
 
   const supabase = getServiceSupabase();
 
@@ -460,6 +463,11 @@ app.put("/playbooks/:id/skills/:sid", async (c) => {
 
   const body = await c.req.json();
   const { name, description, content, licence } = body;
+
+  if (content !== undefined) {
+    const demonstrationError = demonstrationsError(content);
+    if (demonstrationError) return c.json({ error: demonstrationError }, 400);
+  }
 
   const supabase = getServiceSupabase();
 
@@ -1300,6 +1308,8 @@ app.post("/manage/playbooks/:id/skills", async (c) => {
   if (nameError) return c.json({ error: nameError }, 400);
   const descriptionError = validateAgentSkillDescription(description);
   if (descriptionError) return c.json({ error: descriptionError }, 400);
+  const demonstrationError = demonstrationsError(content);
+  if (demonstrationError) return c.json({ error: demonstrationError }, 400);
 
   const supabase = getServiceSupabase();
 
@@ -1346,6 +1356,10 @@ app.put("/manage/playbooks/:id/skills/:sid", async (c) => {
   if (body.description !== undefined) {
     const descriptionError = validateAgentSkillDescription(body.description);
     if (descriptionError) return c.json({ error: descriptionError }, 400);
+  }
+  if (body.content !== undefined) {
+    const demonstrationError = demonstrationsError(body.content);
+    if (demonstrationError) return c.json({ error: demonstrationError }, 400);
   }
 
   // Whitelist allowed fields to prevent mass-assignment

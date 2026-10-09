@@ -71,6 +71,14 @@ import { memoryWriteFields } from "@/lib/memory";
 import { findPlaybookSkill } from "@/lib/repositories/skills";
 import { serveSkill, skillResourceUri, type ServedSkill } from "@/lib/mcp/skill-extension";
 import { cachedSingleFlight, type SingleFlightEntry } from "@/lib/cache/single-flight";
+import {
+  assertValidDemonstrations,
+  episodeTimeBound,
+  prepareMemoryMetadata,
+  readMemoryRecording,
+  readSkillDemonstrations,
+  resolveDemonstration,
+} from "@/lib/demonstrations";
 
 type PersonaSource = Pick<Playbook, "id" | "persona_name" | "persona_system_prompt" | "persona_metadata" | "instructions">;
 
@@ -1233,7 +1241,14 @@ use_secret_write({
 
             if (error) throw new Error(error.message);
             if (!data) throw new Error("Skill not found");
-            result = data;
+
+            // The document already carries these as frontmatter, but resolved
+            // here the caller gets normalized ids, filled-in defaults and a
+            // ready link per segment instead of re-deriving all three.
+            const { demonstrations } = readSkillDemonstrations(data.content);
+            result = demonstrations.length > 0
+              ? { ...data, demonstrations: demonstrations.map(resolveDemonstration) }
+              : data;
             break;
           }
 
@@ -1310,7 +1325,14 @@ use_secret_write({
             if (summary !== undefined) upsertData.summary = summary;
             if (memoryType !== undefined) upsertData.memory_type = memoryType;
             if (status !== undefined) upsertData.status = status;
-            if (metadata !== undefined) upsertData.metadata = metadata;
+            if (metadata !== undefined) {
+              // `metadata` stays free-form; only the two keys with a defined
+              // shape are checked, so a malformed recording is caught here
+              // rather than being silently skipped by every reader downstream.
+              const prepared = prepareMemoryMetadata(metadata);
+              if (prepared.error) throw new Error(prepared.error);
+              upsertData.metadata = prepared.metadata;
+            }
 
             if (proposer) {
               if (value === undefined) throw new Error("value is required");
@@ -1485,6 +1507,13 @@ use_secret_write({
             const maxItems = (args.max_items as number) || 20;
             const expandKeys = (args.expand_keys as string[]) || [];
             const tagsFilter = args.tags_filter as string[] | undefined;
+            // Where and when, for an agent recalling what it did somewhere. These
+            // read the `metadata.episode` convention: `{ time, location, task,
+            // outcome }`. A memory without one simply never matches.
+            const location = args.location as string | undefined;
+            const task = args.task as string | undefined;
+            const since = args.since as string | undefined;
+            const until = args.until as string | undefined;
 
             // Build context object per tier
             const context: Record<string, unknown[]> = {};
@@ -1492,7 +1521,7 @@ use_secret_write({
             for (const tier of includeTiers) {
               let query = serviceSupabase
                 .from("memories")
-                .select("key, value, tags, description, summary, priority, parent_key, memory_at")
+                .select("key, value, tags, description, summary, priority, parent_key, memory_at, metadata")
                 .eq("playbook_id", playbook.id)
                 .eq("is_archived", false)
                 .eq("tier", tier)
@@ -1503,12 +1532,22 @@ use_secret_write({
               if (tagsFilter && tagsFilter.length > 0) {
                 query = query.overlaps("tags", tagsFilter);
               }
+              // Containment, so the GIN index on `metadata` does the work.
+              if (location) query = query.contains("metadata", { episode: { location } });
+              if (task) query = query.contains("metadata", { episode: { task } });
+              // Both sides canonical, or this text comparison orders
+              // `…:00.500Z` before `…:00Z` and silently drops later matches.
+              if (since) query = query.gte("metadata->episode->>time", episodeTimeBound(since, "since"));
+              if (until) query = query.lte("metadata->episode->>time", episodeTimeBound(until, "until"));
 
               const { data } = await query;
 
               if (data) {
                 context[tier] = data.map(m => {
                   const shouldExpand = tier === "working" || expandKeys.includes(m.key);
+                  const metadata = (m.metadata ?? {}) as Record<string, unknown>;
+                  const episode = metadata.episode;
+                  const { demonstrations } = readMemoryRecording(metadata);
                   return {
                     key: m.key,
                     memory_at: m.memory_at,
@@ -1516,6 +1555,10 @@ use_secret_write({
                     tags: m.tags,
                     priority: m.priority,
                     ...(m.parent_key ? { parent_key: m.parent_key } : {}),
+                    ...(episode ? { episode } : {}),
+                    ...(demonstrations.length > 0
+                      ? { recording: demonstrations.map(resolveDemonstration) }
+                      : {}),
                   };
                 });
               }
@@ -2110,6 +2153,7 @@ use_secret_write({
             if (nameError) throw new Error(nameError);
             const descriptionError = validateAgentSkillDescription(description);
             if (descriptionError) throw new Error(descriptionError);
+            assertValidDemonstrations(content);
 
             if (proposer) {
               result = await proposeSkill(serviceSupabase, playbook.id, { id: null, name, description: description ?? null, content: content ?? null }, proposer);
@@ -2161,6 +2205,7 @@ use_secret_write({
               const descriptionError = validateAgentSkillDescription(args.description);
               if (descriptionError) throw new Error(descriptionError);
             }
+            if (args.content !== undefined) assertValidDemonstrations(args.content as string);
 
             const targetSkill = await findPlaybookSkill<{
               id: string;
