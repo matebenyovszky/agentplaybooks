@@ -18,8 +18,10 @@ interface CanvasEditorProps {
 }
 
 export function CanvasEditor({ storage, canvases, onUpdate, runs, onRunsUpdate, playbookGuid, readOnly = false }: CanvasEditorProps) {
-  const [selectedRunId, setSelectedRunId] = useState<string | null>(runs[0]?.id || null);
-  const runCanvases = useMemo(() => canvases.filter((canvas) => canvas.run_id === selectedRunId), [canvases, selectedRunId]);
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+  const runCanvases = useMemo(() => selectedRunId
+    ? canvases.filter((canvas) => canvas.run_id === selectedRunId)
+    : canvases, [canvases, selectedRunId]);
   const [selectedId, setSelectedId] = useState<string | null>(runCanvases[0]?.id || null);
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
@@ -107,7 +109,7 @@ export function CanvasEditor({ storage, canvases, onUpdate, runs, onRunsUpdate, 
       setError("Name and a valid slug are required.");
       return;
     }
-    if (runCanvases.some((canvas) => canvas.id !== selected.id && canvas.slug === normalizedSlug)) {
+    if (canvases.some((canvas) => canvas.run_id === selected.run_id && canvas.id !== selected.id && canvas.slug === normalizedSlug)) {
       setError("Another canvas document already uses this slug.");
       return;
     }
@@ -132,14 +134,16 @@ export function CanvasEditor({ storage, canvases, onUpdate, runs, onRunsUpdate, 
     if (await storage.deleteCanvas(selected.id)) {
       const next = canvases.filter((canvas) => canvas.id !== selected.id);
       onUpdate(next);
-      setSelectedId(next.find((canvas) => canvas.run_id === selectedRunId)?.id || null);
+      setSelectedId(next.find((canvas) => !selectedRunId || canvas.run_id === selectedRunId)?.id || null);
     }
   };
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    const next = await storage.getCanvases();
+    const [nextRuns, next] = await Promise.all([storage.getRuns(), storage.getCanvases()]);
+    onRunsUpdate(nextRuns);
     onUpdate(next);
+    if (selectedRunId && !nextRuns.some((run) => run.id === selectedRunId)) setSelectedRunId(null);
     setRefreshing(false);
   };
 
@@ -161,8 +165,8 @@ export function CanvasEditor({ storage, canvases, onUpdate, runs, onRunsUpdate, 
         </div>
         <div className="flex items-center gap-2">
           <select value={selectedRunId || ""} onChange={(event) => setSelectedRunId(event.target.value || null)} className="max-w-52 rounded-lg border border-neutral-200 bg-transparent px-3 py-2 text-sm dark:border-slate-700" aria-label="Workflow run">
-            <option value="">Select a run</option>
-            {runs.map((run) => <option key={run.id} value={run.id}>{run.name} · {run.status}</option>)}
+            <option value="">All runs · {canvases.length} documents</option>
+            {runs.map((run) => <option key={run.id} value={run.id}>{run.name} · {run.status} · {canvases.filter((canvas) => canvas.run_id === run.id).length} documents</option>)}
           </select>
           <button onClick={handleCreateRun} disabled={saving || readOnly} className="rounded-lg border border-green-500/30 px-3 py-2 text-sm text-green-600 disabled:opacity-50">New run</button>
           <button onClick={handleRefresh} disabled={refreshing} className="p-2 rounded-lg border border-neutral-200 dark:border-slate-700">
@@ -170,7 +174,8 @@ export function CanvasEditor({ storage, canvases, onUpdate, runs, onRunsUpdate, 
           </button>
           <button
             onClick={handleCreate}
-            disabled={saving || readOnly}
+            disabled={saving || readOnly || !selectedRunId}
+            title={!selectedRunId ? "Select a workflow run to create a document" : undefined}
             className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
           >
             <Plus className="h-4 w-4" /> New document
@@ -180,7 +185,7 @@ export function CanvasEditor({ storage, canvases, onUpdate, runs, onRunsUpdate, 
 
       {error && <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm text-red-500">{error}</div>}
 
-      {!selectedRunId ? (
+      {runs.length === 0 && canvases.length === 0 ? (
         <div className="rounded-xl border border-dashed border-neutral-300 dark:border-slate-700 p-10 text-center">
           <FileText className="mx-auto mb-3 h-10 w-10 text-neutral-400" />
           <p className="font-medium text-neutral-700 dark:text-slate-300">Select or create a workflow run</p>
@@ -189,8 +194,10 @@ export function CanvasEditor({ storage, canvases, onUpdate, runs, onRunsUpdate, 
       ) : runCanvases.length === 0 ? (
         <div className="rounded-xl border border-dashed border-neutral-300 dark:border-slate-700 p-10 text-center">
           <FileText className="mx-auto mb-3 h-10 w-10 text-neutral-400" />
-          <p className="font-medium text-neutral-700 dark:text-slate-300">No canvas documents yet</p>
-          <p className="mt-1 text-sm text-neutral-500">Create a shared work document for agents to build and revise.</p>
+          <p className="font-medium text-neutral-700 dark:text-slate-300">{selectedRunId ? "No canvas documents in this run" : "No canvas documents yet"}</p>
+          <p className="mt-1 text-sm text-neutral-500">{selectedRunId && canvases.length > 0
+            ? "Choose All runs to see the other documents, or create a document in this run."
+            : "Select a workflow run and create a shared work document for agents to build and revise."}</p>
         </div>
       ) : (
         <div className="grid min-h-[620px] gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
@@ -208,6 +215,7 @@ export function CanvasEditor({ storage, canvases, onUpdate, runs, onRunsUpdate, 
               >
                 <span className="block truncate text-sm font-medium text-neutral-900 dark:text-white">{canvas.name}</span>
                 <span className="mt-1 block truncate font-mono text-xs text-neutral-500">/{canvas.slug} · v{canvas.version}</span>
+                {!selectedRunId && <span className="mt-1 block truncate text-xs text-neutral-500">{runs.find((run) => run.id === canvas.run_id)?.name || "Workflow run"}</span>}
               </button>
             ))}
           </aside>

@@ -27,6 +27,7 @@ import {
   getUserFromAuthOrApiKey as getUserFromAuthOrApiKeyFromRequest,
 } from "@/app/api/_shared/auth";
 import { getServiceSupabase, getSupabase } from "@/app/api/_shared/supabase";
+import { resolveAllowedOrigins } from "@/app/api/_shared/hono";
 import { checkPlaybookWriteAccess, getPlaybookAccessRole } from "@/app/api/_shared/guards";
 import { buildPlaybookUpdate } from "@/lib/playbook-access";
 import { validateAgentSkillDescription, validateAgentSkillName } from "@/lib/agent-skills";
@@ -92,21 +93,13 @@ type StarredPlaybookRow = { playbooks?: Playbook | null };
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>().basePath("/api");
 
-// CORS middleware
-const ALLOWED_ORIGINS = [
-  process.env.NEXT_PUBLIC_APP_URL || "https://agentplaybooks.ai",
-  "https://agentplaybooks.ai",
-  "https://www.agentplaybooks.ai",
-  "https://apbks.com",
-  "https://www.apbks.com",
-  "https://apbks.online",
-  "https://www.apbks.online",
-].filter(Boolean);
-
+// CORS middleware. Same allow-list as the other API apps, so a self-hosted
+// instance's ALLOWED_ORIGINS also governs this catch-all route.
 app.use("*", cors({
   origin: (origin) => {
-    if (!origin) return ALLOWED_ORIGINS[0];
-    if (ALLOWED_ORIGINS.includes(origin)) return origin;
+    const allowedOrigins = resolveAllowedOrigins();
+    if (!origin) return allowedOrigins[0];
+    if (allowedOrigins.includes(origin)) return origin;
     if (process.env.NODE_ENV === "development" && origin.startsWith("http://localhost")) return origin;
     return null as unknown as string;
   },
@@ -1866,6 +1859,25 @@ app.get("/manage/playbooks/:id/memory", async (c) => {
   catch (error) { return c.json({ error: (error as Error).message }, 500); }
 });
 
+// DELETE /api/manage/playbooks/:id/memory - Reset all memories, including archive and history
+app.delete("/manage/playbooks/:id/memory", async (c) => {
+  const user = await getUserFromAuthOrApiKey(c, "memory:write");
+  if (!user) return c.json({ error: "Unauthorized" }, 401);
+
+  const playbookId = c.req.param("id");
+  if (!(await checkPlaybookWriteAccess(user.id, playbookId))) {
+    return c.json({ error: "Playbook not found" }, 404);
+  }
+
+  // History is removed atomically by the memory_id ON DELETE CASCADE constraint.
+  const { error } = await getServiceSupabase()
+    .from("memories")
+    .delete()
+    .eq("playbook_id", playbookId);
+  if (error) return c.json({ error: error.message }, 500);
+  return c.json({ success: true });
+});
+
 // GET /api/manage/playbooks/:id/memory/:key - Get specific memory
 app.get("/manage/playbooks/:id/memory/:key", async (c) => {
   const user = await getUserFromAuthOrApiKey(c, "memory:read");
@@ -2274,6 +2286,19 @@ app.get("/manage/openapi.json", (c) => {
       },
       // Memory endpoints for management
       "/manage/playbooks/{id}/memory": {
+        delete: {
+          operationId: "resetMemories",
+          summary: "Permanently reset all memories in a playbook",
+          description: "Deletes every memory, including archived memories and previous versions. Ignores search filters and pagination. Requires memory:write and owner or editor access.",
+          parameters: [
+            { name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+          ],
+          responses: {
+            "200": { description: "All memories and their history deleted" },
+            "401": { description: "Authentication or memory:write permission required" },
+            "404": { description: "Playbook not found or write access denied" },
+          },
+        },
         get: {
           operationId: "listMemories",
           summary: "List or search memories in a playbook",

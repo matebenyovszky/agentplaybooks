@@ -83,6 +83,7 @@ export interface StorageAdapter {
   addMemory(data: MemoryInput): Promise<Memory | null>;
   updateMemory(id: string, data: Partial<MemoryInput>): Promise<Memory | null>;
   deleteMemory(id: string): Promise<boolean>;
+  resetMemories(): Promise<boolean>;
 
   // Secrets
   getSecrets(category?: SecretCategory): Promise<SecretMetadata[]>;

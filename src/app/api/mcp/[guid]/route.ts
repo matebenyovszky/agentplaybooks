@@ -1,6 +1,15 @@
 import { handle } from "hono/vercel";
+import { logMcpDiscovery } from "@/app/api/_shared/mcp-observability";
+import { startMcpPerformance, parsedMcpPerformance, authorizedMcpPerformance, finishMcpPerformance } from "@/app/api/_shared/mcp-performance";
 import { createApiApp } from "@/app/api/_shared/hono";
-import { canAccessPrivatePlaybook, validatePlaybookCredential } from "@/app/api/_shared/auth";
+import {
+  actorMayRead,
+  canAccessPrivatePlaybook,
+  resolvePrivatePlaybookActor,
+  validatePlaybookCredential,
+  type PrivatePlaybookActor,
+} from "@/app/api/_shared/auth";
+import { READ_TOOL_PERMISSIONS, readPermissionForResource } from "@/app/api/_shared/private-read-scopes";
 import { getServiceSupabase, getSupabase } from "@/app/api/_shared/supabase";
 import { loadFederationSecrets } from "@/app/api/_shared/federation-secrets";
 import {
@@ -44,7 +53,7 @@ import {
 } from "@/app/api/_shared/audit";
 import { PLAYBOOK_TOOLS } from "@/app/api/_shared/playbook-tools";
 import { structuredToolResult } from "@/app/api/_shared/mcp-tool-hints";
-import { resolveToolset, searchToolCatalog } from "@/app/api/_shared/toolsets";
+import { resolveToolset, searchToolCatalog, type ToolsetView } from "@/app/api/_shared/toolsets";
 import {
   callFederatedTool,
   federatedCallPrefixes,
@@ -59,7 +68,9 @@ import { validateAgentSkillDescription, validateAgentSkillName } from "@/lib/age
 import { searchMemories } from "@/app/api/_shared/memory";
 import { proposeMemory, proposeSkill } from "@/app/api/_shared/proposals";
 import { memoryWriteFields } from "@/lib/memory";
+import { findPlaybookSkill } from "@/lib/repositories/skills";
 import { serveSkill, skillResourceUri, type ServedSkill } from "@/lib/mcp/skill-extension";
+import { cachedSingleFlight, type SingleFlightEntry } from "@/lib/cache/single-flight";
 
 type PersonaSource = Pick<Playbook, "id" | "persona_name" | "persona_system_prompt" | "persona_metadata" | "instructions">;
 
@@ -101,18 +112,68 @@ async function federationOptions(server: MCPServer, playbookId: string, requestI
   };
 }
 
+// Connected server discovery is identical for callers of the same playbook.
+// Share in-flight discovery within an isolate to avoid a burst of duplicate
+// database reads, secret decryptions, and upstream MCP requests.
+const DISCOVERY_TTL_MS = 30_000;
+const DISCOVERY_CACHE_MAX = 32;
+const toolDiscovery = new Map<string, SingleFlightEntry<McpTool[]>>();
+const resourceDiscovery = new Map<string, SingleFlightEntry<McpResource[]>>();
+const toolListBodies = new Map<string, SingleFlightEntry<string>>();
+// These views contain only build-owned built-ins. Their JSON is independent of
+// the playbook and can outlive the per-playbook federation TTL. Authorization
+// still runs freshly for every request before returning this public schema.
+const builtinToolListBodies = new Map<string, string>();
+
+function cachedDiscovery<T>(cache: Map<string, SingleFlightEntry<T>>, key: string, load: () => Promise<T>) {
+  return cachedSingleFlight(cache, key, DISCOVERY_TTL_MS, DISCOVERY_CACHE_MAX, load);
+}
+
 async function federatedTools(servers: MCPServer[], playbookId: string, requestId?: string) {
-  const groups = await Promise.all(servers.map(async (server) =>
-    listFederatedTools([server], await federationOptions(server, playbookId, requestId)),
+  const groups = await Promise.all(servers.map((server) =>
+    cachedDiscovery(toolDiscovery, `${playbookId}:${server.id}`, async () =>
+      listFederatedTools([server], await federationOptions(server, playbookId, requestId))),
   ));
   return groups.flat();
 }
 
 async function federatedResources(servers: MCPServer[], playbookId: string, requestId?: string) {
-  const groups = await Promise.all(servers.map(async (server) =>
-    listFederatedResources([server], await federationOptions(server, playbookId, requestId)),
+  const groups = await Promise.all(servers.filter((server) => server.transport_type !== "openapi").map((server) =>
+    cachedDiscovery(resourceDiscovery, `${playbookId}:${server.id}`, async () =>
+      listFederatedResources([server], await federationOptions(server, playbookId, requestId))),
   ));
   return groups.flat();
+}
+
+function invalidateFederatedDiscovery(playbookId: string, serverId?: string) {
+  for (const view of ["full", "runtime", "memory", "admin"]) {
+    toolListBodies.delete(`${playbookId}:${view}`);
+  }
+  if (serverId) {
+    toolDiscovery.delete(`${playbookId}:${serverId}`);
+    resourceDiscovery.delete(`${playbookId}:${serverId}`);
+  }
+}
+
+async function toolListJson(playbookId: string, view: ToolsetView, requestId?: string): Promise<string> {
+  if (view.name === "memory" || view.name === "admin") {
+    let body = builtinToolListBodies.get(view.name);
+    if (body === undefined) {
+      body = JSON.stringify(PLAYBOOK_TOOLS.filter(tool => view.includes(tool.name, false)));
+      builtinToolListBodies.set(view.name, body);
+    }
+    return body;
+  }
+  return cachedDiscovery(toolListBodies, `${playbookId}:${view.name}`, async () => {
+    const builtins = PLAYBOOK_TOOLS.filter((tool) => view.includes(tool.name, false));
+
+    const { data: mcpRows } = await getServiceSupabase()
+      .from("mcp_servers")
+      .select("*")
+      .eq("playbook_id", playbookId);
+    const federated = await federatedTools((mcpRows || []) as MCPServer[], playbookId, requestId);
+    return JSON.stringify([...builtins, ...federated.filter((tool) => view.includes(tool.name, true))]);
+  });
 }
 
 async function servedSkills(playbookId: string, namespace: string, onlyName?: string): Promise<ServedSkill[]> {
@@ -212,6 +273,12 @@ function parseMarkdownSections(content: string): CanvasSection[] {
 }
 
 const app = createApiApp("/api/mcp/:guid");
+app.use("*", async (c, next) => {
+  if (c.req.method !== "POST") return next();
+  startMcpPerformance(c.req.raw);
+  try { await next(); }
+  finally { finishMcpPerformance(c.req.raw, c.res.status); }
+});
 
 // GET /api/mcp/:guid - Return MCP server manifest
 app.get("/", async (c) => {
@@ -353,6 +420,8 @@ app.post("/", async (c) => {
   const body = await c.req.json();
 
   const { method, params: rpcParams, id } = body;
+  parsedMcpPerformance(c.req.raw, method, method === "tools/call"
+    && PLAYBOOK_TOOLS.some(tool => tool.name === rpcParams?.name) ? rpcParams.name : undefined);
 
   // A JSON-RPC notification carries no `id` and MUST NOT be answered; the
   // Streamable HTTP transport spells that as 202 with an empty body. Clients
@@ -411,8 +480,11 @@ app.post("/", async (c) => {
     .eq("visibility", "public")
     .maybeSingle();
 
-  // If not found as public, try API key auth for private playbooks
+  // If not found as public, try API key auth for private playbooks. Any key
+  // of this playbook gets in -- a write-only or propose-only key must reach
+  // its tools -- and what it may read is checked per tool and resource.
   let privateRowExists = false;
+  let privateActor: PrivatePlaybookActor | null = null;
   if (!playbook) {
     let privateQuery = getServiceSupabase()
       .from("playbooks")
@@ -420,10 +492,13 @@ app.post("/", async (c) => {
     privateQuery = isUuid ? privateQuery.eq("id", guid) : privateQuery.eq("guid", guid);
     const { data: privatePlaybook } = await privateQuery.maybeSingle();
     privateRowExists = Boolean(privatePlaybook);
-    if (privatePlaybook && await canAccessPrivatePlaybook(c.req.raw, privatePlaybook.id)) {
+    privateActor = privatePlaybook ? await resolvePrivatePlaybookActor(c.req.raw, privatePlaybook.id) : null;
+    if (privatePlaybook && privateActor) {
       playbook = privatePlaybook;
     }
   }
+  const mayRead = (permission: string) => actorMayRead(privateActor, permission);
+  authorizedMcpPerformance(c.req.raw);
 
   if (!playbook) {
     // Establishing the connection is not reading the playbook. Refusing the
@@ -475,6 +550,8 @@ app.post("/", async (c) => {
     }, 400);
   }
 
+  logMcpDiscovery(c.req.raw, method, playbook.id, privateActor, rpcParams);
+
   // Handle MCP methods
   switch (method) {
     case "server/discover":
@@ -510,28 +587,22 @@ app.post("/", async (c) => {
     case "tools/list": {
       // Skills are accessible via list_skills / get_skill tools and the Skills resource.
       // They are NOT exposed as separate skill_* tools (they are instructions, not executables).
-      const { data: mcpRows } = await getServiceSupabase()
-        .from("mcp_servers")
-        .select("*")
-        .eq("playbook_id", playbook.id);
-      const tools = await federatedTools(
-        (mcpRows || []) as MCPServer[],
+      const toolsJson = await toolListJson(
         playbook.id,
+        toolsetView,
         c.req.header("cf-ray") || c.req.header("x-request-id"),
       );
-      return c.json({
-        jsonrpc: "2.0",
-        id,
-        result: {
-          tools: [
-            ...PLAYBOOK_TOOLS.filter((tool) => toolsetView.includes(tool.name, false)),
-            ...tools.filter((tool) => toolsetView.includes(tool.name, true)),
-          ],
-        },
-      });
+      return c.body(
+        `{"jsonrpc":"2.0","id":${JSON.stringify(id) ?? "null"},"result":{"tools":${toolsJson}}}`,
+        200,
+        { "Content-Type": "application/json; charset=UTF-8" },
+      );
     }
 
     case "skills/list": {
+      if (!mayRead("skills:read")) {
+        return c.json({ jsonrpc: "2.0", id, error: { code: -32001, message: "Playbook API key with skills:read permission required" } });
+      }
       const skills = await servedSkills(playbook.id, guid);
       return c.json({
         jsonrpc: "2.0", id,
@@ -545,6 +616,9 @@ app.post("/", async (c) => {
     }
 
     case "skills/get": {
+      if (!mayRead("skills:read")) {
+        return c.json({ jsonrpc: "2.0", id, error: { code: -32001, message: "Playbook API key with skills:read permission required" } });
+      }
       const location = skillResourceUri(guid, rpcParams?.uri);
       const skills = location?.path === "SKILL.md"
         ? await servedSkills(playbook.id, guid, location.name)
@@ -599,7 +673,7 @@ app.post("/", async (c) => {
       ];
 
       // Add skill attachment resources
-      if (skills?.length) {
+      if (skills?.length && mayRead("skills:read")) {
         const serviceSupabase = getServiceSupabase();
         const { data: attachments } = await serviceSupabase
           .from("skill_attachments")
@@ -617,10 +691,9 @@ app.post("/", async (c) => {
         }
       }
 
-      const { data: mcpRows } = await serviceSupabase
-        .from("mcp_servers")
-        .select("*")
-        .eq("playbook_id", playbook.id);
+      const { data: mcpRows } = mayRead("playbooks:read")
+        ? await serviceSupabase.from("mcp_servers").select("*").eq("playbook_id", playbook.id)
+        : { data: [] };
       resources.push(...await federatedResources(
         (mcpRows || []) as MCPServer[],
         playbook.id,
@@ -636,6 +709,14 @@ app.post("/", async (c) => {
 
     case "resources/read": {
       const uri = rpcParams?.uri as string;
+      const resourcePermission = parseFederatedResourceUri(uri || "") ? null : readPermissionForResource(uri || "");
+      if (resourcePermission && !mayRead(resourcePermission)) {
+        return c.json({
+          jsonrpc: "2.0",
+          id,
+          error: { code: -32001, message: `Playbook API key with ${resourcePermission} permission required` },
+        });
+      }
       const serviceSupabase = getServiceSupabase();
 
       const skillLocation = skillResourceUri(guid, uri);
@@ -1088,19 +1169,29 @@ use_secret_write({
       try {
         let result: unknown;
 
+        const readPermission = READ_TOOL_PERMISSIONS[toolName];
+        if (readPermission && !mayRead(readPermission)) {
+          throw new Error(`API key with ${readPermission} permission required`);
+        }
+
         switch (toolName) {
           case "find_tools": {
             const query = String(args.query ?? "");
             const limit = typeof args.limit === "number" ? args.limit : 10;
-            const { data: catalogRows } = await serviceSupabase
-              .from("mcp_servers")
-              .select("*")
-              .eq("playbook_id", playbook.id);
-            const federated = await federatedTools(
-              (catalogRows || []) as MCPServer[],
-              playbook.id,
-              c.req.header("cf-ray") || c.req.header("x-request-id"),
-            );
+            const includesFederated = toolsetView.name === "full" || toolsetView.name === "runtime";
+            const federated = includesFederated
+              ? await (async () => {
+                const { data: catalogRows } = await serviceSupabase
+                  .from("mcp_servers")
+                  .select("*")
+                  .eq("playbook_id", playbook.id);
+                return federatedTools(
+                  (catalogRows || []) as MCPServer[],
+                  playbook.id,
+                  c.req.header("cf-ray") || c.req.header("x-request-id"),
+                );
+              })()
+              : [];
             // The searchable catalog respects the view: a pinned connection
             // must not discover tools it would then be refused.
             result = searchToolCatalog([
@@ -2052,7 +2143,6 @@ use_secret_write({
             }
 
             const skillId = args.skill_id as string;
-            const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(skillId);
 
             const updates: SkillsUpdate = {};
             if (args.name !== undefined) updates.name = args.name;
@@ -2072,23 +2162,12 @@ use_secret_write({
               if (descriptionError) throw new Error(descriptionError);
             }
 
-            let query = serviceSupabase
-              .from("skills")
-              .select("id, name, description, content")
-              .eq("playbook_id", playbook.id);
-
-            if (isUuid) {
-              query = query.eq("id", skillId);
-            } else {
-              query = query.ilike("name", skillId);
-            }
-
-            // Fetch the skill first to get its ID if we only have a name
-            const { data: targetSkill } = await query
-              .order("created_at", { ascending: false })
-              .limit(1)
-              .maybeSingle();
-
+            const targetSkill = await findPlaybookSkill<{
+              id: string;
+              name: string;
+              description: string | null;
+              content: string | null;
+            }>(serviceSupabase, playbook.id, skillId, "id, name, description, content");
             if (!targetSkill) {
               throw new Error("Skill not found");
             }
@@ -2123,34 +2202,21 @@ use_secret_write({
               throw new Error("API key with skills:write permission required");
             }
 
-            const skillId = args.skill_id as string;
-            const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(skillId);
-
-            if (isUuid) {
-              query = query.eq("id", skillId);
-            } else {
-              query = query.ilike("name", skillId);
+            // This used to narrow the outer *playbooks* query, so it never
+            // matched a skill, deleted nothing, and still reported success.
+            const skillToDelete = await findPlaybookSkill(serviceSupabase, playbook.id, args.skill_id as string);
+            if (!skillToDelete) {
+              throw new Error("Skill not found");
             }
 
-            // Fetch the skill first to get its ID if we only have a name
-            const { data: skillToDelete } = await query
-              .select("id")
-              .order("created_at", { ascending: false })
-              .limit(1)
-              .maybeSingle();
+            const { error } = await serviceSupabase
+              .from("skills")
+              .delete()
+              .eq("id", skillToDelete.id)
+              .eq("playbook_id", playbook.id);
 
-            if (skillToDelete) {
-
-              const { error } = await serviceSupabase
-                .from("skills")
-                .delete()
-                .eq("id", skillToDelete.id)
-                .eq("playbook_id", playbook.id);
-
-              if (error) throw new Error(error.message);
-            }
-
-            result = { success: true, deleted: true };
+            if (error) throw new Error(error.message);
+            result = { success: true, deleted: true, skill_id: skillToDelete.id };
             break;
           }
 
@@ -2353,6 +2419,7 @@ use_secret_write({
               .select()
               .single();
             if (error || !data) throw new Error(error?.message || "Failed to connect MCP server");
+            invalidateFederatedDiscovery(playbook.id);
             result = data;
             break;
           }
@@ -2392,6 +2459,7 @@ use_secret_write({
               .select()
               .single();
             if (error || !data) throw new Error(error?.message || "MCP server not found");
+            invalidateFederatedDiscovery(playbook.id, serverId);
             result = data;
             break;
           }
@@ -2409,6 +2477,7 @@ use_secret_write({
               .eq("id", serverId)
               .eq("playbook_id", playbook.id);
             if (error) throw new Error(error.message);
+            invalidateFederatedDiscovery(playbook.id, serverId);
             result = { success: true, deleted: serverId };
             break;
           }

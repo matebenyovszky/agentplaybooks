@@ -25,7 +25,15 @@ export function createBrowserClient() {
 
 // Server-side Supabase client (for API routes)
 export function createServerClient(supabaseUrl: string, supabaseKey: string) {
-  return createClient<Database>(supabaseUrl, supabaseKey);
+  // API routes pass bearer tokens explicitly. A server client must never keep
+  // one request's session in an isolate that can serve another request.
+  return createClient<Database>(supabaseUrl, supabaseKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+      detectSessionInUrl: false,
+    },
+  });
 }
 
 

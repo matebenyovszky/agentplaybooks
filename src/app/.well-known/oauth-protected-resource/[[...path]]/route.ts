@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+// Native Request/Response handler: shared by Next.js and the Worker dispatcher.
+// @worker-native
 import {
   MANAGEMENT_MCP_PATH,
   oauthResourceUrl,
@@ -14,7 +15,7 @@ export async function GET(
   const { path } = await context.params;
   const resourcePath = path?.length ? `/${path.join("/")}` : MANAGEMENT_MCP_PATH;
 
-  return NextResponse.json(protectedResourceMetadata(oauthResourceUrl(resourcePath)), {
+  return Response.json(protectedResourceMetadata(oauthResourceUrl(resourcePath)), {
     headers: {
       "Cache-Control": "public, max-age=300",
     },

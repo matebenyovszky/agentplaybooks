@@ -1,4 +1,5 @@
 import { serveWellKnownSkills, wellKnownSkillsOptions } from "@/lib/well-known-skills";
+// @worker-native
 
 /**
  * Site-wide skill discovery: every skill published by a public playbook.

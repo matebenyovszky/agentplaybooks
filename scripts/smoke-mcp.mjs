@@ -177,17 +177,28 @@ async function checkPrivatePlaybookChallenge() {
   }
 
   const { response } = await request(`/api/mcp/${PRIVATE_GUID}`);
-  // 404 tells a client the server does not exist, so it never asks for a
-  // credential. And a Bearer challenge claims OAuth we do not implement.
+  const resource = `${BASE}/api/mcp/${PRIVATE_GUID}`;
+  const metadataPath = `/.well-known/oauth-protected-resource/api/mcp/${PRIVATE_GUID}`;
+  const metadataUrl = `${BASE}${metadataPath}`;
+  // The challenge must point to metadata for this exact private resource.
   record(
-    "a private playbook answers 401 without an OAuth challenge",
-    response.status === 401 && !response.headers.get("www-authenticate"),
+    "a private playbook answers 401 with its OAuth metadata URL",
+    response.status === 401
+      && response.headers.get("www-authenticate") === `Bearer resource_metadata="${metadataUrl}"`,
     `HTTP ${response.status}, WWW-Authenticate: ${response.headers.get("www-authenticate") ?? "(none)"}`,
   );
 
-  // A connector probes before it applies any header. If the handshake itself is
-  // refused, an OAuth-capable client reads the 401 as "OAuth protected
-  // resource" and gives up looking for metadata we never served.
+  const metadata = await request(metadataPath);
+  record(
+    "the private resource publishes usable OAuth metadata",
+    metadata.response.status === 200
+      && metadata.json?.resource === resource
+      && Array.isArray(metadata.json?.authorization_servers)
+      && metadata.json.authorization_servers.some((url) => /^https:\/\//.test(url)),
+    `HTTP ${metadata.response.status}, resource: ${metadata.json?.resource ?? "(none)"}`,
+  );
+
+  // The handshake stays available before a connector applies credentials.
   const handshake = await request(
     `/api/mcp/${PRIVATE_GUID}`,
     rpc("initialize", { params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "smoke", version: "1" } }, version: "2025-06-18", modern: false }),

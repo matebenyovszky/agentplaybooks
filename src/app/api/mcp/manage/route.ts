@@ -3,6 +3,7 @@ import { createApiApp } from "@/app/api/_shared/hono";
 import { getServiceSupabase } from "@/app/api/_shared/supabase";
 import type { UserApiKeysRow, Playbook, PlaybooksUpdate } from "@/lib/supabase/types";
 import { getAuthenticatedUser, validateUserApiKey } from "@/app/api/_shared/auth";
+import { grantsPermission } from "@/app/api/_shared/permissions";
 import {
   isPlaybookTool,
   projectPlaybookToolsForUser,
@@ -40,7 +41,7 @@ type ManagementActor = Pick<UserApiKeysRow, "user_id" | "permissions"> & {
 };
 
 function hasPermission(actor: ManagementActor, permission: string): boolean {
-  return actor.permissions.includes(permission) || actor.permissions.includes("full");
+  return grantsPermission(actor.permissions, permission);
 }
 
 async function authenticateManagementRequest(request: Request): Promise<ManagementActor | null> {
@@ -82,6 +83,7 @@ const MCP_TOOLS = [
   ...ACCOUNT_TOOLS,
   ...projectPlaybookToolsForUser(),
 ];
+const MCP_TOOLS_JSON = JSON.stringify(MCP_TOOLS);
 
 const app = createApiApp("/api/mcp/manage");
 
@@ -181,11 +183,11 @@ app.post("/", async (c) => {
       return c.json({ jsonrpc: "2.0", id, result: {} });
 
     case "tools/list":
-      return c.json({
-        jsonrpc: "2.0",
-        id,
-        result: { tools: MCP_TOOLS },
-      });
+      return c.body(
+        `{"jsonrpc":"2.0","id":${JSON.stringify(id) ?? "null"},"result":{"tools":${MCP_TOOLS_JSON}}}`,
+        200,
+        { "Content-Type": "application/json; charset=UTF-8" },
+      );
 
     case "tools/call": {
       const toolName = params?.name as string;

@@ -229,16 +229,53 @@ describe("MCP federation", () => {
   it("parses SSE JSON-RPC responses", async () => {
     const sseServer = server({ id: "87654321-4321-4321-4321-cba987654321", transport_type: "sse" });
     const fetchMock = vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
-      const request = JSON.parse(String(init?.body)) as { method: string };
+      const request = JSON.parse(String(init?.body)) as { method: string; id: string };
       const result = request.method === "tools/list"
         ? { tools: [{ name: "sse_search", inputSchema: { type: "object" } }] }
         : {};
-      return new Response(`event: message\ndata: ${JSON.stringify({ jsonrpc: "2.0", id: "1", result })}\n\n`, {
+      return new Response(`event: message\ndata: ${JSON.stringify({ jsonrpc: "2.0", id: request.id, result })}\n\n`, {
         headers: { "Content-Type": "text/event-stream" },
       });
     });
     const tools = await listFederatedTools([sseServer], { fetch: fetchMock as typeof fetch });
     expect(tools[0].name).toBe(federatedToolName(sseServer, "sse_search"));
+  });
+
+  it("finishes a persistent SSE after the matching response, ignoring notifications and other IDs", async () => {
+    const upstream = server({ id: "persistent-sse", transport_config: { url: "https://persistent.example.com/mcp", timeout_ms: 100 } });
+    const cancelled = vi.fn();
+    const fetchMock = vi.fn(async (_url: unknown, init?: RequestInit) => {
+      const rpc = JSON.parse(String(init?.body));
+      const encoder = new TextEncoder();
+      return new Response(new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode('data: {"jsonrpc":"2.0","method":"notifications/message"}\n\n'));
+          controller.enqueue(encoder.encode('data: {"jsonrpc":"2.0","id":"other","result":{}}\n\n'));
+          const event = `data: ${JSON.stringify({ jsonrpc: "2.0", id: rpc.id, result: { tools: [{ name: "fast", inputSchema: { type: "object" } }] } })}\r\n\r\n`;
+          controller.enqueue(encoder.encode(event.slice(0, 17)));
+          controller.enqueue(encoder.encode(event.slice(17)));
+        }, cancel: cancelled,
+      }), { headers: { "Content-Type": "text/event-stream" } });
+    });
+    const tools = await listFederatedTools([upstream], { fetch: fetchMock as typeof fetch });
+    expect(tools[0]?.name).toBe(federatedToolName(upstream, "fast"));
+    expect(cancelled).toHaveBeenCalledTimes(1);
+  });
+
+  it("times out and cancels a stalled response body after successful headers", async () => {
+    const upstream = server({ id: "stalled-body", tools: [{ name: "slow", inputSchema: { type: "object" } }], transport_config: { url: "https://stalled.example.com/mcp", timeout_ms: 100 } });
+    const cancelled = vi.fn();
+    const fetchMock = vi.fn(async () => new Response(new ReadableStream({ cancel: cancelled }), { headers: { "Content-Type": "application/json" } }));
+    await expect(callFederatedTool(upstream, federatedToolName(upstream, "slow"), {}, { fetch: fetchMock as typeof fetch }))
+      .rejects.toMatchObject({ code: "UPSTREAM_TIMEOUT", status: 504 });
+    expect(cancelled).toHaveBeenCalled();
+  });
+
+  it("bounds upstream response size", async () => {
+    const upstream = server({ id: "oversized-body", tools: [{ name: "large", inputSchema: { type: "object" } }], transport_config: { url: "https://oversized.example.com/mcp" } });
+    const fetchMock = vi.fn(async () => new Response(new Uint8Array(8 * 1024 * 1024 + 1)));
+    await expect(callFederatedTool(upstream, federatedToolName(upstream, "large"), {}, { fetch: fetchMock as typeof fetch }))
+      .rejects.toMatchObject({ code: "UPSTREAM_RESPONSE_TOO_LARGE" });
   });
 
   it("aborts upstream calls at the configured timeout", async () => {

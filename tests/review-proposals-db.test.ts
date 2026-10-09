@@ -28,8 +28,9 @@ describe("review proposals in PostgreSQL", () => {
       create function auth.role() returns text language sql as 'select current_user::text';
       create table auth.users(id uuid primary key, email text, raw_user_meta_data jsonb default '{}');
     `);
+    // The snapshot already folds in the memory-time migration (memory_at,
+    // memory_history), so replaying it here would fail on existing columns.
     await db.exec(readFileSync("supabase/schema.sql", "utf8").replace(/^CREATE EXTENSION .*;\r?$/gm, ""));
-    await db.exec(readFileSync("supabase/migrations/20260911042912_memory_time_and_history.sql", "utf8"));
     await db.exec(readFileSync("supabase/migrations/20260913173449_harden_public_functions.sql", "utf8"));
     await db.exec(readFileSync("supabase/migrations/20261002120000_review_proposals.sql", "utf8"));
     await db.exec(`

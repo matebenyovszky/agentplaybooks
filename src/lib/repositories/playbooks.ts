@@ -1,4 +1,4 @@
-import { createServerClient } from "@/lib/supabase/client";
+import { getServerServiceSupabase as getServiceSupabase } from "@/lib/supabase/server";
 import type { Playbook } from "@/lib/supabase/types";
 import { generateGuid } from "@/lib/utils";
 
@@ -16,17 +16,6 @@ type PlaybookWithCounts = Playbook & {
   mcp_servers?: Array<{ count: number }>;
   memories?: Array<{ count: number }>;
 };
-
-function getServiceSupabase() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) {
-    throw new Error(
-      "NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required for privileged database access.",
-    );
-  }
-  return createServerClient(url, key);
-}
 
 function withCounts(
   rows: PlaybookWithCounts[],

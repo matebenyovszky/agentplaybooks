@@ -72,23 +72,31 @@ type OpenApiOperation = {
 
 const DEFAULT_TIMEOUT_MS = 15_000;
 const MAX_TIMEOUT_MS = 60_000;
+const CACHE_MAX = 64;
+const LEGACY_SESSION_TTL_MS = 5 * 60_000;
+const PROTOCOL_ERA_TTL_MS = 10 * 60_000;
 const oauthCache = new Map<string, { token: string; expiresAt: number }>();
 
 /**
- * A short digest of a secret, for use as part of a cache key. The secret itself
+ * A digest of a secret, for use as part of a cache key. The secret itself
  * must never become one: this map is process-global and cache keys end up in
  * logs and debugger views.
  */
 async function fingerprint(value: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
-  return Array.from(new Uint8Array(digest).slice(0, 8))
+  return Array.from(new Uint8Array(digest))
     .map((byte) => byte.toString(16).padStart(2, "0"))
     .join("");
 }
-const mcpSessions = new Map<string, string | null>();
+type LegacySession = { session: Promise<string | null>; expiresAt: number };
+const mcpSessions = new Map<string, LegacySession>();
+
+function limitCache<T>(cache: Map<string, T>) {
+  if (cache.size > CACHE_MAX) cache.delete(cache.keys().next().value!);
+}
 
 /**
- * Which protocol era an upstream speaks, cached per origin.
+ * Which protocol era an upstream speaks, cached per endpoint.
  *
  * Revision 2026-07-28 removed the `initialize` handshake and sessions: a modern
  * request carries its version and identity in `_meta`, mirrored into headers,
@@ -97,15 +105,14 @@ const mcpSessions = new Map<string, string | null>();
  * the upstreams people actually federate (Cloudflare, Supabase) are built for
  * the current revision.
  *
- * So we open modern and fall back exactly as the spec prescribes: on a 4xx, a
- * recognized modern JSON-RPC error means the server is modern (and -32022 says
- * which versions to retry with); anything else means legacy, and we run the
- * handshake. The era belongs to the origin rather than to one request, so it is
- * remembered.
+ * So we open modern and fall back when the response looks like a legacy
+ * endpoint. A recognized modern JSON-RPC error stays modern; a 401 or 403 is
+ * an authentication failure and cannot identify the protocol. Different paths
+ * on one origin may run different protocols.
  */
 type ProtocolEra = "modern" | "legacy";
 
-const serverEras = new Map<string, ProtocolEra>();
+const serverEras = new Map<string, { era: ProtocolEra; expiresAt: number }>();
 
 const CLIENT_PROTOCOL_VERSION = "2026-07-28";
 const LEGACY_CLIENT_PROTOCOL_VERSION = "2025-03-26";
@@ -152,15 +159,31 @@ function headerSafe(value: string): string {
  * it will stop working when that server drops the handshake.
  */
 export function knownProtocolEra(url: string): "modern" | "legacy" | null {
-  return serverEras.get(originOf(url)) ?? null;
+  const key = endpointOf(url);
+  const cached = serverEras.get(key);
+  if (!cached) return null;
+  if (cached.expiresAt <= Date.now()) {
+    serverEras.delete(key);
+    return null;
+  }
+  return cached.era;
 }
 
-function originOf(url: string): string {
+function endpointOf(url: string): string {
   try {
-    return new URL(url).origin;
+    const parsed = new URL(url);
+    return `${parsed.origin}${parsed.pathname}`;
   } catch {
-    return url;
+    return "";
   }
+}
+
+function rememberProtocolEra(url: string, era: ProtocolEra) {
+  const key = endpointOf(url);
+  if (!key) return;
+  serverEras.delete(key);
+  serverEras.set(key, { era, expiresAt: Date.now() + PROTOCOL_ERA_TTL_MS });
+  limitCache(serverEras);
 }
 
 export class FederationError extends Error {
@@ -322,19 +345,19 @@ async function mcpRequest<T = Record<string, unknown>>(
   if (!url) throw new FederationError(`Missing transport URL for ${server.name}`, "MISSING_URL", 400);
   assertSafeRemoteUrl(url, config.allow_insecure_http);
   const headers = await buildHeaders(server, config, options);
-  const origin = originOf(url);
 
-  if (serverEras.get(origin) !== "legacy") {
+  if (knownProtocolEra(url) !== "legacy") {
     const attempt = await sendModernRpc<T>(url, method, params, headers, config, options);
     if (attempt.kind === "result") {
-      serverEras.set(origin, "modern");
+      rememberProtocolEra(url, "modern");
       return attempt.result;
     }
     if (attempt.kind === "modern-error") {
-      serverEras.set(origin, "modern");
+      rememberProtocolEra(url, "modern");
       throw attempt.error;
     }
-    serverEras.set(origin, "legacy");
+    if (attempt.kind === "auth-error") throw attempt.error;
+    rememberProtocolEra(url, "legacy");
   }
 
   return legacyRequest<T>(server, url, method, params, headers, config, options);
@@ -343,6 +366,7 @@ async function mcpRequest<T = Record<string, unknown>>(
 type ModernAttempt<T> =
   | { kind: "result"; result: T }
   | { kind: "modern-error"; error: FederationError }
+  | { kind: "auth-error"; error: FederationError }
   | { kind: "not-modern" };
 
 /**
@@ -387,6 +411,15 @@ async function sendModernRpc<T>(
 
   if (response.ok && payload?.result) return { kind: "result", result: payload.result };
 
+  // An authorization failure says nothing about the protocol revision. Falling
+  // back would cache a modern endpoint as legacy until its next era probe.
+  if (response.status === 401 || response.status === 403) {
+    return {
+      kind: "auth-error",
+      error: new FederationError(payload?.error?.message || `Upstream returned ${response.status}`, "UPSTREAM_AUTH_ERROR"),
+    };
+  }
+
   const code = payload?.error?.code;
   if (typeof code === "number" && MODERN_ERROR_CODES.has(code)) {
     const supported = (payload?.error as { data?: { supported?: unknown } } | undefined)?.data?.supported;
@@ -417,6 +450,66 @@ async function sendModernRpc<T>(
 }
 
 /** The handshake era: initialize, acknowledge, then the call, carrying a session. */
+async function legacySessionKey(server: MCPServer, url: string, headers: Record<string, string>) {
+  // Bind the session to its endpoint and effective credentials without keeping
+  // either header values or a token in a process-global map key.
+  const orderedHeaders = Object.entries(headers)
+    .map(([name, value]) => [name.toLowerCase(), value])
+    .sort(([left], [right]) => left.localeCompare(right));
+  return `${server.playbook_id}:${server.id}:${await fingerprint(JSON.stringify([url, orderedHeaders]))}`;
+}
+
+function cachedLegacySession(
+  key: string,
+  url: string,
+  headers: Record<string, string>,
+  config: FederatedTransportConfig,
+  options: FederationOptions,
+): Promise<string | null> {
+  const cached = mcpSessions.get(key);
+  if (cached && cached.expiresAt > Date.now()) return cached.session;
+  mcpSessions.delete(key);
+
+  // Store the in-flight handshake so concurrent requests use one session.
+  const session = initializeLegacySession(url, headers, config, options);
+  const entry = { session, expiresAt: Date.now() + LEGACY_SESSION_TTL_MS };
+  mcpSessions.set(key, entry);
+  limitCache(mcpSessions);
+  void session.catch(() => {
+    if (mcpSessions.get(key) === entry) mcpSessions.delete(key);
+  });
+  return session;
+}
+
+async function initializeLegacySession(
+  url: string,
+  headers: Record<string, string>,
+  config: FederatedTransportConfig,
+  options: FederationOptions,
+): Promise<string | null> {
+  const initialized = await sendMcpRpc<Record<string, unknown>>(
+    url,
+    "initialize",
+    {
+      protocolVersion: LEGACY_CLIENT_PROTOCOL_VERSION,
+      capabilities: {},
+      clientInfo: { name: "AgentPlaybooks Federation", version: "1.0.0" },
+    },
+    headers,
+    config,
+    options,
+  );
+  const response = await timedFetch(url, {
+    method: "POST",
+    headers: mcpHeaders(headers, initialized.sessionId),
+    body: JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }),
+  }, config.timeout_ms, options.fetch);
+  if (!response.ok) {
+    throw new FederationError(`Upstream initialization returned ${response.status}`, "UPSTREAM_HTTP_ERROR");
+  }
+  return initialized.sessionId;
+}
+
 async function legacyRequest<T>(
   server: MCPServer,
   url: string,
@@ -426,26 +519,10 @@ async function legacyRequest<T>(
   config: FederatedTransportConfig,
   options: FederationOptions,
 ): Promise<T> {
-  if (!mcpSessions.has(server.id) && method !== "initialize") {
-    const initialized = await sendMcpRpc<Record<string, unknown>>(
-      url,
-      "initialize",
-      {
-        protocolVersion: LEGACY_CLIENT_PROTOCOL_VERSION,
-        capabilities: {},
-        clientInfo: { name: "AgentPlaybooks Federation", version: "1.0.0" },
-      },
-      headers,
-      config,
-      options,
-    );
-    mcpSessions.set(server.id, initialized.sessionId);
-    await timedFetch(url, {
-      method: "POST",
-      headers: mcpHeaders(headers, initialized.sessionId),
-      body: JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }),
-    }, config.timeout_ms, options.fetch);
-  }
+  const key = await legacySessionKey(server, url, headers);
+  const sessionId = method === "initialize"
+    ? null
+    : await cachedLegacySession(key, url, headers, config, options);
   const response = await sendMcpRpc<T>(
     url,
     method,
@@ -453,7 +530,10 @@ async function legacyRequest<T>(
     headers,
     config,
     options,
-    mcpSessions.get(server.id),
+    sessionId,
+    (status) => {
+      if (status === 401 || status === 403 || status === 404 || status === 410) mcpSessions.delete(key);
+    },
   );
   return response.result;
 }
@@ -466,12 +546,14 @@ async function sendMcpRpc<T>(
   config: FederatedTransportConfig,
   options: FederationOptions,
   sessionId?: string | null,
+  onHttpError?: (status: number) => void,
 ) {
   const response = await timedFetch(url, {
     method: "POST",
     headers: mcpHeaders(headers, sessionId),
     body: JSON.stringify({ jsonrpc: "2.0", id: crypto.randomUUID(), method, params }),
   }, config.timeout_ms, options.fetch);
+  if (!response.ok) onHttpError?.(response.status);
   const payload = await parseJsonOrSse<JsonRpcResponse<T>>(response);
   if (payload.error) {
     throw new FederationError(payload.error.message || `Upstream MCP error (${method})`, "UPSTREAM_RPC_ERROR");
@@ -597,6 +679,12 @@ async function resolveTool(server: MCPServer, namespacedName: string, options: F
     throw new FederationError(`Tool does not belong to ${server.name}`, "TOOL_NOT_FOUND", 404);
   }
   const remainder = namespacedName.slice(prefix.length);
+  // The freshly loaded server row already contains declared tool names. Calling
+  // one does not require another upstream tools/list round trip. Upstream auth
+  // and tool execution remain unchanged; stale declarations fail at execution.
+  const declared = (server.tools || []).find(candidate =>
+    sanitizeName(candidate.name) === remainder || candidate.name === remainder);
+  if (declared) return { originalName: declared.name };
   const tools = server.transport_type === "openapi"
     ? await discoverOpenApiTools(server, options)
     : await mcpListTools(server, options).catch(() => server.tools || []);
@@ -662,14 +750,20 @@ async function getOAuthToken(server: MCPServer, config: FederatedTransportConfig
     throw new FederationError("OAuth client credentials are missing", "MISSING_SECRET", 500);
   }
 
-  // Providers may rotate a refresh token on use, so it forms part of the cache
-  // identity: a renewed token must not read an entry keyed to the old one. Only
-  // a digest goes into the key, never the token.
-  const cacheKey = isRefreshGrant
-    ? `${server.id}:${tokenUrl}:refresh:${await fingerprint(refreshToken as string)}`
-    : `${server.id}:${tokenUrl}:${clientId}`;
+  // Any change to a credential, grant, scope, or audience must get a fresh
+  // token. Only a digest goes into the process-global key, never a secret.
+  const cacheKey = `${server.playbook_id}:${server.id}:${await fingerprint(JSON.stringify({
+    tokenUrl,
+    grant: auth.type,
+    clientId,
+    clientSecret,
+    refreshToken,
+    scopes: auth.scopes,
+    audience: auth.audience,
+  }))}`;
   const cached = oauthCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now() + 10_000) return cached.token;
+  oauthCache.delete(cacheKey);
   const started = Date.now();
   try {
     const body = isRefreshGrant
@@ -693,6 +787,7 @@ async function getOAuthToken(server: MCPServer, config: FederatedTransportConfig
     if (!response.ok || !token) throw new FederationError("OAuth token request failed", "OAUTH_TOKEN_FAILED");
     const expiresIn = Number(payload.expires_in) || 300;
     oauthCache.set(cacheKey, { token, expiresAt: Date.now() + expiresIn * 1000 });
+    limitCache(oauthCache);
     await options.audit?.({ serverId: server.id, operation: "oauth/token", status: "success", latencyMs: Date.now() - started });
     return token;
   } catch (error) {
@@ -729,14 +824,78 @@ async function timedFetch(
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeout);
   try {
-    return await fetchImpl(url, { ...init, signal: controller.signal });
+    const response = await fetchImpl(url, { ...init, signal: controller.signal });
+    const envelope = typeof init.body === "string" ? parseMaybeJson(init.body) : null;
+    const rpc = isRecord(envelope) && envelope.jsonrpc === "2.0" ? envelope : null;
+    // Notification acknowledgements have no RPC result to read. Release their
+    // bodies immediately, even when a peer incorrectly leaves a stream open.
+    if (rpc && rpc.id === undefined) {
+      void response.body?.cancel().catch(() => {});
+      return new Response(null, { status: response.status, headers: response.headers });
+    }
+    const body = await readBoundedResponse(response, controller.signal, rpc?.id);
+    return new Response([204, 205, 304].includes(response.status) ? null : body, {
+      status: response.status, statusText: response.statusText, headers: response.headers,
+    });
   } catch (error) {
-    if (error instanceof Error && error.name === "AbortError") {
+    if (controller.signal.aborted || (error instanceof Error && error.name === "AbortError")) {
       throw new FederationError(`Upstream timed out after ${timeout}ms`, "UPSTREAM_TIMEOUT", 504);
     }
+    if (error instanceof FederationError) throw error;
     throw new FederationError(error instanceof Error ? error.message : "Upstream request failed", "UPSTREAM_NETWORK_ERROR");
   } finally {
     clearTimeout(timer);
+  }
+}
+
+const MAX_UPSTREAM_BODY_BYTES = 8 * 1024 * 1024;
+
+/** Bound the whole response, not just the time until its headers arrive. */
+async function readBoundedResponse(response: Response, signal: AbortSignal, rpcId: unknown): Promise<string> {
+  if (!response.body) return "";
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  const sse = rpcId !== undefined && response.headers.get("content-type")?.includes("text/event-stream");
+  let bytes = 0;
+  let text = "";
+  let onAbort: () => void = () => {};
+  const aborted = new Promise<never>((_resolve, reject) => {
+    onAbort = () => reject(new DOMException("Upstream body timed out", "AbortError"));
+    signal.addEventListener("abort", onAbort, { once: true });
+    if (signal.aborted) onAbort();
+  });
+  try {
+    while (true) {
+      const { done, value } = await Promise.race([reader.read(), aborted]);
+      if (value) {
+        bytes += value.byteLength;
+        if (bytes > MAX_UPSTREAM_BODY_BYTES) throw new FederationError("Upstream response exceeds 8 MiB", "UPSTREAM_RESPONSE_TOO_LARGE");
+        text += decoder.decode(value, { stream: true });
+      }
+      if (done) text += decoder.decode();
+      if (sse) {
+        // Events can span chunks and multiple data lines. Ignore notifications
+        // and other RPC IDs, then cancel as soon as our response is complete.
+        const events = text.split(/\r?\n\r?\n/);
+        text = done ? "" : events.pop() ?? "";
+        for (const event of events) {
+          const data = event.split(/\r?\n/).filter((line) => line.startsWith("data:"))
+            .map((line) => line.slice(5).trimStart()).join("\n");
+          if (!data || data === "[DONE]") continue;
+          const payload = parseMaybeJson(data);
+          if (isRecord(payload) && payload.id === rpcId && ("result" in payload || "error" in payload)) {
+            return `data: ${JSON.stringify(payload)}\n\n`;
+          }
+        }
+        if (done) throw new FederationError("SSE response contained no matching JSON-RPC result", "INVALID_UPSTREAM_RESPONSE");
+      } else if (done) {
+        return text;
+      }
+    }
+  } finally {
+    signal.removeEventListener("abort", onAbort);
+    // Do not wait for the remote peer to close an otherwise long-lived SSE.
+    void reader.cancel().catch(() => {});
   }
 }
 

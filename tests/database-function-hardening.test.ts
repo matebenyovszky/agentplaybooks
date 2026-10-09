@@ -8,6 +8,12 @@ const OTHER = "00000000-0000-4000-8000-000000000002";
 const PB = "00000000-0000-4000-8000-000000000003";
 const SKILL = "00000000-0000-4000-8000-000000000004";
 const migration = readFileSync("supabase/migrations/20260913173449_harden_public_functions.sql", "utf8");
+// schema.sql now ends with both migrations folded in. The workflows below start
+// from the snapshot as it stood before them, so the migrations are still the
+// thing under test.
+const schema = readFileSync("supabase/schema.sql", "utf8");
+const foldedAt = schema.indexOf("-- Folded in from 20260911042912");
+const baselineSchema = schema.slice(0, foldedAt);
 
 // Execute the same user workflows before and after the migration, using the
 // repository's real tables, constraints, RLS policies and function bodies.
@@ -38,7 +44,8 @@ describe.each([false, true])("database workflows (hardened=%s)", (hardened) => {
     `);
     // PGlite supplies core gen_random_uuid; Supabase extension installation is
     // environment setup, not part of the migration being tested.
-    await db.exec(readFileSync("supabase/schema.sql", "utf8").replace(/^CREATE EXTENSION .*;\r?$/gm, ""));
+    expect(foldedAt).toBeGreaterThan(0);
+    await db.exec(baselineSchema.replace(/^CREATE EXTENSION .*;\r?$/gm, ""));
     await db.exec(`
       grant usage on schema public to anon, authenticated, service_role, supabase_auth_admin;
       revoke create on schema public from public;
@@ -154,5 +161,43 @@ describe.each([false, true])("database workflows (hardened=%s)", (hardened) => {
     await db.exec("begin; grant create on schema public to authenticated");
     try { await expect(db.exec(migration)).rejects.toThrow(/public schema is writable/); }
     finally { await db.exec("rollback"); }
+  });
+});
+
+// A fresh self-hosted database is built from schema.sql alone. It has to carry
+// the memory history objects and the hardened functions without replaying
+// any migration, or memory search fails on a new instance.
+describe("fresh database from schema.sql", () => {
+  let db: PGlite;
+  beforeAll(async () => {
+    db = new PGlite({ extensions: { pg_trgm } });
+    await db.exec(`
+      create role anon;
+      create role authenticated;
+      create role service_role bypassrls;
+      create role supabase_auth_admin;
+      create schema auth;
+      create schema extensions;
+      create function extensions.uuid_generate_v4() returns uuid language sql as 'select gen_random_uuid()';
+      create function auth.uid() returns uuid language sql as 'select null::uuid';
+      create function auth.role() returns text language sql as 'select current_user::text';
+      create table auth.users(id uuid primary key, email text, raw_user_meta_data jsonb default '{}');
+    `);
+    await db.exec(schema.replace(/^CREATE EXTENSION .*;\r?$/gm, ""));
+  }, 30000);
+  afterAll(async () => { await db?.close(); });
+
+  it("has memory history and hardened legacy functions", async () => {
+    const objects = await db.query(`select to_regclass('public.memory_entries')::text as entries,
+      to_regclass('public.memory_history')::text as history`);
+    expect(objects.rows).toEqual([{ entries: "memory_entries", history: "memory_history" }]);
+    const columns = await db.query(`select column_name from information_schema.columns
+      where table_schema='public' and table_name='memories' and column_name in ('memory_at','is_archived','search_text')
+      order by column_name`);
+    expect(columns.rows.map((row) => (row as { column_name: string }).column_name)).toEqual(["is_archived", "memory_at", "search_text"]);
+    const unpinned = await db.query(`select proname from pg_proc
+      where pronamespace='public'::regnamespace and proname <> 'track_memory_history'
+        and not coalesce(proconfig, '{}') @> array['search_path=pg_catalog, public, pg_temp']`);
+    expect(unpinned.rows).toEqual([]);
   });
 });

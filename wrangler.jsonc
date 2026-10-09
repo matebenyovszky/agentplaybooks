@@ -4,7 +4,8 @@
   // Keep direct workers.dev entry points disabled across every deployment.
   "workers_dev": false,
   "preview_urls": false,
-  "main": ".open-next/worker.js",
+  "main": "worker.ts",
+  "version_metadata": { "binding": "CF_VERSION_METADATA" },
   // OpenNext requires at least 2025-05-05, below which FinalizationRegistry is
   // not available in the runtime.
   "compatibility_date": "2025-05-05",

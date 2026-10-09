@@ -26,6 +26,8 @@ import type { StorageAdapter } from "@/lib/storage";
 
 interface SecretManagerProps {
   storage: StorageAdapter;
+  secrets: SecretMetadata[];
+  onUpdate: (secrets: SecretMetadata[]) => void;
   readOnly?: boolean;
 }
 
@@ -47,8 +49,7 @@ const CATEGORY_COLORS: Record<SecretCategory, string> = {
   general: "text-slate-400 bg-slate-500/20 border-slate-500/30",
 };
 
-export function SecretManager({ storage, readOnly = false }: SecretManagerProps) {
-  const [secrets, setSecrets] = useState<SecretMetadata[]>([]);
+export function SecretManager({ storage, secrets, onUpdate, readOnly = false }: SecretManagerProps) {
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showRotateModal, setShowRotateModal] = useState<string | null>(null);
@@ -76,9 +77,9 @@ export function SecretManager({ storage, readOnly = false }: SecretManagerProps)
   const loadSecrets = useCallback(async () => {
     setLoading(true);
     const data = await storage.getSecrets();
-    setSecrets(data);
+    onUpdate(data);
     setLoading(false);
-  }, [storage]);
+  }, [storage, onUpdate]);
 
   useEffect(() => {
     loadSecrets();
@@ -109,7 +110,7 @@ export function SecretManager({ storage, readOnly = false }: SecretManagerProps)
       });
 
       if (result) {
-        setSecrets([...secrets, result]);
+        onUpdate([...secrets, result]);
         setShowCreateModal(false);
         resetCreateForm();
       }
@@ -178,7 +179,7 @@ export function SecretManager({ storage, readOnly = false }: SecretManagerProps)
     try {
       const result = await storage.updateSecret(name, { value: rotateValue });
       if (result) {
-        setSecrets(secrets.map((s) => (s.name === name ? result : s)));
+        onUpdate(secrets.map((s) => (s.name === name ? result : s)));
         setShowRotateModal(null);
         setRotateValue("");
         // Clear revealed value if it was showing
@@ -202,7 +203,7 @@ export function SecretManager({ storage, readOnly = false }: SecretManagerProps)
     try {
       const success = await storage.deleteSecret(name);
       if (success) {
-        setSecrets(secrets.filter((s) => s.name !== name));
+        onUpdate(secrets.filter((s) => s.name !== name));
         setRevealedSecrets((prev) => {
           const next = { ...prev };
           delete next[name];

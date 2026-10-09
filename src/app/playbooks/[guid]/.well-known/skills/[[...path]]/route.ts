@@ -1,4 +1,5 @@
 import { serveWellKnownSkills, wellKnownSkillsOptions } from "@/lib/well-known-skills";
+// @worker-native
 
 /**
  * One public playbook as its own skill source. The `/.well-known/skills/` part of

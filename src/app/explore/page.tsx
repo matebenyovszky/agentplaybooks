@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { FloatingNav } from "@/components/ui/floating-navbar";
 import { createBrowserClient } from "@/lib/supabase/client";
 import { authFetch } from "@/lib/auth-fetch";
+import { LatestRequest } from "@/lib/latest-request";
 import { cn } from "@/lib/utils";
 import {
   Search,
@@ -119,26 +120,30 @@ export default function ExplorePage() {
     }
   }, [loadUserStars]);
 
-  const loadPlaybooks = useCallback(async () => {
-    setLoading(true);
+  const playbookRequests = useRef(new LatestRequest());
+  useEffect(() => {
+    if (activeTab !== "playbooks") return;
+    return playbookRequests.current.schedule(async ticket => {
+      setLoading(true);
+      try {
+        const params = new URLSearchParams();
+        if (searchQuery) params.set("search", searchQuery);
+        if (selectedTags.length) params.set("tags", selectedTags.join(","));
+        params.set("sort", sortBy);
 
-    try {
-      const params = new URLSearchParams();
-      if (searchQuery) params.set("search", searchQuery);
-      if (selectedTags.length) params.set("tags", selectedTags.join(","));
-      params.set("sort", sortBy);
-
-      const res = await authFetch(`/api/public/playbooks?${params}`);
-      const data = await res.json();
-
-      setPlaybooks(Array.isArray(data) ? data : []);
-    } catch (error) {
-      console.error("Failed to load playbooks:", error);
-      setPlaybooks([]);
-    }
-
-    setLoading(false);
-  }, [searchQuery, selectedTags, sortBy]);
+        const res = await authFetch(`/api/public/playbooks?${params}`, { signal: ticket.signal });
+        if (!res.ok) throw new Error("Playbook search failed");
+        const data = await res.json();
+        if (ticket.isCurrent()) setPlaybooks(Array.isArray(data) ? data : []);
+      } catch (error) {
+        if (!ticket.isCurrent()) return;
+        console.error("Failed to load playbooks:", error);
+        setPlaybooks([]);
+      } finally {
+        if (ticket.isCurrent()) setLoading(false);
+      }
+    }, searchQuery ? 300 : 0);
+  }, [activeTab, searchQuery, selectedTags, sortBy]);
 
   const loadSkills = useCallback(async () => {
     setSkillsLoading(true);
@@ -171,14 +176,12 @@ export default function ExplorePage() {
   }, [checkAuth]);
 
   useEffect(() => {
-    if (activeTab === "playbooks") {
-      loadPlaybooks();
-    } else if (activeTab === "skills" && skills.length === 0) {
+    if (activeTab === "skills" && skills.length === 0) {
       loadSkills();
     } else if (activeTab === "mcp" && mcpServers.length === 0) {
       loadMCPServers();
     }
-  }, [activeTab, loadPlaybooks, loadSkills, loadMCPServers, skills.length, mcpServers.length]);
+  }, [activeTab, loadSkills, loadMCPServers, skills.length, mcpServers.length]);
 
   const toggleStar = async (playbookId: string) => {
     if (!userId) {

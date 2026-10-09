@@ -106,6 +106,20 @@ describe("memory time and history in PostgreSQL", () => {
     }
   });
 
+  it("resets an entire playbook beyond one page, including archives and history, without touching another playbook", async () => {
+    await db.query("INSERT INTO memories(playbook_id,key,value,is_archived) SELECT $1,'bulk-'||n,'{}',n%2=0 FROM generate_series(1,150) n", [B]);
+    await db.query("UPDATE memories SET value='{\"revised\":true}' WHERE playbook_id=$1", [B]);
+    expect((await db.query("SELECT id FROM memory_history WHERE playbook_id=$1", [B])).rows.length).toBeGreaterThan(100);
+    const otherEntries = (await db.query("SELECT id FROM memory_entries WHERE playbook_id=$1", [A])).rows;
+    await db.exec("SET ROLE service_role");
+    try {
+      await db.query("DELETE FROM memories WHERE playbook_id=$1", [B]);
+      expect((await db.query("SELECT id FROM memory_entries WHERE playbook_id=$1", [B])).rows).toHaveLength(0);
+      expect((await db.query("SELECT id FROM memory_history WHERE playbook_id=$1", [B])).rows).toHaveLength(0);
+      expect((await db.query("SELECT id FROM memory_entries WHERE playbook_id=$1", [A])).rows).toEqual(otherEntries);
+    } finally { await db.exec("RESET ROLE"); }
+  });
+
   it("rolls history back if the enclosing write transaction fails", async () => {
     const before = (await db.query("SELECT id FROM memory_history")).rows.length;
     await db.exec("BEGIN");

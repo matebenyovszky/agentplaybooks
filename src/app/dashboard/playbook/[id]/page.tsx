@@ -39,7 +39,7 @@ import {
   FileText,
   ScrollText
 } from "lucide-react";
-import type { Playbook, Persona, Skill, SkillAttachment, MCPServer, PlaybookRun, Canvas, Memory, ApiKey } from "@/lib/supabase/types";
+import type { Playbook, Persona, Skill, SkillAttachment, MCPServer, PlaybookRun, Canvas, Memory, ApiKey, SecretMetadata } from "@/lib/supabase/types";
 import { ChatGPTIcon, ClaudeIcon, MarkdownIcon } from "@/components/ui/ai-icons";
 
 // Import editor components
@@ -91,6 +91,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
   const [runs, setRuns] = useState<PlaybookRun[]>([]);
   const [canvases, setCanvases] = useState<Canvas[]>([]);
   const [memories, setMemories] = useState<Memory[]>([]);
+  const [secrets, setSecrets] = useState<SecretMetadata[]>([]);
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [activeTab, setActiveTab] = useState<TabType>("details");
   const [loading, setLoading] = useState(true);
@@ -156,12 +157,13 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
     // Now fetch related data using the actual playbook ID
     const owner = userId !== null && pb.user_id === userId;
     const loadStorage = createSupabaseAdapter(playbookId, pb.guid);
-    const [playbookResData, memoryData, keyData, runsData, canvasesData] = await Promise.all([
+    const [playbookResData, memoryData, keyData, runsData, canvasesData, secretsData] = await Promise.all([
       authFetch(`/api/manage/playbooks/${playbookId}`),
       authFetch(`/api/manage/playbooks/${playbookId}/memory`),
       owner ? authFetch(`/api/playbooks/${playbookId}/api-keys`) : Promise.resolve(null),
       loadStorage.getRuns(),
       loadStorage.getCanvases(),
+      owner ? loadStorage.getSecrets() : Promise.resolve([]),
     ]);
 
     const playbookData = await playbookResData.json().catch(() => null);
@@ -181,6 +183,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
     setMcpServers(mcpFromApi);
     setRuns(runsData);
     setCanvases(canvasesData);
+    setSecrets(secretsData);
     setMemories(Array.isArray(memoriesData) ? memoriesData as Memory[] : []);
     setApiKeys(Array.isArray(apiKeysData) ? apiKeysData as ApiKey[] : []);
     setLoading(false);
@@ -876,7 +879,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
     { id: "canvas" as TabType, label: t("editor.tabs.canvas"), icon: FileText, count: canvases.length, color: "green" },
     { id: "memory" as TabType, label: t("editor.tabs.memory"), icon: Database, count: memories.length, color: "teal" },
     ...(isOwner ? [
-      { id: "secrets" as TabType, label: t("editor.tabs.secrets") || "Secrets", icon: Shield, count: 0, color: "emerald" },
+      { id: "secrets" as TabType, label: t("editor.tabs.secrets") || "Secrets", icon: Shield, count: secrets.length, color: "emerald" },
       { id: "apiKeys" as TabType, label: t("editor.tabs.apiKeys"), icon: Puzzle, count: apiKeys.length, color: "amber" },
       { id: "sharing" as TabType, label: "Sharing", icon: UsersRound, count: 0, color: "blue" },
     ] : []),
@@ -1311,6 +1314,8 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
             >
               <SecretManager
                 storage={storage}
+                secrets={secrets}
+                onUpdate={setSecrets}
                 readOnly={!isOwner}
               />
             </motion.div>
