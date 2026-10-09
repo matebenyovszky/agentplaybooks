@@ -132,11 +132,10 @@ Every public playbook publishes its skills over the
 `SKILL.md` per skill, no credential, CORS open:
 
 ```bash
-curl https://apbks.com/.well-known/skills/index.json
+curl https://agentplaybooks.ai/.well-known/skills/index.json
 ```
 
-Any client — including an Obsidian plugin — can fetch and install from that
-without an account.
+Any client can fetch and install from that without an account.
 
 ## The one rule that keeps both clean
 
@@ -177,7 +176,9 @@ apb doctor .
 
 Doctor is read-only. It reports Agent Skills spec violations, likely
 hard-coded credentials (line numbers only, never values), and definitions that
-have drifted between copies. Then:
+have drifted between copies. It reads skills, agent instructions, and MCP
+configurations — not Obsidian's own plugin settings — so a key saved in some
+plugin's `.obsidian/plugins/<name>/data.json` is one to check by hand. Then:
 
 ```bash
 apb sync . --apply

@@ -48,7 +48,7 @@ import { MEMORY_SEARCH_PARAMETERS, memoryWriteFields, parseMemorySearch } from "
  * constraint. Kept here so an unknown role is refused with a clear 400 rather
  * than reaching the database as a constraint violation.
  */
-const API_KEY_ROLES = ["viewer", "coworker", "admin"] as const;
+const API_KEY_ROLES = ["viewer", "coworker", "proposer", "admin"] as const;
 
 // Types
 type Bindings = {

@@ -6,4 +6,5 @@ export { McpServerEditor } from "./McpServerEditor";
 export { MemoryEditor } from "./MemoryEditor";
 export { CanvasEditor } from "./CanvasEditor";
 export { ApiKeyManager } from "./ApiKeyManager";
+export { ProposalsPanel } from "./ProposalsPanel";
 

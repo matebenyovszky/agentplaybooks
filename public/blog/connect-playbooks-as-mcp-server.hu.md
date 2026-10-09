@@ -11,6 +11,41 @@ Az AgentPlaybooks minden playbookja egyben élő **MCP (Model Context Protocol)*
 
 Ma ezt még egyszerűbbé tesszük egy új **Integrations** lappal a playbook vezérlőpulton, valamint friss dokumentációval, amelyben a Cursor IDE beállítása előtérbe került.
 
+## Frissítés (2026. október): három bejárat
+
+A poszt megírása óta egy playbook háromféleképpen érhető el. Válassz
+*hatókör* és *kliens* szerint:
+
+| Ha ezt szeretnéd | Ezt használd | Hitelesítés |
+|---|---|---|
+| **A teljes fiókodat** — minden playbookot, létrehozással és kezeléssel együtt | `https://apbks.com/api/mcp/manage` | OAuth-bejelentkezés (a kliens hozzájárulási képernyőt nyit), vagy user API key |
+| **Egyetlen playbookot** — pontosan annak eszközeit, memóriáját és skilljeit | `https://apbks.com/api/mcp/YOUR_GUID` | Playbook API key — nyilvános playbook olvasásához egyik sem kell |
+| **Szkripteket és kódot futtató ügynököket** — MCP nélkül | `https://apbks.com/api/mcp/YOUR_GUID/llms.txt` | Ugyanaz a playbook API key |
+
+**Fiókszintű végpont.** Egy kapcsolat lefed minden playbookot, amihez
+hozzáférsz; az eszközök `playbook_id` argumentumot kapnak. Valódi OAuth 2.1-es
+védett erőforrás, így a Claude *Add custom connector* ablakában válaszd az
+**Always required** opciót és jelentkezz be — kulcsot másolni sem kell. Fej
+nélküli automatizálás user API key-t is küldhet helyette.
+
+**Playbook-végpont.** Az URL köti egyetlen playbookhoz, playbook API key-jel
+hitelesít. A kulcs mehet az `Authorization` fejlécbe (`Bearer ` előtaggal vagy
+anélkül), vagy az `X-API-Key`-be — ez akkor hasznos, ha egy kliens az
+`Authorization`-t a saját hitelesítésének tartja fenn. A `?toolset=runtime` (vagy
+`memory`, `admin`) kevesebb eszközt hirdet; rögzítetlen kapcsolaton az ügynök a
+`find_tools`-szal így is mindent elér.
+
+**Szkriptek.** Egyes ügynökök eszközönkénti hívás helyett kódot írnak, és
+közülük némelyik a szkriptjeiből nem tud MCP-eszközt hívni. Nekik az
+`llms.txt` egyetlen letöltés, ami elmagyarázza a hitelesítést, az egy-POST-os
+hívási konvenciót (`POST .../tools/TOOL_NAME` JSON-argumentumokkal), és minden
+eszközhöz ad egy one-shot példát — utána az ügynök egyetlen szkriptben annyi
+hívást láncol, amennyit kell, a köztes eredményeket pedig a kontextusán kívül
+tartja.
+
+A dashboard **Integrations** lapja mostantól mindhármat mutatja, mindegyiket
+másolás-gombbal.
+
 ## Mi az az MCP?
 
 A [Model Context Protocol](https://modelcontextprotocol.io/) egy nyílt szabvány (eredetileg az Anthropic fejlesztette), amellyel az AI asszisztensek egyszerű JSON-RPC interfészen keresztül kapcsolódhatnak külső eszközökhöz és adatforrásokhoz. Képzeld el univerzális bővítményrendszerként az AI számára.
@@ -135,7 +170,7 @@ Ha JSON-t látsz `protocolVersion` és `serverInfo` mezőkkel, minden rendben.
 
 - **Cursor Marketplace** — Dolgozunk azon, hogy az AgentPlaybooks felkerüljön a Cursor bővítmény/MCP piactérre
 - **Windsurf** és más MCP-kompatibilis IDE-k — Ugyanaz a végpont mindenhol működik
-- **Management MCP Server** — Használd a `https://apbks.com/api/mcp/manage` címet User API Key-jel playbookok létrehozásához és kezeléséhez közvetlenül az AI ügynöködből
+- **Management MCP Server** — Elkészült: a fiókszintű végpontot OAuth-bejelentkezéssel lásd fent, a *Frissítés (2026. október)* részben
 
 A teljes referenciáért nézd meg az [MCP Integration dokumentációt](/docs/mcp-integration) és a [Platform Integrations útmutatót](/docs/platform-integrations).
 

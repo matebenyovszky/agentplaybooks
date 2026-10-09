@@ -7,6 +7,8 @@ import {
   TERMS_PARAGRAPHS,
 } from "@/lib/legal-copy";
 import { LEGAL_CANONICAL_PATHS, LEGAL_REDIRECTS } from "@/lib/legal-routes";
+import { ACCOUNT_TOOLS } from "@/app/api/_shared/account-tools";
+import { PLAYBOOK_TOOLS } from "@/app/api/_shared/playbook-tools";
 
 const FORBIDDEN = [
   "PolyForm",
@@ -140,16 +142,29 @@ describe("Cursor plugin catalog manifests", () => {
 });
 
 describe("ChatGPT directory reviewer notes", () => {
-  it("documents Bearer auth, the 49-tool surface, and that this is not OAuth or a listing", () => {
+  it("documents both auth modes, the live tool surface, and that this is not a listing", () => {
     const notes = source("docs/chatgpt-directory-notes.md");
     expect(notes).toMatch(/Streamable HTTP/i);
     expect(notes).toContain("https://agentplaybooks.ai/api/mcp/manage");
+    // OAuth is the default since the endpoint started answering with a
+    // resource_metadata challenge; the API key stays for automation. The notes
+    // once said "not OAuth", which reviewers would have found to be false.
+    expect(notes).toMatch(/OAuth 2\.1/);
+    expect(notes).toContain("resource_metadata");
     expect(notes).toContain("Authorization: Bearer");
-    expect(notes).toContain("49");
     expect(notes).toContain("use_secret_write");
     expect(notes).toContain("find_tools");
-    expect(notes).toMatch(/not.*OAuth/i);
     expect(notes).toMatch(/does \*\*not\*\* claim a listing/i);
     expect(notes).not.toContain("outlook.com");
+  });
+
+  it("states the tool count the server actually advertises", () => {
+    // Derived rather than pinned: a hard-coded "49" here outlived the tool that
+    // made it 50, and a reviewer counting tools/list would have seen the gap.
+    const notes = source("docs/chatgpt-directory-notes.md");
+    const total = ACCOUNT_TOOLS.length + PLAYBOOK_TOOLS.length;
+    expect(notes).toContain(`**${total}** tools`);
+    expect(notes).toContain(`${ACCOUNT_TOOLS.length} account tools`);
+    expect(notes).toContain(`${PLAYBOOK_TOOLS.length} playbook tools`);
   });
 });

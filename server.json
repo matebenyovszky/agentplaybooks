@@ -23,8 +23,8 @@
       "headers": [
         {
           "name": "Authorization",
-          "description": "Bearer AgentPlaybooks user API key (for example: Bearer apb_live_...)",
-          "isRequired": true,
+          "description": "Optional. OAuth 2.1 with PKCE is the default: an OAuth-capable client gets a 401 with a resource_metadata challenge and signs in through the browser. Set this only for headless use, as a Bearer AgentPlaybooks user API key (for example: Bearer apb_live_...).",
+          "isRequired": false,
           "isSecret": true
         }
       ]
