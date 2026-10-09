@@ -11,6 +11,39 @@ Every playbook on AgentPlaybooks is also a live **MCP (Model Context Protocol) s
 
 Today we're making this even easier with a new **Integrations** tab in the playbook dashboard and updated documentation covering Cursor IDE setup front and center.
 
+## Update (October 2026): three ways in
+
+Since this post was written, a playbook can be reached three ways. Pick by
+*scope* and by *client*:
+
+| You want | Use | Authentication |
+|---|---|---|
+| **Your whole account** — every playbook, create and manage them from the agent | `https://apbks.com/api/mcp/manage` | OAuth sign-in (the client opens a consent screen), or a user API key |
+| **One playbook** — exactly its tools, memory, and skills | `https://apbks.com/api/mcp/YOUR_GUID` | A playbook API key — or none, for a public playbook's read access |
+| **Scripts and code-executing agents** — no MCP at all | `https://apbks.com/api/mcp/YOUR_GUID/llms.txt` | Same playbook API key |
+
+**Account endpoint.** One connection covers every playbook you can access; the
+tools take a `playbook_id` argument. It is a real OAuth 2.1 protected resource,
+so in Claude's *Add custom connector* dialog choose **Always required** and sign
+in — no key to copy. Headless automation can send a user API key instead.
+
+**Playbook endpoint.** Bound to one playbook by its URL, authenticated with a
+playbook API key. The key may go in `Authorization` (with or without the
+`Bearer ` prefix) or in `X-API-Key` — useful when a client reserves
+`Authorization` for itself. Append `?toolset=runtime` (or `memory`, `admin`) to
+advertise fewer tools; on an unpinned connection the agent can still reach
+everything through `find_tools`.
+
+**Scripts.** Some agents write code instead of calling tools one by one, and
+some of those cannot call MCP tools from inside their scripts. For them,
+`llms.txt` is a single fetch that explains authentication, the one-POST calling
+convention (`POST .../tools/TOOL_NAME` with JSON arguments), and gives every
+tool a one-shot example — after which the agent chains as many calls as it
+needs in one script, keeping intermediate results out of its context.
+
+The dashboard's **Integrations** tab now shows all three, each with a copy
+button.
+
 ## What is MCP?
 
 The [Model Context Protocol](https://modelcontextprotocol.io/) is an open standard (originally developed by Anthropic) that lets AI assistants connect to external tools and data sources over a simple JSON-RPC interface. Think of it as a universal plugin system for AI.
@@ -135,7 +168,7 @@ If you see JSON with `protocolVersion` and `serverInfo`, you're good.
 
 - **Cursor Marketplace** — We're working on listing AgentPlaybooks in the Cursor extension/MCP marketplace
 - **Windsurf** and other MCP-compatible IDEs — Same endpoint works everywhere
-- **Management MCP Server** — Use `https://apbks.com/api/mcp/manage` with a User API Key to create and manage playbooks from within your AI agent
+- **Management MCP Server** — Shipped: see *Update (October 2026)* above for the account endpoint, with OAuth sign-in
 
 Check the [MCP Integration docs](/docs/mcp-integration) and [Platform Integrations guide](/docs/platform-integrations) for the full reference.
 

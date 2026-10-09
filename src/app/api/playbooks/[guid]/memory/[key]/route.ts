@@ -4,6 +4,7 @@ import { getServiceSupabase } from "@/app/api/_shared/supabase";
 import { requireAuth, validateApiKey } from "@/app/api/_shared/auth";
 import { checkPlaybookWriteAccess, getPlaybookByGuid } from "@/app/api/_shared/guards";
 import { memoryWriteFields } from "@/lib/memory";
+import { proposeMemory } from "@/app/api/_shared/proposals";
 
 const app = createApiApp("/api/playbooks/:guid/memory/:key");
 
@@ -18,9 +19,12 @@ app.put("/", async (c) => {
     return c.json({ error: "Missing memory key" }, 400);
   }
 
+  // A key with only memory:propose stores a proposal for review instead.
   const apiKeyData = await validateApiKey(c.req.raw, "memory:write");
-  if (apiKeyData) {
-    if (apiKeyData.playbooks.guid !== guid) {
+  const proposerKey = apiKeyData ? null : await validateApiKey(c.req.raw, "memory:propose");
+  const keyData = apiKeyData ?? proposerKey;
+  if (keyData) {
+    if (keyData.playbooks.guid !== guid) {
       return c.json({ error: "API key does not match playbook" }, 403);
     }
   } else {
@@ -78,6 +82,14 @@ app.put("/", async (c) => {
   if (memory_type !== undefined) upsertData.memory_type = memory_type;
   if (status !== undefined) upsertData.status = status;
   if (metadata !== undefined) upsertData.metadata = metadata;
+
+  if (proposerKey) {
+    try {
+      return c.json(await proposeMemory(supabase, playbook.id, key, upsertData, proposerKey), 202);
+    } catch (error) {
+      return c.json({ error: (error as Error).message }, 500);
+    }
+  }
 
   const { data, error } = await supabase
     .from("memories")

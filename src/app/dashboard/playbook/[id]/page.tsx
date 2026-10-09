@@ -48,6 +48,7 @@ import { InstructionsEditor } from "@/components/playbook/InstructionsEditor";
 import { SkillEditor } from "@/components/playbook/SkillEditor";
 import { McpServerEditor } from "@/components/playbook/McpServerEditor";
 import { MemoryEditor } from "@/components/playbook/MemoryEditor";
+import { ProposalsPanel } from "@/components/playbook/ProposalsPanel";
 import { CanvasEditor } from "@/components/playbook/CanvasEditor";
 import { ApiKeyManager } from "@/components/playbook/ApiKeyManager";
 import { SecretManager } from "@/components/playbook/SecretManager";
@@ -1154,6 +1155,10 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                 )}
               </div>
 
+              {canEdit && playbook?.guid && (
+                <ProposalsPanel playbookGuid={playbook.guid} kind="skill" onApproved={loadPlaybook} />
+              )}
+
               {skills.length === 0 ? (
                 <EmptyState
                   icon={Zap}
@@ -1287,6 +1292,9 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
             >
+              {canEdit && playbook?.guid && (
+                <ProposalsPanel playbookGuid={playbook.guid} kind="memory" onApproved={loadPlaybook} />
+              )}
               <MemoryEditor
                 storage={storage}
                 memories={memories}
@@ -1465,6 +1473,47 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                     Add this playbook as an MCP (Model Context Protocol) server in your IDE or AI client. Copy the JSON config below and paste it into your settings.
                   </p>
 
+                  {/* Three ways in: the configs below cover the middle one. The
+                      other two used to be documented only in the docs, so a
+                      user copying a URL here never learned they existed. */}
+                  <div className="mb-4 rounded-lg border border-neutral-200 dark:border-slate-700/50 divide-y divide-neutral-200 dark:divide-slate-700/50 text-xs">
+                    {[
+                      {
+                        key: "mcp-scope-account",
+                        label: "Whole account",
+                        url: `${getApiBaseUrl()}/api/mcp/manage`,
+                        note: "Every playbook you can access, one connection. OAuth sign-in — in Claude choose “Always required” — or a user API key.",
+                      },
+                      {
+                        key: "mcp-scope-playbook",
+                        label: "This playbook",
+                        url: `${getApiBaseUrl()}/api/mcp/${playbook?.guid}`,
+                        note: "Exactly this playbook’s tools, memory and skills, with a playbook API key. Ready-made configs below. Add ?toolset=runtime to advertise fewer tools.",
+                      },
+                      {
+                        key: "mcp-scope-scripts",
+                        label: "Scripts (no MCP)",
+                        url: `${getApiBaseUrl()}/api/mcp/${playbook?.guid}/llms.txt`,
+                        note: "For agents that write code instead of calling tools: one fetch explains auth and the one-POST calling convention, with an example per tool.",
+                      },
+                    ].map((option) => (
+                      <div key={option.key} className="p-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-medium text-neutral-700 dark:text-slate-300">{option.label}</span>
+                          <button
+                            onClick={() => copyToClipboard(option.url, option.key)}
+                            className="text-amber-400 hover:text-amber-300 flex items-center gap-1 shrink-0"
+                          >
+                            {copied === option.key ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                            Copy URL
+                          </button>
+                        </div>
+                        <code className="block mt-1 font-mono text-neutral-800 dark:text-slate-300 break-all">{option.url}</code>
+                        <p className="mt-1 text-neutral-500 dark:text-slate-500">{option.note}</p>
+                      </div>
+                    ))}
+                  </div>
+
                   {playbook?.visibility === "public" ? (
                     <div className="mb-3 px-3 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/30 rounded-lg">
                       <p className="text-sm text-green-700 dark:text-green-400">
@@ -1605,7 +1654,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                       </div>
                     </dl>
                     <p className="mt-2 text-xs text-neutral-500 dark:text-slate-500">
-                      Include the scheme in the header value: the field is sent exactly as entered, so <code className="px-1 rounded bg-neutral-200 dark:bg-slate-800">Bearer </code> has to be part of it.
+                      The <code className="px-1 rounded bg-neutral-200 dark:bg-slate-800">Bearer </code> prefix is optional — the bare key works too. If the client reserves <code className="px-1 rounded bg-neutral-200 dark:bg-slate-800">authorization</code> for itself, send the key as <code className="px-1 rounded bg-neutral-200 dark:bg-slate-800">x-api-key</code> instead.
                       {playbook?.visibility === "public" ? " A public playbook needs no header for read access." : ""}
                     </p>
                   </div>

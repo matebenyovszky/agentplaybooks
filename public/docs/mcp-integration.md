@@ -13,6 +13,13 @@ control plane that can create a playbook and immediately apply it.
 |-------|--------------|-------------------|
 | User control plane | `https://agentplaybooks.ai/api/mcp/manage` | Required `playbook_id` tool argument |
 | Direct playbook | `https://agentplaybooks.ai/api/mcp/YOUR_GUID` | Bound in the URL |
+| Scripts, no MCP | `https://agentplaybooks.ai/api/mcp/YOUR_GUID/llms.txt` | Bound in the URL |
+
+The third row is for agents that write code instead of calling tools one at a
+time — some of them cannot call MCP tools from inside their scripts at all.
+`llms.txt` is one fetch that explains authentication and the one-POST calling
+convention (`POST /api/mcp/YOUR_GUID/tools/TOOL_NAME` with JSON arguments), with a
+one-shot example per tool. The dashboard's Integrations tab shows all three.
 
 OAuth 2.1 with PKCE is the default for interactive clients. The endpoint
 publishes protected-resource metadata, discovers the AgentPlaybooks
@@ -456,10 +463,28 @@ The read-only manifest (`GET /api/mcp/:guid`) and `llms.txt` still need a key wi
 | Write memory/canvas | API key required | API key required |
 | Manage playbook | User API key | User API key |
 
-API keys come in three roles:
+API keys come in four roles:
 - **Viewer** — Read-only access
+- **Proposer** — Read access; memory and skill changes wait for review
 - **Coworker** — Read and write access
 - **Admin** — Full access to modify playbook structure
+
+### Proposals
+
+A key with `memory:propose` or `skills:propose` (the Proposer role) may suggest changes it is not allowed to make. `write_memory`, `create_skill` and `update_skill` (and `PUT /api/playbooks/:guid/memory/:key`, which answers `202`) then save the change as a proposal instead of applying it:
+
+```json
+{ "status": "pending_review", "kind": "memory", "proposal_id": "…", "target": "lesson/check-the-register" }
+```
+
+A proposal changes nothing until it is approved. It is not returned by memory reads, search, context or history, nor listed as a skill version. The owner and editors see pending proposals at the top of the Memory and Skills tabs and approve or reject them there. Approving applies the proposal as an ordinary write, so the previous content stays in the history. Keys can review too: a key with `memory:write` reviews memory proposals, and one with `skills:write` reviews skill proposals:
+
+```bash
+GET  /api/playbooks/:guid/proposals?kind=memory|skill
+POST /api/playbooks/:guid/proposals/:id   {"kind": "memory", "decision": "approve" | "reject"}
+```
+
+A propose permission never grants reading. Give a proposer `memory:read` / `skills:read` as well when it needs to see what is already there; the Proposer role does.
 
 ## Best Practices
 
