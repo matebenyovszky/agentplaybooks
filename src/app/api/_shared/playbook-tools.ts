@@ -77,11 +77,11 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
       type: "object",
       properties: {
         search: { type: "string", description: "Literal text in keys, JSON values, descriptions and summaries" },
-        scope: { type: "string", enum: ["active", "archived", "all"], default: "active" },
+        scope: { type: "string", enum: ["active", "archived", "all"], default: "active", description: "active: current; archived: archived and previous versions; all: both" },
         after: { type: "string", format: "date-time", description: "Inclusive lower bound on memory_at" },
         before: { type: "string", format: "date-time", description: "Inclusive upper bound on memory_at" },
-        limit: { type: "integer", minimum: 1, maximum: 200, default: 100 },
-        offset: { type: "integer", minimum: 0, default: 0 },
+        limit: { type: "integer", minimum: 1, maximum: 200, default: 100, description: "Page size" },
+        offset: { type: "integer", minimum: 0, default: 0, description: "Results to skip, for paging" },
         tags: { type: "array", items: { type: "string" }, description: "Filter by tags (any match)" },
         tier: { type: "string", enum: ["working", "contextual", "longterm"], description: "Filter by memory tier" },
         memory_type: { type: "string", enum: ["flat", "hierarchical"], description: "Filter by memory type" },
@@ -94,14 +94,14 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   {
     name: "get_memory_history",
     title: "Memory history",
-    description: "Read previous versions of a memory by its current key, including original memory_at and saved contents. History is excluded from normal search. To restore a version, write its contents and memory_at with write_memory and is_archived=false. Read-only.",
+    description: "Read previous versions of a memory by its current key, including original memory_at and saved contents. History is excluded from normal search. To restore a version, write its contents and memory_at with write_memory and is_archived=false. Read-only. Unlike get_memory_context (current entries by tier) and get_memory_tree (hierarchy), this returns one key's past versions.",
     inputSchema: {
       type: "object",
       properties: {
-        key: { type: "string" },
+        key: { type: "string", description: "Current key of the memory" },
         search: { type: "string", description: "Optional text within this memory's history" },
-        limit: { type: "integer", minimum: 1, maximum: 200, default: 100 },
-        offset: { type: "integer", minimum: 0, default: 0 },
+        limit: { type: "integer", minimum: 1, maximum: 200, default: 100, description: "Page size" },
+        offset: { type: "integer", minimum: 0, default: 0, description: "Versions to skip, for paging" },
       },
       required: ["key"],
     },
