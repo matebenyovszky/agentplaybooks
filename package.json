@@ -22,6 +22,7 @@
     "seed": "tsx scripts/seed-data.ts",
     "seed:skills": "tsx scripts/github-skill-parser.ts",
     "seed:dry": "DRY_RUN=true tsx scripts/seed-data.ts",
+    "seed:reviewer": "node scripts/seed-reviewer-account.mjs",
     "test": "vitest",
     "test:cli": "npm --prefix packages/cli test",
     "test:all": "vitest run && npm run test:cli",
