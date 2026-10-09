@@ -121,7 +121,9 @@ apb doctor /path/to/MyVault
 
 It reports Agent Skills spec violations, likely hard-coded credentials (line
 numbers only, never values), and definitions that have drifted between copies.
-Most people find at least one plaintext key they had forgotten about.
+It reads skills, agent instructions, and MCP configurations — not other
+plugins' settings — so a key sitting in some plugin's `data.json` is one to look
+for by hand.
 
 Then, when you want the prompts to actually work inside every agent tool you
 have installed:
