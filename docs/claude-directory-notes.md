@@ -119,3 +119,44 @@ Negative:
   playbooks with skills, memory entries, a canvas run, and at least one secret,
   so that every tool has something real to act on.
 - **Public documentation by the publish date** — the docs above are live.
+
+## The plugin bundle (second submission)
+
+The directory has two submission kinds, and the plugin is the other one. A
+plugin that references a remote server we run should be submitted alongside
+that server as a connector, so do both.
+
+**Source** — repository `matebenyovszky/agentplaybooks`, plugin path
+`plugins/agentplaybooks`, tracked branch `main`. Not `packages/cli`: claude.ai
+chat and Cowork refuse a plugin with a top-level `bin/` directory, and its
+lockfile and bundled CLI would be held for manual review.
+
+**Validate** — `claude plugin validate plugins/agentplaybooks` passes locally;
+the portal runs more checks. What it will see:
+
+- `.claude-plugin/plugin.json` with `name`, `displayName`, `version`,
+  `description`, `author`, `license`, and the account connector as a remote
+  `http` server with a fixed `https://` URL and no credential;
+- `README.md` well over 40 words, with what the plugin runs and connects to and
+  a privacy section; `LICENSE`;
+- two skills and two commands, plain markdown with valid front matter;
+- no hooks, no executables, no lockfile, no package-manager config. The
+  commands tell Claude to run `npx --yes @agentplaybooks/cli@<version>`, pinned;
+  that is an instruction to Claude, not a hook or MCP server command, so the
+  launcher rules do not apply to it. `release:check` keeps every pin equal to
+  the CLI version.
+
+**Listing details** — read from `plugin.json` and the README, so edit those,
+not the portal.
+
+**Data handling** — reads and stores the user's own playbook data on our
+service through the declared connector; sends nothing to other services (the
+commands download the CLI from the npm registry, which the README names);
+retention follows the service, as the privacy policy says. Whether it is
+intended for people under 18 is the maintainer's answer to give.
+
+**After approval** — keep **GitHub push webhook** on, so merging to `main`
+publishes the next version. Raise `version` in `plugin.json` with every
+release; `release:check` already ties it to the CLI version.
+
+The privacy policy blocker above applies to this submission too.

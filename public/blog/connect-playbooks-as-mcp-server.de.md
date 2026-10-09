@@ -96,6 +96,8 @@ Starte Cursor neu (oder lade das Fenster neu). Die Tools deines playbooks ersche
 
 ## Verbindung mit Claude Desktop
 
+> **Das hat nie funktioniert.** `claude_desktop_config.json` kennt nur lokale Server und ignoriert eine URL ohne Fehlermeldung. Nutzen Sie stattdessen das AgentPlaybooks-Plugin oder einen eigenen Connector, mit OAuth-Anmeldung und ohne Key — siehe [AgentPlaybooks in Claude](/docs/claude).
+
 ```json
 {
   "mcpServers": {
