@@ -284,22 +284,54 @@ url = "https://agentplaybooks.ai/api/mcp/manage"
 bearer_token_env_var = "AGENTPLAYBOOKS_API_KEY"
 ```
 
-#### For Claude Desktop
+#### For Claude (claude.ai, Claude Desktop, Cowork)
 
-Add to your `claude_desktop_config.json`:
+Remote servers are connected to your Claude **account**, not configured per app,
+so the same connector appears on the web, in Claude Desktop and in Cowork.
+`claude_desktop_config.json` is for *local* MCP servers and is not the place
+for this one.
 
-```json
-{
-  "mcpServers": {
-    "agentplaybooks-manage": {
-      "url": "https://agentplaybooks.ai/api/mcp/manage",
-      "transport": "http",
-      "headers": {
-        "Authorization": "Bearer apb_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-      }
-    }
-  }
-}
+**Pro and Max:**
+
+1. Go to **Customize > Connectors**, click **+ Add**, then **Add custom connector**.
+2. Name it (for example `AgentPlaybooks`) and enter the server URL:
+   `https://agentplaybooks.ai/api/mcp/manage`
+3. Review the detected authentication and continue.
+4. Under **OAuth client**, choose **Register automatically**. Our authorization
+   server supports dynamic client registration, which is what this option uses.
+5. Click **Add**, then **Connect**. Sign in with your AgentPlaybooks account in
+   the browser and approve access. Claude never sees your password.
+
+**Team and Enterprise:** an Owner adds the connector first, under
+**Organization settings > Connectors > Add > Custom > Web**, with the same URL
+and the same OAuth choice. Each member then connects individually from
+**Customize > Connectors**.
+
+To use it in a conversation, open **+ > Connectors** in the chat and turn
+AgentPlaybooks on.
+
+**With an API key instead of OAuth:** leave authentication on **No sign in**
+and add a request header — `Authorization: Bearer apb_live_…` — under
+**Request headers**. Use a User API Key from Dashboard → Settings. This suits a
+shared or automated setup; for a person, OAuth is better, because revoking
+access does not mean rotating a key.
+
+Claude connects from Anthropic's cloud, not from your device, so this needs the
+hosted service (or a self-hosted instance reachable from the internet).
+
+#### For Claude Code
+
+```bash
+claude mcp add --transport http agentplaybooks https://agentplaybooks.ai/api/mcp/manage
+```
+
+Then run `/mcp` inside Claude Code, select `agentplaybooks`, and follow its
+sign-in prompt — the browser opens the same consent page. For headless or CI
+use, pass a User API Key as a header instead:
+
+```bash
+claude mcp add --transport http agentplaybooks https://agentplaybooks.ai/api/mcp/manage \
+  --header "Authorization: Bearer $AGENTPLAYBOOKS_API_KEY"
 ```
 
 #### For Cursor
