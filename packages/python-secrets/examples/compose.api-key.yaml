@@ -1,0 +1,17 @@
+services:
+  app:
+    build:
+      context: ../../..
+      dockerfile: packages/python-secrets/examples/Dockerfile
+      args:
+        APP_UID: ${APP_UID:-1000}
+        APP_GID: ${APP_GID:-1000}
+    environment:
+      AGENTPLAYBOOKS_PLAYBOOK_GUID: ${AGENTPLAYBOOKS_PLAYBOOK_GUID:?Set the playbook GUID}
+      AGENTPLAYBOOKS_URL: ${AGENTPLAYBOOKS_URL:-https://agentplaybooks.ai}
+      AGENTPLAYBOOKS_PLAYBOOK_KEY_FILE: /run/secrets/apb_api_key
+    secrets:
+      - apb_api_key
+secrets:
+  apb_api_key:
+    file: ${APB_CREDENTIALS_DIR:?Set the credential directory}/apb_api_key

@@ -5,6 +5,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { ApiKeyReveal } from "@/components/ApiKeyReveal";
+import { SecretClientManager } from "./SecretClientManager";
 import {
   Key,
   Trash2,
@@ -436,6 +437,7 @@ export function ApiKeyManager({ playbook_id, apiKeys, onUpdate }: ApiKeyManagerP
           </motion.div>
         )}
       </AnimatePresence>
+      <SecretClientManager playbookId={playbook_id} />
     </div>
   );
 }

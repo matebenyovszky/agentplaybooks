@@ -74,3 +74,37 @@ BEGIN
   END IF;
 END
 $verify$;
+
+DO $verify_secret_clients$
+DECLARE
+  client_role text;
+BEGIN
+  IF to_regclass('public.secret_clients') IS NULL THEN
+    RAISE EXCEPTION 'secret_clients table is missing';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_class
+    WHERE oid = 'public.secret_clients'::regclass AND relrowsecurity
+  ) THEN
+    RAISE EXCEPTION 'secret_clients RLS is disabled';
+  END IF;
+  FOREACH client_role IN ARRAY ARRAY['anon', 'authenticated'] LOOP
+    IF has_table_privilege(client_role, 'public.secret_clients', 'SELECT')
+      OR has_table_privilege(client_role, 'public.secret_clients', 'INSERT')
+      OR has_table_privilege(client_role, 'public.secret_clients', 'UPDATE')
+      OR has_table_privilege(client_role, 'public.secret_clients', 'DELETE')
+      OR has_table_privilege(client_role, 'public.secret_clients', 'TRUNCATE')
+      OR has_table_privilege(client_role, 'public.secret_clients', 'REFERENCES')
+      OR has_table_privilege(client_role, 'public.secret_clients', 'TRIGGER')
+    THEN
+      RAISE EXCEPTION 'secret_clients unexpectedly grants access to %', client_role;
+    END IF;
+  END LOOP;
+  IF NOT has_table_privilege('service_role', 'public.secret_clients', 'SELECT')
+    OR NOT has_table_privilege('service_role', 'public.secret_clients', 'INSERT')
+    OR NOT has_table_privilege('service_role', 'public.secret_clients', 'UPDATE')
+    OR NOT has_table_privilege('service_role', 'public.secret_clients', 'DELETE') THEN
+    RAISE EXCEPTION 'secret_clients service_role CRUD grants are missing';
+  END IF;
+END
+$verify_secret_clients$;
