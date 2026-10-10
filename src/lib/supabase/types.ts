@@ -170,7 +170,7 @@ export type AuditLogRow = {
   latency_ms: number;
   /** A short code, never a message. */
   error_code: string | null;
-  actor_type: "owner" | "api_key" | "anonymous" | null;
+  actor_type: "owner" | "api_key" | "mtls" | "anonymous" | null;
   /** A user id, or an API key prefix. */
   actor_id: string | null;
   /** Which secret a `secret.*` row is about; by name, so a delete survives. */
@@ -401,6 +401,18 @@ export const SECRET_CATEGORIES = [
 
 export type SecretCategory = typeof SECRET_CATEGORIES[number];
 
+export type SecretClientsRow = {
+  id: string;
+  playbook_id: string;
+  name: string;
+  certificate_sha256: string;
+  secret_names: string[];
+  is_active: boolean;
+  expires_at: string | null;
+  last_used_at: string | null;
+  created_at: string;
+};
+
 export type SecretsRow = {
   id: string;
   playbook_id: string;
@@ -465,6 +477,8 @@ export const SECRET_AUDIT_OPERATIONS = [
   'secret.reveal',
   'secret.use',
   'secret.list',
+  'secret.client_create',
+  'secret.client_revoke',
   // A consent flow completed server-side: the client secret went out and the
   // refresh token came back, neither ever reaching the caller.
   'secret.oauth_exchange',
@@ -475,7 +489,7 @@ export type SecretAuditOperation = typeof SECRET_AUDIT_OPERATIONS[number];
 /** `denied` is a refused attempt; `error` is an authorized one that failed. */
 export type AuditStatus = 'success' | 'denied' | 'error';
 
-export type AuditActorType = 'owner' | 'api_key' | 'anonymous';
+export type AuditActorType = 'owner' | 'api_key' | 'mtls' | 'anonymous';
 
 // Known publisher IDs
 export const PUBLISHER_IDS = {
@@ -574,6 +588,12 @@ export interface Database {
         Row: SecretsRow;
         Insert: SecretsInsert;
         Update: SecretsUpdate;
+        Relationships: [];
+      };
+      secret_clients: {
+        Row: SecretClientsRow;
+        Insert: Pick<SecretClientsRow, 'playbook_id' | 'name' | 'certificate_sha256' | 'secret_names'> & Partial<SecretClientsRow>;
+        Update: Partial<SecretClientsRow>;
         Relationships: [];
       };
     };

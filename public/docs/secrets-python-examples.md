@@ -4,6 +4,10 @@ title: Python Examples - Secrets API
 
 # Secrets API: Python Examples
 
+For existing applications using `.env` or `os.environ`, start with the
+[Python Secrets library](./python-secrets.md): a startup loader with API-key and
+mTLS authentication, Docker examples, and compatibility with existing CI/CD values.
+
 Ready-to-use Python code for integrating with the AgentPlaybooks Secrets API. These examples cover the **Proxy** (zero-exposure) pattern, the optional **Reveal** pattern, and full CRUD operations.
 
 ## Prerequisites

@@ -24,6 +24,7 @@ Welcome to the AgentPlaybooks documentation.
 
 ### Reference
 - [API Reference](./api-reference.md) - Complete API documentation
+- [Python Secrets](./python-secrets.md) - Load credentials at startup with API keys or mTLS, locally and in Docker
 - [Management API & MCP](./management-api.md) - AI-driven playbook management
 - [Developer Guide](./developer-guide.md) - Contributing and development
 - [Self-Hosting](./self-hosting.md) - Deploy your own instance
