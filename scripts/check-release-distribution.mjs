@@ -46,6 +46,29 @@ check(variants[0].interface?.logo === "./assets/icon.svg", "Codex compatibility 
 check(variants[0].interface?.composerIcon === "./assets/icon.svg", "Codex compatibility composer icon path differs.");
 check(variants[2].logo === "assets/agentplaybooks-mark.svg", "Cursor plugin logo path differs.");
 check(variants[4].plugins?.[0]?.logo === "packages/cli/assets/agentplaybooks-mark.svg", "Cursor marketplace logo path differs.");
+// The Claude directory plugin (plugins/agentplaybooks) is a separate, lean
+// folder: the directory holds a bundled CLI and a lockfile for manual review, so
+// it runs the published CLI through `npx` instead. That makes the pinned version
+// the thing that can silently go stale — a release that bumps the CLI but not
+// the pin would ship commands documented against one version and running
+// another. Every pin, and the manifest, must move with the CLI.
+const directoryPlugin = await json("plugins/agentplaybooks/.claude-plugin/plugin.json");
+check(directoryPlugin.version === cli.version, "Claude directory plugin version differs.");
+check(
+  directoryPlugin.mcpServers?.["agentplaybooks-account"]?.url === registry.remotes?.[0]?.url,
+  "Claude directory plugin MCP URL differs from the registry.",
+);
+for (const file of [
+  "plugins/agentplaybooks/README.md",
+  "plugins/agentplaybooks/commands/doctor.md",
+  "plugins/agentplaybooks/commands/sync.md",
+  "plugins/agentplaybooks/skills/agentplaybooks-cli/SKILL.md",
+]) {
+  const pins = [...(await read(file)).matchAll(/@agentplaybooks\/cli@([0-9A-Za-z.+-]+)/g)].map(match => match[1]);
+  check(pins.length > 0, `${file} no longer pins the CLI version.`);
+  for (const pin of pins) check(pin === cli.version, `${file} pins @agentplaybooks/cli@${pin}, not ${cli.version}.`);
+}
+
 const skillNames = await readdir(resolve(root, "packages/cli/skills"));
 check(skillNames.length > 0, "No skills included in npm plugin.");
 

@@ -259,9 +259,12 @@ scheitern:
 
 ## Claude-Code- & Claude-Cowork-Plugin
 
-Das CLI-Paket ist zugleich ein Claude-Code-Plugin mit dem
-`agentplaybooks`-Skill und den Befehlen `/agentplaybooks:doctor`, `:sync`,
-`:pull`, `:push`, `:connect`:
+Der Marketplace des Repositorys installiert das AgentPlaybooks-Plugin für
+Claude: den Konto-MCP-Connector (OAuth, ohne Key), einen Playbooks-Skill und
+`/agentplaybooks:doctor` sowie `:sync`, die diese CLI über ein festgelegtes
+`npx` ausführen. Es funktioniert in claude.ai, Cowork und Claude Code — auf
+claude.ai unter **Customize → Plugins → Add marketplace**. Siehe
+[AgentPlaybooks in Claude](/docs/claude). In Claude Code:
 
 ```text
 /plugin marketplace add matebenyovszky/agentplaybooks

@@ -165,9 +165,24 @@ components:
 
 ## Anthropic Claude (claude.ai)
 
-Claude doesn't have a custom GPT-style system, but you can use Projects for persistent context.
+### Recommended: the plugin or a connector
 
-### Method 1: Using Projects (Recommended)
+Claude connects to a playbook live over MCP — on the web, in Claude Desktop, in
+Cowork, and on mobile — and signs in with your AgentPlaybooks account, so there
+is no key to paste:
+
+- **The AgentPlaybooks plugin** reaches every playbook in your account and adds a
+  skill for using them. Add it from
+  [Customize → Plugins](https://claude.ai/customize/plugins).
+- **A custom connector** reaches one playbook — so its persona and instructions
+  apply — or the whole account. Add `https://agentplaybooks.ai/api/mcp/YOUR_GUID`
+  under [Customize → Connectors](https://claude.ai/customize/connectors).
+
+[AgentPlaybooks in Claude](/docs/claude) has the step-by-step for both, including
+Team and Enterprise plans. The methods below copy a playbook into a Project
+instead; they work without a connector, but memory and skills do not stay live.
+
+### Method 1: Using Projects
 
 Claude Pro and Team users can create Projects with custom instructions.
 
@@ -403,26 +418,26 @@ and roadmap.
 
 ---
 
-## Claude Coworker (Desktop AI Agent)
+## Claude Cowork and Claude Desktop
 
-Claude Coworker is Anthropic's autonomous AI agent that operates directly on macOS, with the ability to organize files, convert documents, and automate multi-step workflows.
+Cowork is the agent mode of the Claude desktop app, able to organize files,
+convert documents, and run multi-step workflows. It reads plugins and connectors
+from your claude.ai account, so a playbook connected there is already available
+in Cowork and in Claude Desktop's chat.
 
-### Method 1: MCP Integration (Recommended)
+### Method 1: Plugin or connector (Recommended)
 
-Configure Claude Coworker's MCP settings to connect to your playbook:
+Install the AgentPlaybooks plugin from
+[Customize → Plugins](https://claude.ai/customize/plugins), or add
+`https://agentplaybooks.ai/api/mcp/YOUR_GUID` as a custom connector under
+[Customize → Connectors](https://claude.ai/customize/connectors), then sign in.
+See [AgentPlaybooks in Claude](/docs/claude). In Cowork, the plugin's commands run
+as `/agentplaybooks:doctor` and `/agentplaybooks:sync`.
 
-```json
-{
-  "mcpServers": {
-    "apb-my-playbook": {
-      "transport": "http",
-      "url": "https://apbks.com/api/mcp/YOUR_GUID"
-    }
-  }
-}
-```
+Do not add it to `claude_desktop_config.json`: that file holds local stdio
+servers only, and a `url` written there is ignored without an error.
 
-Coworker will have access to:
+Cowork will have access to:
 - **Tools** — All playbook skills as callable functions
 - **Resources** — Personas, memory, and skill definitions
 - **Persistent Memory** — Context that persists across sessions
@@ -580,10 +595,10 @@ clawdbot status
 | Platform | Custom Instructions | Actions/Tools | Memory | Reasoning Mode |
 |----------|-------------------|---------------|--------|----------------|
 | ChatGPT (GPT) | ✅ System prompt | ✅ OpenAPI Actions | ✅ Via API | ✅ o1/o3 models |
-| Claude | ✅ Projects | ❌ No actions | 📥 Read-only | ✅ Extended thinking |
+| Claude (web, Desktop, mobile) | ✅ Playbook instructions via connector | ✅ MCP Tools | ✅ Via MCP | ✅ Extended thinking |
 | Gemini | ✅ Gems | ⚠️ Extensions only | 📥 Read-only | ✅ Thinking mode |
 | Grok | ✅ Projects | ⚠️ Limited | 📥 Read-only | ✅ Thinking mode |
-| Claude Coworker | ✅ Skills folder | ✅ MCP Tools | ✅ Via MCP | ✅ Built-in |
+| Claude Cowork | ✅ Plugin or connector | ✅ MCP Tools | ✅ Via MCP | ✅ Built-in |
 | Clawdbot | ✅ MCP config | ✅ MCP Tools | ✅ Bidirectional | ✅ Via backend LLM |
 
 ---
@@ -597,6 +612,8 @@ These are instructions for developers integrating playbooks into their applicati
 ## Cursor IDE
 
 Cursor is an AI-powered code editor with native MCP support. Connecting an AgentPlaybooks playbook gives Cursor's AI agent access to your playbook's tools, resources, and memory.
+
+**One click:** [Add your AgentPlaybooks account to Cursor](cursor://anysphere.cursor-deeplink/mcp/install?name=agentplaybooks&config=eyJ0eXBlIjoiaHR0cCIsInVybCI6Imh0dHBzOi8vYWdlbnRwbGF5Ym9va3MuYWkvYXBpL21jcC9tYW5hZ2UifQ%3D%3D), or use **Add to Cursor** on a playbook's **Integrations** tab for just that playbook. VS Code has the same links — see [one-click install](/docs/mcp-integration). The steps below are the manual route, with an API key.
 
 ### Step 1: Get Your MCP Endpoint
 
@@ -681,18 +698,25 @@ The cleanest integration is via MCP (Model Context Protocol).
 
 #### Step 1: Configure MCP
 
-Add to your `~/.claude/claude_desktop_config.json` (or `claude_code_config.json`):
+Add the playbook, then sign in from `/mcp` — the endpoint uses OAuth, so no key
+is needed:
 
-```json
-{
-  "mcpServers": {
-    "apb-my-playbook": {
-      "transport": "http",
-      "url": "https://apbks.com/api/mcp/YOUR_GUID"
-    }
-  }
-}
+```bash
+claude mcp add --transport http apb-my-playbook https://agentplaybooks.ai/api/mcp/YOUR_GUID
 ```
+
+Or install the plugin, which adds the account connector (every playbook) and the
+`/agentplaybooks:doctor` and `/agentplaybooks:sync` commands:
+
+```text
+/plugin marketplace add matebenyovszky/agentplaybooks
+/plugin install agentplaybooks@agentplaybooks
+```
+
+For a `.mcp.json` the team shares in the repository, `apb connect YOUR_GUID --apply`
+writes an entry that reads an API key from an environment variable instead, for
+CI jobs and clients that cannot run a browser sign-in. `claude_desktop_config.json`
+is a different application's file and accepts local stdio servers only.
 
 #### Step 2: Verify Connection
 

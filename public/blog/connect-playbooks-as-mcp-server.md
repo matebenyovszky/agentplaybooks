@@ -93,6 +93,8 @@ Restart Cursor (or reload the window). Your playbook's tools will appear in Curs
 
 ## Connecting to Claude Desktop
 
+> **This never worked.** `claude_desktop_config.json` holds local servers only and ignores a URL without an error. Use the AgentPlaybooks plugin or a custom connector instead, with OAuth sign-in and no key — see [AgentPlaybooks in Claude](/docs/claude).
+
 ```json
 {
   "mcpServers": {
