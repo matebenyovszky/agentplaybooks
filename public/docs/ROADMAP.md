@@ -198,7 +198,7 @@ Open, in rough order of value:
 
 > **Set aside for now (October 2026).** A vault already works with the CLI as
 > it is: a folder laid out as `<name>/SKILL.md` is what `apb push` reads, and
-> `apb sync` fans it out to every agent tool. A plugin would add a second distribution
+> `apb sync --target=…` writes it into the agent tools you enable. A plugin would add a second distribution
 > channel (Obsidian's community directory needs a dedicated repository with one
 > release per version), a second place the skill rules must stay correct, and
 > a credential problem of its own (plugin settings live inside the vault, so in

@@ -10,7 +10,6 @@ export const publicPagePaths = new Set<string>([
   "/blog/connect-playbooks-as-mcp-server",
   "/blog/grok-bot-portable-skills",
   "/blog/hermes-native-memory",
-  "/blog/obsidian-ai-agent-vault",
   "/blog/portable-agent-backups",
   "/blog/portable-playbooks-cli",
   "/blog/rlm-enhanced-memory",
