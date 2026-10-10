@@ -42,6 +42,7 @@ import type {
   PlaybookRunsUpdate,
 } from "@/lib/supabase/types";
 import { encryptSecret, decryptSecret } from "@/lib/crypto";
+import { expiredSecretMessage, isSecretExpired } from "@/lib/secret-expiry";
 import { checkSecretDestination } from "@/lib/secret-destinations";
 import {
   auditActor,
@@ -67,13 +68,12 @@ import { composePlaybookSystemPrompt } from "@/lib/playbook-prompt";
 import { validateAgentSkillDescription, validateAgentSkillName } from "@/lib/agent-skills";
 import { searchMemories } from "@/app/api/_shared/memory";
 import { proposeMemory, proposeSkill } from "@/app/api/_shared/proposals";
-import { memoryWriteFields } from "@/lib/memory";
+import { memoryTimestamp, memoryWriteFields } from "@/lib/memory";
 import { findPlaybookSkill } from "@/lib/repositories/skills";
 import { serveSkill, skillResourceUri, type ServedSkill } from "@/lib/mcp/skill-extension";
 import { cachedSingleFlight, type SingleFlightEntry } from "@/lib/cache/single-flight";
 import {
   assertValidDemonstrations,
-  episodeTimeBound,
   prepareMemoryMetadata,
   readMemoryRecording,
   readSkillDemonstrations,
@@ -1332,6 +1332,8 @@ use_secret_write({
               const prepared = prepareMemoryMetadata(metadata);
               if (prepared.error) throw new Error(prepared.error);
               upsertData.metadata = prepared.metadata;
+              // An episode time written the old way is the memory's time.
+              if (prepared.memoryAt && args.memory_at === undefined) upsertData.memory_at = prepared.memoryAt;
             }
 
             if (proposer) {
@@ -1507,13 +1509,20 @@ use_secret_write({
             const maxItems = (args.max_items as number) || 20;
             const expandKeys = (args.expand_keys as string[]) || [];
             const tagsFilter = args.tags_filter as string[] | undefined;
-            // Where and when, for an agent recalling what it did somewhere. These
-            // read the `metadata.episode` convention: `{ time, location, task,
-            // outcome }`. A memory without one simply never matches.
+            // Where and when, for an agent recalling what it did somewhere.
+            // Where reads the `metadata.episode` convention `{ location, task,
+            // outcome }`; when is the memory's own `memory_at`, bounded the same
+            // way search_memory bounds it.
             const location = args.location as string | undefined;
             const task = args.task as string | undefined;
-            const since = args.since as string | undefined;
-            const until = args.until as string | undefined;
+            if (args.since !== undefined || args.until !== undefined) {
+              // Refused rather than ignored: dropping a bound would quietly
+              // return the wrong window.
+              throw new Error("since and until were replaced by after and before, which bound memory_at");
+            }
+            const after = args.after === undefined ? undefined : memoryTimestamp(args.after);
+            const before = args.before === undefined ? undefined : memoryTimestamp(args.before);
+            if (after && before && after > before) throw new Error("after must not be later than before");
 
             // Build context object per tier
             const context: Record<string, unknown[]> = {};
@@ -1535,10 +1544,8 @@ use_secret_write({
               // Containment, so the GIN index on `metadata` does the work.
               if (location) query = query.contains("metadata", { episode: { location } });
               if (task) query = query.contains("metadata", { episode: { task } });
-              // Both sides canonical, or this text comparison orders
-              // `…:00.500Z` before `…:00Z` and silently drops later matches.
-              if (since) query = query.gte("metadata->episode->>time", episodeTimeBound(since, "since"));
-              if (until) query = query.lte("metadata->episode->>time", episodeTimeBound(until, "until"));
+              if (after) query = query.gte("memory_at", after);
+              if (before) query = query.lte("memory_at", before);
 
               const { data } = await query;
 
@@ -2719,6 +2726,12 @@ use_secret_write({
               throw new Error(useDestination.reason);
             }
 
+            if (isSecretExpired(useSecretData.expires_at)) {
+              secretAudit.status = "denied";
+              secretAudit.reason = "expired";
+              throw new Error(expiredSecretMessage(useSecretData.name, useSecretData.expires_at));
+            }
+
             const secretValue = await decryptSecret({
               encrypted_value: useSecretData.encrypted_value,
               iv: useSecretData.iv,
@@ -2907,10 +2920,14 @@ use_secret_write({
                 iv: rotateEncrypted.iv,
                 auth_tag: rotateEncrypted.auth_tag,
                 rotated_at: new Date().toISOString(),
+                // The expiry is the owner's rule and survives a rotation; this
+                // is the one way to change it over MCP, so an expired secret
+                // can be brought back without the dashboard.
+                ...(args.expires_at !== undefined ? { expires_at: (args.expires_at as string | null) || null } : {}),
                 updated_by: rotateApiKey.key_prefix,
               })
               .eq("id", existingSecret.id)
-              .select("id, name, rotated_at, updated_at")
+              .select("id, name, rotated_at, expires_at, updated_at")
               .single();
 
             if (rotateError) {

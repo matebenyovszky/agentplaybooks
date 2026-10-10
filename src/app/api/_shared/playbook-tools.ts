@@ -126,7 +126,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
         summary: { type: "string", description: "Compact summary for context views" },
         memory_type: { type: "string", enum: ["flat", "hierarchical"], description: "flat (default) or hierarchical for task graphs" },
         status: { type: "string", enum: ["pending", "running", "completed", "failed", "blocked"], description: "Task status (for hierarchical task tracking)" },
-        metadata: { type: "object", description: "Free-form metadata: dependencies, thread assignment, progress. Two keys have a defined shape and are validated: metadata.episode as {time, location, task, outcome} makes the entry findable by where and when through get_memory_context, where time is any ISO 8601 timestamp and is stored normalized to UTC; and metadata.recording holds demonstration references in the same shape a skill uses, as a list of {provider, ref, fidelity, role, segments}. Everything else is stored untouched." },
+        metadata: { type: "object", description: "Free-form metadata: dependencies, thread assignment, progress. Two keys have a defined shape and are validated: metadata.episode as {location, task, outcome} makes the entry findable by where through get_memory_context, while when it happened is memory_at; and metadata.recording holds demonstration references in the same shape a skill uses, as a list of {provider, ref, fidelity, role, segments}. Everything else is stored untouched." },
       },
       required: ["key", "value"],
     },
@@ -180,7 +180,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   {
     name: "get_memory_context",
     title: "Get memory context",
-    description: "Get a context-optimized view of memories: full working memory, summaries for contextual, and keys only for longterm. Read-only. Filter episodic memories by where and when with location, task, since, and until, which read the metadata.episode convention {time, location, task, outcome}; entries carrying a metadata.recording come back with their recording links resolved. Use this to pack a prompt; use read_memory for one key, search_memory to filter by text or tags, and get_memory_tree for parent-child task graphs.",
+    description: "Get a context-optimized view of memories: full working memory, summaries for contextual, and keys only for longterm. Read-only. Filter episodic memories by where with location and task, which read the metadata.episode convention {location, task, outcome}, and by when with after and before, which bound memory_at exactly as search_memory does; entries carrying a metadata.recording come back with their recording links resolved. Use this to pack a prompt; use read_memory for one key, search_memory to filter by text or tags, and get_memory_tree for parent-child task graphs.",
     inputSchema: {
       type: "object",
       properties: {
@@ -194,8 +194,8 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
         tags_filter: { type: "array", items: { type: "string" }, description: "Only include memories with these tags" },
         location: { type: "string", description: "Only episodic memories recorded at this place (metadata.episode.location)" },
         task: { type: "string", description: "Only episodic memories from this task (metadata.episode.task)" },
-        since: { type: "string", description: "Only episodic memories at or after this ISO 8601 timestamp (metadata.episode.time). Rejected if it is not a timestamp." },
-        until: { type: "string", description: "Only episodic memories at or before this ISO 8601 timestamp (metadata.episode.time). Rejected if it is not a timestamp." },
+        after: { type: "string", format: "date-time", description: "Inclusive lower bound on memory_at, with a timezone" },
+        before: { type: "string", format: "date-time", description: "Inclusive upper bound on memory_at, with a timezone" },
       },
     },
     outputSchema: memoryContextOutputSchema,
@@ -678,12 +678,13 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   {
     name: "rotate_secret",
     title: "Rotate secret",
-    description: "Rotate an existing secret with a new value. The old value is permanently replaced and cannot be recovered. Requires secrets:write or full permission. Use store_secret to create a name that does not exist yet, and delete_secret to remove the secret entirely.",
+    description: "Rotate an existing secret with a new value. The old value is permanently replaced and cannot be recovered. The expiry is kept unless you pass expires_at: a date sets a new one, null removes it — which is how an expired secret, refused by use_secret, becomes usable again. Requires secrets:write or full permission. Use store_secret to create a name that does not exist yet, and delete_secret to remove the secret entirely.",
     inputSchema: {
       type: "object",
       properties: {
         name: { type: "string", description: "Secret name to rotate" },
         value: { type: "string", description: "New secret value" },
+        expires_at: { type: ["string", "null"], format: "date-time", description: "New expiry with a timezone, or null to remove it. Omit to keep the current one." },
       },
       required: ["name", "value"],
     },

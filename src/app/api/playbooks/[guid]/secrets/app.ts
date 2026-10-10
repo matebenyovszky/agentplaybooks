@@ -3,6 +3,7 @@ import { getServiceSupabase } from "@/app/api/_shared/supabase";
 import { getAuthenticatedUser, validateApiKey } from "@/app/api/_shared/auth";
 import { getPlaybookByGuid } from "@/app/api/_shared/guards";
 import { encryptSecret, decryptSecret } from "@/lib/crypto";
+import { expiredSecretMessage, isSecretExpired } from "@/lib/secret-expiry";
 import { checkSecretDestination, normalizeAllowedHosts } from "@/lib/secret-destinations";
 import { secretProxyStream, type ProxyStreamOutcome } from "@/lib/secret-proxy-stream";
 import {
@@ -294,6 +295,17 @@ app.get("/reveal/:name", async (c) => {
         reason: "reveal_not_permitted_for_api_key",
       });
       return c.json({ error: "Proxy Only: API keys are not permitted to reveal this secret's raw value." }, 403);
+    }
+    // The owner may still read an expired value in order to replace it; an
+    // agent may not, because reading it is the first step of using it.
+    if (isSecretExpired(secret.expires_at)) {
+      await recordSecretAudit(audit, {
+        operation: "secret.reveal",
+        status: "denied",
+        secretName: secret.name,
+        reason: "expired",
+      });
+      return c.json({ error: expiredSecretMessage(secret.name, secret.expires_at) }, 403);
     }
   }
 
@@ -609,6 +621,17 @@ app.post("/proxy", async (c) => {
     return c.json({ error: destination.reason }, 403);
   }
 
+  if (isSecretExpired(secret.expires_at)) {
+    await recordSecretAudit(audit, {
+      operation: "secret.use",
+      status: "denied",
+      secretName: secret.name,
+      target: destinationHost,
+      reason: "expired",
+    });
+    return c.json({ error: expiredSecretMessage(secret.name, secret.expires_at) }, 403);
+  }
+
   let secretValue: string;
   try {
     secretValue = await decryptSecret({
@@ -831,6 +854,16 @@ app.post("/oauth-exchange", async (c) => {
         reason: "destination_not_allowed",
       });
       return c.json({ error: allowed.reason }, 403);
+    }
+    if (isSecretExpired(row.expires_at)) {
+      await recordSecretAudit(audit, {
+        operation,
+        status: "denied",
+        secretName: plan.clientSecretName,
+        target: destinationHost,
+        reason: "expired",
+      });
+      return c.json({ error: expiredSecretMessage(row.name, row.expires_at) }, 403);
     }
     try {
       clientSecret = await decryptSecret(

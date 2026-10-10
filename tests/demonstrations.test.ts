@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   DEMONSTRATION_LIMITS,
   demonstrationUrl,
-  episodeTimeBound,
   formatTimestamp,
   normalizeYouTubeRef,
   parseDemonstrations,
@@ -297,38 +296,32 @@ describe("reading a recording off a memory", () => {
 });
 
 describe("episodic memory metadata", () => {
-  it("canonicalizes a stored time so the text comparison matches the calendar", () => {
-    const { metadata, error } = prepareMemoryMetadata({
-      episode: { time: "2026-08-20T14:32:00Z", location: "building-B/floor-2" },
+  // When an episode happened is the memory's own memory_at. An episode.time
+  // written the old way is handed back as that, and is not stored twice.
+  it("moves an episode time written the old way onto memory_at", () => {
+    const { metadata, memoryAt, error } = prepareMemoryMetadata({
+      episode: { time: "2026-08-20T16:32:00+02:00", location: "building-B/floor-2" },
     });
     expect(error).toBeNull();
-    expect((metadata as { episode: { time: string } }).episode.time).toBe("2026-08-20T14:32:00.000Z");
+    expect(memoryAt).toBe("2026-08-20T14:32:00.000Z");
+    expect(metadata).toEqual({ episode: { location: "building-B/floor-2" } });
   });
 
-  it("brings an offset timestamp onto the same scale as a UTC bound", () => {
-    const { metadata } = prepareMemoryMetadata({ episode: { time: "2026-08-20T16:32:00+02:00" } });
-    expect((metadata as { episode: { time: string } }).episode.time).toBe("2026-08-20T14:32:00.000Z");
-  });
-
-  it("orders a canonicalized value against a canonicalized bound correctly", () => {
-    // The bug this guards: as raw text "…00.500Z" sorts before "…00Z", so a
-    // memory half a second after the bound was excluded from the window.
-    const { metadata } = prepareMemoryMetadata({ episode: { time: "2026-08-20T14:32:00.500Z" } });
-    const stored = (metadata as { episode: { time: string } }).episode.time;
-    expect(stored >= episodeTimeBound("2026-08-20T14:32:00Z", "since")).toBe(true);
-    expect(stored <= episodeTimeBound("2026-08-20T14:32:01Z", "until")).toBe(true);
-  });
-
-  it("refuses a time it cannot compare", () => {
+  it("refuses an episode time that is not a timestamp, pointing at memory_at", () => {
     const { error } = prepareMemoryMetadata({ episode: { time: "last tuesday" } });
     expect(error).toContain("ISO 8601");
-    expect(() => episodeTimeBound("last tuesday", "since")).toThrow("ISO 8601");
+    expect(error).toContain("memory_at");
   });
 
-  it("leaves the rest of metadata alone", () => {
+  it("requires a timezone, as memory_at itself does", () => {
+    expect(prepareMemoryMetadata({ episode: { time: "2026-08-20T14:32:00" } }).error).toContain("timezone");
+  });
+
+  it("leaves the rest of metadata alone and reports no time", () => {
     const original = { episode: { task: "open-fire-door" }, threads: [1, 2], anything: { nested: true } };
-    const { metadata, error } = prepareMemoryMetadata(original);
+    const { metadata, memoryAt, error } = prepareMemoryMetadata(original);
     expect(error).toBeNull();
+    expect(memoryAt).toBeNull();
     expect(metadata).toEqual(original);
   });
 
@@ -338,7 +331,7 @@ describe("episodic memory metadata", () => {
   });
 
   it("passes non-object metadata straight through", () => {
-    expect(prepareMemoryMetadata(null)).toEqual({ metadata: null, error: null });
+    expect(prepareMemoryMetadata(null)).toEqual({ metadata: null, memoryAt: null, error: null });
   });
 });
 

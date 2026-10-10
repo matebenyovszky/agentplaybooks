@@ -31,7 +31,7 @@ import { resolveAllowedOrigins } from "@/app/api/_shared/hono";
 import { checkPlaybookWriteAccess, getPlaybookAccessRole } from "@/app/api/_shared/guards";
 import { buildPlaybookUpdate } from "@/lib/playbook-access";
 import { validateAgentSkillDescription, validateAgentSkillName } from "@/lib/agent-skills";
-import { demonstrationsError } from "@/lib/demonstrations";
+import { demonstrationsError, prepareMemoryMetadata } from "@/lib/demonstrations";
 import { DEFAULT_USER_API_KEY_PERMISSIONS } from "@/lib/user-api-key-permissions";
 import {
   createPlaybook,
@@ -2074,7 +2074,12 @@ app.put("/manage/playbooks/:id/memory/:key", async (c) => {
     upsertData.status = status;
   }
   if (metadata !== undefined) {
-    upsertData.metadata = metadata;
+    // The same check as the other memory writes: a malformed recording is
+    // refused here rather than skipped by every reader downstream.
+    const prepared = prepareMemoryMetadata(metadata);
+    if (prepared.error) return c.json({ error: prepared.error }, 400);
+    upsertData.metadata = prepared.metadata;
+    if (prepared.memoryAt && body.memory_at === undefined) upsertData.memory_at = prepared.memoryAt;
   }
 
   const mutation = value === undefined

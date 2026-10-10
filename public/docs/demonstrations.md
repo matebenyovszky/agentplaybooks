@@ -33,7 +33,7 @@ demonstrations:
 1. Stand 60 cm from the hinge.
 ```
 
-Frontmatter rather than a table or an attachment, for one decisive reason: it is the only place a skill can carry structured data and still survive the round trip. `apb pull` writes `SKILL.md` and `apb push` sends `content` back verbatim, so anything stored outside the document is dropped on the first pull. It also costs no migration, no new endpoint and no new MCP tool — a demonstration travels through git, the CLI, `/.well-known/skills/`, and every export exactly the way the rest of the skill does.
+Frontmatter rather than a table or a bundled file, because the list is part of the skill's definition: its order is the order of execution, so it belongs in the same document as the procedure it demonstrates. Kept there, the two cannot drift apart. They are reviewed in one diff, versioned together — `rollback_skill` restores a procedure and its demonstrations as one — and covered by the same digest in the manifest. It also costs no migration, no new endpoint and no new MCP tool: a demonstration travels through git, the CLI, `/.well-known/skills/`, and every export exactly the way the rest of the skill does.
 
 ## Fields
 
@@ -151,9 +151,9 @@ The same shape describes a recording attached to a memory, under `metadata.recor
   "key": "2026-08-20-fire-door-B2",
   "value": { "attempts": 2, "note": "handle stiffer than the demo" },
   "summary": "Opened the B2 fire door on the second attempt.",
+  "memory_at": "2026-08-20T14:32:00Z",
   "metadata": {
     "episode": {
-      "time": "2026-08-20T14:32:00Z",
       "location": "building-B/floor-2",
       "task": "open-fire-door",
       "outcome": "completed"
@@ -165,14 +165,14 @@ The same shape describes a recording attached to a memory, under `metadata.recor
 }
 ```
 
-`metadata.episode` is a convention, not a column: `{ time, location, task, outcome }`. `get_memory_context` filters on it with `location`, `task`, `since` and `until`, and returns any `recording` with its links resolved.
-
-`time` accepts any ISO 8601 timestamp — an offset like `+02:00` is fine — and is **stored normalized to UTC with milliseconds**, because the filter compares it as text and `…:00.500Z` would otherwise sort before `…:00Z`. A value that is not a timestamp is rejected rather than stored uncomparable. Everything else under `metadata` is passed through untouched.
+**Where** is `metadata.episode`, a convention rather than a column: `{ location, task, outcome }`. **When** is the memory's own `memory_at` — a real timestamp, the same one every memory has. `get_memory_context` filters on both, with `location` and `task` for where and `after` and `before` for when, and returns any `recording` with its links resolved. `search_memory` bounds `memory_at` the same way.
 
 ```jsonc
 // "what did I do in building B last week?"
-{ "location": "building-B/floor-2", "since": "2026-08-13T00:00:00Z" }
+{ "location": "building-B/floor-2", "after": "2026-08-13T00:00:00Z" }
 ```
+
+An earlier version of this convention put the time in `metadata.episode.time`. A write that still does so has it moved to `memory_at` (unless the write sets `memory_at` itself), so there is only ever one answer to *when*. Everything else under `metadata` is stored untouched.
 
 A successful run recorded this way can be promoted into a skill's `demonstrations` — which is the point of sharing the shape. A memory becomes a skill.
 

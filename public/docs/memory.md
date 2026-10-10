@@ -223,16 +223,16 @@ When using AgentPlaybooks via MCP, these tools are available:
 
 `metadata` is free-form, with two conventions that the tools understand:
 
-- **`metadata.episode`** — `{ time, location, task, outcome }`. `get_memory_context` filters on these with `location`, `task`, `since` and `until`, which is how an agent recalls what it did somewhere. `time` takes any ISO 8601 timestamp and is stored normalized to UTC so the range filter compares correctly; a value that is not a timestamp is rejected.
+- **`metadata.episode`** — `{ location, task, outcome }`: where an episode happened and what came of it. *When* is the memory's `memory_at`. `get_memory_context` filters on `location` and `task`, and on `after` and `before` for `memory_at`, which is how an agent recalls what it did somewhere. A time written as `metadata.episode.time`, as the first version of this convention did, is moved to `memory_at`.
 - **`metadata.recording`** — a recording of the episode, in the same shape a skill's `demonstrations` use. Returned with its links resolved.
 
 ```json
 {
   "key": "2026-08-20-fire-door-B2",
   "summary": "Opened the B2 fire door on the second attempt.",
+  "memory_at": "2026-08-20T14:32:00Z",
   "metadata": {
     "episode": {
-      "time": "2026-08-20T14:32:00Z",
       "location": "building-B/floor-2",
       "task": "open-fire-door",
       "outcome": "completed"
