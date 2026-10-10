@@ -1,4 +1,5 @@
 import type { Playbook, Skill, MCPServer, Persona } from "@/lib/supabase/types";
+import { skillDemonstrationsMarkdown } from "@/lib/demonstrations";
 import { PLAYBOOK_TOOLS } from "@/app/api/_shared/playbook-tools";
 import { composePlaybookSystemPrompt } from "@/lib/playbook-prompt";
 import { operationPathsFromTools, secretProxyOpenApiPath } from "@/app/api/_shared/operation-openapi";
@@ -446,6 +447,12 @@ export function formatAsMarkdown(playbook: PlaybookWithExports): string {
             md += `### ${skill.name}\n\n`;
             if (skill.description) md += `${skill.description}\n\n`;
             if (skill.licence) md += `**Licence:** ${skill.licence}\n\n`;
+            // Before the document itself: a reader that stops early should still
+            // have seen the recordings and the order they are performed in. The
+            // raw content below carries the same data as YAML, which only a
+            // client that already knows the key will look at.
+            const demonstrations = skillDemonstrationsMarkdown(skill.content, { headingLevel: 4 });
+            if (demonstrations) md += `${demonstrations}\n\n`;
             if (skill.content) md += `**Content:**\n\n${skill.content}\n\n`;
         }
     }

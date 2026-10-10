@@ -31,6 +31,13 @@ Your agent setup stays in sync across Claude, ChatGPT, Cursor, Codex, Gemini, lo
 
 **Getting it into your tools**
 
+- Claude: one plugin brings every playbook in your account into claude.ai,
+  Claude Desktop, Cowork, Claude Code, and mobile, signing in with OAuth — no
+  API key. Or add a single playbook as a custom connector. See
+  [AgentPlaybooks in Claude](https://agentplaybooks.ai/docs/claude).
+- Cursor and VS Code: one-click install links for the account or a single
+  playbook — on each playbook's Integrations tab, and in
+  [MCP Integration](https://agentplaybooks.ai/docs/mcp-integration).
 - CLI + portable Agent Plugin: audit your local agent config, then sync one playbook
   to Claude Code, Cursor, ChatGPT/Codex, Google Antigravity, Grok Bot and Hermes
 - Agent Plugins 1.0: install the project plugin or export a single playbook as
@@ -175,13 +182,16 @@ plan first and require `--apply`, `--yes`, or interactive confirmation where
 supported. See [packages/cli/README.md](packages/cli/README.md) and the
 [backup and migration guide](public/docs/portable-agent-backups.md).
 
-The same package is a ChatGPT/Codex plugin (skill + account MCP) and a Claude
-Code / Claude Cowork plugin (skill + slash commands + account MCP). Both expose
-playbooks, skills, memory, canvas, connected MCP/OpenAPI tools, workflows, and
-the vault-backed API proxy. Exact API-key setup and installation commands are
-in [packages/cli/README.md](packages/cli/README.md).
+The same package is a ChatGPT/Codex and Cursor plugin (skill + account MCP).
+Exact API-key setup and installation commands are in
+[packages/cli/README.md](packages/cli/README.md).
 
-Install the Claude plugin from this repository:
+The Claude plugin is a separate, lean folder, `plugins/agentplaybooks`: the
+account MCP connector (OAuth, no key), a playbooks skill that works in chat and
+Cowork, and `doctor` / `sync` commands that run the published CLI through a
+pinned `npx`. It has no `bin/` directory, because claude.ai and Cowork refuse a
+plugin that has one. Add it on claude.ai under **Customize → Plugins → Add
+marketplace** with `matebenyovszky/agentplaybooks`, or in Claude Code:
 
 ```text
 /plugin marketplace add matebenyovszky/agentplaybooks
@@ -473,7 +483,9 @@ agentplaybooks/
       supabase/            # Supabase client and types
       crypto.ts            # Secrets vault encryption
   packages/
-    cli/                   # AgentPlaybooks CLI + Claude Code plugin
+    cli/                   # AgentPlaybooks CLI + Codex/Cursor plugin
+  plugins/
+    agentplaybooks/        # Claude plugin (claude.ai, Cowork, Claude Code)
   .claude-plugin/          # Plugin marketplace manifest
   docs/                    # Contributor-facing notes
   examples/                # Starter playbooks (fork/clone/sync)

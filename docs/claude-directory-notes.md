@@ -8,6 +8,47 @@ portal, by a person with directory access — not from this repository.
 Everything below was checked against the live service or `main`; the parts
 that are not code are listed at the end as blockers.
 
+## Where this stands (10 October 2026)
+
+Paused here, to be picked up later. The public summary is the *Claude Plugin &
+Directory Listing* section of `public/docs/ROADMAP.md`. Nothing about this work
+lives only on a local machine: everything below is on `main`.
+
+**Done (PR #173, merged):**
+
+- `plugins/agentplaybooks` — the lean Claude plugin; `.claude-plugin/marketplace.json`
+  points at it. `claude plugin validate` passes for the plugin and the marketplace.
+- Integrations tab: Claude steps (custom connector, OAuth), one-click Cursor and
+  VS Code links; the dead `claude_desktop_config.json` advice removed from docs.
+- `/docs/claude` (+ Hungarian), a blog post dated 2026-09-30.
+- Settings → Delete account (`public.delete_account`, one transaction), and the
+  fix for playbook deletion, which a delete trigger had been rolling back in
+  production. Both migrations deploy automatically on merge.
+- A complete privacy notice (`src/lib/legal-copy.ts`), with no email address by
+  the owner's decision: contact goes through the repository's issues.
+- `npm run seed:reviewer` to populate a reviewer account.
+
+**Continue here — the OAuth sign-in is not working yet.** There is a known
+OAuth bug when the database runs on OrioleDB (the production Supabase project
+does, `17-oriole`), being fixed separately. Until it is fixed, everything from
+step 1 down waits on it.
+
+1. Fix the OAuth bug on OrioleDB, then test the connector from claude.ai
+   (*Customize → Connectors → Add custom connector*,
+   `https://agentplaybooks.ai/api/mcp/manage`) and from Claude Code (`/mcp`).
+2. Confirm that deleting a throwaway playbook and a throwaway account works in
+   production.
+3. Sign up the reviewer account and run `npm run seed:reviewer`.
+4. Add the plugin on claude.ai through *Customize → Plugins → Add marketplace*
+   (`matebenyovszky/agentplaybooks`), connect it, try each skill and command.
+5. Submit both in the portal — **MCP connector** first, then **Plugin bundle** —
+   from the account that should own the listings for good.
+
+**Open decisions:** whether to mark the 17 non-destructive writes destructive
+(only if the portal's Tools step flags them, see the tool table above); a UI for
+the profile display name; whether a repository link is enough as the privacy
+contact once the directory reviews it.
+
 ## What gets submitted
 
 - **Server:** `https://agentplaybooks.ai/api/mcp/manage`
@@ -104,18 +145,64 @@ Negative:
 
 ## Blockers (not code)
 
-- **Privacy policy completeness.** `/privacy` returns `200`, but its copy is
-  four short paragraphs and is marked *locked* in `src/lib/legal-copy.ts`.
-  The directory states that missing or incomplete privacy policies are an
-  immediate rejection, and lists what a policy must cover: data collection,
-  usage and storage, third-party sharing, data retention, and contact
-  information. The current copy says nothing about third-party processors
-  (Supabase, Cloudflare) or retention, and offers a repository link rather
-  than a contact. Expanding it is the copy owner's decision.
-- **Organization.** The portal is part of claude.ai organization settings: a
-  Team or Enterprise organization, submitted by an Owner (or, on Enterprise, a
-  role with the Directory permission).
-- **Test account.** Reviewers need credentials for a fully populated account:
-  playbooks with skills, memory entries, a canvas run, and at least one secret,
-  so that every tool has something real to act on.
-- **Public documentation by the publish date** — the docs above are live.
+- **Privacy policy — written.** `src/lib/legal-copy.ts` covers what the
+  directory lists: collection, use and legal basis, processors (Supabase in
+  Frankfurt, Cloudflare), sharing, retention, rights, contact, and account
+  deletion. The contact is the repository's issue tracker, not an email
+  address — the owner's decision. The directory asks for "contact
+  information"; if a reviewer finds a repository link insufficient, that is the
+  thing to revisit.
+- **Who submits.** Pro, Max, Team, or Enterprise; Free cannot. On Pro and Max you
+  submit from your own account; on Team and Enterprise an Owner does, or on
+  Enterprise a member with the Directory permission. The first account or
+  organization to submit a repository folder owns that listing for good.
+- **Test account — script ready.** Sign up a dedicated reviewer account, create a
+  user API key with full access under Settings, then run
+  `AGENTPLAYBOOKS_API_KEY=… npm run seed:reviewer` (try `-- --dry-run` first).
+  It creates two private playbooks with a persona, instructions, skills, memory,
+  a run with a canvas document, and a demo secret whose value is not a real
+  credential. Give reviewers that account's credentials through the portal's
+  Test & launch step only.
+- **Public documentation by the publish date** — the docs above are live, and
+  `/docs/claude` once #173 is deployed.
+
+## The plugin bundle (second submission)
+
+The directory has two submission kinds, and the plugin is the other one. A
+plugin that references a remote server we run should be submitted alongside
+that server as a connector, so do both.
+
+**Source** — repository `matebenyovszky/agentplaybooks`, plugin path
+`plugins/agentplaybooks`, tracked branch `main`. Not `packages/cli`: claude.ai
+chat and Cowork refuse a plugin with a top-level `bin/` directory, and its
+lockfile and bundled CLI would be held for manual review.
+
+**Validate** — `claude plugin validate plugins/agentplaybooks` passes locally;
+the portal runs more checks. What it will see:
+
+- `.claude-plugin/plugin.json` with `name`, `displayName`, `version`,
+  `description`, `author`, `license`, and the account connector as a remote
+  `http` server with a fixed `https://` URL and no credential;
+- `README.md` well over 40 words, with what the plugin runs and connects to and
+  a privacy section; `LICENSE`;
+- two skills and two commands, plain markdown with valid front matter;
+- no hooks, no executables, no lockfile, no package-manager config. The
+  commands tell Claude to run `npx --yes @agentplaybooks/cli@<version>`, pinned;
+  that is an instruction to Claude, not a hook or MCP server command, so the
+  launcher rules do not apply to it. `release:check` keeps every pin equal to
+  the CLI version.
+
+**Listing details** — read from `plugin.json` and the README, so edit those,
+not the portal.
+
+**Data handling** — reads and stores the user's own playbook data on our
+service through the declared connector; sends nothing to other services (the
+commands download the CLI from the npm registry, which the README names);
+retention follows the service, as the privacy policy says. Whether it is
+intended for people under 18 is the maintainer's answer to give.
+
+**After approval** — keep **GitHub push webhook** on, so merging to `main`
+publishes the next version. Raise `version` in `plugin.json` with every
+release; `release:check` already ties it to the CLI version.
+
+The privacy policy blocker above applies to this submission too.

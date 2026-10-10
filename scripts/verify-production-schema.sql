@@ -46,5 +46,31 @@ BEGIN
         )) <> 3 THEN
     RAISE EXCEPTION 'playbook_snapshots indexes are missing';
   END IF;
+
+  -- Account deletion: the function must exist and must stay out of reach of
+  -- the browser roles — calling it is the API route's job, after it has
+  -- checked the session and the typed confirmation.
+  IF to_regprocedure('public.delete_account(uuid)') IS NULL THEN
+    RAISE EXCEPTION 'delete_account function is missing';
+  END IF;
+  FOREACH client_role IN ARRAY ARRAY['anon', 'authenticated'] LOOP
+    IF has_function_privilege(client_role, 'public.delete_account(uuid)', 'EXECUTE') THEN
+      RAISE EXCEPTION 'delete_account is executable by %', client_role;
+    END IF;
+  END LOOP;
+  IF NOT has_function_privilege('service_role', 'public.delete_account(uuid)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'delete_account is not executable by service_role';
+  END IF;
+
+  -- A delete trigger on playbooks made every playbook delete fail; it must
+  -- not come back. Bit 8 of tgtype is TRIGGER_TYPE_DELETE.
+  IF EXISTS (
+    SELECT 1 FROM pg_trigger
+    WHERE tgrelid = 'public.playbooks'::regclass AND NOT tgisinternal
+      AND tgname = 'trigger_track_playbook_version'
+      AND (tgtype & 8) <> 0
+  ) THEN
+    RAISE EXCEPTION 'trigger_track_playbook_version still fires on DELETE';
+  END IF;
 END
 $verify$;

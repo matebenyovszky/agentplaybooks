@@ -21,6 +21,12 @@ export const docsEntries: DocEntry[] = [
     section: "guides",
   },
   {
+    slug: "claude",
+    title: "AgentPlaybooks in Claude",
+    description: "Plugin, custom connector, and Claude Code — web, Desktop, Cowork, mobile",
+    section: "guides",
+  },
+  {
     slug: "bot-platform-integrations",
     title: "Portable Bot Teams",
     description: "Grok Bot, Hermes Bot Mode, deployments, and fleet design",

@@ -53,6 +53,20 @@ A skill is a reusable capability definition that includes:
 }
 ```
 
+## Demonstrations
+
+A skill can point at recordings of itself being performed, declared in its `SKILL.md` frontmatter under `demonstrations:`. For a robot foundation model that learns a task from one or a handful of demonstrations, this is the executable core of the skill rather than an illustration beside it — and the order of the list is the order of execution.
+
+```yaml
+demonstrations:
+  - provider: youtube
+    ref: dQw4w9WgXcQ
+    segments:
+      - { start: 134, end: 158, label: grip the handle, comment: from below }
+```
+
+A text-only reader gets the same recordings as a timestamped list, so nothing is lost either way. See [Demonstrations](./demonstrations.md).
+
 ## Creating Skills
 
 ### Via Dashboard
@@ -232,8 +246,13 @@ Export your playbook skills for Claude Coworker:
 # Export skills in Anthropic format
 curl -s "https://apbks.com/api/playbooks/YOUR_GUID?format=anthropic" \
   | jq '.tools' > ~/Documents/CoworkerSkills/my_skills.json
-
-# Or connect via MCP (recommended)
-# Add to claude_desktop_config.json:
-# "mcpServers": {"playbook": {"transport": "http", "url": "https://apbks.com/api/mcp/YOUR_GUID"}}
 ```
+
+Connecting over MCP is the better route, because skills and memory stay live
+instead of being copied once. Cowork reads plugins and connectors from your
+claude.ai account: install the AgentPlaybooks plugin from
+[Customize → Plugins](https://claude.ai/customize/plugins), or add
+`https://agentplaybooks.ai/api/mcp/YOUR_GUID` as a custom connector — see
+[AgentPlaybooks in Claude](/docs/claude). `claude_desktop_config.json` does not
+work for this: it holds local stdio servers only, and a `url` there is ignored
+without an error.

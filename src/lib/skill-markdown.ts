@@ -72,16 +72,33 @@ function patchFrontmatter(block: string, name: string, description: string): str
   return lines.join("\n");
 }
 
+export type FrontmatterSplit = {
+  /** The YAML between the `---` fences, without the fences themselves. */
+  block: string;
+  /** Everything after the closing fence. */
+  body: string;
+  hasFrontmatter: boolean;
+};
+
+/**
+ * Separate a `SKILL.md` document into its frontmatter and its body. Callers that
+ * only want one of the two get the same view of the document that
+ * `skillMarkdown` works from, rather than re-deriving the fence rules.
+ */
+export function splitFrontmatter(content: string | null | undefined): FrontmatterSplit {
+  const normalized = normalizeLineEndings(content ?? "");
+  const match = normalized.match(FRONTMATTER_PATTERN);
+  if (!match) return { block: "", body: normalized, hasFrontmatter: false };
+  return { block: match[1], body: normalized.slice(match[0].length), hasFrontmatter: true };
+}
+
 /**
  * The `SKILL.md` document for a stored skill, or null when it cannot be made
  * spec-valid — a skill with no description anywhere is not publishable, and
  * inventing one would be worse than leaving it out.
  */
 export function skillMarkdown(skill: SkillDocument): string | null {
-  const content = normalizeLineEndings(skill.content ?? "");
-  const match = content.match(FRONTMATTER_PATTERN);
-  const block = match ? match[1] : "";
-  const body = match ? content.slice(match[0].length) : content;
+  const { block, body, hasFrontmatter } = splitFrontmatter(skill.content);
 
   const columnDescription = (skill.description ?? "").replace(/\s+/g, " ").trim();
   const frontmatterDescription = block
@@ -92,7 +109,7 @@ export function skillMarkdown(skill: SkillDocument): string | null {
   const description = columnDescription || frontmatterDescription;
   if (description.length === 0) return null;
 
-  if (match) {
+  if (hasFrontmatter) {
     const patched = patchFrontmatter(block, skill.name, description);
     return `---\n${patched}\n---\n\n${body.replace(/^\n+/, "")}`;
   }

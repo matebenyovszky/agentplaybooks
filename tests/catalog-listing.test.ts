@@ -1,23 +1,33 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
-  PRIVACY_PARAGRAPHS,
+  PRIVACY_CONTACT_URL,
+  PRIVACY_SECTIONS,
   TERMS_PARAGRAPHS,
 } from "@/lib/legal-copy";
 import { LEGAL_CANONICAL_PATHS, LEGAL_REDIRECTS } from "@/lib/legal-routes";
 import { ACCOUNT_TOOLS } from "@/app/api/_shared/account-tools";
 import { PLAYBOOK_TOOLS } from "@/app/api/_shared/playbook-tools";
 
+// The privacy notice was a locked four-paragraph copy until the Claude
+// directory submission needed a complete one. Two rules of that lock survive:
+// no compliance claim we cannot back, and no email address of any kind — the
+// owner's decision; contact goes through the public repository.
+const EMAIL_ADDRESS = /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.[A-Za-z]{2,}/;
 const FORBIDDEN = [
   "PolyForm",
   "SOC 2",
   "SOC2",
   "ISO 27001",
-  "GDPR",
-  "OAuth",
+  "compliant",
+  "certified",
   "outlook.com",
+  "gmail.com",
+  // Internal host and organisation names are kept out by the maintainer's
+  // pre-push denylist, which covers the whole repository; listing them here
+  // would publish them.
   "hello@",
   "apb_live_",
 ];
@@ -26,14 +36,30 @@ function source(relativePath: string): string {
   return readFileSync(path.join(process.cwd(), relativePath), "utf8");
 }
 
+const privacyText = PRIVACY_SECTIONS.flatMap((section) => [
+  section.heading ?? "",
+  ...section.blocks.flatMap((block) => (typeof block === "string" ? [block] : [...block])),
+]).join("\n");
+
 describe("catalog legal pages", () => {
-  it("keeps the CoS-locked privacy and terms copy", () => {
-    expect(PRIVACY_PARAGRAPHS).toEqual([
-      "AgentPlaybooks is open-source software licensed under MIT. The product is the code in the public repository.",
-      "The CLI and editor plugins run on your machine. Local use does not send us your playbooks, skills, instructions, or secrets.",
-      "If you use agentplaybooks.ai or the hosted API, we process only what is required to run that service (for example an account email or API key). We do not sell personal data.",
-      "To ask about this page, contact the maintainers via the public repository: https://github.com/matebenyovszky/agentplaybooks",
-    ]);
+  it("covers what the Claude directory requires of a privacy policy", () => {
+    // https://claude.com/docs/connectors/building/submission — data collection,
+    // usage and storage, third-party sharing, data retention, contact.
+    const headings = PRIVACY_SECTIONS.map((section) => section.heading ?? "");
+    for (const heading of ["Who is responsible", "What we collect", "Why we use it", "Who else sees it", "How long we keep it", "Your rights"]) {
+      expect(headings, heading).toContain(heading);
+    }
+    expect(PRIVACY_CONTACT_URL).toMatch(/^https:\/\/github\.com\/matebenyovszky\/agentplaybooks\//);
+    expect(privacyText).toContain(PRIVACY_CONTACT_URL);
+  });
+
+  it("names every processor the service actually uses, and the account deletion it offers", () => {
+    expect(privacyText).toContain("Supabase");
+    expect(privacyText).toContain("Cloudflare");
+    expect(privacyText).toContain("Settings → Delete account");
+  });
+
+  it("keeps the terms copy", () => {
     expect(TERMS_PARAGRAPHS).toEqual([
       "The software is provided \u201cas is\u201d, without warranty of any kind, express or implied.",
       "You use AgentPlaybooks at your own risk. The maintainers accept no liability for any loss or damage arising from use of the software or the site.",
@@ -41,7 +67,7 @@ describe("catalog legal pages", () => {
     ]);
   });
 
-  it("does not invent compliance claims, OAuth, emails, or marketplace listings", () => {
+  it("does not invent compliance claims or publish an email address", () => {
     const legal = [
       source("src/lib/legal-copy.ts"),
       source("src/app/privacy/page.tsx"),
@@ -51,6 +77,7 @@ describe("catalog legal pages", () => {
     for (const term of FORBIDDEN) {
       expect(legal, term).not.toContain(term);
     }
+    expect(legal).not.toMatch(EMAIL_ADDRESS);
   });
 
   it("exports privacy and terms page modules with canonical metadata", () => {
@@ -117,19 +144,11 @@ describe("Cursor plugin catalog manifests", () => {
     const marketplace = JSON.parse(source(".cursor-plugin/marketplace.json")) as {
       plugins: Array<{ source: string; license: string; version: string }>;
     };
-    const claudeMarketplace = JSON.parse(source(".claude-plugin/marketplace.json")) as {
-      plugins: Array<{ source: string; license: string; version: string }>;
-    };
     expect(marketplace.plugins).toHaveLength(1);
     expect(marketplace.plugins[0].source).toBe("./packages/cli");
     expect(marketplace.plugins[0].license).toBe("MIT");
     const cli = JSON.parse(source("packages/cli/package.json")) as { version: string };
     expect(marketplace.plugins[0].version).toBe(cli.version);
-    expect(claudeMarketplace.plugins[0]).toMatchObject({
-      source: marketplace.plugins[0].source,
-      license: marketplace.plugins[0].license,
-      version: marketplace.plugins[0].version,
-    });
   });
 
   it("keeps portable plugin and MCP Registry versions aligned with the CLI", () => {
@@ -166,5 +185,48 @@ describe("ChatGPT directory reviewer notes", () => {
     expect(notes).toContain(`**${total}** tools`);
     expect(notes).toContain(`${ACCOUNT_TOOLS.length} account tools`);
     expect(notes).toContain(`${PLAYBOOK_TOOLS.length} playbook tools`);
+  });
+});
+
+/**
+ * The Claude marketplace points somewhere else on purpose. claude.ai chat and
+ * Cowork refuse a plugin that has a top-level `bin/` directory, which the CLI
+ * package has, so Claude gets the lean `plugins/agentplaybooks` folder instead —
+ * and that folder is also what Anthropic's directory reads.
+ * See https://claude.com/docs/plugins/platform-support
+ */
+describe("Claude plugin catalog manifests", () => {
+  const pluginRoot = "plugins/agentplaybooks";
+
+  it("resolves the Claude marketplace to the lean plugin, at the CLI's version", () => {
+    const claudeMarketplace = JSON.parse(source(".claude-plugin/marketplace.json")) as {
+      plugins: Array<{ name: string; source: string; license: string; version: string }>;
+    };
+    const cli = JSON.parse(source("packages/cli/package.json")) as { version: string };
+    expect(claudeMarketplace.plugins).toHaveLength(1);
+    expect(claudeMarketplace.plugins[0]).toMatchObject({
+      name: "agentplaybooks",
+      source: `./${pluginRoot}`,
+      license: "MIT",
+      version: cli.version,
+    });
+  });
+
+  it("keeps the folder installable on every Claude surface", () => {
+    const entries = readdirSync(path.join(process.cwd(), pluginRoot));
+    expect(entries, "a top-level bin/ makes claude.ai and Cowork refuse the plugin").not.toContain("bin");
+    expect(entries, "a lockfile is held for manual directory review").not.toContain("package-lock.json");
+    expect(entries).toContain("README.md");
+    expect(entries).toContain("LICENSE");
+  });
+
+  it("bundles the account connector as a remote server with no credential in it", () => {
+    const plugin = JSON.parse(source(`${pluginRoot}/.claude-plugin/plugin.json`)) as {
+      name: string;
+      mcpServers: Record<string, { type: string; url: string; headers?: unknown }>;
+    };
+    const server = plugin.mcpServers["agentplaybooks-account"];
+    expect(plugin.name).toBe("agentplaybooks");
+    expect(server).toEqual({ type: "http", url: "https://agentplaybooks.ai/api/mcp/manage" });
   });
 });

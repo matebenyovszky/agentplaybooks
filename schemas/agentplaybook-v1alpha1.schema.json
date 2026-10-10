@@ -37,7 +37,23 @@
               "platform": { "type": "string" },
               "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
               "name": { "type": "string" },
-              "description": { "type": "string" }
+              "description": { "type": "string" },
+              "demonstrations": {
+                "description": "Recordings of the skill being performed, declared in its SKILL.md frontmatter, in the order they are performed. Listed here so a playbook says which external recordings an agent must be able to reach before it is run; the segment detail stays in the skill itself.",
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["provider", "ref"],
+                  "properties": {
+                    "provider": { "enum": ["youtube", "hf_dataset", "url"] },
+                    "ref": { "type": "string" },
+                    "fidelity": { "enum": ["video", "sensorimotor"] },
+                    "role": { "enum": ["demonstration", "reference", "warning"] },
+                    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+                  }
+                }
+              }
             }
           }
         },

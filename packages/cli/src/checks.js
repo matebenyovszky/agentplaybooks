@@ -48,6 +48,63 @@ function parseFrontmatter(content) {
   };
 }
 
+const DEMONSTRATION_PROVIDERS = new Set(["youtube", "hf_dataset", "url"]);
+const SHA256_HEX = /^[0-9a-f]{64}$/;
+
+/**
+ * The `demonstrations` block of a skill, as far as this side needs to know it.
+ *
+ * A demonstration points at a recording of the skill being performed, and the
+ * order of the list is the order the recordings are performed in. Only the
+ * shape is checked here — that each entry names a provider we can resolve and
+ * carries a reference — because the hosted playbook validates the reference
+ * itself when the skill is pushed. Catching a typo locally is what makes the
+ * difference between `apb doctor` pointing at the line and `apb push` failing.
+ *
+ * @returns {{ demonstrations: Array<{provider: string, ref: string, fidelity: string, role: string, sha256?: string}>, invalid: boolean }}
+ */
+export function skillDemonstrations(values) {
+  const raw = values?.demonstrations;
+  if (raw === undefined || raw === null) return { demonstrations: [], invalid: false };
+
+  const list = Array.isArray(raw) ? raw : [raw];
+  const demonstrations = [];
+  let invalid = false;
+
+  for (const entry of list) {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      invalid = true;
+      continue;
+    }
+    const { provider, ref } = entry;
+    if (!DEMONSTRATION_PROVIDERS.has(provider) || typeof ref !== "string" || ref.trim().length === 0) {
+      invalid = true;
+      continue;
+    }
+    // Same rule as the hosted playbook: a digest pins the bytes behind a url,
+    // and nothing else has stable bytes to pin.
+    let sha256;
+    if (entry.sha256 !== undefined && entry.sha256 !== null) {
+      sha256 = typeof entry.sha256 === "string" ? entry.sha256.trim().toLowerCase() : "";
+      if (provider !== "url" || !SHA256_HEX.test(sha256)) {
+        invalid = true;
+        continue;
+      }
+    }
+    demonstrations.push({
+      provider,
+      ref: ref.trim(),
+      // The same defaults the hosted playbook applies, so a manifest built here
+      // and one built there describe the same playbook.
+      fidelity: typeof entry.fidelity === "string" ? entry.fidelity : provider === "hf_dataset" ? "sensorimotor" : "video",
+      role: typeof entry.role === "string" ? entry.role : "demonstration",
+      ...(sha256 ? { sha256 } : {}),
+    });
+  }
+
+  return { demonstrations, invalid };
+}
+
 export function credentialLines(content) {
   const results = [];
   for (const [index, line] of content.split(/\r?\n/).entries()) {
@@ -156,7 +213,12 @@ export function analyze(inventory) {
     const parentName = path.basename(path.dirname(skill.source));
     const name = typeof frontmatter.values.name === "string" ? frontmatter.values.name : parentName;
     const description = typeof frontmatter.values.description === "string" ? frontmatter.values.description : "";
-    skills.push({ ...skill, name, description });
+    const { demonstrations, invalid: demonstrationsInvalid } = skillDemonstrations(frontmatter.values);
+    skills.push({ ...skill, name, description, demonstrations });
+
+    if (demonstrationsInvalid) {
+      findings.push(finding("high", "skill.demonstrations.invalid", "Each demonstration needs a provider of youtube, hf_dataset, or url, and a ref; a sha256 is 64 hex characters and only on a url reference.", skill.source));
+    }
 
     if (!frontmatter.valid) {
       findings.push(finding("high", "skill.frontmatter.invalid", "SKILL.md must start with valid YAML frontmatter.", skill.source));

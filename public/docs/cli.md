@@ -387,9 +387,12 @@ expands it at launch. Two details worth knowing, because both fail silently:
 
 ## Claude Code & Claude Cowork plugin
 
-The CLI package doubles as a Claude Code plugin with an `agentplaybooks`
-skill and `/agentplaybooks:doctor`, `:sync`, `:pull`, `:push`, `:connect`
-commands:
+The repository marketplace installs the AgentPlaybooks Claude plugin: the
+account MCP connector (OAuth, no key), a playbooks skill, and
+`/agentplaybooks:doctor` and `:sync`, which run this CLI through a pinned `npx`.
+It works in claude.ai chat and Cowork as well as Claude Code — on claude.ai, add
+it under **Customize → Plugins → Add marketplace**. See
+[AgentPlaybooks in Claude](/docs/claude). In Claude Code:
 
 ```text
 /plugin marketplace add matebenyovszky/agentplaybooks

@@ -31,6 +31,7 @@ import { resolveAllowedOrigins } from "@/app/api/_shared/hono";
 import { checkPlaybookWriteAccess, getPlaybookAccessRole } from "@/app/api/_shared/guards";
 import { buildPlaybookUpdate } from "@/lib/playbook-access";
 import { validateAgentSkillDescription, validateAgentSkillName } from "@/lib/agent-skills";
+import { demonstrationsError } from "@/lib/demonstrations";
 import { DEFAULT_USER_API_KEY_PERMISSIONS } from "@/lib/user-api-key-permissions";
 import {
   createPlaybook,
@@ -422,6 +423,8 @@ app.post("/playbooks/:id/skills", async (c) => {
   if (nameError) return c.json({ error: nameError }, 400);
   const descriptionError = validateAgentSkillDescription(description);
   if (descriptionError) return c.json({ error: descriptionError }, 400);
+  const demonstrationError = demonstrationsError(content);
+  if (demonstrationError) return c.json({ error: demonstrationError }, 400);
 
   const supabase = getServiceSupabase();
 
@@ -460,6 +463,11 @@ app.put("/playbooks/:id/skills/:sid", async (c) => {
 
   const body = await c.req.json();
   const { name, description, content, licence } = body;
+
+  if (content !== undefined) {
+    const demonstrationError = demonstrationsError(content);
+    if (demonstrationError) return c.json({ error: demonstrationError }, 400);
+  }
 
   const supabase = getServiceSupabase();
 
@@ -999,6 +1007,45 @@ app.put("/user/api-keys/:kid/rotate", async (c) => {
   });
 });
 
+// DELETE /api/user/account - Permanently delete the signed-in account and everything it owns
+//
+// Two deliberate frictions. Only a browser session can do this: requireAuth
+// goes through getAuthenticatedUser, which ignores `Bearer apb_…`, so a leaked
+// user or playbook API key cannot delete the account it belongs to. And the
+// caller must type the account's email, checked here against the auth record,
+// so a stray request — or an agent acting through the session — cannot get
+// there by accident. The deletion itself is one database function in one
+// transaction (supabase/migrations/20261010120000_delete_account.sql): the
+// account is either gone completely or untouched.
+app.delete("/user/account", async (c) => {
+  const user = await requireAuth(c);
+  if (!user) {
+    return c.json({ error: "Sign in to delete your account. API keys cannot do this." }, 401);
+  }
+
+  const body = (await c.req.json().catch(() => null)) as { confirm_email?: unknown } | null;
+  const typed = typeof body?.confirm_email === "string" ? body.confirm_email.trim().toLowerCase() : "";
+
+  const supabase = getServiceSupabase();
+  const { data: account, error: lookupError } = await supabase.auth.admin.getUserById(user.id);
+  if (lookupError || !account?.user) {
+    return c.json({ error: "Account not found." }, 404);
+  }
+  const email = (account.user.email ?? "").trim().toLowerCase();
+  if (!email || typed !== email) {
+    return c.json({ error: "Type your account's email address to confirm. Nothing was deleted." }, 400);
+  }
+
+  const { data: result, error } = await supabase.rpc("delete_account", { p_user_id: user.id });
+  if (error) {
+    console.error("delete_account failed", { userId: user.id, message: error.message });
+    return c.json({ error: "The account could not be deleted, and nothing was removed. Try again, or contact us through the privacy page." }, 500);
+  }
+
+  const playbooksDeleted = Number((result as { playbooks_deleted?: unknown } | null)?.playbooks_deleted ?? 0);
+  return c.json({ deleted: true, playbooks_deleted: playbooksDeleted });
+});
+
 // ============================================
 // MANAGEMENT API (User API Key supported)
 // These endpoints can be called with User API key for AI automation
@@ -1300,6 +1347,8 @@ app.post("/manage/playbooks/:id/skills", async (c) => {
   if (nameError) return c.json({ error: nameError }, 400);
   const descriptionError = validateAgentSkillDescription(description);
   if (descriptionError) return c.json({ error: descriptionError }, 400);
+  const demonstrationError = demonstrationsError(content);
+  if (demonstrationError) return c.json({ error: demonstrationError }, 400);
 
   const supabase = getServiceSupabase();
 
@@ -1346,6 +1395,10 @@ app.put("/manage/playbooks/:id/skills/:sid", async (c) => {
   if (body.description !== undefined) {
     const descriptionError = validateAgentSkillDescription(body.description);
     if (descriptionError) return c.json({ error: descriptionError }, 400);
+  }
+  if (body.content !== undefined) {
+    const demonstrationError = demonstrationsError(body.content);
+    if (demonstrationError) return c.json({ error: demonstrationError }, 400);
   }
 
   // Whitelist allowed fields to prevent mass-assignment

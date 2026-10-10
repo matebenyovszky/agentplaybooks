@@ -1,45 +1,62 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { FloatingNav } from "@/components/ui/floating-navbar";
+import type { LegalSection } from "@/lib/legal-copy";
 
-const REPO_URL = "https://github.com/matebenyovszky/agentplaybooks";
+const LINK_CLASS = "text-indigo-600 dark:text-indigo-400 underline underline-offset-2";
 
-function withRepoLink(text: string) {
-  if (!text.includes(REPO_URL)) return text;
+// URLs and email addresses in the copy become links; everything else stays
+// plain text, so the copy file remains the single place the wording lives.
+const LINKABLE = /(https:\/\/[^\s)]*[^\s).,]|[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/g;
 
-  const parts = text.split(REPO_URL);
-  return parts.flatMap((part, index) =>
-    index === 0
-      ? [part]
-      : [
-          <a
-            key={`${REPO_URL}-${index}`}
-            href={REPO_URL}
-            className="text-indigo-600 dark:text-indigo-400 underline underline-offset-2"
-          >
-            {REPO_URL}
-          </a>,
-          part,
-        ],
-  );
+function linkify(text: string): ReactNode[] {
+  return text.split(LINKABLE).map((part, index) => {
+    if (index % 2 === 0) return part;
+    const href = part.startsWith("https://") ? part : `mailto:${part}`;
+    return (
+      <a key={`${part}-${index}`} href={href} className={LINK_CLASS}>
+        {part}
+      </a>
+    );
+  });
 }
 
 export function LegalDocument({
   title,
   paragraphs,
+  sections,
 }: {
   title: string;
-  paragraphs: readonly string[];
+  paragraphs?: readonly string[];
+  sections?: readonly LegalSection[];
 }) {
+  const allSections: readonly LegalSection[] = sections ?? [{ blocks: paragraphs ?? [] }];
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <FloatingNav />
       <main className="max-w-3xl mx-auto px-6 pt-32 pb-20">
         <h1 className="text-4xl font-bold mb-8 text-neutral-900 dark:text-white">{title}</h1>
-        <article className="space-y-6">
-          {paragraphs.map((paragraph) => (
-            <p key={paragraph} className="text-neutral-700 dark:text-neutral-300 leading-relaxed">
-              {withRepoLink(paragraph)}
-            </p>
+        <article className="space-y-10">
+          {allSections.map((section, sectionIndex) => (
+            <section key={section.heading ?? `section-${sectionIndex}`} className="space-y-4">
+              {section.heading && (
+                <h2 className="text-xl font-semibold text-neutral-900 dark:text-white">{section.heading}</h2>
+              )}
+              {section.blocks.map((block, blockIndex) =>
+                typeof block === "string" ? (
+                  <p key={blockIndex} className="text-neutral-700 dark:text-neutral-300 leading-relaxed">
+                    {linkify(block)}
+                  </p>
+                ) : (
+                  <ul key={blockIndex} className="list-disc pl-6 space-y-2 text-neutral-700 dark:text-neutral-300 leading-relaxed">
+                    {block.map((item) => (
+                      <li key={item}>{linkify(item)}</li>
+                    ))}
+                  </ul>
+                ),
+              )}
+            </section>
           ))}
         </article>
         <nav className="mt-12 pt-8 border-t border-neutral-200 dark:border-neutral-800 text-sm text-neutral-500 dark:text-slate-500 flex gap-4">

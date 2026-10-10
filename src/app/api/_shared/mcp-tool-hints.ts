@@ -89,6 +89,39 @@ export const skillListOutputSchema: Record<string, unknown> = {
   required: ["skills"],
 };
 
+/**
+ * A demonstration reference with its links already resolved. Present only when
+ * the skill's frontmatter declares one; absent entirely for a text-only skill.
+ */
+export const resolvedDemonstrationSchema: Record<string, unknown> = {
+  type: "object",
+  properties: {
+    provider: { type: "string", enum: ["youtube", "hf_dataset", "url"] },
+    ref: { type: "string" },
+    fidelity: { type: "string", enum: ["video", "sensorimotor"] },
+    role: { type: "string", enum: ["demonstration", "reference", "warning"] },
+    title: { type: "string" },
+    sha256: { type: "string", description: "Hex SHA-256 the downloaded recording must match; url references only." },
+    url: { type: "string" },
+    segments: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          start: { type: "number" },
+          end: { type: "number" },
+          label: { type: "string" },
+          comment: { type: "string" },
+          timestamp: { type: "string" },
+          url: { type: "string" },
+        },
+        required: ["start", "timestamp", "url"],
+      },
+    },
+  },
+  required: ["provider", "ref", "fidelity", "role", "url", "segments"],
+};
+
 export const skillRecordOutputSchema: Record<string, unknown> = {
   type: "object",
   properties: {
@@ -102,6 +135,7 @@ export const skillRecordOutputSchema: Record<string, unknown> = {
     priority: { type: ["number", "null"] },
     created_at: { type: "string" },
     skill_attachments: { type: "array", items: { type: "object" } },
+    demonstrations: { type: "array", items: resolvedDemonstrationSchema },
   },
 };
 

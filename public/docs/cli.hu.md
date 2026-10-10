@@ -271,8 +271,12 @@ mindkettő némán hibázik:
 
 ## Claude Code és Claude Cowork plugin
 
-A CLI-csomag egyben Claude Code plugin is: `agentplaybooks` skillel és
-`/agentplaybooks:doctor`, `:sync`, `:pull`, `:push`, `:connect` parancsokkal:
+A repó marketplace-e az AgentPlaybooks Claude-plugint telepíti: a fiók
+MCP-connectort (OAuth, kulcs nélkül), egy playbooks skillt, valamint az
+`/agentplaybooks:doctor` és `:sync` parancsot, amelyek ezt a CLI-t rögzített
+verziójú `npx`-szel futtatják. claude.ai chatben és Cowork-ben is működik, nem
+csak Claude Code-ban — claude.ai-on a **Customize → Plugins → Add marketplace**
+alatt add hozzá. Lásd [AgentPlaybooks a Claude-ban](/docs/claude). Claude Code-ban:
 
 ```text
 /plugin marketplace add matebenyovszky/agentplaybooks

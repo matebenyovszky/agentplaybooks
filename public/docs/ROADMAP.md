@@ -52,6 +52,23 @@ This document outlines the development roadmap for AgentPlaybooks — the open s
 
 ## Phase 2: Security, Enterprise Readiness & Distribution 🚧
 
+### Claude Plugin & Directory Listing 🚧
+
+> Every playbook in an account, in every Claude surface — claude.ai, Claude
+> Desktop, Cowork, Claude Code, mobile — signing in with OAuth and no API key.
+> Status as of October 2026; the step-by-step lives in
+> `docs/claude-directory-notes.md`.
+
+- [x] **Claude plugin** - `plugins/agentplaybooks`: account connector, a playbooks skill that works in chat and Cowork, `doctor` / `sync` commands; no `bin/`, so claude.ai and Cowork accept it
+- [x] **Integrations tab for Claude, Cursor, VS Code** - custom-connector steps and one-click editor install links, replacing the `claude_desktop_config.json` advice that never worked
+- [x] **Self-service account deletion** - Settings → Delete account, in one transaction; also fixed playbook deletion
+- [x] **Complete privacy notice** - collection, processors, retention, rights, contact
+- [x] **Tool annotations** - every tool has a title and read-only / destructive hints, enforced by tests
+- [ ] **OAuth sign-in on OrioleDB** ← *continue here* - the endpoints advertise OAuth (protected-resource metadata, dynamic client registration), but sign-in fails while the database runs on OrioleDB; being fixed separately. Then test the connector from claude.ai and Claude Code
+- [ ] **Reviewer account** - populated with `npm run seed:reviewer`
+- [ ] **Directory submissions** - MCP connector, then plugin bundle, at claude.ai/directory/manage
+- [ ] **Profile name editing** - a UI for the public display name, which starts as the local part of the email address
+
 ### API Security Enhancements 📋
 
 - [ ] **Read API Authentication** - Optional auth for read endpoints

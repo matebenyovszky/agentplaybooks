@@ -95,6 +95,8 @@ Indítsd újra a Cursort (vagy töltsd újra az ablakot). A playbook eszközei m
 
 ## Csatlakozás Claude Desktophoz
 
+> **Ez sosem működött.** A `claude_desktop_config.json` csak helyi szervereket kezel, az URL-t hibajelzés nélkül figyelmen kívül hagyja. Használd helyette az AgentPlaybooks plugint vagy egy egyéni connectort, OAuth-belépéssel, kulcs nélkül — lásd [AgentPlaybooks a Claude-ban](/docs/claude).
+
 ```json
 {
   "mcpServers": {

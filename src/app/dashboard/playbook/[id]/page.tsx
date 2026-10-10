@@ -13,6 +13,16 @@ import { createSupabaseAdapter } from "@/lib/storage";
 import { isSafeSkillFile, skillMarkdown } from "@/lib/skill-markdown";
 import { buildPlaybookPluginZip } from "@/lib/playbook-plugin-export";
 import {
+  CLAUDE_CODE_MARKETPLACE_COMMAND,
+  CLAUDE_CONNECTORS_URL,
+  CLAUDE_DOCS_PATH,
+  claudeCodeAddCommand,
+  cursorInstallLink,
+  httpServerDefinition,
+  mcpEntryName,
+  vscodeInstallLink,
+} from "@/lib/mcp-install-links";
+import {
   ArrowLeft,
   Brain,
   Zap,
@@ -1488,7 +1498,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                         key: "mcp-scope-playbook",
                         label: "This playbook",
                         url: `${getApiBaseUrl()}/api/mcp/${playbook?.guid}`,
-                        note: "Exactly this playbook’s tools, memory and skills, with a playbook API key. Ready-made configs below. Add ?toolset=runtime to advertise fewer tools.",
+                        note: "Exactly this playbook’s tools, memory and skills. Sign in with your account (OAuth) in Claude, Cursor or VS Code, or use a playbook API key. Ready-made configs below. Add ?toolset=runtime to advertise fewer tools.",
                       },
                       {
                         key: "mcp-scope-scripts",
@@ -1523,7 +1533,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                   ) : (
                     <div className="mb-3 px-3 py-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/30 rounded-lg">
                       <p className="text-sm text-amber-700 dark:text-amber-400">
-                        <strong>Private playbook</strong> — an API key is required. After copying the config, replace <code className="text-xs bg-amber-100 dark:bg-amber-900/40 px-1 rounded">YOUR_API_KEY</code> with your full key.
+                        <strong>Private playbook</strong> — Claude, Cursor, and VS Code sign in with your AgentPlaybooks account (OAuth), so the one-click options below need no key. The copy-paste JSON configs use an API key instead: replace <code className="text-xs bg-amber-100 dark:bg-amber-900/40 px-1 rounded">YOUR_API_KEY</code> with your full key.
                         {apiKeys.length > 0 ? (
                           <> You have a key: <code className="text-xs bg-amber-100 dark:bg-amber-900/40 px-1 rounded">{apiKeys[0].key_prefix}</code>... (full key shown only at creation). Need the full key? Create a new one below — the old one will still work.</>
                         ) : (
@@ -1533,6 +1543,62 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                     </div>
                   )}
 
+                  {/* Claude — web, Desktop, Cowork. One card for all three: they share
+                      the connector settings, and the endpoint signs users in with
+                      OAuth, so nothing here asks for a key. */}
+                  <div className="mb-4 p-3 rounded-lg border border-amber-300/60 dark:border-amber-500/30 bg-amber-50/60 dark:bg-amber-900/10">
+                    <span className="text-sm font-medium text-neutral-800 dark:text-slate-200">Claude — web, Desktop, and Cowork</span>
+                    <ol className="mt-2 space-y-1.5 text-xs text-neutral-700 dark:text-slate-300 list-decimal list-inside">
+                      <li>
+                        Open{" "}
+                        <a href={CLAUDE_CONNECTORS_URL} target="_blank" rel="noopener noreferrer" className="underline hover:no-underline font-medium">
+                          Customize → Connectors
+                        </a>{" "}
+                        and choose <strong>Add custom connector</strong>.
+                      </li>
+                      <li className="break-all">
+                        Paste <code className="bg-white/70 dark:bg-slate-800 px-1 rounded">{`${getApiBaseUrl()}/api/mcp/${playbook?.guid}`}</code>{" "}
+                        <button
+                          onClick={() => copyToClipboard(`${getApiBaseUrl()}/api/mcp/${playbook?.guid}`, "mcp-claude-url")}
+                          className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400 hover:text-amber-500"
+                        >
+                          {copied === "mcp-claude-url" ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                          Copy
+                        </button>
+                      </li>
+                      <li>Select <strong>Connect</strong> and sign in with your AgentPlaybooks account. Leave the advanced fields empty.</li>
+                    </ol>
+                    <p className="mt-2 text-xs text-neutral-500 dark:text-slate-500">
+                      To reach <em>every</em> playbook in your account from one connection — with a skill that teaches Claude how to use them — install the AgentPlaybooks plugin instead.{" "}
+                      <Link href={CLAUDE_DOCS_PATH} target="_blank" className="underline hover:no-underline">How to install it</Link>.
+                      Claude Desktop&apos;s <code className="bg-white/70 dark:bg-slate-800 px-1 rounded">claude_desktop_config.json</code> cannot hold a remote server: a URL written there is ignored without an error.
+                    </p>
+                  </div>
+
+                  {/* One-click install for the two editors that accept a deeplink. */}
+                  <div className="mb-4">
+                    <span className="text-sm font-medium text-neutral-700 dark:text-slate-300">One-click install</span>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <a
+                        href={cursorInstallLink(mcpEntryName(playbook?.name), httpServerDefinition(`${getApiBaseUrl()}/api/mcp/${playbook?.guid}`))}
+                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-neutral-200 dark:border-slate-700/50 bg-neutral-100 dark:bg-slate-900/70 text-xs font-medium text-neutral-700 dark:text-slate-300 hover:border-amber-400/60 transition-colors"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        Add to Cursor
+                      </a>
+                      <a
+                        href={vscodeInstallLink(mcpEntryName(playbook?.name), httpServerDefinition(`${getApiBaseUrl()}/api/mcp/${playbook?.guid}`))}
+                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-neutral-200 dark:border-slate-700/50 bg-neutral-100 dark:bg-slate-900/70 text-xs font-medium text-neutral-700 dark:text-slate-300 hover:border-amber-400/60 transition-colors"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        Add to VS Code
+                      </a>
+                    </div>
+                    <p className="text-xs text-neutral-500 dark:text-slate-500 mt-1">
+                      Opens the editor&apos;s own install dialog with this endpoint filled in; the editor then signs you in. No key is stored in its config.
+                    </p>
+                  </div>
+
                   {/* Cursor IDE */}
                   <div className="mb-4">
                     <div className="flex items-center justify-between mb-2">
@@ -1541,7 +1607,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                         onClick={() => copyToClipboard(
                           JSON.stringify({
                             mcpServers: {
-                              [`apb-${playbook?.name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 30) || "playbook"}`]: {
+                              [mcpEntryName(playbook?.name)]: {
                                 url: `${getApiBaseUrl()}/api/mcp/${playbook?.guid}`,
                                 ...(playbook?.visibility !== "public" ? { headers: { Authorization: "Bearer YOUR_API_KEY" } } : {}),
                               }
@@ -1558,7 +1624,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                     <pre className="p-3 bg-neutral-100 dark:bg-slate-900/70 rounded-lg border border-neutral-200 dark:border-slate-700/50 text-xs font-mono text-neutral-800 dark:text-slate-300 overflow-x-auto">
 {JSON.stringify({
   mcpServers: {
-    [`apb-${playbook?.name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 30) || "playbook"}`]: {
+    [mcpEntryName(playbook?.name)]: {
       url: `${getApiBaseUrl()}/api/mcp/${playbook?.guid}`,
       ...(playbook?.visibility !== "public" ? { headers: { Authorization: "Bearer YOUR_API_KEY" } } : {}),
     }
@@ -1570,52 +1636,13 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                     </p>
                   </div>
 
-                  {/* Claude Desktop */}
-                  <div className="mb-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-neutral-700 dark:text-slate-300">Claude Desktop</span>
-                      <button
-                        onClick={() => copyToClipboard(
-                          JSON.stringify({
-                            mcpServers: {
-                              [`apb-${playbook?.name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 30) || "playbook"}`]: {
-                                transport: "http",
-                                url: `${getApiBaseUrl()}/api/mcp/${playbook?.guid}`,
-                                ...(playbook?.visibility !== "public" ? { headers: { Authorization: "Bearer YOUR_API_KEY" } } : {}),
-                              }
-                            }
-                          }, null, 2),
-                          "mcp-claude"
-                        )}
-                        className="text-xs text-amber-400 hover:text-amber-300 flex items-center gap-1"
-                      >
-                        {copied === "mcp-claude" ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                        Copy
-                      </button>
-                    </div>
-                    <pre className="p-3 bg-neutral-100 dark:bg-slate-900/70 rounded-lg border border-neutral-200 dark:border-slate-700/50 text-xs font-mono text-neutral-800 dark:text-slate-300 overflow-x-auto">
-{JSON.stringify({
-  mcpServers: {
-    [`apb-${playbook?.name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 30) || "playbook"}`]: {
-      transport: "http",
-      url: `${getApiBaseUrl()}/api/mcp/${playbook?.guid}`,
-      ...(playbook?.visibility !== "public" ? { headers: { Authorization: "Bearer YOUR_API_KEY" } } : {}),
-    }
-  }
-}, null, 2)}
-                    </pre>
-                    <p className="text-xs text-neutral-500 dark:text-slate-500 mt-1">
-                      Add to <code className="bg-neutral-100 dark:bg-slate-800 px-1 rounded">claude_desktop_config.json</code>
-                    </p>
-                  </div>
-
                   {/* Claude Code */}
                   <div className="mb-4">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium text-neutral-700 dark:text-slate-300">Claude Code (CLI)</span>
                       <button
                         onClick={() => copyToClipboard(
-                          `claude mcp add apb-${playbook?.name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 30) || "playbook"} ${getApiBaseUrl()}/api/mcp/${playbook?.guid} --transport http`,
+                          claudeCodeAddCommand(mcpEntryName(playbook?.name), `${getApiBaseUrl()}/api/mcp/${playbook?.guid}`),
                           "mcp-claude-code"
                         )}
                         className="text-xs text-amber-400 hover:text-amber-300 flex items-center gap-1"
@@ -1625,37 +1652,12 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                       </button>
                     </div>
                     <pre className="p-3 bg-neutral-100 dark:bg-slate-900/70 rounded-lg border border-neutral-200 dark:border-slate-700/50 text-xs font-mono text-neutral-800 dark:text-slate-300 overflow-x-auto">
-{`claude mcp add apb-${playbook?.name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 30) || "playbook"} ${getApiBaseUrl()}/api/mcp/${playbook?.guid} --transport http`}
+{claudeCodeAddCommand(mcpEntryName(playbook?.name), `${getApiBaseUrl()}/api/mcp/${playbook?.guid}`)}
                     </pre>
-                  </div>
-
-                  {/* claude.ai custom connector */}
-                  <div className="mb-4">
-                    <span className="text-sm font-medium text-neutral-700 dark:text-slate-300">Claude (web/desktop) — Add custom connector</span>
-                    <p className="mt-1 text-xs text-neutral-600 dark:text-slate-400">
-                      Settings → Connectors → Add custom connector, then fill in exactly these:
-                    </p>
-                    <dl className="mt-2 p-3 bg-neutral-100 dark:bg-slate-900/70 rounded-lg border border-neutral-200 dark:border-slate-700/50 text-xs space-y-1.5">
-                      <div className="flex gap-2">
-                        <dt className="w-28 shrink-0 text-neutral-500 dark:text-slate-500">URL</dt>
-                        <dd className="font-mono text-neutral-800 dark:text-slate-300 break-all">{`${getApiBaseUrl()}/api/mcp/${playbook?.guid}`}</dd>
-                      </div>
-                      <div className="flex gap-2">
-                        <dt className="w-28 shrink-0 text-neutral-500 dark:text-slate-500">Authentication</dt>
-                        <dd className="text-neutral-800 dark:text-slate-300"><strong>None</strong> — this endpoint uses an API key header, not OAuth</dd>
-                      </div>
-                      <div className="flex gap-2">
-                        <dt className="w-28 shrink-0 text-neutral-500 dark:text-slate-500">Request header</dt>
-                        <dd className="font-mono text-neutral-800 dark:text-slate-300 break-all">authorization: Bearer YOUR_API_KEY</dd>
-                      </div>
-                      <div className="flex gap-2">
-                        <dt className="w-28 shrink-0 text-neutral-500 dark:text-slate-500">Transport</dt>
-                        <dd className="text-neutral-800 dark:text-slate-300">Streamable HTTP</dd>
-                      </div>
-                    </dl>
-                    <p className="mt-2 text-xs text-neutral-500 dark:text-slate-500">
-                      The <code className="px-1 rounded bg-neutral-200 dark:bg-slate-800">Bearer </code> prefix is optional — the bare key works too. If the client reserves <code className="px-1 rounded bg-neutral-200 dark:bg-slate-800">authorization</code> for itself, send the key as <code className="px-1 rounded bg-neutral-200 dark:bg-slate-800">x-api-key</code> instead.
-                      {playbook?.visibility === "public" ? " A public playbook needs no header for read access." : ""}
+                    <p className="text-xs text-neutral-500 dark:text-slate-500 mt-1">
+                      Then run <code className="bg-neutral-100 dark:bg-slate-800 px-1 rounded">/mcp</code> in Claude Code to sign in. For every playbook plus the local
+                      {" "}<code className="bg-neutral-100 dark:bg-slate-800 px-1 rounded">doctor</code> and <code className="bg-neutral-100 dark:bg-slate-800 px-1 rounded">sync</code> commands, install the plugin:
+                      {" "}<code className="bg-neutral-100 dark:bg-slate-800 px-1 rounded">{CLAUDE_CODE_MARKETPLACE_COMMAND}</code>.
                     </p>
                   </div>
 

@@ -310,6 +310,10 @@ and the same OAuth choice. Each member then connects individually from
 To use it in a conversation, open **+ > Connectors** in the chat and turn
 AgentPlaybooks on.
 
+Or install the **AgentPlaybooks plugin**, which adds this same connector together
+with a skill that teaches Claude how to use your playbooks — see
+[AgentPlaybooks in Claude](/docs/claude).
+
 **With an API key instead of OAuth:** leave authentication on **No sign in**
 and add a request header — `Authorization: Bearer apb_live_…` — under
 **Request headers**. Use a User API Key from Dashboard → Settings. This suits a
@@ -573,16 +577,25 @@ Each public playbook has its own MCP server at `/api/mcp/:guid`. This allows AI 
 | `playbook://{guid}/memory` | All memories |
 | `playbook://{guid}/skills/{id}/attachments/{id}` | Skill attachment content |
 
-### Example: Configure Claude Desktop for a Playbook
+### Example: Point a client at one playbook
+
+A client that signs in with OAuth — Claude, Cursor, VS Code, Claude Code — needs
+only the URL: `https://agentplaybooks.ai/api/mcp/abc123def456`. The playbook's
+**Integrations** tab has one-click buttons for Cursor and VS Code and the Claude
+steps.
+
+A client that reads a key from a config file takes it as a header, ideally as a
+`${VAR}` reference the client expands at launch, so no credential reaches the
+file (`apb connect abc123def456` writes exactly this):
 
 ```json
 {
   "mcpServers": {
-    "my-playbook": {
-      "url": "https://apbks.com/api/mcp/abc123def456",
-      "transport": "http",
+    "apb-my-playbook": {
+      "type": "http",
+      "url": "https://agentplaybooks.ai/api/mcp/abc123def456",
       "headers": {
-        "Authorization": "Bearer apb_live_xxx"  // Optional, for write access
+        "X-API-Key": "${APBKS_KEY_AGENTPLAYBOOKS}"
       }
     }
   }

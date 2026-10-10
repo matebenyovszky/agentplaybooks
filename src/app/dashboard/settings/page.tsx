@@ -5,6 +5,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { createBrowserClient } from "@/lib/supabase/client";
 import { ApiKeyReveal } from "@/components/ApiKeyReveal";
+import { DeleteAccountSection } from "@/components/DeleteAccountSection";
 import {
   Key,
   Plus,
@@ -367,6 +368,8 @@ export default function SettingsPage() {
           </p>
         </div>
       </div>
+
+      <DeleteAccountSection email={user?.email} />
 
       {/* Create Key Modal */}
       {showCreateModal && (

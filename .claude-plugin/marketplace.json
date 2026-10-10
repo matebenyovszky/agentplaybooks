@@ -11,14 +11,14 @@
   "plugins": [
     {
       "name": "agentplaybooks",
-      "source": "./packages/cli",
-      "description": "Sync portable agent configuration and connect playbooks, skills, tools, memory, canvas, and the secret proxy.",
+      "source": "./plugins/agentplaybooks",
+      "description": "Every playbook in your AgentPlaybooks account in Claude — persona, instructions, skills, memory, canvas, connected tools, and the secret proxy — plus local doctor and sync commands.",
       "version": "0.6.0",
       "author": {
         "name": "AgentPlaybooks",
         "url": "https://agentplaybooks.ai"
       },
-      "homepage": "https://agentplaybooks.ai",
+      "homepage": "https://agentplaybooks.ai/docs/claude",
       "license": "MIT",
       "category": "productivity",
       "keywords": ["playbooks", "skills", "mcp", "audit", "sync", "portability"]
