@@ -30,6 +30,7 @@ jobs:
           node - <<'JS'
           const url = new URL(process.env.SOURCE_DATABASE_URL);
           const ref = 'bydcjwxfiiolmnddzbpy';
+          console.log(JSON.stringify({hostname: url.hostname, username: url.username, protocol: url.protocol}));
           if (!['postgres:', 'postgresql:'].includes(url.protocol) ||
               !(url.hostname === `db.${ref}.supabase.co` ||
                 (url.hostname.endsWith('.pooler.supabase.com') && url.username === `postgres.${ref}`))) {
