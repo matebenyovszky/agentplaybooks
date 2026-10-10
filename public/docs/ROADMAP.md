@@ -52,6 +52,22 @@ This document outlines the development roadmap for AgentPlaybooks — the open s
 
 ## Phase 2: Security, Enterprise Readiness & Distribution 🚧
 
+### Claude Plugin & Directory Listing 🚧
+
+> Every playbook in an account, in every Claude surface — claude.ai, Claude
+> Desktop, Cowork, Claude Code, mobile — signing in with OAuth and no API key.
+> Status as of October 2026; the step-by-step lives in
+> `docs/claude-directory-notes.md`.
+
+- [x] **OAuth on the MCP endpoints** - `/api/mcp/manage` and `/api/mcp/<guid>` are OAuth protected resources with dynamic client registration
+- [x] **Tool annotations** - every tool has a title and read-only / destructive hints, enforced by tests
+- [ ] **Claude plugin** - `plugins/agentplaybooks`: account connector, a playbooks skill that works in chat and Cowork, `doctor` / `sync` commands; no `bin/`, so claude.ai and Cowork accept it (in review: PR #173)
+- [ ] **Integrations tab for Claude, Cursor, VS Code** - custom-connector steps and one-click editor links, replacing the `claude_desktop_config.json` advice that never worked (PR #173)
+- [ ] **Self-service account deletion** - Settings → Delete account, in one transaction; also fixes playbook deletion (PR #173)
+- [ ] **Complete privacy notice** - collection, processors, retention, rights, contact (drafted, awaiting sign-off)
+- [ ] **Directory submissions** - plugin bundle and MCP connector at claude.ai/directory/manage, with a populated reviewer account
+- [ ] **Profile name editing** - a UI for the public display name, which starts as the email's local part
+
 ### API Security Enhancements 📋
 
 - [ ] **Read API Authentication** - Optional auth for read endpoints

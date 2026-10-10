@@ -52,7 +52,9 @@ persona, instructions, skills, memory, canvas, connected-server definitions —
 and processes only what it needs to run that service, such as your account
 email. It does not sell personal data. Secret values are stored encrypted
 (AES-256-GCM) and are never returned through the connector. The CLI commands
-run locally and do not send your project files to AgentPlaybooks.
+run locally and do not send your project files to AgentPlaybooks. You can delete
+your account, and everything it owns, under Settings → Delete account on
+agentplaybooks.ai.
 
 Full policy: https://agentplaybooks.ai/privacy. Questions go to the maintainers
 through https://github.com/matebenyovszky/agentplaybooks.

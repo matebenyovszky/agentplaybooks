@@ -8,6 +8,46 @@ portal, by a person with directory access — not from this repository.
 Everything below was checked against the live service or `main`; the parts
 that are not code are listed at the end as blockers.
 
+## Where this stands (10 October 2026)
+
+Paused here, to be picked up later. The public summary is the *Claude Plugin &
+Directory Listing* section of `public/docs/ROADMAP.md`.
+
+**Done, in PR #173 (`feat/claude-plugin-everywhere`), not merged:**
+
+- `plugins/agentplaybooks` — the lean Claude plugin; `.claude-plugin/marketplace.json`
+  points at it. `claude plugin validate` passes for the plugin and the marketplace.
+- Integrations tab: Claude steps (custom connector, OAuth), one-click Cursor and
+  VS Code links; the dead `claude_desktop_config.json` advice removed from docs.
+- `/docs/claude` (+ Hungarian), a blog post dated 2026-09-30.
+- Settings → Delete account (`public.delete_account`, one transaction), and the
+  fix for playbook deletion, which a delete trigger had been rolling back in
+  production. Both migrations deploy automatically on merge.
+- `npm run seed:reviewer` to populate a reviewer account.
+
+**Held back on purpose:** the full privacy notice is committed on the local-only
+branch `draft/privacy-notice` (744ef8e), not pushed. It waits for the owner to
+sign off the controller line and the contact address, and for that address to
+deliver. Push it onto the PR branch once signed off.
+
+**Next, in order:**
+
+1. Owner signs off the privacy notice; the contact address is set up; the draft
+   branch is pushed onto #173.
+2. Test the OAuth connector from claude.ai (*Customize → Connectors → Add custom
+   connector*, the URL above). This works before the merge.
+3. CI green → merge #173 → confirm the Supabase deploy and its schema
+   verification passed; try deleting a throwaway playbook and a throwaway account.
+4. Sign up the reviewer account and run `npm run seed:reviewer`.
+5. Add the plugin on claude.ai through *Customize → Plugins → Add marketplace*
+   (`matebenyovszky/agentplaybooks`), connect it, try each skill and command.
+6. Submit both in the portal — **MCP connector** first, then **Plugin bundle** —
+   from the account that should own the listings for good.
+
+**Open decisions:** whether to mark the 17 non-destructive writes destructive
+(only if the portal's Tools step flags them, see the tool table above); a UI for
+the profile display name; deleting the superseded `feat/desktop-extension` branch.
+
 ## What gets submitted
 
 - **Server:** `https://agentplaybooks.ai/api/mcp/manage`
@@ -104,21 +144,25 @@ Negative:
 
 ## Blockers (not code)
 
-- **Privacy policy completeness.** `/privacy` returns `200`, but its copy is
-  four short paragraphs and is marked *locked* in `src/lib/legal-copy.ts`.
-  The directory states that missing or incomplete privacy policies are an
-  immediate rejection, and lists what a policy must cover: data collection,
-  usage and storage, third-party sharing, data retention, and contact
-  information. The current copy says nothing about third-party processors
-  (Supabase, Cloudflare) or retention, and offers a repository link rather
-  than a contact. Expanding it is the copy owner's decision.
-- **Organization.** The portal is part of claude.ai organization settings: a
-  Team or Enterprise organization, submitted by an Owner (or, on Enterprise, a
-  role with the Directory permission).
-- **Test account.** Reviewers need credentials for a fully populated account:
-  playbooks with skills, memory entries, a canvas run, and at least one secret,
-  so that every tool has something real to act on.
-- **Public documentation by the publish date** — the docs above are live.
+- **Privacy policy — drafted, awaiting sign-off.** The live `/privacy` copy is
+  four short paragraphs, and the directory rejects a policy that does not cover
+  data collection, usage and storage, third-party sharing, retention, and
+  contact. A complete notice — processors (Supabase in Frankfurt, Cloudflare),
+  legal bases, retention, rights, account deletion, a contact address — is on
+  the local branch `draft/privacy-notice`; see *Where this stands* above.
+- **Who submits.** Pro, Max, Team, or Enterprise; Free cannot. On Pro and Max you
+  submit from your own account; on Team and Enterprise an Owner does, or on
+  Enterprise a member with the Directory permission. The first account or
+  organization to submit a repository folder owns that listing for good.
+- **Test account — script ready.** Sign up a dedicated reviewer account, create a
+  user API key with full access under Settings, then run
+  `AGENTPLAYBOOKS_API_KEY=… npm run seed:reviewer` (try `-- --dry-run` first).
+  It creates two private playbooks with a persona, instructions, skills, memory,
+  a run with a canvas document, and a demo secret whose value is not a real
+  credential. Give reviewers that account's credentials through the portal's
+  Test & launch step only.
+- **Public documentation by the publish date** — the docs above are live, and
+  `/docs/claude` once #173 is deployed.
 
 ## The plugin bundle (second submission)
 
