@@ -24,6 +24,10 @@ const FORBIDDEN = [
   "compliant",
   "certified",
   "outlook.com",
+  "gmail.com",
+  // Internal host and organisation names are kept out by the maintainer's
+  // pre-push denylist, which covers the whole repository; listing them here
+  // would publish them.
   "hello@",
   "apb_live_",
 ];
