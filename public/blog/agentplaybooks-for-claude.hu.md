@@ -15,8 +15,7 @@ programokat ír le. A Claude Desktop figyelmen kívül hagyta a bejegyzést, nem
 szólt semmit, a szerver pedig sosem jelent meg. Négy dokumentációs oldal és a
 dashboard ismételte ugyanezt.
 
-Ez most megjavult, és a megoldás sokkal jobb lett, mint a kerülőút, amivel
-elindultunk.
+Ez most megjavult.
 
 ## Mi változott
 
@@ -81,21 +80,6 @@ A hitelesítő adatok ott maradnak, ahol vannak. A `list_secrets` csak neveket a
 vissza. A `use_secret` megkéri az AgentPlaybooks szervert, hogy a kérést ott,
 a titkot beillesztve küldje el, és csak a válasz jön vissza. A kulcsot a Claude
 soha nem látja, és a beszélgetés átirata sem.
-
-## A kitérő, amit nem adtunk ki
-
-Ez augusztus 21-én egy Claude Desktop kiegészítőként indult: egy `.mcpb` csomag
-egy kis helyi híddal, amely minden üzenetet továbbított a hosztolt végpontra, az
-API-kulcsot pedig az asztali app beállításaiba kellett beírni. Működött. Kiadva
-mégsem lett, két okból, amelyek mind a ketten megérkeztek, amíg várt. A végpont
-megkapta az OAuth-ot, amitől a híd feleslegessé vált mindenütt, ahol segíteni lett
-volna hivatott. Az Anthropic directoryja pedig már nem fogad kiegészítőket
-listázásra — a helyi szerverek ma pluginek belsejében utaznak —, így terjesztési
-szempontból zsákutca lett.
-
-Abból az ágból az maradt meg, aminek soha nem volt köze a kiegészítőhöz: a
-dokumentáció kijavítása, amely egy működésképtelen konfigurációs fájlhoz küldte
-az embereket, és az egy-kattintásos szerkesztő-gombok.
 
 ## A directory szabályai szerint építve
 

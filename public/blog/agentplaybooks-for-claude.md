@@ -14,8 +14,7 @@ file that only describes *local* programs. Claude Desktop ignored the entry,
 said nothing, and the server never appeared. Four documentation pages and the
 dashboard repeated it.
 
-That is fixed, and the fix turned out to be much better than the workaround we
-started with.
+That is fixed.
 
 ## What changed
 
@@ -77,20 +76,6 @@ Credentials stay where they are. `list_secrets` returns names. `use_secret` asks
 the AgentPlaybooks server to make the request with the value injected there, and
 only the response comes back. Claude never sees the key, and neither does the
 conversation transcript.
-
-## The detour we did not ship
-
-This started on 21 August as a Claude Desktop extension: a `.mcpb` bundle with a
-small local bridge that forwarded every message to the hosted endpoint, with the
-API key typed into the desktop app's settings. It worked. It also went unshipped,
-for two reasons that both arrived while it waited. The endpoint got OAuth, which
-made the bridge unnecessary everywhere it was meant to help. And Anthropic's
-directory stopped accepting desktop extensions as listings — local servers now
-travel inside plugins — which made it a dead end for distribution.
-
-What survived from that branch is the part that was never about the extension:
-correcting the documentation that had sent people to a config file that could not
-work, and the one-click editor buttons.
 
 ## Building it to the directory's rules
 

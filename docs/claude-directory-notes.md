@@ -27,8 +27,6 @@ lives only on a local machine: everything below is on `main`.
 - A complete privacy notice (`src/lib/legal-copy.ts`), with no email address by
   the owner's decision: contact goes through the repository's issues.
 - `npm run seed:reviewer` to populate a reviewer account.
-- The 2026-08 Claude Desktop extension (`.mcpb`) experiment is deleted; OAuth
-  and the directory's end of MCPB listings made it pointless.
 
 **Continue here — the OAuth sign-in is not working yet.** There is a known
 OAuth bug when the database runs on OrioleDB (the production Supabase project
