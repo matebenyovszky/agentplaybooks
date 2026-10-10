@@ -31,15 +31,24 @@ Do not remove constraints, change ownership, or bypass managed-role protections.
    before any database connection. It must be replaced with the source project's
    actual **Session pooler** connection string, using the existing DB password.
    Do not put the password into an issue, commit, PR, log, or chat message.
-2. A fresh default-Postgres target is required. The dashboard creation form has
-   been prepared for `Agentplaybooks_heap_migration` in the existing Free org,
-   with default Postgres selected and automatic table exposure disabled.
-   The user must enter/save the DB password and submit creation. Check the
-   account's free-project quota first; do not upgrade or delete another project
-   just to make room.
+2. The user created `Agentplaybooks_heap_migration`, ref
+   `zcphxfospbvqplonkvco`, in the existing Free org. It is Healthy and runs
+   PostgreSQL 17.11 with default access method heap. The region is eu-west-1
+   (Ireland), whereas the source is eu-central-1 (Frankfurt); consider this
+   region change before cutover. Automatic table exposure was disabled on the
+   prepared form. The rollback-only nullable UNIQUE probe returned
+   `updated_rows=1`, `user_assignment_ok=true`, `default_access_method=heap`.
+   The target is still empty; no application restore or cutover occurred.
 3. Access to the owner mailbox is still needed to establish whether support has
    already responded. If there is a supported in-place remedy, reassess the
    full-project migration before production cutover.
+
+The source Connect panel verified the Session pooler host as
+`aws-1-eu-central-1.pooler.supabase.com:5432` and login as
+`postgres.bydcjwxfiiolmnddzbpy`. Its password is still unavailable. The local
+backup directory has a URL template and a private, empty password input file;
+these are not working credentials. Do not update the GitHub secret from the
+template. Percent-encode the supplied password when assembling the URL.
 
 ## Backup and rehearsal
 
