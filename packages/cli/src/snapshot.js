@@ -130,7 +130,9 @@ export async function buildPortableSnapshot(report, root, manifest, instructions
     const directory = path.dirname(chosen.absolutePath);
     for (const absolute of await treeFiles(directory)) {
       const relative = normalizePath(path.relative(directory, absolute));
-      add(`.agents/skills/${name}/${relative}`, await readFile(absolute), chosen.source);
+      // Name the file the credential is in, not the skill's SKILL.md: when a
+      // backup is refused over `scripts/deploy.py`, that is the file to fix.
+      add(`.agents/skills/${name}/${relative}`, await readFile(absolute), normalizePath(path.relative(root, absolute)));
     }
   }
 

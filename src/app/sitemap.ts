@@ -40,7 +40,6 @@ const docSlugs = [
   "mcp-integration",
   "mcp-registry-publishing",
   "memory",
-  "obsidian",
   "platform-integrations",
   "playbooks",
   "portable-agent-backups",
@@ -49,6 +48,7 @@ const docSlugs = [
   "self-hosting",
   "skills",
   "team-collaboration",
+  "worker-api-performance",
   "roadmap",
 ];
 

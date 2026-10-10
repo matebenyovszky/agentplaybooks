@@ -5,6 +5,7 @@ import path from "node:path";
 import test from "node:test";
 import { mkdtemp } from "node:fs/promises";
 import { printDoctor, publicReport, runDoctor } from "../src/doctor.js";
+import { buildPortableSnapshot } from "../src/snapshot.js";
 
 function capturePrint(report) {
   const lines = [];
@@ -162,4 +163,43 @@ Body.
   assert.ok(findings.has("skill.compatibility.invalid"));
   assert.ok(findings.has("skill.metadata.invalid"));
   assert.ok(findings.has("skill.allowed-tools.invalid"));
+});
+
+// A skill is its directory. Before this, a key in scripts/deploy.py scored a
+// clean 100 while the backup refused the very same file, so the check meant to
+// run before a push — or in CI with --strict — missed what the push caught.
+test("doctor scans the files a skill bundles for credentials", async () => {
+  const root = await fixture();
+  await put(root, ".agents/skills/deploy/SKILL.md", "---\nname: deploy\ndescription: Deploy the app.\n---\nRun scripts/deploy.py.\n");
+  await put(root, ".agents/skills/deploy/scripts/deploy.py", 'import requests\nAPI_KEY = "sk-abcdefghijklmnopqrstuvwxyz123456"\n');
+  // A reference to the environment is the behaviour to encourage, not report.
+  await put(root, ".agents/skills/deploy/references/USAGE.md", "Set API_KEY=${DEPLOY_API_KEY} before running.\n");
+  // Binary assets are not text and are not scanned.
+  await put(root, ".agents/skills/deploy/assets/blob.bin", "\u0000password=hunter2-not-really-text\n");
+
+  const report = await runDoctor(root);
+  const secrets = report.findings.filter((item) => item.code === "secret.hardcoded");
+
+  assert.equal(secrets.length, 1);
+  assert.equal(secrets[0].source, ".agents/skills/deploy/scripts/deploy.py");
+  assert.equal(secrets[0].severity, "critical");
+  assert.deepEqual(secrets[0].lines, [2]);
+  assert.doesNotMatch(JSON.stringify(report.findings), /sk-abcdefghijklmnopqrstuvwxyz/);
+  assert.ok(report.score < 100);
+
+  // The backup refuses the same file, and now names it rather than SKILL.md.
+  const { snapshot, conflicts } = await buildPortableSnapshot(report, root, {}, null);
+  assert.equal(snapshot, null);
+  assert.match(conflicts.map((item) => item.reason).join("\n"), /in \.agents\/skills\/deploy\/scripts\/deploy\.py;/);
+});
+
+test("doctor reports a credential in a nested skill once", async () => {
+  const root = await fixture();
+  await put(root, ".agents/skills/outer/SKILL.md", "---\nname: outer\ndescription: Outer skill.\n---\nBody.\n");
+  await put(root, ".agents/skills/outer/inner/SKILL.md", "---\nname: inner\ndescription: Inner skill.\n---\nAPI_KEY=sk-abcdefghijklmnopqrstuvwxyz123456\n");
+
+  const report = await runDoctor(root);
+  const secrets = report.findings.filter((item) => item.code === "secret.hardcoded");
+
+  assert.deepEqual(secrets.map((item) => item.source), [".agents/skills/outer/inner/SKILL.md"]);
 });

@@ -187,7 +187,17 @@ async function readText(absolutePath) {
   return normalizeText(buffer.toString("utf8"));
 }
 
-async function skillTreeDigest(skillFile, allFiles) {
+/**
+ * Digest a skill's whole directory, and collect the text of the files it
+ * bundles.
+ *
+ * The bundled text is what lets doctor scan a skill's scripts and references
+ * for credentials: a key in `scripts/deploy.py` travels with the skill exactly
+ * as one in SKILL.md does. Paths are relative to the skill directory, so they
+ * follow the skill's `source` when a global scan prefixes it. Nested SKILL.md
+ * files are left out — they are skills of their own and scanned as such.
+ */
+async function readSkillTree(skillFile, allFiles) {
   const directory = path.dirname(skillFile);
   const members = allFiles
     .filter((file) => {
@@ -196,6 +206,7 @@ async function skillTreeDigest(skillFile, allFiles) {
     })
     .sort((a, b) => normalizePath(path.relative(directory, a)).localeCompare(normalizePath(path.relative(directory, b))));
   const hash = createHash("sha256");
+  const bundled = [];
   for (const file of members) {
     const relative = normalizePath(path.relative(directory, file));
     const buffer = await readFile(file);
@@ -203,11 +214,13 @@ async function skillTreeDigest(skillFile, allFiles) {
     hash.update("\0");
     // Normalize checkout line endings for text resources, while hashing binary
     // assets byte-for-byte. A NUL is a reliable conservative binary signal.
-    if (buffer.byteLength <= MAX_TEXT_BYTES && !buffer.includes(0)) hash.update(normalizeText(buffer.toString("utf8")));
+    const isText = buffer.byteLength <= MAX_TEXT_BYTES && !buffer.includes(0);
+    if (isText) hash.update(normalizeText(buffer.toString("utf8")));
     else hash.update(buffer);
     hash.update("\0");
+    if (isText && path.basename(file) !== "SKILL.md") bundled.push({ path: relative, content: normalizeText(buffer.toString("utf8")) });
   }
-  return `sha256:${hash.digest("hex")}`;
+  return { treeDigest: `sha256:${hash.digest("hex")}`, bundled };
 }
 
 async function readTextIfExists(absolutePath) {
@@ -266,7 +279,7 @@ export async function discover(root, { extraMcpPaths = [], agentPlatform = null,
       content,
     };
 
-    if (isSkill) item.treeDigest = await skillTreeDigest(absolutePath, files);
+    if (isSkill) Object.assign(item, await readSkillTree(absolutePath, files));
 
     if (isSkill) inventory.skills.push(item);
     if (isAgent) inventory.agents.push(item);

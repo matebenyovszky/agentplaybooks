@@ -133,6 +133,3 @@ apb sync /path/to/MyVault --apply
 ```
 
 Your vault is untouched. Keep Obsidian.
-
-The full comparison table, the interop recipes, and the memory-boundary rule
-live in the docs: [Obsidian and AgentPlaybooks](/docs/obsidian).
