@@ -10,6 +10,8 @@ A dashboard support request was confirmed sent on 2026-10-10 to the project
 owner email. A follow-up email to support@supabase.com included the sanitized
 reproduction as a text attachment and the possible prior ticket `SU-484862`.
 The prior ticket and any reply have not been verified in the owner mailbox.
+The email follow-up received an automated receipt assigning **SU-501809**.
+No human response has been observed in the connected mailbox.
 
 The failure occurs when Auth assigns a user to an OAuth authorization whose
 nullable UNIQUE authorization_code column is NULL. OrioleDB raises SQLSTATE
@@ -40,6 +42,15 @@ Do not remove constraints, change ownership, or bypass managed-role protections.
    full-project migration before production cutover.
 
 ## Backup and rehearsal
+
+An additional local API export saved 20 exposed tables / 44,011 rows on
+2026-10-10. Storage returned zero buckets. The Auth admin export returned HTTP
+500. This is a **partial, non-snapshot export**, not a database backup: it lacks
+password hashes, managed Auth/OAuth state, database DDL and access controls, and
+pagination was not protected from concurrent writes. It must not authorize a
+cutover. Its encrypted CMS archive is retained locally in the backup directory;
+decryption and per-file SHA-256 checks passed. Temporary plaintext copies were
+removed after verification. No production data was changed.
 
 The branch-only workflow `supabase-migration-backup.yml` is read-only and
 validates the source endpoint. It obtains a single-snapshot custom pg_dump
