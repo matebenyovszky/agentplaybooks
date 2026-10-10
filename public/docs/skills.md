@@ -53,6 +53,20 @@ A skill is a reusable capability definition that includes:
 }
 ```
 
+## Demonstrations
+
+A skill can point at recordings of itself being performed, declared in its `SKILL.md` frontmatter under `demonstrations:`. For a robot foundation model that learns a task from one or a handful of demonstrations, this is the executable core of the skill rather than an illustration beside it — and the order of the list is the order of execution.
+
+```yaml
+demonstrations:
+  - provider: youtube
+    ref: dQw4w9WgXcQ
+    segments:
+      - { start: 134, end: 158, label: grip the handle, comment: from below }
+```
+
+A text-only reader gets the same recordings as a timestamped list, so nothing is lost either way. See [Demonstrations](./demonstrations.md).
+
 ## Creating Skills
 
 ### Via Dashboard

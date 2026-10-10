@@ -44,7 +44,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   {
     name: "get_skill",
     title: "Get skill",
-    description: "Return the full definition of one skill in this playbook, including name, description, content, priority, and attachments. Identify the skill with skill_id, which may be a UUID or the skill's kebab-case name. This lookup does not modify the skill. Use list_skills first to discover IDs and names. Do not use list_skill_versions (historical revisions) or get_playbook (persona and summaries, not full skill content).",
+    description: "Return the full definition of one skill in this playbook, including name, description, content, priority, and attachments. Identify the skill with skill_id, which may be a UUID or the skill's kebab-case name. When the skill's frontmatter declares demonstrations, they come back as a resolved list with a link per recording and per timestamped segment, in the order they are performed. This lookup does not modify the skill. Use list_skills first to discover IDs and names. Do not use list_skill_versions (historical revisions) or get_playbook (persona and summaries, not full skill content).",
     inputSchema: {
       type: "object",
       properties: {
@@ -126,7 +126,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
         summary: { type: "string", description: "Compact summary for context views" },
         memory_type: { type: "string", enum: ["flat", "hierarchical"], description: "flat (default) or hierarchical for task graphs" },
         status: { type: "string", enum: ["pending", "running", "completed", "failed", "blocked"], description: "Task status (for hierarchical task tracking)" },
-        metadata: { type: "object", description: "Graph metadata: dependencies, thread assignment, progress, etc." },
+        metadata: { type: "object", description: "Free-form metadata: dependencies, thread assignment, progress. Two keys have a defined shape and are validated: metadata.episode as {time, location, task, outcome} makes the entry findable by where and when through get_memory_context, where time is any ISO 8601 timestamp and is stored normalized to UTC; and metadata.recording holds demonstration references in the same shape a skill uses, as a list of {provider, ref, fidelity, role, segments}. Everything else is stored untouched." },
       },
       required: ["key", "value"],
     },
@@ -180,7 +180,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   {
     name: "get_memory_context",
     title: "Get memory context",
-    description: "Get a context-optimized view of memories: full working memory, summaries for contextual, and keys only for longterm. Read-only. Use this to pack a prompt; use read_memory for one key, search_memory to filter, and get_memory_tree for parent-child task graphs.",
+    description: "Get a context-optimized view of memories: full working memory, summaries for contextual, and keys only for longterm. Read-only. Filter episodic memories by where and when with location, task, since, and until, which read the metadata.episode convention {time, location, task, outcome}; entries carrying a metadata.recording come back with their recording links resolved. Use this to pack a prompt; use read_memory for one key, search_memory to filter by text or tags, and get_memory_tree for parent-child task graphs.",
     inputSchema: {
       type: "object",
       properties: {
@@ -192,6 +192,10 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
         max_items: { type: "number", description: "Maximum items per tier", default: 20 },
         expand_keys: { type: "array", items: { type: "string" }, description: "Keys to show full content regardless of tier" },
         tags_filter: { type: "array", items: { type: "string" }, description: "Only include memories with these tags" },
+        location: { type: "string", description: "Only episodic memories recorded at this place (metadata.episode.location)" },
+        task: { type: "string", description: "Only episodic memories from this task (metadata.episode.task)" },
+        since: { type: "string", description: "Only episodic memories at or after this ISO 8601 timestamp (metadata.episode.time). Rejected if it is not a timestamp." },
+        until: { type: "string", description: "Only episodic memories at or before this ISO 8601 timestamp (metadata.episode.time). Rejected if it is not a timestamp." },
       },
     },
     outputSchema: memoryContextOutputSchema,
@@ -391,7 +395,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
       properties: {
         name: { type: "string", description: "Agent Skills-compatible name (lowercase kebab-case, e.g. data-analyzer)" },
         description: { type: "string", description: "What the skill does and when the agent should use it" },
-        content: { type: "string", description: "The instructions/prompt/code for the skill" },
+        content: { type: "string", description: "The SKILL.md document. Its YAML frontmatter may carry a demonstrations list of {provider, ref, fidelity, role, title, sha256, segments}, where segments are {start, end, label, comment} in seconds; the list order is the order the demonstrations are performed in. A malformed block is rejected." },
         priority: { type: "number", description: "Priority level (default 50)" },
       },
       required: ["name", "content"],
@@ -408,7 +412,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
         skill_id: { type: "string", description: "ID or name of the skill to update" },
         name: { type: "string", description: "New name" },
         description: { type: "string", description: "New description" },
-        content: { type: "string", description: "New content/instructions" },
+        content: { type: "string", description: "New SKILL.md document, frontmatter included. A demonstrations block in the frontmatter is validated the same way create_skill validates it." },
         priority: { type: "number", description: "New priority level" },
       },
       required: ["skill_id"],

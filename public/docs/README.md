@@ -17,6 +17,7 @@ Welcome to the AgentPlaybooks documentation.
 ### Core Concepts
 - [Playbooks](./playbooks.md) - Complete agent operating environment
 - [Skills](./skills.md) - Structured capability definitions
+- [Demonstrations](./demonstrations.md) - Recordings of a skill being performed, for agents with a body
 - [Memory](./memory.md) - Persistent key-value storage
 - [MCP Integration](./mcp-integration.md) - Model Context Protocol guide
 - [Federated MCP & OpenAPI Tools](./mcp-federation.md) - Secure upstream tools, OAuth, secrets, and audit logs

@@ -20,6 +20,7 @@ import {
   Loader2,
   FileText
 } from "lucide-react";
+import { DemonstrationPreview } from "@/components/playbook/DemonstrationPreview";
 import type { Skill, SkillAttachment, AttachmentFileType } from "@/lib/supabase/types";
 import { FILE_EXTENSION_MAP, ALLOWED_FILE_TYPES, ATTACHMENT_LIMITS } from "@/lib/supabase/types";
 import type { StorageAdapter } from "@/lib/storage";
@@ -433,6 +434,9 @@ export function SkillEditor({ skill, storage, onUpdate, onDelete, readOnly = fal
                   {content.length.toLocaleString()} characters • ~{Math.round(content.length / 4)} tokens
                 </p>
               </div>
+
+              {/* What the frontmatter's demonstrations block resolved to */}
+              <DemonstrationPreview content={content} />
 
               {/* Attachments Section */}
               <div className="border-t border-slate-700/50 pt-4 mt-4">
