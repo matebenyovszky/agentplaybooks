@@ -49,6 +49,16 @@ const CATEGORY_COLORS: Record<SecretCategory, string> = {
   general: "text-slate-400 bg-slate-500/20 border-slate-500/30",
 };
 
+/** A stored timestamp as the browser-local value a `datetime-local` input shows. */
+function toDateTimeLocal(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+    + `T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 export function SecretManager({ storage, secrets, onUpdate, readOnly = false }: SecretManagerProps) {
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -73,6 +83,10 @@ export function SecretManager({ storage, secrets, onUpdate, readOnly = false }: 
   // Rotate form state
   const [rotateValue, setRotateValue] = useState("");
   const [rotating, setRotating] = useState(false);
+  // The expiry is the owner's rule, not part of the value, so a rotation keeps
+  // it unless it is edited here. Without this field an expired secret could
+  // only be deleted and recreated.
+  const [rotateExpiry, setRotateExpiry] = useState({ initial: "", value: "", expired: false });
 
   const loadSecrets = useCallback(async () => {
     setLoading(true);
@@ -177,7 +191,15 @@ export function SecretManager({ storage, secrets, onUpdate, readOnly = false }: 
     setActionError("");
     setRotating(true);
     try {
-      const result = await storage.updateSecret(name, { value: rotateValue });
+      const expiryChanged = rotateExpiry.value !== rotateExpiry.initial;
+      const result = await storage.updateSecret(name, {
+        value: rotateValue,
+        // Sent only when edited, so a rotation never moves the expiry by
+        // accident; an emptied field removes it.
+        ...(expiryChanged
+          ? { expires_at: rotateExpiry.value ? new Date(rotateExpiry.value).toISOString() : null }
+          : {}),
+      });
       if (result) {
         onUpdate(secrets.map((s) => (s.name === name ? result : s)));
         setShowRotateModal(null);
@@ -462,6 +484,8 @@ export function SecretManager({ storage, secrets, onUpdate, readOnly = false }: 
                         onClick={() => {
                           setShowRotateModal(secret.name);
                           setRotateValue("");
+                          const initial = toDateTimeLocal(secret.expires_at);
+                          setRotateExpiry({ initial, value: initial, expired: !!isExpired(secret) });
                         }}
                         className="p-2 text-neutral-500 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-neutral-100 dark:hover:bg-slate-800/50 rounded-lg transition-colors"
                         title="Rotate secret"
@@ -726,6 +750,28 @@ export function SecretManager({ storage, secrets, onUpdate, readOnly = false }: 
                       "focus:outline-none focus:border-amber-500/50"
                     )}
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-neutral-600 dark:text-slate-400 mb-1">
+                    Expires At (optional)
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={rotateExpiry.value}
+                    onChange={(e) => setRotateExpiry((prev) => ({ ...prev, value: e.target.value }))}
+                    className={cn(
+                      "w-full px-3 py-2 rounded-lg",
+                      "bg-neutral-50 dark:bg-slate-800 border border-neutral-200 dark:border-slate-700",
+                      "text-neutral-900 dark:text-slate-200",
+                      "focus:outline-none focus:border-amber-500/50"
+                    )}
+                  />
+                  <p className="text-xs text-neutral-500 dark:text-slate-500 mt-1">
+                    {rotateExpiry.expired && rotateExpiry.value === rotateExpiry.initial
+                      ? "This secret has expired, and agents cannot use it. Set a later date or clear the field."
+                      : "Kept as it is unless you change it. Clear the field to remove the expiry."}
+                  </p>
                 </div>
               </div>
 

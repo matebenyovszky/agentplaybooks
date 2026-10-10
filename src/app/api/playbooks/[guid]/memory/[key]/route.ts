@@ -93,6 +93,8 @@ app.put("/", async (c) => {
   if (memory_type !== undefined) upsertData.memory_type = memory_type;
   if (status !== undefined) upsertData.status = status;
   if (preparedMetadata) upsertData.metadata = preparedMetadata.metadata;
+  // An episode time written the old way is the memory's time.
+  if (preparedMetadata?.memoryAt && body.memory_at === undefined) upsertData.memory_at = preparedMetadata.memoryAt;
 
   if (proposerKey) {
     try {

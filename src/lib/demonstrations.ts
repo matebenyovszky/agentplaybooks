@@ -24,11 +24,11 @@
  *         - { start: 134, end: 158, label: grip the handle, comment: from below }
  *   ---
  *
- * Frontmatter rather than a table of its own, because that is the one place a
- * skill can carry structured data and still survive the round trip: `apb pull`
- * writes `SKILL.md` and `apb push` sends `content` back verbatim, so anything
- * outside the document is dropped on the first pull. It also costs no migration,
- * no endpoint and no new MCP tool.
+ * Frontmatter rather than a table or a bundled file, because the list is part of
+ * the skill's definition — its order is the order of execution — and so belongs
+ * in the same document as the procedure. Kept there, the two are reviewed in one
+ * diff, versioned together (`rollback_skill` restores both at once) and covered
+ * by one digest. It also costs no migration, no endpoint and no new MCP tool.
  *
  * The same shape describes a recording attached to a memory, where it lives
  * under `metadata.recording`. There the semantics differ — evidence of what
@@ -37,6 +37,7 @@
  */
 import { parseDocument } from "yaml";
 import { splitFrontmatter } from "@/lib/skill-markdown";
+import { memoryTimestamp } from "@/lib/memory";
 
 export const DEMONSTRATION_PROVIDERS = ["youtube", "hf_dataset", "url"] as const;
 export const DEMONSTRATION_FIDELITIES = ["video", "sensorimotor"] as const;
@@ -428,68 +429,52 @@ export function readMemoryRecording(metadata: unknown): ParseResult {
   return parseDemonstrations(metadata[MEMORY_RECORDING_KEY]);
 }
 
-/** The other `metadata` key with a defined shape: `{time, location, task, outcome}`. */
+/** The other `metadata` key with a defined shape: `{location, task, outcome}`. */
 export const MEMORY_EPISODE_KEY = "episode";
 
-/**
- * `metadata.episode.time` in the one form that can be compared.
- *
- * The time filter is a text comparison on a JSON field, which is only
- * trustworthy when every value is spelled the same way: `2026-08-20T14:32:00Z`
- * and `2026-08-20T14:32:00.500Z` denote instants half a second apart but sort
- * the other way round as strings, because `.` precedes `Z`. Canonicalizing both
- * the stored value and the query bound to ISO 8601 UTC with milliseconds makes
- * the ordering match the calendar.
- */
-export function canonicalEpisodeTime(value: unknown): string | null {
-  if (typeof value !== "string") return null;
-  const parsed = Date.parse(value);
-  return Number.isNaN(parsed) ? null : new Date(parsed).toISOString();
-}
-
 export type PreparedMetadata =
-  | { metadata: unknown; error: null }
-  | { metadata: null; error: string };
+  | { metadata: unknown; memoryAt: string | null; error: null }
+  | { metadata: null; memoryAt: null; error: string };
 
 /**
  * Check the two `metadata` keys that have a defined shape, and return the value
  * to store.
  *
- * Everything else in `metadata` is passed through untouched — it is free-form
- * by design. `episode.time` is the one field rewritten rather than merely
- * validated, because a comparable ordering is the entire reason it exists.
+ * When something happened is not part of the episode: it is the memory's own
+ * `memory_at`, a real timestamp column that `search_memory` and
+ * `get_memory_context` both filter with `after` and `before`. The first version
+ * of this convention kept the time in `metadata.episode.time` instead. A writer
+ * that still does so gets it back as `memoryAt`, for the caller to store unless
+ * the write names a `memory_at` itself, and the field is dropped from what is
+ * stored — so there is only ever one answer to "when".
+ *
+ * Everything else in `metadata` is passed through untouched; it is free-form by
+ * design.
  */
 export function prepareMemoryMetadata(metadata: unknown): PreparedMetadata {
   const recording = recordingError(metadata);
-  if (recording) return { metadata: null, error: recording };
+  if (recording) return { metadata: null, memoryAt: null, error: recording };
 
-  if (!isPlainObject(metadata)) return { metadata, error: null };
+  if (!isPlainObject(metadata)) return { metadata, memoryAt: null, error: null };
   const episode = metadata[MEMORY_EPISODE_KEY];
-  if (!isPlainObject(episode)) return { metadata, error: null };
-  if (episode.time === undefined || episode.time === null) return { metadata, error: null };
+  if (!isPlainObject(episode) || !("time" in episode)) return { metadata, memoryAt: null, error: null };
 
-  const time = canonicalEpisodeTime(episode.time);
-  if (time === null) {
-    return {
-      metadata: null,
-      error: `Invalid metadata.episode.time — expected an ISO 8601 timestamp, got ${JSON.stringify(episode.time)}`,
-    };
+  const { time, ...rest } = episode;
+  let memoryAt: string | null = null;
+  if (time !== undefined && time !== null) {
+    try {
+      memoryAt = memoryTimestamp(time);
+    } catch {
+      return {
+        metadata: null,
+        memoryAt: null,
+        error: "metadata.episode.time must be an ISO 8601 timestamp with a timezone. "
+          + "The time of a memory belongs in memory_at.",
+      };
+    }
   }
 
-  return { metadata: { ...metadata, [MEMORY_EPISODE_KEY]: { ...episode, time } }, error: null };
-}
-
-/**
- * A `since` or `until` bound in the same canonical form as the stored values.
- * Throws rather than filtering on an uncomparable string, because a bound the
- * caller mistyped should not quietly return the wrong window.
- */
-export function episodeTimeBound(value: string, field: string): string {
-  const canonical = canonicalEpisodeTime(value);
-  if (canonical === null) {
-    throw new Error(`${field} must be an ISO 8601 timestamp, got ${JSON.stringify(value)}`);
-  }
-  return canonical;
+  return { metadata: { ...metadata, [MEMORY_EPISODE_KEY]: rest }, memoryAt, error: null };
 }
 
 /** `2:14`, or `1:03:52` once it runs past an hour. */
