@@ -24,6 +24,7 @@ vi.mock("@/app/api/_shared/guards", () => ({
   checkPlaybookWriteAccess: vi.fn().mockResolvedValue(true),
   getPlaybookAccessRole: vi.fn().mockResolvedValue("owner"),
   getPlaybookByGuid: vi.fn(),
+  resolvePlaybookId: vi.fn(async (id: string) => id),
 }));
 
 vi.mock("@/lib/utils", async (importOriginal) => ({

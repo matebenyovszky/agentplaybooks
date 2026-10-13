@@ -10,6 +10,13 @@ https://apbks.com/api
 
 For self-hosted instances, replace with your domain.
 
+### Playbook identifiers
+
+A playbook has two identifiers: its **GUID**, the short id in every URL and on
+the Integrations tab (for example `a1b2c3d4e5f60718`), and its **id**, a UUID.
+Every endpoint accepts either one wherever a path says `:guid` or `:id`, so use
+whichever you have; the GUID is the one to share.
+
 ## Agent Reliability Loop
 
 For production agent workflows, use this loop:

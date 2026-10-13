@@ -12,6 +12,7 @@ vi.mock("@/app/api/_shared/auth", () => ({
 vi.mock("@/app/api/_shared/guards", () => ({
   checkPlaybookWriteAccess: mocks.checkPlaybookWriteAccess,
   getPlaybookAccessRole: vi.fn(),
+  resolvePlaybookId: vi.fn(async (id: string) => id),
 }));
 vi.mock("@/app/api/_shared/supabase", async () => {
   const { createClient } = await import("@supabase/supabase-js");

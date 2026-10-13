@@ -6,6 +6,7 @@ import { checkPlaybookWriteAccess, getPlaybookByGuid } from "@/app/api/_shared/g
 import { memoryWriteFields } from "@/lib/memory";
 import { proposeMemory } from "@/app/api/_shared/proposals";
 import { recordingError } from "@/lib/demonstrations";
+import { matchesPlaybook, playbookIdentifierColumn } from "@/lib/playbook-identifier";
 
 const app = createApiApp("/api/playbooks/:guid/memory/:key");
 
@@ -25,7 +26,7 @@ app.put("/", async (c) => {
   const proposerKey = apiKeyData ? null : await validateApiKey(c.req.raw, "memory:propose");
   const keyData = apiKeyData ?? proposerKey;
   if (keyData) {
-    if (keyData.playbooks.guid !== guid) {
+    if (!matchesPlaybook(keyData.playbooks, guid)) {
       return c.json({ error: "API key does not match playbook" }, 403);
     }
   } else {
@@ -67,7 +68,7 @@ app.put("/", async (c) => {
   const { data: playbook } = await supabase
     .from("playbooks")
     .select("id")
-    .eq("guid", guid)
+    .eq(playbookIdentifierColumn(guid), guid)
     .single();
 
   if (!playbook) {
@@ -132,7 +133,7 @@ app.delete("/", async (c) => {
 
   const apiKeyData = await validateApiKey(c.req.raw, "memory:write");
   if (apiKeyData) {
-    if (apiKeyData.playbooks.guid !== guid) {
+    if (!matchesPlaybook(apiKeyData.playbooks, guid)) {
       return c.json({ error: "API key does not match playbook" }, 403);
     }
   } else {
@@ -152,7 +153,7 @@ app.delete("/", async (c) => {
   const { data: playbook } = await supabase
     .from("playbooks")
     .select("id")
-    .eq("guid", guid)
+    .eq(playbookIdentifierColumn(guid), guid)
     .single();
 
   if (!playbook) {

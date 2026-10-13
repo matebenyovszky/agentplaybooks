@@ -2,6 +2,7 @@ import { getAuthenticatedUser, validateApiKey, validateUserApiKey } from "@/app/
 import { checkPlaybookWriteAccess } from "@/app/api/_shared/guards";
 import { getServiceSupabase } from "@/app/api/_shared/supabase";
 import type { ProposalKind } from "@/app/api/_shared/proposals";
+import { playbookIdentifierColumn } from "@/lib/playbook-identifier";
 
 // Who may review which proposals: the owner and editors review both kinds; a
 // playbook key reviews the kind it may write directly. A proposer never
@@ -13,7 +14,7 @@ export async function reviewerKinds(
   const { data: playbook } = await getServiceSupabase()
     .from("playbooks")
     .select("id")
-    .eq("guid", guid)
+    .eq(playbookIdentifierColumn(guid), guid)
     .maybeSingle();
   if (!playbook) return null;
 
