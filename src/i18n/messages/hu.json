@@ -18,7 +18,7 @@
   "landing": {
     "hero": {
       "title": "Egy playbook. Minden agent.",
-      "subtitle": "Skillek, MCP szerverek, projektutasítások és memória egyetlen hordozható igazságforrásban — egy paranccsal kitelepítve Claude Code-ba, Cursorba, Codexbe, Antigravitybe és Hermesbe.",
+      "subtitle": "Nem újabb skill store: egyetlen, vendorfüggetlen playbook a teljes munkához — skillek, MCP szerverek, utasítások, memória, és titkok, amelyeket az agented úgy használ, hogy sosem látja őket — egy paranccsal kitelepítve Claude Code-ba, Cursorba, Codexbe, Antigravitybe és Hermesbe.",
       "cta": "Playbook-ok felfedezése",
       "tryDemo": "Próbáld ki"
     },
@@ -35,7 +35,7 @@
         "skills": {
           "title": "Skillek",
           "subtitle": "Tudás és képességek",
-          "description": "Strukturált feladatdefiníciók és tudás, amit az agent használhat. A skillek határozzák meg, MIT tud az agent. Később: dokumentumok csatolása mélyebb tudáshoz."
+          "description": "Strukturált feladatdefiníciók és tudás, amit az agent használhat. A skillek határozzák meg, MIT tud az agent — fájlokat is csomagolhatnak, és rámutathatnak a feladat elvégzéséről készült felvételekre azoknak az agenteknek, amelyek megfigyelésből tanulnak."
         },
         "mcp": {
           "title": "MCP Szerverek",
@@ -130,7 +130,7 @@
         },
         "futureProof": {
           "question": "Aggódsz, hogy beragadsz a mai AI platformba?",
-          "answer": "Az AgentPlaybooks nyílt forráskódú, szabványos formátumokkal. A playbook-jaid a holnap AI-jaival és robotjaival is működni fognak - a jövőre építünk."
+          "answer": "Az AgentPlaybooks nyílt forráskódú, szabványos formátumokkal, és már most készen áll a testtel bíró agentekre: egy skill bemutatásokat hordozhat — a feladat időbélyeges felvételeit, abban a sorrendben, ahogy egy robot végrehajtja."
         },
         "localLlm": {
           "question": "Helyi LLM-eket futtatsz, de ugyanazokat a képességeket szeretnéd, mint a felhőszolgáltatások?",

@@ -18,7 +18,7 @@
   "landing": {
     "hero": {
       "title": "Ein Playbook. Jeder Agent.",
-      "subtitle": "Skills, MCP-Server, Projektanweisungen und Speicher in einer portablen Single Source of Truth — mit einem Befehl ausgerollt nach Claude Code, Cursor, Codex, Antigravity und Hermes.",
+      "subtitle": "Kein weiterer Skill-Store: ein herstellerneutrales Playbook für die ganze Aufgabe — Skills, MCP-Server, Anweisungen, Speicher und Zugangsdaten, die Ihr Agent nutzt, ohne sie je zu sehen — mit einem Befehl ausgerollt nach Claude Code, Cursor, Codex, Antigravity und Hermes.",
       "cta": "Kostenlos Starten",
       "tryDemo": "Demo Testen"
     },
@@ -88,7 +88,7 @@
         "skills": {
           "title": "Skills",
           "subtitle": "Wissen & Fähigkeiten",
-          "description": "Strukturierte Aufgabendefinitionen und Wissen, das der Agent nutzen kann. Skills definieren, WAS der Agent weiß und kann. Später: Dokumente für tiefergehendes Wissen anhängen."
+          "description": "Strukturierte Aufgabendefinitionen und Wissen, das der Agent nutzen kann. Skills definieren, WAS der Agent weiß und kann — und können Dateien bündeln oder auf Aufnahmen der ausgeführten Aufgabe verweisen, für Agenten, die durch Zusehen lernen."
         },
         "mcp": {
           "title": "MCP-Server",
@@ -130,7 +130,7 @@
         },
         "futureProof": {
           "question": "Sorgen, sich an die KI-Plattform von heute zu binden?",
-          "answer": "AgentPlaybooks ist Open Source und nutzt Standardformate. Ihre Playbooks werden mit den KIs und Robotern von morgen funktionieren — wir bauen für die Zukunft."
+          "answer": "AgentPlaybooks ist Open Source mit Standardformaten und schon jetzt bereit für Agenten mit Körper: Ein Skill kann Demonstrationen tragen — zeitgestempelte Aufnahmen der Aufgabe, in der Reihenfolge, in der ein Roboter sie ausführt."
         },
         "localLlm": {
           "question": "Sie betreiben lokale LLMs, möchten aber dieselben Fähigkeiten wie bei Cloud-Diensten?",
