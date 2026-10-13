@@ -2,11 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   DEMONSTRATION_LIMITS,
   demonstrationUrl,
-  episodeTimeBound,
   formatTimestamp,
   normalizeYouTubeRef,
   parseDemonstrations,
-  prepareMemoryMetadata,
+  recordingError,
   readMemoryRecording,
   readSkillDemonstrations,
   renderDemonstrationsMarkdown,
@@ -296,49 +295,17 @@ describe("reading a recording off a memory", () => {
   });
 });
 
-describe("episodic memory metadata", () => {
-  it("canonicalizes a stored time so the text comparison matches the calendar", () => {
-    const { metadata, error } = prepareMemoryMetadata({
-      episode: { time: "2026-08-20T14:32:00Z", location: "building-B/floor-2" },
-    });
-    expect(error).toBeNull();
-    expect((metadata as { episode: { time: string } }).episode.time).toBe("2026-08-20T14:32:00.000Z");
+describe("memory metadata", () => {
+  // `metadata` is free-form. Only `recording` has a checked shape; when an
+  // episode happened is the memory's own memory_at, not a metadata field.
+  it("accepts any metadata whose recording is well formed, or that has none", () => {
+    expect(recordingError({ episode: { location: "building-B/floor-2", task: "open-fire-door" } })).toBeNull();
+    expect(recordingError({ recording: [{ provider: "youtube", ref: "dQw4w9WgXcQ" }] })).toBeNull();
+    expect(recordingError(null)).toBeNull();
   });
 
-  it("brings an offset timestamp onto the same scale as a UTC bound", () => {
-    const { metadata } = prepareMemoryMetadata({ episode: { time: "2026-08-20T16:32:00+02:00" } });
-    expect((metadata as { episode: { time: string } }).episode.time).toBe("2026-08-20T14:32:00.000Z");
-  });
-
-  it("orders a canonicalized value against a canonicalized bound correctly", () => {
-    // The bug this guards: as raw text "…00.500Z" sorts before "…00Z", so a
-    // memory half a second after the bound was excluded from the window.
-    const { metadata } = prepareMemoryMetadata({ episode: { time: "2026-08-20T14:32:00.500Z" } });
-    const stored = (metadata as { episode: { time: string } }).episode.time;
-    expect(stored >= episodeTimeBound("2026-08-20T14:32:00Z", "since")).toBe(true);
-    expect(stored <= episodeTimeBound("2026-08-20T14:32:01Z", "until")).toBe(true);
-  });
-
-  it("refuses a time it cannot compare", () => {
-    const { error } = prepareMemoryMetadata({ episode: { time: "last tuesday" } });
-    expect(error).toContain("ISO 8601");
-    expect(() => episodeTimeBound("last tuesday", "since")).toThrow("ISO 8601");
-  });
-
-  it("leaves the rest of metadata alone", () => {
-    const original = { episode: { task: "open-fire-door" }, threads: [1, 2], anything: { nested: true } };
-    const { metadata, error } = prepareMemoryMetadata(original);
-    expect(error).toBeNull();
-    expect(metadata).toEqual(original);
-  });
-
-  it("still rejects a malformed recording", () => {
-    const { error } = prepareMemoryMetadata({ recording: [{ provider: "vimeo", ref: "12345" }] });
-    expect(error).toContain("metadata.recording");
-  });
-
-  it("passes non-object metadata straight through", () => {
-    expect(prepareMemoryMetadata(null)).toEqual({ metadata: null, error: null });
+  it("rejects a malformed recording", () => {
+    expect(recordingError({ recording: [{ provider: "vimeo", ref: "12345" }] })).toContain("metadata.recording");
   });
 });
 

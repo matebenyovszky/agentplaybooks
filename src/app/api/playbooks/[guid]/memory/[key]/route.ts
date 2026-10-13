@@ -5,7 +5,7 @@ import { requireAuth, validateApiKey } from "@/app/api/_shared/auth";
 import { checkPlaybookWriteAccess, getPlaybookByGuid } from "@/app/api/_shared/guards";
 import { memoryWriteFields } from "@/lib/memory";
 import { proposeMemory } from "@/app/api/_shared/proposals";
-import { prepareMemoryMetadata } from "@/lib/demonstrations";
+import { recordingError } from "@/lib/demonstrations";
 
 const app = createApiApp("/api/playbooks/:guid/memory/:key");
 
@@ -53,11 +53,9 @@ app.put("/", async (c) => {
   // `metadata` stays free-form; only the two keys with a defined shape are
   // checked, so a malformed recording is caught here rather than being silently
   // skipped by every reader downstream.
-  const preparedMetadata = metadata === undefined
-    ? null
-    : prepareMemoryMetadata(metadata);
-  if (preparedMetadata?.error) {
-    return c.json({ error: preparedMetadata.error }, 400);
+  const invalidRecording = metadata === undefined ? null : recordingError(metadata);
+  if (invalidRecording) {
+    return c.json({ error: invalidRecording }, 400);
   }
 
   if (tags !== undefined && !Array.isArray(tags)) {
@@ -92,7 +90,7 @@ app.put("/", async (c) => {
   if (summary !== undefined) upsertData.summary = summary;
   if (memory_type !== undefined) upsertData.memory_type = memory_type;
   if (status !== undefined) upsertData.status = status;
-  if (preparedMetadata) upsertData.metadata = preparedMetadata.metadata;
+  if (metadata !== undefined) upsertData.metadata = metadata;
 
   if (proposerKey) {
     try {

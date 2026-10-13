@@ -795,6 +795,8 @@ Content-Type: application/json
 
 The `value` is encrypted immediately and never stored in plaintext.
 
+`expires_at` is optional and must carry a timezone (`Z` or `+02:00`); a time without one is refused with `400`, because the server would otherwise have to guess which instant it means. Once it passes, the secret can no longer be used: the proxy, `use_secret`, federated servers, and reveal by API key all refuse it with `403`, and the refusal is recorded in the audit log. The owner can still reveal it in the dashboard, in order to replace it.
+
 ### Reveal Secret
 
 ```http
@@ -916,6 +918,8 @@ Content-Type: application/json
   "description": "Updated key"
 }
 ```
+
+Rotating keeps the expiry: it is the owner's rule, not part of the value. To bring an expired secret back, send a later `expires_at`, or `null` to remove it.
 
 ### Delete Secret
 

@@ -1,4 +1,5 @@
 import { decryptSecret } from "@/lib/crypto";
+import { isSecretExpired } from "@/lib/secret-expiry";
 import { referencedSecretNames } from "@/lib/mcp/secret-references";
 import { checkSecretDestination } from "@/lib/secret-destinations";
 import { getServiceSupabase } from "./supabase";
@@ -87,6 +88,9 @@ export async function loadFederationSecrets(
     const blocked = destinations.some((url) =>
       !checkSecretDestination(url, secret.allowed_hosts).allowed);
     if (blocked) continue;
+    // Expired is treated like blocked: the secret stays unresolved and
+    // federation names it as missing, rather than calling with a stale value.
+    if (isSecretExpired(secret.expires_at)) continue;
     try {
       resolved[secret.name] = await decryptSecret(
         {
