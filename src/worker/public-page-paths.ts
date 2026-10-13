@@ -40,6 +40,7 @@ export const publicPagePaths = new Set<string>([
   "/docs/platform-integrations",
   "/docs/playbooks",
   "/docs/portable-agent-backups",
+  "/docs/python-secrets",
   "/docs/readme",
   "/docs/release-distribution",
   "/docs/secrets-python-examples",

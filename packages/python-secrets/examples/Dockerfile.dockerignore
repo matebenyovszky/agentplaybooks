@@ -1,0 +1,12 @@
+# Explicit build allow-list: never send credentials, .env, or test key files.
+**
+!packages/
+!packages/python-secrets/
+!packages/python-secrets/pyproject.toml
+!packages/python-secrets/README.md
+!packages/python-secrets/LICENSE
+!packages/python-secrets/apb_secrets/
+!packages/python-secrets/apb_secrets/*.py
+!packages/python-secrets/apb_secrets/py.typed
+!packages/python-secrets/examples/
+!packages/python-secrets/examples/app.py

@@ -804,6 +804,17 @@ Authorization: Bearer <jwt_or_api_key>
 
 Returns the decrypted value. If called with an API key, the request will only succeed if the secret has `allow_api_key_reveal` set to true. Otherwise, it will return a 403 Forbidden error (Proxy Only mode).
 
+### Load Runtime Secrets
+
+For application startup loading, use `POST /api/playbooks/:guid/secrets/resolve`
+with `names`, optional `optional_names`, and `auth_mode` (`api_key` or `mtls`).
+API keys require `secrets:read`. Certificate clients require a Cloudflare-verified,
+owner-registered certificate with explicit allowed names. Both require the secret's
+`allow_api_key_reveal` flag and refuse expired secrets. The response contains `values`
+and `missing_optional`; a failed batch contains no plaintext values. Maximum 100
+distinct names. See [Python Secrets](./python-secrets.md) for the client package,
+Docker examples, and owner-only certificate management endpoints.
+
 ### Use Secret (Proxy)
 
 ```http
