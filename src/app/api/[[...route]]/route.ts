@@ -28,7 +28,7 @@ import {
 } from "@/app/api/_shared/auth";
 import { getServiceSupabase, getSupabase } from "@/app/api/_shared/supabase";
 import { resolveAllowedOrigins } from "@/app/api/_shared/hono";
-import { checkPlaybookWriteAccess, getPlaybookAccessRole } from "@/app/api/_shared/guards";
+import { checkPlaybookWriteAccess, getPlaybookAccessRole, resolvePlaybookId } from "@/app/api/_shared/guards";
 import { buildPlaybookUpdate } from "@/lib/playbook-access";
 import { validateAgentSkillDescription, validateAgentSkillName } from "@/lib/agent-skills";
 import { demonstrationsError, recordingError } from "@/lib/demonstrations";
@@ -244,7 +244,7 @@ app.post("/playbooks/:id/personas", async (c) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const playbookId = c.req.param("id");
+  const playbookId = await resolvePlaybookId(c.req.param("id"));
 
   if (!(await checkPlaybookWriteAccess(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
@@ -284,7 +284,7 @@ app.put("/playbooks/:id/personas/:pid", async (c) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const playbookId = c.req.param("id");
+  const playbookId = await resolvePlaybookId(c.req.param("id"));
   const personaId = c.req.param("pid");
 
   if (!(await checkPlaybookWriteAccess(user.id, playbookId))) {
@@ -326,7 +326,7 @@ app.delete("/playbooks/:id/personas/:pid", async (c) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const playbookId = c.req.param("id");
+  const playbookId = await resolvePlaybookId(c.req.param("id"));
   const personaId = c.req.param("pid");
 
   if (!(await checkPlaybookWriteAccess(user.id, playbookId))) {
@@ -410,7 +410,7 @@ app.post("/playbooks/:id/skills", async (c) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const playbookId = c.req.param("id");
+  const playbookId = await resolvePlaybookId(c.req.param("id"));
 
   if (!(await checkPlaybookWriteAccess(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
@@ -454,7 +454,7 @@ app.put("/playbooks/:id/skills/:sid", async (c) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const playbookId = c.req.param("id");
+  const playbookId = await resolvePlaybookId(c.req.param("id"));
   const skillId = c.req.param("sid");
 
   if (!(await checkPlaybookWriteAccess(user.id, playbookId))) {
@@ -499,7 +499,7 @@ app.delete("/playbooks/:id/skills/:sid", async (c) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const playbookId = c.req.param("id");
+  const playbookId = await resolvePlaybookId(c.req.param("id"));
   const skillId = c.req.param("sid");
 
   if (!(await checkPlaybookWriteAccess(user.id, playbookId))) {
@@ -542,7 +542,7 @@ app.get("/playbooks/:id/api-keys", async (c) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const playbookId = c.req.param("id");
+  const playbookId = await resolvePlaybookId(c.req.param("id"));
 
   if (!(await checkPlaybookOwnership(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
@@ -570,7 +570,7 @@ app.post("/playbooks/:id/api-keys", async (c) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const playbookId = c.req.param("id");
+  const playbookId = await resolvePlaybookId(c.req.param("id"));
 
   if (!(await checkPlaybookOwnership(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
@@ -630,7 +630,7 @@ app.delete("/playbooks/:id/api-keys/:kid", async (c) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const playbookId = c.req.param("id");
+  const playbookId = await resolvePlaybookId(c.req.param("id"));
   const keyId = c.req.param("kid");
 
   if (!(await checkPlaybookOwnership(user.id, playbookId))) {
@@ -659,7 +659,7 @@ app.put("/playbooks/:id/api-keys/:kid/rotate", async (c) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const playbookId = c.req.param("id");
+  const playbookId = await resolvePlaybookId(c.req.param("id"));
   const keyId = c.req.param("kid");
 
   if (!(await checkPlaybookOwnership(user.id, playbookId))) {
@@ -1095,7 +1095,7 @@ app.get("/manage/playbooks/:id", async (c) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const playbookId = c.req.param("id");
+  const playbookId = await resolvePlaybookId(c.req.param("id"));
   const supabase = getServiceSupabase();
 
   const accessRole = await getPlaybookAccessRole(user.id, playbookId);
@@ -1155,7 +1155,7 @@ app.put("/manage/playbooks/:id", async (c) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const playbookId = c.req.param("id");
+  const playbookId = await resolvePlaybookId(c.req.param("id"));
 
   const accessRole = await getPlaybookAccessRole(user.id, playbookId);
   if (!accessRole) {
@@ -1193,7 +1193,7 @@ app.delete("/manage/playbooks/:id", async (c) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const playbookId = c.req.param("id");
+  const playbookId = await resolvePlaybookId(c.req.param("id"));
 
   if (!(await checkPlaybookOwnership(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
@@ -1220,7 +1220,7 @@ app.post("/manage/playbooks/:id/personas", async (c) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const playbookId = c.req.param("id");
+  const playbookId = await resolvePlaybookId(c.req.param("id"));
 
   if (!(await checkPlaybookWriteAccess(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
@@ -1260,7 +1260,7 @@ app.put("/manage/playbooks/:id/personas/:pid", async (c) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const playbookId = c.req.param("id");
+  const playbookId = await resolvePlaybookId(c.req.param("id"));
   const personaId = c.req.param("pid");
 
   if (!(await checkPlaybookWriteAccess(user.id, playbookId))) {
@@ -1299,7 +1299,7 @@ app.delete("/manage/playbooks/:id/personas/:pid", async (c) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const playbookId = c.req.param("id");
+  const playbookId = await resolvePlaybookId(c.req.param("id"));
   const personaId = c.req.param("pid");
 
   if (!(await checkPlaybookWriteAccess(user.id, playbookId))) {
@@ -1334,7 +1334,7 @@ app.post("/manage/playbooks/:id/skills", async (c) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const playbookId = c.req.param("id");
+  const playbookId = await resolvePlaybookId(c.req.param("id"));
 
   if (!(await checkPlaybookWriteAccess(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
@@ -1378,7 +1378,7 @@ app.put("/manage/playbooks/:id/skills/:sid", async (c) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const playbookId = c.req.param("id");
+  const playbookId = await resolvePlaybookId(c.req.param("id"));
   const skillId = c.req.param("sid");
 
   if (!(await checkPlaybookWriteAccess(user.id, playbookId))) {
@@ -1434,7 +1434,7 @@ app.delete("/manage/playbooks/:id/skills/:sid", async (c) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const playbookId = c.req.param("id");
+  const playbookId = await resolvePlaybookId(c.req.param("id"));
   const skillId = c.req.param("sid");
 
   if (!(await checkPlaybookWriteAccess(user.id, playbookId))) {
@@ -1466,7 +1466,7 @@ app.get("/manage/playbooks/:id/mcp-servers", async (c) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const playbookId = c.req.param("id");
+  const playbookId = await resolvePlaybookId(c.req.param("id"));
   if (!(await checkPlaybookWriteAccess(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
   }
@@ -1492,7 +1492,7 @@ app.post("/manage/playbooks/:id/mcp-servers", async (c) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const playbookId = c.req.param("id");
+  const playbookId = await resolvePlaybookId(c.req.param("id"));
   if (!(await checkPlaybookWriteAccess(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
   }
@@ -1541,7 +1541,7 @@ app.put("/manage/playbooks/:id/mcp-servers/:mid", async (c) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const playbookId = c.req.param("id");
+  const playbookId = await resolvePlaybookId(c.req.param("id"));
   const mcpId = c.req.param("mid");
   if (!(await checkPlaybookWriteAccess(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
@@ -1592,7 +1592,7 @@ app.delete("/manage/playbooks/:id/mcp-servers/:mid", async (c) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const playbookId = c.req.param("id");
+  const playbookId = await resolvePlaybookId(c.req.param("id"));
   const mcpId = c.req.param("mid");
   if (!(await checkPlaybookWriteAccess(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
@@ -1901,7 +1901,7 @@ app.get("/manage/playbooks/:id/memory", async (c) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const playbookId = c.req.param("id");
+  const playbookId = await resolvePlaybookId(c.req.param("id"));
   if (!(await checkPlaybookWriteAccess(user.id, playbookId))) {
     return c.json({ error: "Playbook not found" }, 404);
   }
@@ -1917,7 +1917,7 @@ app.delete("/manage/playbooks/:id/memory", async (c) => {
   const user = await getUserFromAuthOrApiKey(c, "memory:write");
   if (!user) return c.json({ error: "Unauthorized" }, 401);
 
-  const playbookId = c.req.param("id");
+  const playbookId = await resolvePlaybookId(c.req.param("id"));
   if (!(await checkPlaybookWriteAccess(user.id, playbookId))) {
     return c.json({ error: "Playbook not found" }, 404);
   }
@@ -1938,7 +1938,7 @@ app.get("/manage/playbooks/:id/memory/:key", async (c) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const playbookId = c.req.param("id");
+  const playbookId = await resolvePlaybookId(c.req.param("id"));
   const key = c.req.param("key");
   const supabase = getServiceSupabase();
 
@@ -1970,7 +1970,7 @@ app.put("/manage/playbooks/:id/memory/:key", async (c) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const playbookId = c.req.param("id");
+  const playbookId = await resolvePlaybookId(c.req.param("id"));
   const key = c.req.param("key");
   const supabase = getServiceSupabase();
 
@@ -2100,7 +2100,7 @@ app.delete("/manage/playbooks/:id/memory/:key", async (c) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const playbookId = c.req.param("id");
+  const playbookId = await resolvePlaybookId(c.req.param("id"));
   const key = c.req.param("key");
   const supabase = getServiceSupabase();
 
@@ -2576,7 +2576,7 @@ app.get("/playbooks/:id/star", async (c) => {
     return c.json({ starred: false });
   }
 
-  const playbookId = c.req.param("id");
+  const playbookId = await resolvePlaybookId(c.req.param("id"));
   const supabase = getServiceSupabase();
 
   const { data } = await supabase
@@ -2596,7 +2596,7 @@ app.post("/playbooks/:id/star", async (c) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const playbookId = c.req.param("id");
+  const playbookId = await resolvePlaybookId(c.req.param("id"));
   const supabase = getServiceSupabase();
 
   // Check if playbook exists and is public

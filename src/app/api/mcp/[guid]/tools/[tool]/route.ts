@@ -6,6 +6,7 @@ import { loadFederationSecrets } from "@/app/api/_shared/federation-secrets";
 import { callFederatedTool, federatedCallPrefixes } from "@/lib/mcp/federation";
 import { federationAuditWriter } from "@/app/api/_shared/audit";
 import type { ApiKey, MCPServer } from "@/lib/supabase/types";
+import { matchesPlaybook, playbookIdentifierColumn } from "@/lib/playbook-identifier";
 
 type AuthenticatedPlaybookKey = ApiKey & { playbooks: { id: string; guid: string } };
 
@@ -19,13 +20,13 @@ app.post("/", async (c) => {
   let { data: playbook } = await supabase
     .from("playbooks")
     .select("id")
-    .eq("guid", guid)
+    .eq(playbookIdentifierColumn(guid), guid)
     .eq("visibility", "public")
     .single();
   let authenticatedKey: AuthenticatedPlaybookKey | null = null;
   if (!playbook) {
     authenticatedKey = await validateApiKey(c.req.raw, "tools:call");
-    if (authenticatedKey?.playbooks.guid === guid) {
+    if (authenticatedKey && matchesPlaybook(authenticatedKey.playbooks, guid)) {
       playbook = { id: authenticatedKey.playbooks.id };
     }
   }

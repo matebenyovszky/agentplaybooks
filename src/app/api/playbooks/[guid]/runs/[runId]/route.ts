@@ -4,12 +4,13 @@ import { getServiceSupabase } from "@/app/api/_shared/supabase";
 import { requireAuth, validateApiKey } from "@/app/api/_shared/auth";
 import { checkPlaybookWriteAccess, getPlaybookByGuid } from "@/app/api/_shared/guards";
 import type { PlaybookRunsUpdate } from "@/lib/supabase/types";
+import { matchesPlaybook } from "@/lib/playbook-identifier";
 
 const app = createApiApp("/api/playbooks/:guid/runs/:runId");
 
 async function authorize(request: Request, guid: string, runId: string) {
   const apiKey = await validateApiKey(request, "canvas:write");
-  if (apiKey) return apiKey.playbooks.guid === guid ? apiKey.playbooks : null;
+  if (apiKey) return matchesPlaybook(apiKey.playbooks, guid) ? apiKey.playbooks : null;
 
   const user = await requireAuth(request);
   if (!user) return null;

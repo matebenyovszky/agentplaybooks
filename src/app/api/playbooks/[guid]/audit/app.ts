@@ -17,6 +17,7 @@ import { createApiApp } from "@/app/api/_shared/hono";
 import { getUserFromAuthOrApiKey } from "@/app/api/_shared/auth";
 import { getServiceSupabase } from "@/app/api/_shared/supabase";
 import type { Context } from "hono";
+import { playbookIdentifierColumn } from "@/lib/playbook-identifier";
 
 const app = createApiApp();
 
@@ -31,7 +32,7 @@ async function readAuditLogs(c: Context) {
   const { data: playbook } = await supabase
     .from("playbooks")
     .select("id")
-    .eq("guid", guid)
+    .eq(playbookIdentifierColumn(guid), guid)
     .eq("user_id", user.id)
     .single();
   if (!playbook) return c.json({ error: "Playbook not found" }, 404);

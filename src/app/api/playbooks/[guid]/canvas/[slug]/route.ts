@@ -5,12 +5,13 @@ import { getAuthenticatedUser, requireAuth, validateApiKey } from "@/app/api/_sh
 import { checkPlaybookWriteAccess, getPlaybookByGuid } from "@/app/api/_shared/guards";
 import { applyCanvasPatch, slugifyCanvasName, type CanvasPatchOperation } from "@/lib/canvas";
 import type { CanvasUpdate } from "@/lib/supabase/types";
+import { matchesPlaybook } from "@/lib/playbook-identifier";
 
 const app = createApiApp("/api/playbooks/:guid/canvas/:slug");
 
 async function authorize(request: Request, guid: string, permission: "canvas:read" | "canvas:write", runId?: string) {
   const apiKey = await validateApiKey(request, permission);
-  if (apiKey) return apiKey.playbooks.guid === guid ? apiKey.playbooks : null;
+  if (apiKey) return matchesPlaybook(apiKey.playbooks, guid) ? apiKey.playbooks : null;
 
   if (permission === "canvas:read") {
     const user = await getAuthenticatedUser(request);
