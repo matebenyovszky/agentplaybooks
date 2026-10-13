@@ -26,8 +26,9 @@ Each playbook can have at most 25 active editors and pending invitations in tota
 | Edit skills, MCP servers, persona, attachments, canvas, and memory | Yes | Yes |
 | Change visibility | Yes | No |
 | Manage collaborators | Yes | No |
-| Manage playbook API keys | Yes | No |
-| View or manage secrets | Yes | No |
+| Inspect playbook API-key metadata | Yes | Yes |
+| Create, rotate or revoke playbook API keys | Yes | No |
+| View or manage secrets in the dashboard | Yes | Yes |
 | Delete the playbook | Yes | No |
 
 Ownership always remains with the original owner.
