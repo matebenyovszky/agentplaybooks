@@ -172,7 +172,7 @@ The same shape describes a recording attached to a memory, under `metadata.recor
 { "location": "building-B/floor-2", "after": "2026-08-13T00:00:00Z" }
 ```
 
-An earlier version of this convention put the time in `metadata.episode.time`. A write that still does so has it moved to `memory_at` (unless the write sets `memory_at` itself), so there is only ever one answer to *when*. Everything else under `metadata` is stored untouched.
+There is one answer to *when*, and it is `memory_at`: a time with a timezone, stored in UTC. `metadata` itself is free-form and stored untouched; only `recording` is checked.
 
 A successful run recorded this way can be promoted into a skill's `demonstrations` — which is the point of sharing the shape. A memory becomes a skill.
 

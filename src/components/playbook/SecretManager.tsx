@@ -119,7 +119,9 @@ export function SecretManager({ storage, secrets, onUpdate, readOnly = false }: 
         value: newValue,
         description: newDescription || undefined,
         category: newCategory,
-        expires_at: newExpiresAt || undefined,
+        // The input is browser-local and has no zone; the server only accepts
+        // a timestamp that says which instant it means.
+        expires_at: newExpiresAt ? new Date(newExpiresAt).toISOString() : undefined,
         allow_api_key_reveal: newAllowApiKeyReveal,
       });
 

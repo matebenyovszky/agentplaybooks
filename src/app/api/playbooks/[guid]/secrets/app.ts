@@ -3,7 +3,7 @@ import { getServiceSupabase } from "@/app/api/_shared/supabase";
 import { getAuthenticatedUser, validateApiKey } from "@/app/api/_shared/auth";
 import { getPlaybookByGuid } from "@/app/api/_shared/guards";
 import { encryptSecret, decryptSecret } from "@/lib/crypto";
-import { expiredSecretMessage, isSecretExpired } from "@/lib/secret-expiry";
+import { expiredSecretMessage, expiresAtInput, isSecretExpired } from "@/lib/secret-expiry";
 import { checkSecretDestination, normalizeAllowedHosts } from "@/lib/secret-destinations";
 import { secretProxyStream, type ProxyStreamOutcome } from "@/lib/secret-proxy-stream";
 import {
@@ -144,6 +144,9 @@ app.post("/", async (c) => {
   if (!value || typeof value !== "string" || value.trim().length === 0) {
     return c.json({ error: "value is required (the secret to encrypt)" }, 400);
   }
+  let expiresAt: string | null | undefined;
+  try { expiresAt = expiresAtInput(expires_at); }
+  catch (error) { return c.json({ error: (error as Error).message }, 400); }
 
   const normalizedNamePattern = /^[A-Za-z0-9_-]+$/;
   if (!normalizedNamePattern.test(name.trim())) {
@@ -203,7 +206,7 @@ app.post("/", async (c) => {
       name: normalizedName,
       description: description || null,
       category: category || "general",
-      expires_at: expires_at || null,
+      expires_at: expiresAt ?? null,
       allow_api_key_reveal: !!allow_api_key_reveal,
       allowed_hosts: allowed_hosts === undefined ? null : normalizeAllowedHosts(allowed_hosts),
       encrypted_value: encrypted.encrypted_value,
@@ -383,6 +386,10 @@ app.put("/:name", async (c) => {
     return c.json({ error: "Forbidden" }, 403);
   }
 
+  let expiresAt: string | null | undefined;
+  try { expiresAt = expiresAtInput(expires_at); }
+  catch (error) { return c.json({ error: (error as Error).message }, 400); }
+
   const supabase = getServiceSupabase();
 
   // Find existing secret
@@ -436,7 +443,7 @@ app.put("/:name", async (c) => {
 
   if (description !== undefined) updateData.description = description;
   if (category !== undefined) updateData.category = category;
-  if (expires_at !== undefined) updateData.expires_at = expires_at;
+  if (expiresAt !== undefined) updateData.expires_at = expiresAt;
   if (allow_api_key_reveal !== undefined) updateData.allow_api_key_reveal = !!allow_api_key_reveal;
   if (allowed_hosts !== undefined) {
     updateData.allowed_hosts = allowed_hosts === null ? null : normalizeAllowedHosts(allowed_hosts);

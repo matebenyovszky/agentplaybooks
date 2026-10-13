@@ -5,7 +5,7 @@ import {
   formatTimestamp,
   normalizeYouTubeRef,
   parseDemonstrations,
-  prepareMemoryMetadata,
+  recordingError,
   readMemoryRecording,
   readSkillDemonstrations,
   renderDemonstrationsMarkdown,
@@ -295,43 +295,17 @@ describe("reading a recording off a memory", () => {
   });
 });
 
-describe("episodic memory metadata", () => {
-  // When an episode happened is the memory's own memory_at. An episode.time
-  // written the old way is handed back as that, and is not stored twice.
-  it("moves an episode time written the old way onto memory_at", () => {
-    const { metadata, memoryAt, error } = prepareMemoryMetadata({
-      episode: { time: "2026-08-20T16:32:00+02:00", location: "building-B/floor-2" },
-    });
-    expect(error).toBeNull();
-    expect(memoryAt).toBe("2026-08-20T14:32:00.000Z");
-    expect(metadata).toEqual({ episode: { location: "building-B/floor-2" } });
+describe("memory metadata", () => {
+  // `metadata` is free-form. Only `recording` has a checked shape; when an
+  // episode happened is the memory's own memory_at, not a metadata field.
+  it("accepts any metadata whose recording is well formed, or that has none", () => {
+    expect(recordingError({ episode: { location: "building-B/floor-2", task: "open-fire-door" } })).toBeNull();
+    expect(recordingError({ recording: [{ provider: "youtube", ref: "dQw4w9WgXcQ" }] })).toBeNull();
+    expect(recordingError(null)).toBeNull();
   });
 
-  it("refuses an episode time that is not a timestamp, pointing at memory_at", () => {
-    const { error } = prepareMemoryMetadata({ episode: { time: "last tuesday" } });
-    expect(error).toContain("ISO 8601");
-    expect(error).toContain("memory_at");
-  });
-
-  it("requires a timezone, as memory_at itself does", () => {
-    expect(prepareMemoryMetadata({ episode: { time: "2026-08-20T14:32:00" } }).error).toContain("timezone");
-  });
-
-  it("leaves the rest of metadata alone and reports no time", () => {
-    const original = { episode: { task: "open-fire-door" }, threads: [1, 2], anything: { nested: true } };
-    const { metadata, memoryAt, error } = prepareMemoryMetadata(original);
-    expect(error).toBeNull();
-    expect(memoryAt).toBeNull();
-    expect(metadata).toEqual(original);
-  });
-
-  it("still rejects a malformed recording", () => {
-    const { error } = prepareMemoryMetadata({ recording: [{ provider: "vimeo", ref: "12345" }] });
-    expect(error).toContain("metadata.recording");
-  });
-
-  it("passes non-object metadata straight through", () => {
-    expect(prepareMemoryMetadata(null)).toEqual({ metadata: null, memoryAt: null, error: null });
+  it("rejects a malformed recording", () => {
+    expect(recordingError({ recording: [{ provider: "vimeo", ref: "12345" }] })).toContain("metadata.recording");
   });
 });
 

@@ -5,7 +5,7 @@ import { getPlaybookByGuid } from "@/app/api/_shared/guards";
 import { getServiceSupabase } from "@/app/api/_shared/supabase";
 import { recordSecretAudit } from "@/app/api/_shared/audit";
 import { decryptSecret, encryptSecret } from "@/lib/crypto";
-import { isSecretExpired } from "@/lib/secret-expiry";
+import { expiresAtInput, isSecretExpired } from "@/lib/secret-expiry";
 
 /**
  * An expired secret cannot be used: not proxied, not revealed to an API key.
@@ -106,6 +106,41 @@ describe("the expiry comparison", () => {
     expect(isSecretExpired("2026-10-10T12:00:00.000Z", at - 1)).toBe(false);
   });
 
+  it("fails closed on an expiry it cannot read", () => {
+    expect(isSecretExpired("not a date")).toBe(true);
+  });
+});
+
+describe("accepting an expiry", () => {
+  it("normalizes a timestamp with a zone to UTC", () => {
+    expect(expiresAtInput("2026-12-01T10:00:00+02:00")).toBe("2026-12-01T08:00:00.000Z");
+  });
+
+  it("refuses a time without a zone, which the database would read in its own", () => {
+    expect(() => expiresAtInput("2026-12-01T10:00")).toThrow("timezone");
+    expect(() => expiresAtInput("2026-12-01")).toThrow("timezone");
+    expect(() => expiresAtInput("next week")).toThrow("timezone");
+  });
+
+  it("distinguishes leaving it alone from clearing it", () => {
+    expect(expiresAtInput(undefined)).toBeUndefined();
+    expect(expiresAtInput(null)).toBeNull();
+    expect(expiresAtInput("")).toBeNull();
+  });
+
+  it("rejects a zoneless expiry on create and on update, before anything is stored", async () => {
+    const created = await app.request("/api/playbooks/guid1/secrets", {
+      method: "POST",
+      headers: { Authorization: "Bearer apb_live_test", "Content-Type": "application/json" },
+      body: JSON.stringify({ name: "MODEL_KEY", value: "v", expires_at: "2026-12-01T10:00" }),
+    });
+    const updated = await rotate({ value: "v", expires_at: "2026-12-01T10:00" });
+
+    expect(created.status).toBe(400);
+    expect(updated.status).toBe(400);
+    expect(encryptSecret).not.toHaveBeenCalled();
+    expect(update).not.toHaveBeenCalled();
+  });
 });
 
 describe("using an expired secret", () => {

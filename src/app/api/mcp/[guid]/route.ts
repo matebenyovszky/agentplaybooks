@@ -42,7 +42,7 @@ import type {
   PlaybookRunsUpdate,
 } from "@/lib/supabase/types";
 import { encryptSecret, decryptSecret } from "@/lib/crypto";
-import { expiredSecretMessage, isSecretExpired } from "@/lib/secret-expiry";
+import { expiredSecretMessage, expiresAtInput, isSecretExpired } from "@/lib/secret-expiry";
 import { checkSecretDestination } from "@/lib/secret-destinations";
 import {
   auditActor,
@@ -74,8 +74,8 @@ import { serveSkill, skillResourceUri, type ServedSkill } from "@/lib/mcp/skill-
 import { cachedSingleFlight, type SingleFlightEntry } from "@/lib/cache/single-flight";
 import {
   assertValidDemonstrations,
-  prepareMemoryMetadata,
   readMemoryRecording,
+  recordingError,
   readSkillDemonstrations,
   resolveDemonstration,
 } from "@/lib/demonstrations";
@@ -1329,11 +1329,9 @@ use_secret_write({
               // `metadata` stays free-form; only the two keys with a defined
               // shape are checked, so a malformed recording is caught here
               // rather than being silently skipped by every reader downstream.
-              const prepared = prepareMemoryMetadata(metadata);
-              if (prepared.error) throw new Error(prepared.error);
-              upsertData.metadata = prepared.metadata;
-              // An episode time written the old way is the memory's time.
-              if (prepared.memoryAt && args.memory_at === undefined) upsertData.memory_at = prepared.memoryAt;
+              const invalidRecording = recordingError(metadata);
+              if (invalidRecording) throw new Error(invalidRecording);
+              upsertData.metadata = metadata;
             }
 
             if (proposer) {
@@ -1513,13 +1511,11 @@ use_secret_write({
             // Where reads the `metadata.episode` convention `{ location, task,
             // outcome }`; when is the memory's own `memory_at`, bounded the same
             // way search_memory bounds it.
+            for (const field of ["location", "task"] as const) {
+              if (args[field] !== undefined && typeof args[field] !== "string") throw new Error(`${field} must be a string`);
+            }
             const location = args.location as string | undefined;
             const task = args.task as string | undefined;
-            if (args.since !== undefined || args.until !== undefined) {
-              // Refused rather than ignored: dropping a bound would quietly
-              // return the wrong window.
-              throw new Error("since and until were replaced by after and before, which bound memory_at");
-            }
             const after = args.after === undefined ? undefined : memoryTimestamp(args.after);
             const before = args.before === undefined ? undefined : memoryTimestamp(args.before);
             if (after && before && after > before) throw new Error("after must not be later than before");
@@ -2859,7 +2855,7 @@ use_secret_write({
                 name: normalizedStoreName,
                 description: (args.description as string) || null,
                 category: (args.category as SecretCategory) || "general",
-                expires_at: (args.expires_at as string) || null,
+                expires_at: expiresAtInput(args.expires_at) ?? null,
                 allow_api_key_reveal: (args.allow_api_key_reveal as boolean) || false,
                 encrypted_value: encrypted.encrypted_value,
                 iv: encrypted.iv,
@@ -2923,7 +2919,7 @@ use_secret_write({
                 // The expiry is the owner's rule and survives a rotation; this
                 // is the one way to change it over MCP, so an expired secret
                 // can be brought back without the dashboard.
-                ...(args.expires_at !== undefined ? { expires_at: (args.expires_at as string | null) || null } : {}),
+                ...(args.expires_at !== undefined ? { expires_at: expiresAtInput(args.expires_at) } : {}),
                 updated_by: rotateApiKey.key_prefix,
               })
               .eq("id", existingSecret.id)
