@@ -16,6 +16,7 @@ export const publicPagePaths = new Set<string>([
   "/blog/rlm-enhanced-memory",
   "/blog/secrets-vault-secure-credential-management",
   "/blog/secure-team-playbook-collaboration",
+  "/blog/skills-a-robot-can-watch",
   "/blog/using-hermes-agent-with-playbooks",
   "/blog/welcome-to-agentplaybooks",
   "/blog/your-bot-is-not-your-agent",
