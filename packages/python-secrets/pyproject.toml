@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=77,<83"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agentplaybooks-secrets"
+version = "0.1.0"
+description = "Load AgentPlaybooks secrets into Python applications using API keys or mTLS"
+requires-python = ">=3.10"
+license = "MIT"
+readme = "README.md"
+authors = [{name = "AgentPlaybooks"}]
+dependencies = []
+
+[project.urls]
+Homepage = "https://agentplaybooks.ai"
+Repository = "https://github.com/matebenyovszky/agentplaybooks"
+
+[tool.setuptools]
+packages = ["apb_secrets"]
+
+[tool.setuptools.package-data]
+apb_secrets = ["py.typed"]

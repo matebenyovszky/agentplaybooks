@@ -33,5 +33,5 @@ describe("private portable backup schema", () => {
     } finally {
       await db.close();
     }
-  });
+  }, 30000); // Includes cold WASM/Postgres startup alongside the other migration suites.
 });
