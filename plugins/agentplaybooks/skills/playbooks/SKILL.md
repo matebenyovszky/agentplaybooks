@@ -12,14 +12,24 @@ vault. The same playbook follows the user into Claude, Cursor, Codex, Hermes,
 and other clients, so what you write into it is visible there too — and to
 anyone the playbook is shared with.
 
-This plugin connects the **account** endpoint. Every playbook the signed-in
-account owns or has been given is reachable from one connection, and each
-playbook tool takes a `playbook_id` (its UUID or GUID). If the tools are
-missing, the connection is not authenticated yet. In a Claude app, ask the
-user to open the AgentPlaybooks connector and select **Connect**. In Claude
-Code, `/mcp` shows the server's state; against a self-hosted server the key
-comes from the AgentPlaybooks CLI, so the user runs its `login --url=<server>`
-in their own terminal (see the agentplaybooks-cli skill).
+The plugin has two connections with the same tools:
+
+- **agentplaybooks-account** reaches agentplaybooks.ai and signs in with
+  OAuth. It works in every Claude app.
+- **agentplaybooks-servers** runs on the user's machine, in Claude Code, and
+  reaches every AgentPlaybooks server the user has logged in to with the CLI —
+  the hosted one, their organisation's own, or several. With more than one,
+  `list_playbooks` marks each playbook's `server`, a playbook tool goes to the
+  server that has its `playbook_id`, and `create_playbook` needs `server`.
+
+Through either, one connection reaches every playbook the account owns or has
+been given, and each playbook tool takes a `playbook_id` (its UUID or GUID).
+Use whichever has tools; when both reach a playbook, either works. If neither
+has tools, nothing is signed in yet. In a Claude app, ask the user to open the
+AgentPlaybooks connector and select **Connect**. In Claude Code, `/mcp` shows
+each connection's state; a server is added by running the CLI's
+`login --url=<server>` in the user's own terminal and reconnecting
+`agentplaybooks-servers` from `/mcp` (see the agentplaybooks-cli skill).
 
 ## Start of a task
 

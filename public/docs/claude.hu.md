@@ -15,7 +15,7 @@ Háromféleképpen lehet bekötni. Aszerint válassz, mit akarsz elérni a Claud
 
 ## A plugin
 
-A plugin három dolgot csomagol egybe:
+A plugin négy dolgot csomagol egybe:
 
 - az **AgentPlaybooks connectort** a fiók-végponthoz
   (`https://agentplaybooks.ai/api/mcp/manage`). Rajta keresztül minden playbook
@@ -27,7 +27,10 @@ A plugin három dolgot csomagol egybe:
   dolgot módosít;
 - az **`/agentplaybooks:doctor` és `/agentplaybooks:sync` parancsokat** Claude
   Code-hoz, amelyek egy projekt agent-konfigurációs fájljait auditálják és
-  szinkronizálják.
+  szinkronizálják;
+- Claude Code-ban egy **helyi kapcsolatot a saját szervereidhez**: minden
+  AgentPlaybooks szervert, amelyre a CLI-vel bejelentkeztél, privát hálózatban
+  lévőt is — lásd lejjebb, a *Saját üzemeltetésű példányok* résznél.
 
 **claude.ai-ról vagy az asztali appból.**
 
@@ -138,27 +141,25 @@ onnan elérhetőnek kell lennie — privát hálózatban lévő szerverhez a Cla
 [MCP tunneljei](https://claude.com/docs/connectors/mcp-tunnels/overview) a
 támogatott út.
 
-Maga a plugin az agentplaybooks.ai-ra mutat. Claude Code-hoz van egy második
-plugin, az **agentplaybooks-self-hosted**, ugyanazokkal a skillekkel és
-parancsokkal. Ez a gépeden fut, ezért privát hálózatban lévő szervert is elér,
-és a CLI által tárolt felhasználói API-kulccsal azonosít — OAuth-szerver nem kell
-hozzá:
+Claude Code-ban a plugin mindez nélkül eléri a saját szervereidet. Az
+**agentplaybooks-servers** kapcsolata a gépeden fut, és minden AgentPlaybooks
+szervert kiszolgál, amelyhez a CLI-vel felhasználói API-kulcsot tároltál —
+OAuth-szerver nem kell hozzá, és annyi szerver lehet, ahányra bejelentkezel:
 
 ```bash
 npx --yes @agentplaybooks/cli@0.6.0 login --url=https://<szervered>
 ```
 
-```bash
-claude plugin install agentplaybooks-self-hosted@agentplaybooks --config server_url=https://<szervered>
-```
-
-Ha még nincs felvéve, előbb add hozzá a marketplace-t (`claude plugin marketplace
-add matebenyovszky/agentplaybooks`). A plugin minden kapcsolódáskor a pontosan
-ahhoz a szerverhez tárolt kulcsot olvassa ki, és `X-API-Key` fejlécben küldi; a
-Claude Code beállításaiba sosem másolja. Ha a szerver tanúsítványát olyan CA
-állította ki, amely nincs az operációs rendszer tárában, a CA fájlját a
-`~/.claude/settings.json` `env` blokkjában add meg `NODE_EXTRA_CA_CERTS`-ként,
-és abban a terminálban is, ahol a `login`-t futtatod.
+Utána a `/mcp` alatt kapcsold újra az **agentplaybooks-servers**-t. Több szerver
+esetén a `list_playbooks` minden playbooknál megadja a szerverét, a
+`playbook_id`-t megnevező hívás ahhoz a szerverhez megy, amelyiken az a
+playbook van, a `create_playbook` pedig megkérdezi, melyik szerverre. Minden
+kulcs csak ahhoz a szerverhez megy, amelyhez tároltad, HTTPS-en (vagy HTTP-n a
+saját gépedre), és a `logout --url=<szervered>` vissza is veszi. Ha a szerver
+tanúsítványát olyan CA állította ki, amely nincs az operációs rendszer tárában,
+a CA fájlját a `~/.claude/settings.json` `env` blokkjában add meg
+`NODE_EXTRA_CA_CERTS`-ként, és abban a terminálban is, ahol a `login`-t
+futtatod.
 
 ## Hibaelhárítás
 

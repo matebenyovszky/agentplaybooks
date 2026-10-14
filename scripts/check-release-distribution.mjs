@@ -58,21 +58,19 @@ check(
   directoryPlugin.mcpServers?.["agentplaybooks-account"]?.url === registry.remotes?.[0]?.url,
   "Claude directory plugin MCP URL differs from the registry.",
 );
-// Its self-hosted sibling runs the same CLI, and its headers helper names the
-// `login` command to run, so it carries the same pins.
-const selfHostedPlugin = await json("plugins/agentplaybooks-self-hosted/.claude-plugin/plugin.json");
-check(selfHostedPlugin.version === cli.version, "Claude self-hosted plugin version differs.");
+// The plugin's local server names the `login` command in its messages and
+// reports a version of its own, so both move with the CLI as well.
+const localServer = await read("plugins/agentplaybooks/server/servers.mjs");
 check(
-  variants[3].plugins?.find(plugin => plugin.name === "agentplaybooks-self-hosted")?.version === cli.version,
-  "Marketplace version of the Claude self-hosted plugin differs.",
+  localServer.match(/^const VERSION = "([^"]+)";\r?$/m)?.[1] === cli.version,
+  "Claude plugin's local server reports a version other than the CLI's.",
 );
 for (const file of [
   "plugins/agentplaybooks/README.md",
   "plugins/agentplaybooks/commands/doctor.md",
   "plugins/agentplaybooks/commands/sync.md",
   "plugins/agentplaybooks/skills/agentplaybooks-cli/SKILL.md",
-  "plugins/agentplaybooks-self-hosted/README.md",
-  "plugins/agentplaybooks-self-hosted/scripts/mcp-headers.mjs",
+  "plugins/agentplaybooks/server/servers.mjs",
 ]) {
   const pins = [...(await read(file)).matchAll(/@agentplaybooks\/cli@([0-9A-Za-z.+-]+)/g)].map(match => match[1]);
   check(pins.length > 0, `${file} no longer pins the CLI version.`);
