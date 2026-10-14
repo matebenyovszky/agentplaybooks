@@ -22,7 +22,9 @@ key the AgentPlaybooks CLI already stores.
 1. Store the key once with the CLI. It takes the key from
    `AGENTPLAYBOOKS_API_KEY`, or prompts for it, and checks it against the
    server before saving it in `~/.agentplaybooks/credentials.json` (mode 0600).
-   The prompt shows what you paste, so prefer the variable on a shared screen:
+   CLI releases after 0.6.0 read the key at the prompt without echoing it;
+   0.6.0 itself still shows what you paste, so with it prefer the variable on
+   a shared screen:
 
    ```bash
    npx --yes @agentplaybooks/cli@0.6.0 login --url=https://playbooks.example.org
