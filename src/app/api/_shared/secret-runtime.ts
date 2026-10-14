@@ -4,6 +4,7 @@ import { getServiceSupabase } from "./supabase";
 import { verifiedClientFingerprint } from "@/lib/mtls";
 import type { AuditContext } from "./audit";
 import { recordSecretAudit } from "./audit";
+import { playbookIdentifierColumn } from "@/lib/playbook-identifier";
 
 export const SECRET_NAME = /^[A-Za-z_][A-Za-z0-9_.-]{0,127}$/;
 export const MAX_RUNTIME_SECRETS = 100;
@@ -44,7 +45,7 @@ export async function authorizeSecretRuntime(
   if (!fingerprint) return null;
   const db = getServiceSupabase();
   const { data: playbook, error: playbookError } = await db.from("playbooks")
-    .select("id, user_id").eq("guid", guid).maybeSingle();
+    .select("id, user_id").eq(playbookIdentifierColumn(guid), guid).maybeSingle();
   if (playbookError || !playbook) return null;
   const { data: client, error } = await db.from("secret_clients").select("*")
     .eq("playbook_id", playbook.id).eq("certificate_sha256", fingerprint)

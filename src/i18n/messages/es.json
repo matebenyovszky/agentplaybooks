@@ -18,7 +18,7 @@
   "landing": {
     "hero": {
       "title": "Un playbook. Todos tus agentes.",
-      "subtitle": "Habilidades, servidores MCP, instrucciones de proyecto y memoria en una única fuente de verdad portátil — desplegada a Claude Code, Cursor, Codex, Antigravity y Hermes con un solo comando.",
+      "subtitle": "No es otra tienda de habilidades: un único playbook independiente del proveedor para todo el trabajo — habilidades, servidores MCP, instrucciones, memoria y credenciales que tu agente usa sin verlas nunca — desplegado a Claude Code, Cursor, Codex, Antigravity y Hermes con un solo comando.",
       "cta": "Empieza Gratis",
       "tryDemo": "Probar Demo"
     },
@@ -88,7 +88,7 @@
         "skills": {
           "title": "Habilidades",
           "subtitle": "Conocimiento y capacidades",
-          "description": "Definiciones de tareas estructuradas y conocimiento que el agente puede usar. Las habilidades definen QUÉ sabe y qué puede hacer el agente. Más adelante: adjunta documentos para un conocimiento más profundo."
+          "description": "Definiciones de tareas estructuradas y conocimiento que el agente puede usar. Las habilidades definen QUÉ sabe y qué puede hacer el agente, y pueden incluir archivos o apuntar a grabaciones de la tarea realizada, para agentes que aprenden observando."
         },
         "mcp": {
           "title": "Servidores MCP",
@@ -130,7 +130,7 @@
         },
         "futureProof": {
           "question": "¿Te preocupa quedar atado a la plataforma de IA de hoy?",
-          "answer": "AgentPlaybooks es open source y usa formatos estándar. Tus playbooks funcionarán con las IAs y los robots de mañana: construimos pensando en el futuro."
+          "answer": "AgentPlaybooks es open source con formatos estándar, y ya está preparado para agentes con cuerpo: una habilidad puede llevar demostraciones — grabaciones de la tarea con marcas de tiempo, en el orden en que un robot la realiza."
         },
         "localLlm": {
           "question": "¿Ejecutas LLMs locales pero quieres las mismas capacidades que en los servicios en la nube?",

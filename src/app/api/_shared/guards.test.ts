@@ -10,6 +10,7 @@ import {
   checkPlaybookWriteAccess,
   getPlaybookAccessRole,
   getPlaybookByGuid,
+  resolvePlaybookId,
 } from "./guards";
 
 type QueryResult = {
@@ -169,5 +170,44 @@ describe("playbook access guards", () => {
 
     await expect(getPlaybookAccessRole("editor-1", "playbook-1"))
       .rejects.toThrow("Failed to check playbook collaboration");
+  });
+});
+
+describe("either playbook identifier", () => {
+  const UUID = "3f2a9c1e-5b7d-4e8f-9a0b-1c2d3e4f5a6b";
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("looks a playbook up by UUID as well as by GUID", async () => {
+    const byUuid = mockSupabaseResults({
+      data: { id: UUID, user_id: "owner-1", visibility: "public", guid: "a1b2c3d4e5f60718" },
+      error: null,
+    });
+    await expect(getPlaybookByGuid(UUID, null)).resolves.toMatchObject({ id: UUID });
+    expect(byUuid.eq).toHaveBeenCalledWith("id", UUID);
+
+    const byGuid = mockSupabaseResults({
+      data: { id: UUID, user_id: "owner-1", visibility: "public", guid: "a1b2c3d4e5f60718" },
+      error: null,
+    });
+    await expect(getPlaybookByGuid("a1b2c3d4e5f60718", null)).resolves.toMatchObject({ id: UUID });
+    expect(byGuid.eq).toHaveBeenCalledWith("guid", "a1b2c3d4e5f60718");
+  });
+
+  it("resolves a GUID to the UUID that UUID-keyed routes use", async () => {
+    mockSupabaseResults({ data: { id: UUID }, error: null });
+    await expect(resolvePlaybookId("a1b2c3d4e5f60718")).resolves.toBe(UUID);
+  });
+
+  it("passes a UUID through without a query", async () => {
+    await expect(resolvePlaybookId(UUID)).resolves.toBe(UUID);
+    expect(getServiceSupabaseMock).not.toHaveBeenCalled();
+  });
+
+  it("leaves an unknown GUID for the route's own lookup to refuse", async () => {
+    mockSupabaseResults({ data: null, error: null });
+    await expect(resolvePlaybookId("does-not-exist")).resolves.toBe("does-not-exist");
   });
 });

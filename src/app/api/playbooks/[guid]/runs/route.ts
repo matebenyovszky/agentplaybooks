@@ -3,6 +3,7 @@ import { createApiApp } from "@/app/api/_shared/hono";
 import { getServiceSupabase } from "@/app/api/_shared/supabase";
 import { getAuthenticatedUser, validateApiKey } from "@/app/api/_shared/auth";
 import { getPlaybookByGuid } from "@/app/api/_shared/guards";
+import { matchesPlaybook } from "@/lib/playbook-identifier";
 
 const app = createApiApp("/api/playbooks/:guid/runs");
 
@@ -10,7 +11,7 @@ app.get("/", async (c) => {
   const guid = c.req.param("guid") || "";
   const apiKey = await validateApiKey(c.req.raw, "canvas:read");
   const user = apiKey ? null : await getAuthenticatedUser(c.req.raw);
-  const playbook = apiKey?.playbooks.guid === guid
+  const playbook = apiKey && matchesPlaybook(apiKey.playbooks, guid)
     ? apiKey.playbooks
     : await getPlaybookByGuid(guid, user?.id || null);
   if (!playbook) return c.json({ error: "Playbook not found or access denied" }, 404);
@@ -26,7 +27,7 @@ app.post("/", async (c) => {
   const guid = c.req.param("guid") || "";
   const apiKey = await validateApiKey(c.req.raw, "canvas:write");
   const user = apiKey ? null : await getAuthenticatedUser(c.req.raw);
-  const playbook = apiKey?.playbooks.guid === guid
+  const playbook = apiKey && matchesPlaybook(apiKey.playbooks, guid)
     ? apiKey.playbooks
     : await getPlaybookByGuid(guid, user?.id || null);
   if (!playbook || (!apiKey && !user)) return c.json({ error: "Unauthorized or forbidden" }, 403);

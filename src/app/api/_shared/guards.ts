@@ -1,5 +1,25 @@
 import { getServiceSupabase } from "./supabase";
 import type { Playbook } from "@/lib/supabase/types";
+import { playbookIdentifierColumn } from "@/lib/playbook-identifier";
+
+/**
+ * The UUID of the playbook a request names by UUID or by GUID. Routes keyed on
+ * the UUID call this first, so a caller holding the GUID from a URL reaches
+ * them too. An unknown identifier comes back unchanged and fails the route's
+ * own lookup, with the same 404 or 403 as before.
+ */
+export async function resolvePlaybookId(identifier: string): Promise<string> {
+  if (playbookIdentifierColumn(identifier) === "id") return identifier;
+  const { data, error } = await getServiceSupabase()
+    .from("playbooks")
+    .select("id")
+    .eq("guid", identifier)
+    .maybeSingle();
+  if (error) {
+    throw new Error(`Failed to resolve playbook: ${error.message}`);
+  }
+  return data?.id ?? identifier;
+}
 
 export async function checkPlaybookOwnership(userId: string, playbookId: string): Promise<boolean> {
   const { data: playbook, error } = await getServiceSupabase()
@@ -64,7 +84,7 @@ export async function getPlaybookByGuid(
   const { data: playbook, error } = await getServiceSupabase()
     .from("playbooks")
     .select("id, user_id, visibility, guid")
-    .eq("guid", guid)
+    .eq(playbookIdentifierColumn(guid), guid)
     .maybeSingle();
 
   if (error) {

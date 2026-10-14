@@ -4,6 +4,7 @@ import { getAuthenticatedUser, validateApiKey } from "@/app/api/_shared/auth";
 import { getPlaybookByGuid } from "@/app/api/_shared/guards";
 import { searchMemories } from "@/app/api/_shared/memory";
 import { parseMemorySearch } from "@/lib/memory";
+import { matchesPlaybook } from "@/lib/playbook-identifier";
 
 const app = createApiApp("/api/playbooks/:guid/memory");
 
@@ -12,7 +13,7 @@ app.get("/", async (c) => {
   if (!guid) return c.json({ error: "Missing playbook GUID" }, 400);
   const user = await getAuthenticatedUser(c.req.raw);
   const apiKey = await validateApiKey(c.req.raw, "memory:read");
-  const playbook = apiKey?.playbooks.guid === guid ? apiKey.playbooks : await getPlaybookByGuid(guid, user?.id ?? null);
+  const playbook = apiKey && matchesPlaybook(apiKey.playbooks, guid) ? apiKey.playbooks : await getPlaybookByGuid(guid, user?.id ?? null);
   if (!playbook) return c.json({ error: "Playbook not found" }, 404);
   let options;
   try { options = parseMemorySearch(c.req.query()); }
