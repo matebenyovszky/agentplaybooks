@@ -57,6 +57,7 @@ import {
   runWithEnvironment,
   savePlaybookKey,
 } from "./secrets.js";
+import { promptForKey, promptForLine } from "./prompt.js";
 
 const HELP = `AgentPlaybooks CLI
 
@@ -237,20 +238,6 @@ async function openBrowser(url) {
     child.unref();
   } catch {
     // Printed above; nothing else to do.
-  }
-}
-
-async function promptForKey(question) {
-  if (!process.stdin.isTTY) {
-    const chunks = [];
-    for await (const chunk of process.stdin) chunks.push(chunk);
-    return Buffer.concat(chunks).toString("utf8").trim();
-  }
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-  try {
-    return (await new Promise((resolve) => rl.question(question, resolve))).trim();
-  } finally {
-    rl.close();
   }
 }
 
@@ -943,7 +930,7 @@ export async function run(args) {
       configured: state.client_id,
     });
     const clientId = chosen.clientId
-      || await promptForKey(`Client ID for your ${template.name} OAuth app: `);
+      || await promptForLine(`Client ID for your ${template.name} OAuth app: `);
     if (!clientId) throw new Error("A client ID is required.");
     if (chosen.source === "playbook") {
       console.log(`Using the client ID configured on this playbook's ${template.name} server.`);
