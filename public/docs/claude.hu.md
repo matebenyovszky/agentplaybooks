@@ -136,11 +136,29 @@ Auth-jában be van kapcsolva az OAuth-szerver: add hozzá egyéni connectorként
 Anthropic infrastruktúrájából kapcsolódik, nem a gépedről, tehát a szervernek
 onnan elérhetőnek kell lennie — privát hálózatban lévő szerverhez a Claude
 [MCP tunneljei](https://claude.com/docs/connectors/mcp-tunnels/overview) a
-támogatott út. Claude Code közvetlenül is eléri az intranetes szervert az
-`apb connect`-tel, mert az a gépeden fut.
+támogatott út.
 
-Maga a plugin az agentplaybooks.ai-ra mutat; saját szerverhez egyéni connectort
-használj.
+Maga a plugin az agentplaybooks.ai-ra mutat. Claude Code-hoz van egy második
+plugin, az **agentplaybooks-self-hosted**, ugyanazokkal a skillekkel és
+parancsokkal. Ez a gépeden fut, ezért privát hálózatban lévő szervert is elér,
+és a CLI által tárolt felhasználói API-kulccsal azonosít — OAuth-szerver nem kell
+hozzá:
+
+```bash
+npx --yes @agentplaybooks/cli@0.6.0 login --url=https://<szervered>
+```
+
+```bash
+claude plugin install agentplaybooks-self-hosted@agentplaybooks --config server_url=https://<szervered>
+```
+
+Ha még nincs felvéve, előbb add hozzá a marketplace-t (`claude plugin marketplace
+add matebenyovszky/agentplaybooks`). A plugin minden kapcsolódáskor a pontosan
+ahhoz a szerverhez tárolt kulcsot olvassa ki, és `X-API-Key` fejlécben küldi; a
+Claude Code beállításaiba sosem másolja. Ha a szerver tanúsítványát olyan CA
+állította ki, amely nincs az operációs rendszer tárában, a CA fájlját a
+`~/.claude/settings.json` `env` blokkjában add meg `NODE_EXTRA_CA_CERTS`-ként,
+és abban a terminálban is, ahol a `login`-t futtatod.
 
 ## Hibaelhárítás
 

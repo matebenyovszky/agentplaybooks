@@ -15,13 +15,18 @@ anyone the playbook is shared with.
 This plugin connects the **account** endpoint. Every playbook the signed-in
 account owns or has been given is reachable from one connection, and each
 playbook tool takes a `playbook_id` (its UUID or GUID). If the tools are
-missing, the connector has not finished signing in: ask the user to open the
-AgentPlaybooks connector and select **Connect**.
+missing, the connection is not authenticated yet. In a Claude app, ask the
+user to open the AgentPlaybooks connector and select **Connect**. In Claude
+Code, `/mcp` shows the server's state; against a self-hosted server the key
+comes from the AgentPlaybooks CLI, so the user runs its `login --url=<server>`
+in their own terminal (see the agentplaybooks-cli skill).
 
 ## Start of a task
 
 1. `list_playbooks` to see what exists. Pick by name with the user if more
-   than one fits; do not guess between similar names.
+   than one fits; do not guess between similar names. A project the CLI has
+   linked to a playbook names it in `.agentplaybooks/remote.json`; prefer that
+   one.
 2. `get_playbook` for the chosen one. It returns the persona, instructions,
    skills, connected servers, and a memory summary.
 3. If the user wants Claude to *be* that playbook, follow its persona and
@@ -66,7 +71,7 @@ while editing a section someone else might also edit.
   secret injected server-side. `use_secret_write` does the same for writes.
   Name the host and the effect to the user before a write.
 - Never ask the user to paste a credential into the chat. To add one, point
-  them to the playbook's **Secrets** tab on agentplaybooks.ai.
+  them to the playbook's **Secrets** tab in the AgentPlaybooks web app.
 
 ## Boundaries
 

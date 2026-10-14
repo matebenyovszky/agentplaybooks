@@ -22,6 +22,20 @@
       "license": "MIT",
       "category": "productivity",
       "keywords": ["playbooks", "skills", "mcp", "audit", "sync", "portability"]
+    },
+    {
+      "name": "agentplaybooks-self-hosted",
+      "source": "./plugins/agentplaybooks-self-hosted",
+      "description": "The same playbooks, skills, memory, canvas, connected tools, and secret proxy from your own AgentPlaybooks server in Claude Code, authenticated with the key the AgentPlaybooks CLI stores.",
+      "version": "0.6.0",
+      "author": {
+        "name": "AgentPlaybooks",
+        "url": "https://agentplaybooks.ai"
+      },
+      "homepage": "https://agentplaybooks.ai/docs/claude",
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": ["playbooks", "skills", "mcp", "self-hosted", "secrets"]
     }
   ]
 }

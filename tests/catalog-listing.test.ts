@@ -203,13 +203,20 @@ describe("Claude plugin catalog manifests", () => {
       plugins: Array<{ name: string; source: string; license: string; version: string }>;
     };
     const cli = JSON.parse(source("packages/cli/package.json")) as { version: string };
-    expect(claudeMarketplace.plugins).toHaveLength(1);
-    expect(claudeMarketplace.plugins[0]).toMatchObject({
+    expect(claudeMarketplace.plugins.find((plugin) => plugin.name === "agentplaybooks")).toMatchObject({
       name: "agentplaybooks",
       source: `./${pluginRoot}`,
       license: "MIT",
       version: cli.version,
     });
+    // The only other entry is the self-hosted sibling. Its connector takes the
+    // server URL from `${user_config.*}`, which chat and Cowork skip without
+    // refusing the plugin, so listing it here cannot break those surfaces.
+    expect(claudeMarketplace.plugins.map((plugin) => plugin.name).sort())
+      .toEqual(["agentplaybooks", "agentplaybooks-self-hosted"]);
+    for (const plugin of claudeMarketplace.plugins) {
+      expect(plugin.source, `${plugin.name} must not resolve to the CLI package and its bin/`).toMatch(/^\.\/plugins\//);
+    }
   });
 
   it("keeps the folder installable on every Claude surface", () => {

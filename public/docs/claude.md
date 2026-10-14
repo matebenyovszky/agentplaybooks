@@ -128,11 +128,28 @@ has the OAuth server enabled: add `https://<your-server>/api/mcp/manage` or
 infrastructure, not from your machine, so the server has to be reachable from
 there — for a server inside a private network, Claude's
 [MCP tunnels](https://claude.com/docs/connectors/mcp-tunnels/overview) are the
-supported route. Claude Code can also reach an intranet server directly with
-`apb connect`, which runs on your machine.
+supported route.
 
-The plugin itself points at agentplaybooks.ai; for a self-hosted server, use a
-custom connector instead.
+The plugin itself points at agentplaybooks.ai. For Claude Code there is a
+second plugin, **agentplaybooks-self-hosted**, with the same skills and
+commands. It runs on your machine, so it reaches a server inside a private
+network, and it authenticates with the user API key the CLI stores — no OAuth
+server needed:
+
+```bash
+npx --yes @agentplaybooks/cli@0.6.0 login --url=https://<your-server>
+```
+
+```bash
+claude plugin install agentplaybooks-self-hosted@agentplaybooks --config server_url=https://<your-server>
+```
+
+Add the marketplace first if you have not (`claude plugin marketplace add
+matebenyovszky/agentplaybooks`). For each connection, the plugin reads the key
+stored for exactly that server and sends it as `X-API-Key`; it is never copied
+into Claude Code's settings. A server whose certificate comes from a CA outside
+the operating system's store needs `NODE_EXTRA_CA_CERTS` in the `env` block of
+`~/.claude/settings.json`, and in the terminal where you run `login`.
 
 ## Troubleshooting
 

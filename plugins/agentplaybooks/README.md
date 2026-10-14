@@ -61,9 +61,11 @@ through https://github.com/matebenyovszky/agentplaybooks/issues.
 
 ## Self-hosted instances
 
-If your organisation runs its own AgentPlaybooks server, add it as a custom
-connector by URL instead — `https://<your-server>/api/mcp/manage` — as
-described at https://agentplaybooks.ai/docs/claude.
+If your organisation runs its own AgentPlaybooks server, use the
+`agentplaybooks-self-hosted` plugin from the same marketplace in Claude Code,
+or add the server as a custom connector by URL —
+`https://<your-server>/api/mcp/manage` — as described at
+https://agentplaybooks.ai/docs/claude.
 
 ## Links
 
