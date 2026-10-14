@@ -8,6 +8,7 @@ vi.mock("@/app/api/_shared/auth", () => ({
 }));
 vi.mock("@/app/api/_shared/guards", () => ({
   checkPlaybookWriteAccess: vi.fn(),
+  resolvePlaybookId: vi.fn(async (identifier: string) => identifier),
   checkPlaybookOwnership: vi.fn().mockResolvedValue(false),
   getPlaybookAccessRole: vi.fn(),
 }));

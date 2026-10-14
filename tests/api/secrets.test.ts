@@ -372,7 +372,7 @@ describe("Secrets API - editor access and reveal policy", () => {
     expect(update).not.toHaveBeenCalled();
   });
 
-  it("lets a scoped API key with secret write access change the policy", async () => {
+  it("denies a scoped API key changing its own raw-value policy", async () => {
     vi.mocked(getAuthenticatedUser).mockResolvedValue(null);
     vi.mocked(validateApiKey).mockResolvedValue({
       playbooks: { id: "playbook1" }, key_prefix: "apb_live_writer",
@@ -381,9 +381,9 @@ describe("Secrets API - editor access and reveal policy", () => {
       method: "PUT", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ allow_api_key_reveal: true }),
     });
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(403);
     expect(validateApiKey).toHaveBeenCalledWith(expect.any(Request), "secrets:write");
-    expect(update).toHaveBeenCalledWith({ updated_by: "apb_live_writer", allow_api_key_reveal: true });
+    expect(update).not.toHaveBeenCalled();
   });
 
   it("denies a key belonging to a different playbook", async () => {
