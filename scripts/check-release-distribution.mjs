@@ -76,6 +76,18 @@ for (const file of [
   check(pins.length > 0, `${file} no longer pins the CLI version.`);
   for (const pin of pins) check(pin === cli.version, `${file} pins @agentplaybooks/cli@${pin}, not ${cli.version}.`);
 }
+// The 0.6.0 login prompt echoes a pasted key; later releases read it without
+// echo (#188). The docs warn about it in prose, which no pin check moves, so
+// past 0.6.0 the warning has to go: the prompt simply does not show the key.
+if (cli.version !== "0.6.0") {
+  for (const [file, warning] of [
+    ["plugins/agentplaybooks/README.md", /The \S+ prompt shows the key/],
+    ["public/docs/claude.md", /The \S+ prompt shows the key/],
+    ["public/docs/claude.hu.md", /A \S+ CLI promptja kiírja/],
+  ]) {
+    check(!warning.test((await read(file)).replace(/\s+/g, " ")), `${file} still says the login prompt shows the key; past 0.6.0 it does not.`);
+  }
+}
 
 const skillNames = await readdir(resolve(root, "packages/cli/skills"));
 check(skillNames.length > 0, "No skills included in npm plugin.");

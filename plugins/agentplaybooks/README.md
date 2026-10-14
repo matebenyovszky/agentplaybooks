@@ -84,7 +84,11 @@ from `/mcp`:
 npx --yes @agentplaybooks/cli@0.6.0 login --url=https://playbooks.example.org
 ```
 
-`logout --url=<server>` removes it again. A server whose certificate comes
+The CLI takes the key from `AGENTPLAYBOOKS_API_KEY`, or prompts for it.
+The 0.6.0 prompt shows the key as you paste it — later releases do not — so on
+a shared screen set the variable instead.
+
+`logout --url=<server>` removes the key again. A server whose certificate comes
 from a CA outside your operating system's store needs that CA's file in
 `NODE_EXTRA_CA_CERTS`, in the `env` block of `~/.claude/settings.json` and in
 the terminal where you run `login`. In Claude's chat apps, add the server as a
