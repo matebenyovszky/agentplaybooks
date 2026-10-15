@@ -63,7 +63,7 @@ export function CollaborationManager({ playbookId }: { playbookId: string }) {
       <div className="p-5 rounded-xl bg-white dark:bg-slate-900/80 border border-neutral-200 dark:border-slate-700/50">
         <h3 className="font-semibold text-neutral-900 dark:text-white mb-2">Invite an editor</h3>
         <p className="text-sm text-neutral-600 dark:text-slate-400 mb-4">
-          The link can be accepted once and expires after 72 hours. Editors can change playbook content, but cannot access secrets, API keys, visibility, sharing, or deletion.
+          The link can be accepted once and expires after 72 hours. Editors can edit content, manage secrets and view API-key metadata. Creating or revoking keys, visibility, sharing and deletion remain with the owner.
         </p>
         <button
           onClick={createInvite}

@@ -170,7 +170,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
     const [playbookResData, memoryData, keyData, runsData, canvasesData, secretsData] = await Promise.all([
       authFetch(`/api/manage/playbooks/${playbookId}`),
       authFetch(`/api/manage/playbooks/${playbookId}/memory`),
-      owner ? authFetch(`/api/playbooks/${playbookId}/api-keys`) : Promise.resolve(null),
+      (owner || pb.current_user_role === "editor") ? authFetch(`/api/playbooks/${playbookId}/api-keys`) : Promise.resolve(null),
       loadStorage.getRuns(),
       loadStorage.getCanvases(),
       owner ? loadStorage.getSecrets() : Promise.resolve([]),
@@ -407,22 +407,11 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
     setForking(true);
 
     try {
-      const response = await authFetch("/api/manage/playbooks", {
+      const response = await authFetch(`/api/manage/playbooks/${playbook.id}/fork`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          name: `${playbook.name} (Copy)`,
-          description: playbook.description,
-          visibility: "private",
-          config: playbook.config,
-          tags: playbook.tags,
-          persona_name: playbook.persona_name,
-          persona_system_prompt: playbook.persona_system_prompt,
-          persona_metadata: playbook.persona_metadata,
-          instructions: playbook.instructions,
-        }),
       });
 
       const newPlaybook = await response.json().catch(() => null);
@@ -430,58 +419,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
         throw new Error(newPlaybook?.error || "Failed to fork playbook");
       }
 
-      // Copy all skills
-      if (skills.length > 0) {
-        await Promise.all(
-          skills.map(async (s) => {
-            const skillResponse = await authFetch(`/api/manage/playbooks/${newPlaybook.id}/skills`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                  name: s.name,
-                  description: s.description,
-                  content: s.content,
-                  licence: s.licence,
-                }),
-            });
-
-            if (!skillResponse.ok) {
-              const data = await skillResponse.json().catch(() => null);
-              throw new Error(data?.error || "Failed to copy skills");
-            }
-          })
-        );
-      }
-
-      // Copy all MCP servers
-      if (mcpServers.length > 0) {
-        await Promise.all(
-          mcpServers.map(async (m) => {
-            const mcpResponse = await authFetch(`/api/manage/playbooks/${newPlaybook.id}/mcp-servers`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                name: m.name,
-                description: m.description,
-                tools: m.tools,
-                resources: m.resources,
-                transport_type: m.transport_type,
-                transport_config: m.transport_config,
-              }),
-            });
-
-            if (!mcpResponse.ok) {
-              const mcpData = await mcpResponse.json().catch(() => null);
-              throw new Error(mcpData?.error || "Failed to copy MCP servers");
-            }
-          })
-        );
-      }
-
+      // The fork endpoint copies skills, attachments and MCP records in one transaction.
       setForkSuccess(true);
       setTimeout(() => {
         // Redirect to the new playbook
@@ -888,11 +826,11 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
     { id: "mcp" as TabType, label: t("editor.tabs.mcp"), icon: Server, count: mcpServers.length, color: "pink" },
     { id: "canvas" as TabType, label: t("editor.tabs.canvas"), icon: FileText, count: canvases.length, color: "green" },
     { id: "memory" as TabType, label: t("editor.tabs.memory"), icon: Database, count: memories.length, color: "teal" },
-    ...(isOwner ? [
+    ...(canEdit ? [
       { id: "secrets" as TabType, label: t("editor.tabs.secrets") || "Secrets", icon: Shield, count: secrets.length, color: "emerald" },
       { id: "apiKeys" as TabType, label: t("editor.tabs.apiKeys"), icon: Puzzle, count: apiKeys.length, color: "amber" },
-      { id: "sharing" as TabType, label: "Sharing", icon: UsersRound, count: 0, color: "blue" },
     ] : []),
+    ...(isOwner ? [{ id: "sharing" as TabType, label: "Sharing", icon: UsersRound, count: 0, color: "blue" }] : []),
   ];
 
   if (loading) {
@@ -1314,8 +1252,8 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
             </motion.div>
           )}
 
-          {/* Secrets Tab - only visible to owner */}
-          {activeTab === "secrets" && isOwner && (
+          {/* Secrets Tab - owners and accepted editors */}
+          {activeTab === "secrets" && canEdit && (
             <motion.div
               key="secrets"
               initial={{ opacity: 0, y: 10 }}
@@ -1326,13 +1264,13 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                 storage={storage}
                 secrets={secrets}
                 onUpdate={setSecrets}
-                readOnly={!isOwner}
+                readOnly={!canEdit}
               />
             </motion.div>
           )}
 
           {/* Secrets Tab - not owner message */}
-          {activeTab === "secrets" && !isOwner && (
+          {activeTab === "secrets" && !canEdit && (
             <motion.div
               key="secrets-readonly"
               initial={{ opacity: 0, y: 10 }}
@@ -1341,7 +1279,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
               className="text-center py-16"
             >
               <Lock className="h-12 w-12 mx-auto text-neutral-400 dark:text-slate-600 mb-4" />
-              <p className="text-neutral-600 dark:text-slate-400">Secrets are only visible to the playbook owner</p>
+              <p className="text-neutral-600 dark:text-slate-400">Secrets require owner or editor access</p>
             </motion.div>
           )}
 
@@ -1448,21 +1386,22 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                 )}
 
                 {/* API Keys - second block */}
-                {isOwner && (
+                {canEdit && (
                   <div className={cn(
                     "p-5 rounded-xl",
                     "bg-white dark:bg-gradient-to-br dark:from-slate-900/80 dark:to-slate-800/80",
                     "border border-neutral-200 dark:border-slate-700/50"
                   )}>
                     <ApiKeyManager
-                      playbook_id={id}
+                      playbook_id={playbook.id}
+                      readOnly={!isOwner}
                       apiKeys={apiKeys}
                       onUpdate={setApiKeys}
                     />
                   </div>
                 )}
 
-                {!isOwner && (
+                {!canEdit && (
                   <div className="text-center py-8">
                     <Lock className="h-12 w-12 mx-auto text-neutral-400 dark:text-slate-600 mb-4" />
                     <p className="text-neutral-600 dark:text-slate-400">{t("editor.apiKeysPrivate") || "API Keys are only visible to the playbook owner"}</p>

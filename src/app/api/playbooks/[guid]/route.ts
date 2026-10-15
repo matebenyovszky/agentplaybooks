@@ -4,6 +4,7 @@ import { getServiceSupabase } from "../../_shared/supabase";
 import { getAuthenticatedUser } from "../../_shared/auth";
 import { getPlaybookAccessRole } from "../../_shared/guards";
 import { buildPlaybookUpdate } from "@/lib/playbook-access";
+import { getPublisherIdForAuthUser } from "@/lib/repositories/playbooks";
 import {
     formatAsOpenAPI,
     formatAsMCP,
@@ -149,7 +150,7 @@ export async function PUT(
     const supabase = getServiceSupabase();
 
     // Find the playbook ID first
-    let query = supabase.from("playbooks").select("id, user_id");
+    let query = supabase.from("playbooks").select("id, user_id, publisher_id");
     if (isUuid) {
         query = query.eq("id", idOrGuid);
     } else {
@@ -168,6 +169,15 @@ export async function PUT(
 
     const body = await request.json();
     const updateData = buildPlaybookUpdate(body, accessRole);
+    if ((updateData.visibility === "public" || updateData.visibility === "unlisted")
+        && !playbook.publisher_id) {
+        try {
+            updateData.publisher_id = await getPublisherIdForAuthUser(playbook.user_id);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : "Publisher profile not found";
+            return Response.json({ error: message }, { status: 500 });
+        }
+    }
     if (Object.keys(updateData).length === 0) {
         return Response.json({ error: "No valid fields to update" }, { status: 400 });
     }

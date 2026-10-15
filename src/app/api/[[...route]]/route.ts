@@ -35,6 +35,8 @@ import { demonstrationsError, recordingError } from "@/lib/demonstrations";
 import { DEFAULT_USER_API_KEY_PERMISSIONS } from "@/lib/user-api-key-permissions";
 import {
   createPlaybook,
+  forkPlaybook,
+  getPublisherIdForAuthUser,
   listAccessiblePlaybooks,
   parseCreatePlaybookInput,
 } from "@/lib/repositories/playbooks";
@@ -544,10 +546,11 @@ app.get("/playbooks/:id/api-keys", async (c) => {
 
   const playbookId = await resolvePlaybookId(c.req.param("id"));
 
-  if (!(await checkPlaybookOwnership(user.id, playbookId))) {
+  if (!(await checkPlaybookWriteAccess(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
+  c.header("Cache-Control", "no-store");
   const supabase = getServiceSupabase();
 
   const { data, error } = await supabase
@@ -1088,6 +1091,45 @@ app.post("/manage/playbooks", async (c) => {
   }
 });
 
+// POST /api/manage/playbooks/:id/fork - Copy a readable playbook, retaining its publisher attribution
+app.post("/manage/playbooks/:id/fork", async (c) => {
+  const user = await getUserFromAuthOrApiKey(c, "playbooks:write");
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const sourceId = c.req.param("id");
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sourceId);
+  const supabase = getServiceSupabase();
+  let sourceQuery = supabase
+    .from("playbooks")
+    .select("id, user_id, publisher_id, name, description, config, tags, persona_name, persona_system_prompt, persona_metadata, instructions, visibility");
+  sourceQuery = isUuid ? sourceQuery.eq("id", sourceId) : sourceQuery.eq("guid", sourceId);
+  const { data: source, error: sourceError } = await sourceQuery.maybeSingle();
+
+  if (sourceError) {
+    return c.json({ error: sourceError.message }, 500);
+  }
+  if (!source) {
+    return c.json({ error: "Playbook not found" }, 404);
+  }
+
+  const hasAccess = source.visibility === "public"
+    || source.visibility === "unlisted"
+    || await getPlaybookAccessRole(user.id, source.id) !== null;
+  if (!hasAccess) {
+    return c.json({ error: "Playbook not found" }, 404);
+  }
+
+  try {
+    const fork = await forkPlaybook(user.id, source.id);
+    return c.json(fork, 201);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to fork playbook";
+    return c.json({ error: message }, message === "Playbook not found" ? 404 : 500);
+  }
+});
+
 // GET /api/manage/playbooks/:id - Get playbook details (User API key supported)
 app.get("/manage/playbooks/:id", async (c) => {
   const user = await getUserFromAuthOrApiKey(c, "playbooks:read");
@@ -1167,6 +1209,33 @@ app.put("/manage/playbooks/:id", async (c) => {
   const supabase = getServiceSupabase();
 
   const updateData = buildPlaybookUpdate(body, accessRole);
+
+  // Older playbooks may predate publisher profiles. Do not let publishing one
+  // preserve a missing publisher association; resolve profiles.id from auth.uid.
+  if (updateData.visibility === "public" || updateData.visibility === "unlisted") {
+    const { data: currentPlaybook, error: lookupError } = await supabase
+      .from("playbooks")
+      .select("user_id, publisher_id")
+      .eq("id", playbookId)
+      .maybeSingle();
+
+    if (lookupError) {
+      return c.json({ error: lookupError.message }, 500);
+    }
+
+    if (!currentPlaybook) {
+      return c.json({ error: "Playbook not found" }, 404);
+    }
+
+    if (!currentPlaybook.publisher_id) {
+      try {
+        updateData.publisher_id = await getPublisherIdForAuthUser(currentPlaybook.user_id);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Publisher profile not found";
+        return c.json({ error: message }, 500);
+      }
+    }
+  }
 
   if (Object.keys(updateData).length === 0) {
     return c.json({ error: "No valid fields to update" }, 400);
