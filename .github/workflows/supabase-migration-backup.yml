@@ -1,0 +1,71 @@
+name: Supabase encrypted migration backup
+
+on:
+  push:
+    branches: [codex/supabase-heap-migration]
+    paths:
+      - .github/workflows/supabase-migration-backup.yml
+      - scripts/supabase-migration/**
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-migration-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - name: Create read-only snapshot and encrypt before upload
+        env:
+          SOURCE_DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          node - <<'JS'
+          const url = new URL(process.env.SOURCE_DATABASE_URL);
+          const ref = 'bydcjwxfiiolmnddzbpy';
+          console.log(JSON.stringify({hostname: url.hostname, username: url.username, protocol: url.protocol}));
+          if (!['postgres:', 'postgresql:'].includes(url.protocol) ||
+              !(url.hostname === `db.${ref}.supabase.co` ||
+                (url.hostname.endsWith('.pooler.supabase.com') && url.username === `postgres.${ref}`))) {
+            throw new Error('Source URL must identify the existing AgentPlaybooks project');
+          }
+          JS
+          mkdir -p "$RUNNER_TEMP/snapshot" "$RUNNER_TEMP/encrypted"
+          export PGDATABASE="$SOURCE_DATABASE_URL"
+          export PGSSLMODE=require
+          export PGOPTIONS='-c default_transaction_read_only=on -c statement_timeout=600000'
+          docker pull postgres:17-bookworm
+          pgclient() {
+            docker run --rm --network host -e PGDATABASE -e PGSSLMODE -e PGOPTIONS \
+              -v "$RUNNER_TEMP/snapshot:/snapshot" \
+              -v "$GITHUB_WORKSPACE/scripts/supabase-migration:/migration:ro" \
+              --user "$(id -u):$(id -g)" postgres:17-bookworm "$@"
+          }
+          pgclient psql -X -v ON_ERROR_STOP=1 -f /migration/inventory.sql > "$RUNNER_TEMP/snapshot/inventory.txt"
+          pgclient pg_dump --format=custom --no-table-access-method --file=/snapshot/database.dump
+          pgclient pg_dumpall --roles-only --no-role-passwords > "$RUNNER_TEMP/snapshot/roles.sql"
+          pgclient pg_restore --list /snapshot/database.dump > "$RUNNER_TEMP/snapshot/archive-list.txt"
+          test -s "$RUNNER_TEMP/snapshot/database.dump"
+          cd "$RUNNER_TEMP/snapshot"
+          sha256sum database.dump roles.sql inventory.txt archive-list.txt > SHA256SUMS
+          tar -czf "$RUNNER_TEMP/snapshot.tar.gz" .
+          openssl cms -encrypt -binary -aes-256-gcm -outform DER \
+            -in "$RUNNER_TEMP/snapshot.tar.gz" \
+            -out "$RUNNER_TEMP/encrypted/database-snapshot.cms" \
+            "$GITHUB_WORKSPACE/scripts/supabase-migration/backup-recipient.pem"
+          sha256sum "$RUNNER_TEMP/encrypted/database-snapshot.cms"
+          rm -rf "$RUNNER_TEMP/snapshot" "$RUNNER_TEMP/snapshot.tar.gz"
+          echo 'Read-only database backup created; only encrypted data will be uploaded.'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: supabase-encrypted-migration-backup
+          path: ${{ runner.temp }}/encrypted/database-snapshot.cms
+          retention-days: 3
+          if-no-files-found: error
