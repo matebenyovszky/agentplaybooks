@@ -15,7 +15,7 @@ There are three ways in. Pick by what you want Claude to reach:
 
 ## The plugin
 
-The plugin bundles three things:
+The plugin bundles four things:
 
 - the **AgentPlaybooks connector** for the account endpoint
   (`https://agentplaybooks.ai/api/mcp/manage`). Every playbook you own or have
@@ -26,7 +26,10 @@ The plugin bundles three things:
   memory rather than repeating them, and ask before changing anything shared;
 - the **`/agentplaybooks:doctor` and `/agentplaybooks:sync` commands** for
   Claude Code, which audit and synchronize the agent configuration files in a
-  project.
+  project;
+- in Claude Code, a **local connection to your own servers**: every
+  AgentPlaybooks server you log in to with the CLI, including one inside a
+  private network — see [Self-hosted instances](#self-hosted-instances).
 
 **From claude.ai or the desktop app.**
 
@@ -128,11 +131,29 @@ has the OAuth server enabled: add `https://<your-server>/api/mcp/manage` or
 infrastructure, not from your machine, so the server has to be reachable from
 there — for a server inside a private network, Claude's
 [MCP tunnels](https://claude.com/docs/connectors/mcp-tunnels/overview) are the
-supported route. Claude Code can also reach an intranet server directly with
-`apb connect`, which runs on your machine.
+supported route.
 
-The plugin itself points at agentplaybooks.ai; for a self-hosted server, use a
-custom connector instead.
+In Claude Code, the plugin reaches your own servers without any of that. Its
+**agentplaybooks-servers** connection runs on your machine and serves every
+AgentPlaybooks server you have stored a user API key for with the CLI — no
+OAuth server needed, and as many servers as you log in to:
+
+```bash
+npx --yes @agentplaybooks/cli@0.6.0 login --url=https://<your-server>
+```
+
+The CLI takes the key from `AGENTPLAYBOOKS_API_KEY`, or prompts for it.
+The 0.6.0 prompt shows the key as you paste it — later releases do not — so on
+a shared screen set the variable instead.
+
+Then reconnect **agentplaybooks-servers** from `/mcp`. With more than one
+server, `list_playbooks` marks each playbook with its server, a call that names
+a `playbook_id` goes to the server that has it, and `create_playbook` asks which
+server. Each key goes only to the server it was stored for, over HTTPS (or HTTP
+to your own machine), and `logout --url=<your-server>` takes it away again. A
+server whose certificate comes from a CA outside the operating system's store
+needs `NODE_EXTRA_CA_CERTS` in the `env` block of `~/.claude/settings.json`, and
+in the terminal where you run `login`.
 
 ## Troubleshooting
 

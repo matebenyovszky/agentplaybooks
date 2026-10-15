@@ -18,6 +18,10 @@ Hermes is available here, and what Claude learns is available there.
 - **Secrets that stay secret.** A tool call that needs a stored credential names
   the secret, and the AgentPlaybooks server injects it. The value is never
   returned to Claude.
+- **Your own servers too, in Claude Code.** Every AgentPlaybooks server you
+  log in to with the CLI — your organisation's own, one inside a private
+  network, or several at once — is reachable through one more connection,
+  with each playbook marked by its server.
 - **Local configuration tools in Claude Code.** `/agentplaybooks:doctor` audits
   a project's agent configuration and `/agentplaybooks:sync` keeps skills,
   instructions, and MCP definitions consistent across Claude Code, Cursor,
@@ -42,7 +46,16 @@ Hermes is available here, and what Claude learns is available there.
   `npx` (`@agentplaybooks/cli@0.6.0` from the npm registry). `doctor` only reads
   local files. `sync` writes local files only after you approve its plan. Neither
   sends project files anywhere.
-- Nothing else. The plugin has no hooks and runs nothing in the background.
+- **Local MCP server, in Claude Code and in Cowork on your computer:**
+  `node server/servers.mjs`, a readable script with no dependencies, which
+  needs Node.js 20 or later. It reads the user API keys the AgentPlaybooks CLI
+  stored in `~/.agentplaybooks/credentials.json` when you ran
+  `login --url=<server>`, and sends each key only to the server it was stored
+  for, as the `X-API-Key` header, over HTTPS — or over HTTP to your own
+  machine; a plain-HTTP address on the network is skipped. It passes on the
+  tool calls you approve and returns the answers. It starts nothing else and
+  writes nothing. Claude's chat apps do not run it.
+- Nothing else. The plugin has no hooks.
 
 ## Privacy
 
@@ -52,7 +65,9 @@ persona, instructions, skills, memory, canvas, connected-server definitions —
 and processes only what it needs to run that service, such as your account
 email. It does not sell personal data. Secret values are stored encrypted
 (AES-256-GCM) and are never returned through the connector. The CLI commands
-run locally and do not send your project files to AgentPlaybooks. You can delete
+run locally and do not send your project files to AgentPlaybooks. The local
+server talks only to the servers you logged in to; what those store is up to
+whoever runs them. You can delete
 your account, and everything it owns, under Settings → Delete account on
 agentplaybooks.ai.
 
@@ -61,8 +76,23 @@ through https://github.com/matebenyovszky/agentplaybooks/issues.
 
 ## Self-hosted instances
 
-If your organisation runs its own AgentPlaybooks server, add it as a custom
-connector by URL instead — `https://<your-server>/api/mcp/manage` — as
+In Claude Code, add your organisation's server — or several — by storing a
+user API key for it with the CLI, then reconnecting `agentplaybooks-servers`
+from `/mcp`:
+
+```bash
+npx --yes @agentplaybooks/cli@0.6.0 login --url=https://playbooks.example.org
+```
+
+The CLI takes the key from `AGENTPLAYBOOKS_API_KEY`, or prompts for it.
+The 0.6.0 prompt shows the key as you paste it — later releases do not — so on
+a shared screen set the variable instead.
+
+`logout --url=<server>` removes the key again. A server whose certificate comes
+from a CA outside your operating system's store needs that CA's file in
+`NODE_EXTRA_CA_CERTS`, in the `env` block of `~/.claude/settings.json` and in
+the terminal where you run `login`. In Claude's chat apps, add the server as a
+custom connector by URL instead — `https://<your-server>/api/mcp/manage` — as
 described at https://agentplaybooks.ai/docs/claude.
 
 ## Links
