@@ -29,9 +29,11 @@
     "release:check": "node scripts/check-release-distribution.mjs",
     "test:watch": "vitest",
     "audit:production": "node scripts/audit-production.mjs",
-    "smoke": "node scripts/smoke-mcp.mjs"
+    "smoke": "node scripts/smoke-mcp.mjs",
+    "mcp:stdio": "tsx scripts/mcp-stdio.ts"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.1",
     "@opennextjs/cloudflare": "1.20.8",
     "@supabase/supabase-js": "^2.117.2",
     "clsx": "^2.1.1",

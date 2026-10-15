@@ -374,6 +374,10 @@ DELETE /api/playbooks/:guid/memory/:key
 
 ### MCP endpoints
 
+For clients that require a local stdio process, see the [local MCP transport](docs/mcp-stdio.md).
+It uses the same account tools and authorization handlers; protocol discovery
+starts without credentials, while data operations require your instance configuration.
+
 ```
 GET  /api/mcp/:guid                    # MCP manifest
 POST /api/mcp/:guid                    # MCP JSON-RPC
