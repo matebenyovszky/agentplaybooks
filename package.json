@@ -37,7 +37,7 @@
     "@opennextjs/cloudflare": "1.20.8",
     "@supabase/supabase-js": "^2.117.2",
     "clsx": "^2.1.1",
-    "framer-motion": "^13.4.5",
+    "framer-motion": "^14.1.0",
     "hono": "^4.13.13",
     "jszip": "^3.10.2",
     "lucide-react": "^1.52.0",
