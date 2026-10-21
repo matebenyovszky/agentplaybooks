@@ -76,15 +76,13 @@
         "minimatch": {
           "brace-expansion": "5.0.12"
         }
-      },
-      "@opennextjs/aws": {
-        "@node-minify/core": {
-          "glob": {
-            ".": "10.5.0",
-            "minimatch": {
-              "brace-expansion": "2.1.7"
-            }
-          }
+      }
+    },
+    "@node-minify/core": {
+      "glob": {
+        ".": "10.5.0",
+        "minimatch": {
+          "brace-expansion": "2.1.7"
         }
       }
     },
