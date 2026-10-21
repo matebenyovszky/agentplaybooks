@@ -177,11 +177,12 @@ export async function buildPortableSnapshot(report, root, manifest, instructions
   return { snapshot, digest: snapshotDigest(snapshot), conflicts };
 }
 
-export async function planSnapshotRestore(root, snapshot) {
+export async function planSnapshotRestore(root, snapshot, { skillsOnly = false } = {}) {
   validateSnapshot(snapshot);
   const actions = [];
   const conflicts = [];
   for (const file of snapshot.files) {
+    if (skillsOnly && !file.path.startsWith(".agents/skills/")) continue;
     const absolute = await assertSafeDestination(root, file.path);
     const content = Buffer.from(file.content, "base64");
     let existing = null;

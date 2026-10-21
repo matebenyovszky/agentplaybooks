@@ -112,17 +112,17 @@ var require_visit = __commonJS({
     visit.BREAK = BREAK;
     visit.SKIP = SKIP;
     visit.REMOVE = REMOVE;
-    function visit_(key, node, visitor, path17) {
-      const ctrl = callVisitor(key, node, visitor, path17);
+    function visit_(key, node, visitor, path18) {
+      const ctrl = callVisitor(key, node, visitor, path18);
       if (identity.isNode(ctrl) || identity.isPair(ctrl)) {
-        replaceNode(key, path17, ctrl);
-        return visit_(key, ctrl, visitor, path17);
+        replaceNode(key, path18, ctrl);
+        return visit_(key, ctrl, visitor, path18);
       }
       if (typeof ctrl !== "symbol") {
         if (identity.isCollection(node)) {
-          path17 = Object.freeze(path17.concat(node));
+          path18 = Object.freeze(path18.concat(node));
           for (let i = 0; i < node.items.length; ++i) {
-            const ci = visit_(i, node.items[i], visitor, path17);
+            const ci = visit_(i, node.items[i], visitor, path18);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -133,13 +133,13 @@ var require_visit = __commonJS({
             }
           }
         } else if (identity.isPair(node)) {
-          path17 = Object.freeze(path17.concat(node));
-          const ck = visit_("key", node.key, visitor, path17);
+          path18 = Object.freeze(path18.concat(node));
+          const ck = visit_("key", node.key, visitor, path18);
           if (ck === BREAK)
             return BREAK;
           else if (ck === REMOVE)
             node.key = null;
-          const cv = visit_("value", node.value, visitor, path17);
+          const cv = visit_("value", node.value, visitor, path18);
           if (cv === BREAK)
             return BREAK;
           else if (cv === REMOVE)
@@ -160,17 +160,17 @@ var require_visit = __commonJS({
     visitAsync.BREAK = BREAK;
     visitAsync.SKIP = SKIP;
     visitAsync.REMOVE = REMOVE;
-    async function visitAsync_(key, node, visitor, path17) {
-      const ctrl = await callVisitor(key, node, visitor, path17);
+    async function visitAsync_(key, node, visitor, path18) {
+      const ctrl = await callVisitor(key, node, visitor, path18);
       if (identity.isNode(ctrl) || identity.isPair(ctrl)) {
-        replaceNode(key, path17, ctrl);
-        return visitAsync_(key, ctrl, visitor, path17);
+        replaceNode(key, path18, ctrl);
+        return visitAsync_(key, ctrl, visitor, path18);
       }
       if (typeof ctrl !== "symbol") {
         if (identity.isCollection(node)) {
-          path17 = Object.freeze(path17.concat(node));
+          path18 = Object.freeze(path18.concat(node));
           for (let i = 0; i < node.items.length; ++i) {
-            const ci = await visitAsync_(i, node.items[i], visitor, path17);
+            const ci = await visitAsync_(i, node.items[i], visitor, path18);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -181,13 +181,13 @@ var require_visit = __commonJS({
             }
           }
         } else if (identity.isPair(node)) {
-          path17 = Object.freeze(path17.concat(node));
-          const ck = await visitAsync_("key", node.key, visitor, path17);
+          path18 = Object.freeze(path18.concat(node));
+          const ck = await visitAsync_("key", node.key, visitor, path18);
           if (ck === BREAK)
             return BREAK;
           else if (ck === REMOVE)
             node.key = null;
-          const cv = await visitAsync_("value", node.value, visitor, path17);
+          const cv = await visitAsync_("value", node.value, visitor, path18);
           if (cv === BREAK)
             return BREAK;
           else if (cv === REMOVE)
@@ -214,23 +214,23 @@ var require_visit = __commonJS({
       }
       return visitor;
     }
-    function callVisitor(key, node, visitor, path17) {
+    function callVisitor(key, node, visitor, path18) {
       if (typeof visitor === "function")
-        return visitor(key, node, path17);
+        return visitor(key, node, path18);
       if (identity.isMap(node))
-        return visitor.Map?.(key, node, path17);
+        return visitor.Map?.(key, node, path18);
       if (identity.isSeq(node))
-        return visitor.Seq?.(key, node, path17);
+        return visitor.Seq?.(key, node, path18);
       if (identity.isPair(node))
-        return visitor.Pair?.(key, node, path17);
+        return visitor.Pair?.(key, node, path18);
       if (identity.isScalar(node))
-        return visitor.Scalar?.(key, node, path17);
+        return visitor.Scalar?.(key, node, path18);
       if (identity.isAlias(node))
-        return visitor.Alias?.(key, node, path17);
+        return visitor.Alias?.(key, node, path18);
       return void 0;
     }
-    function replaceNode(key, path17, node) {
-      const parent = path17[path17.length - 1];
+    function replaceNode(key, path18, node) {
+      const parent = path18[path18.length - 1];
       if (identity.isCollection(parent)) {
         parent.items[key] = node;
       } else if (identity.isPair(parent)) {
@@ -842,10 +842,10 @@ var require_Collection = __commonJS({
     var createNode = require_createNode();
     var identity = require_identity();
     var Node = require_Node();
-    function collectionFromPath(schema, path17, value) {
+    function collectionFromPath(schema, path18, value) {
       let v = value;
-      for (let i = path17.length - 1; i >= 0; --i) {
-        const k = path17[i];
+      for (let i = path18.length - 1; i >= 0; --i) {
+        const k = path18[i];
         if (typeof k === "number" && Number.isInteger(k) && k >= 0) {
           const a = [];
           a[k] = v;
@@ -864,7 +864,7 @@ var require_Collection = __commonJS({
         sourceObjects: /* @__PURE__ */ new Map()
       });
     }
-    var isEmptyPath = (path17) => path17 == null || typeof path17 === "object" && !!path17[Symbol.iterator]().next().done;
+    var isEmptyPath = (path18) => path18 == null || typeof path18 === "object" && !!path18[Symbol.iterator]().next().done;
     var Collection = class extends Node.NodeBase {
       constructor(type, schema) {
         super(type);
@@ -894,11 +894,11 @@ var require_Collection = __commonJS({
        * be a Pair instance or a `{ key, value }` object, which may not have a key
        * that already exists in the map.
        */
-      addIn(path17, value) {
-        if (isEmptyPath(path17))
+      addIn(path18, value) {
+        if (isEmptyPath(path18))
           this.add(value);
         else {
-          const [key, ...rest] = path17;
+          const [key, ...rest] = path18;
           const node = this.get(key, true);
           if (identity.isCollection(node))
             node.addIn(rest, value);
@@ -912,8 +912,8 @@ var require_Collection = __commonJS({
        * Removes a value from the collection.
        * @returns `true` if the item was found and removed.
        */
-      deleteIn(path17) {
-        const [key, ...rest] = path17;
+      deleteIn(path18) {
+        const [key, ...rest] = path18;
         if (rest.length === 0)
           return this.delete(key);
         const node = this.get(key, true);
@@ -927,8 +927,8 @@ var require_Collection = __commonJS({
        * scalar values from their surrounding node; to disable set `keepScalar` to
        * `true` (collections are always returned intact).
        */
-      getIn(path17, keepScalar) {
-        const [key, ...rest] = path17;
+      getIn(path18, keepScalar) {
+        const [key, ...rest] = path18;
         const node = this.get(key, true);
         if (rest.length === 0)
           return !keepScalar && identity.isScalar(node) ? node.value : node;
@@ -946,8 +946,8 @@ var require_Collection = __commonJS({
       /**
        * Checks if the collection includes a value with the key `key`.
        */
-      hasIn(path17) {
-        const [key, ...rest] = path17;
+      hasIn(path18) {
+        const [key, ...rest] = path18;
         if (rest.length === 0)
           return this.has(key);
         const node = this.get(key, true);
@@ -957,8 +957,8 @@ var require_Collection = __commonJS({
        * Sets a value in this collection. For `!!set`, `value` needs to be a
        * boolean to add/remove the item from the set.
        */
-      setIn(path17, value) {
-        const [key, ...rest] = path17;
+      setIn(path18, value) {
+        const [key, ...rest] = path18;
         if (rest.length === 0) {
           this.set(key, value);
         } else {
@@ -3473,9 +3473,9 @@ var require_Document = __commonJS({
           this.contents.add(value);
       }
       /** Adds a value to the document. */
-      addIn(path17, value) {
+      addIn(path18, value) {
         if (assertCollection(this.contents))
-          this.contents.addIn(path17, value);
+          this.contents.addIn(path18, value);
       }
       /**
        * Create a new `Alias` node, ensuring that the target `node` has the required anchor.
@@ -3550,14 +3550,14 @@ var require_Document = __commonJS({
        * Removes a value from the document.
        * @returns `true` if the item was found and removed.
        */
-      deleteIn(path17) {
-        if (Collection.isEmptyPath(path17)) {
+      deleteIn(path18) {
+        if (Collection.isEmptyPath(path18)) {
           if (this.contents == null)
             return false;
           this.contents = null;
           return true;
         }
-        return assertCollection(this.contents) ? this.contents.deleteIn(path17) : false;
+        return assertCollection(this.contents) ? this.contents.deleteIn(path18) : false;
       }
       /**
        * Returns item at `key`, or `undefined` if not found. By default unwraps
@@ -3572,10 +3572,10 @@ var require_Document = __commonJS({
        * scalar values from their surrounding node; to disable set `keepScalar` to
        * `true` (collections are always returned intact).
        */
-      getIn(path17, keepScalar) {
-        if (Collection.isEmptyPath(path17))
+      getIn(path18, keepScalar) {
+        if (Collection.isEmptyPath(path18))
           return !keepScalar && identity.isScalar(this.contents) ? this.contents.value : this.contents;
-        return identity.isCollection(this.contents) ? this.contents.getIn(path17, keepScalar) : void 0;
+        return identity.isCollection(this.contents) ? this.contents.getIn(path18, keepScalar) : void 0;
       }
       /**
        * Checks if the document includes a value with the key `key`.
@@ -3586,10 +3586,10 @@ var require_Document = __commonJS({
       /**
        * Checks if the document includes a value at `path`.
        */
-      hasIn(path17) {
-        if (Collection.isEmptyPath(path17))
+      hasIn(path18) {
+        if (Collection.isEmptyPath(path18))
           return this.contents !== void 0;
-        return identity.isCollection(this.contents) ? this.contents.hasIn(path17) : false;
+        return identity.isCollection(this.contents) ? this.contents.hasIn(path18) : false;
       }
       /**
        * Sets a value in this document. For `!!set`, `value` needs to be a
@@ -3606,13 +3606,13 @@ var require_Document = __commonJS({
        * Sets a value in this document. For `!!set`, `value` needs to be a
        * boolean to add/remove the item from the set.
        */
-      setIn(path17, value) {
-        if (Collection.isEmptyPath(path17)) {
+      setIn(path18, value) {
+        if (Collection.isEmptyPath(path18)) {
           this.contents = value;
         } else if (this.contents == null) {
-          this.contents = Collection.collectionFromPath(this.schema, Array.from(path17), value);
+          this.contents = Collection.collectionFromPath(this.schema, Array.from(path18), value);
         } else if (assertCollection(this.contents)) {
-          this.contents.setIn(path17, value);
+          this.contents.setIn(path18, value);
         }
       }
       /**
@@ -5573,9 +5573,9 @@ var require_cst_visit = __commonJS({
     visit.BREAK = BREAK;
     visit.SKIP = SKIP;
     visit.REMOVE = REMOVE;
-    visit.itemAtPath = (cst, path17) => {
+    visit.itemAtPath = (cst, path18) => {
       let item = cst;
-      for (const [field, index] of path17) {
+      for (const [field, index] of path18) {
         const tok = item?.[field];
         if (tok && "items" in tok) {
           item = tok.items[index];
@@ -5584,23 +5584,23 @@ var require_cst_visit = __commonJS({
       }
       return item;
     };
-    visit.parentCollection = (cst, path17) => {
-      const parent = visit.itemAtPath(cst, path17.slice(0, -1));
-      const field = path17[path17.length - 1][0];
+    visit.parentCollection = (cst, path18) => {
+      const parent = visit.itemAtPath(cst, path18.slice(0, -1));
+      const field = path18[path18.length - 1][0];
       const coll = parent?.[field];
       if (coll && "items" in coll)
         return coll;
       throw new Error("Parent collection not found");
     };
-    function _visit(path17, item, visitor) {
-      let ctrl = visitor(item, path17);
+    function _visit(path18, item, visitor) {
+      let ctrl = visitor(item, path18);
       if (typeof ctrl === "symbol")
         return ctrl;
       for (const field of ["key", "value"]) {
         const token = item[field];
         if (token && "items" in token) {
           for (let i = 0; i < token.items.length; ++i) {
-            const ci = _visit(Object.freeze(path17.concat([[field, i]])), token.items[i], visitor);
+            const ci = _visit(Object.freeze(path18.concat([[field, i]])), token.items[i], visitor);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -5611,10 +5611,10 @@ var require_cst_visit = __commonJS({
             }
           }
           if (typeof ctrl === "function" && field === "key")
-            ctrl = ctrl(item, path17);
+            ctrl = ctrl(item, path18);
         }
       }
-      return typeof ctrl === "function" ? ctrl(item, path17) : ctrl;
+      return typeof ctrl === "function" ? ctrl(item, path18) : ctrl;
     }
     exports.visit = visit;
   }
@@ -7366,8 +7366,9 @@ var require_dist = __commonJS({
 });
 
 // src/cli.js
-import os6 from "node:os";
-import path16 from "node:path";
+import os7 from "node:os";
+import { readFile as readFile14 } from "node:fs/promises";
+import path17 from "node:path";
 import readline2 from "node:readline";
 
 // src/checks.js
@@ -7596,12 +7597,20 @@ function hermesProfileCandidates({ homedir = os.homedir(), env = process.env, pl
   return candidates;
 }
 async function hermesProfile(options = {}) {
-  const home = await hermesHome(options);
-  const named = typeof options.profile === "string" ? options.profile.trim() : "";
+  const env = options.hermesHome ? { ...options.env ?? process.env, HERMES_HOME: options.hermesHome } : options.env;
+  const home = await hermesHome({ ...options, env });
+  const named = typeof options.profile === "string" ? options.profile.trim().toLowerCase() : "";
   if (named.length === 0) return home;
+  if (!/^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(named)) {
+    throw new Error("Invalid Hermes profile name; use 1\u201364 letters, digits, underscores or hyphens.");
+  }
+  const nested = path.basename(path.dirname(home.directory)) === "profiles";
+  const root = nested ? path.dirname(path.dirname(home.directory)) : home.directory;
+  const display = nested ? `${home.display}/../..` : home.display;
+  if (named === "default") return { directory: root, display };
   return {
-    directory: path.join(home.directory, "profiles", named),
-    display: `${home.display}/profiles/${named}`
+    directory: path.join(root, "profiles", named),
+    display: `${display}/profiles/${named}`
   };
 }
 async function hermesHome(options = {}) {
@@ -8352,7 +8361,7 @@ function interpretCallback(query, expectedState) {
   }
   return { ok: true, code };
 }
-function startCallbackServer({ path: path17 = "/callback", timeoutMs = 3e5, createServer = http.createServer } = {}) {
+function startCallbackServer({ path: path18 = "/callback", timeoutMs = 3e5, createServer = http.createServer } = {}) {
   let resolveCallback;
   let rejectCallback;
   const callback = new Promise((resolve, reject) => {
@@ -8362,7 +8371,7 @@ function startCallbackServer({ path: path17 = "/callback", timeoutMs = 3e5, crea
   let settled = false;
   const server = createServer((request2, response) => {
     const url = new URL(request2.url, "http://127.0.0.1");
-    if (url.pathname !== path17) {
+    if (url.pathname !== path18) {
       response.writeHead(404).end("Not found");
       return;
     }
@@ -8534,6 +8543,7 @@ import path6 from "node:path";
 var import_yaml4 = __toESM(require_dist(), 1);
 import { access as access2, mkdir, copyFile, readFile as readFile2, readdir as readdir2, rename, writeFile } from "node:fs/promises";
 import os2 from "node:os";
+import { createHash as createHash2 } from "node:crypto";
 import path4 from "node:path";
 var TARGET_ADAPTERS = {
   claude: { platforms: ["claude"], mcpPlatforms: ["claude", "copilot", "shared-mcp"], skillsDir: ".claude/skills", agentDir: ".claude/agents", mcpPath: ".mcp.json", format: "json" },
@@ -9072,19 +9082,22 @@ async function planHermesMcpServersAction({
   conflicts = [],
   homedir = os2.homedir(),
   env = process.env,
-  platform = process.platform
+  platform = process.platform,
+  hermesHome: hermesHome2,
+  hermesProfileName = "",
+  externalDir = null
 }) {
-  const profile = await hermesProfile({ homedir, env, platform });
+  const profile = await hermesProfile({ homedir, env, platform, hermesHome: hermesHome2, profile: hermesProfileName });
   const configPath = path4.join(profile.directory, "config.yaml");
   const display = `${profile.display}/config.yaml`;
   const existingContent = await readIfExists(configPath);
-  const merged = mergedHermesConfig(existingContent, definitions, null, {
+  const merged = mergedHermesConfig(existingContent, definitions, externalDir, {
     conflicts,
     display,
     homedir,
     env
   });
-  if (merged.content === null || merged.servers.length === 0) return null;
+  if (merged.content === null) return null;
   return {
     kind: "mcp-config",
     target: "hermes",
@@ -9093,7 +9106,8 @@ async function planHermesMcpServersAction({
     path: display,
     absolutePath: configPath,
     servers: merged.servers,
-    content: merged.content
+    content: merged.content,
+    expectedHash: existingContent === null ? null : createHash2("sha256").update(existingContent).digest("hex")
   };
 }
 function planMcpServersAction({ root, target, definitions, existingContent = null, conflicts = [] }) {
@@ -9118,7 +9132,8 @@ function planMcpServersAction({ root, target, definitions, existingContent = nul
     path: adapter.mcpPath,
     absolutePath: path4.join(root, ...adapter.mcpPath.split("/")),
     servers: merged.added,
-    content: merged.content
+    content: merged.content,
+    expectedHash: existingContent === null ? null : createHash2("sha256").update(existingContent).digest("hex")
   };
 }
 
@@ -9404,7 +9419,7 @@ import { copyFile as copyFile3, mkdir as mkdir3, readFile as readFile5, readdir 
 import path8 from "node:path";
 
 // src/snapshot.js
-import { createHash as createHash2 } from "node:crypto";
+import { createHash as createHash3 } from "node:crypto";
 import { lstat, readFile as readFile4, readdir as readdir3 } from "node:fs/promises";
 import path7 from "node:path";
 var SNAPSHOT_FORMAT = "agentplaybooks.portable-snapshot/v1";
@@ -9423,7 +9438,7 @@ function validSnapshotPath(value) {
   return segments[0] === ".agents" && segments[1] === "skills" && segments.length >= 4 && SKILL_NAME.test(segments[2]);
 }
 function sha256(buffer) {
-  return `sha256:${createHash2("sha256").update(buffer).digest("hex")}`;
+  return `sha256:${createHash3("sha256").update(buffer).digest("hex")}`;
 }
 function textIfUtf8(buffer) {
   if (buffer.includes(0)) return null;
@@ -9485,7 +9500,7 @@ function validateSnapshot(snapshot) {
 }
 function snapshotDigest(snapshot) {
   validateSnapshot(snapshot);
-  const hash = createHash2("sha256");
+  const hash = createHash3("sha256");
   for (const file of [...snapshot.files].sort((a, b) => a.path.localeCompare(b.path))) {
     hash.update(file.path);
     hash.update("\0");
@@ -9563,11 +9578,12 @@ async function buildPortableSnapshot(report, root, manifest, instructions, { ski
   validateSnapshot(snapshot);
   return { snapshot, digest: snapshotDigest(snapshot), conflicts };
 }
-async function planSnapshotRestore(root, snapshot) {
+async function planSnapshotRestore(root, snapshot, { skillsOnly = false } = {}) {
   validateSnapshot(snapshot);
   const actions = [];
   const conflicts = [];
   for (const file of snapshot.files) {
+    if (skillsOnly && !file.path.startsWith(".agents/skills/")) continue;
     const absolute = await assertSafeDestination(root, file.path);
     const content = Buffer.from(file.content, "base64");
     let existing = null;
@@ -9590,8 +9606,8 @@ async function assertSafeDestination(root, relative) {
     const inside = path7.relative(base, current);
     if (inside.startsWith("..") || path7.isAbsolute(inside)) throw new Error(`Restore path escapes its root: ${relative}.`);
     try {
-      const stat = await lstat(current);
-      if (stat.isSymbolicLink()) throw new Error(`Restore path passes through a symlink: ${relative}.`);
+      const stat2 = await lstat(current);
+      if (stat2.isSymbolicLink()) throw new Error(`Restore path passes through a symlink: ${relative}.`);
     } catch (error) {
       if (error?.code !== "ENOENT") throw error;
     }
@@ -10387,7 +10403,7 @@ async function requestLatestSnapshot(url, apiKey, playbookId, fetchImpl) {
     throw error;
   }
 }
-async function planPull(root, ref, { url, apiKey, fetchImpl, snapshotId } = {}) {
+async function planPull(root, ref, { url, apiKey, fetchImpl, snapshotId, skillsOnly = false } = {}) {
   let playbook;
   let saved;
   try {
@@ -10406,7 +10422,7 @@ async function planPull(root, ref, { url, apiKey, fetchImpl, snapshotId } = {}) 
   if (!saved) saved = snapshotId ? await request(url, `/api/manage/playbooks/${playbook.id}/snapshots/${encodeURIComponent(snapshotId)}`, { apiKey, fetchImpl }) : await requestLatestSnapshot(url, apiKey, playbook.id, fetchImpl);
   if (saved?.snapshot) {
     if (saved.digest !== snapshotDigest(saved.snapshot)) throw new Error("Central backup digest mismatch; refusing to restore.");
-    const restored = await planSnapshotRestore(root, saved.snapshot);
+    const restored = await planSnapshotRestore(root, saved.snapshot, { skillsOnly });
     return {
       playbook: { id: playbook.id, guid: playbook.guid, name: playbook.name },
       url,
@@ -10454,6 +10470,7 @@ async function planPull(root, ref, { url, apiKey, fetchImpl, snapshotId } = {}) 
       }
     }
   }
+  if (skillsOnly) return { playbook: { id: playbook.id, guid: playbook.guid, name: playbook.name }, url, actions, conflicts };
   const remoteInstructions = typeof playbook.instructions === "string" ? normalizeText(playbook.instructions) : "";
   if (remoteInstructions.trim().length > 0) {
     const content = remoteInstructions.endsWith("\n") ? remoteInstructions : `${remoteInstructions}
@@ -11069,6 +11086,7 @@ function hermesInstallHint(plan) {
 // src/connect.js
 import { readFile as readFile8 } from "node:fs/promises";
 import path11 from "node:path";
+import { createHash as createHash4 } from "node:crypto";
 var GUID_PATTERN = /^[0-9a-f]{8,}$/i;
 var UUID_PATTERN2 = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 var SAFE_ENV_NAME = /^[A-Z_][A-Z0-9_]*$/;
@@ -11116,6 +11134,9 @@ async function planConnect(root, options = {}) {
     throw new Error("--name can only be used with --account or a single playbook.");
   }
   const targets = options.targets?.length ? options.targets : ["claude"];
+  if ((options.profile || options.hermesHome) && !targets.includes("hermes")) {
+    throw new Error("--profile and --hermes-home require --target=hermes.");
+  }
   const baseUrl = resolveBaseUrl(options.url, options.env ?? process.env);
   const entries = account ? [{ name: options.name?.trim() || "agentplaybooks-account", url: accountEndpoint(baseUrl), playbook: null }] : playbooks.map((playbook) => ({
     name: options.name?.trim() || (playbooks.length === 1 ? "agentplaybooks" : `agentplaybooks-${playbook.slice(0, 8)}`),
@@ -11140,7 +11161,10 @@ async function planConnect(root, options = {}) {
         conflicts,
         env: options.env,
         homedir: options.homedir,
-        platform: options.platform
+        platform: options.platform,
+        hermesHome: options.hermesHome,
+        hermesProfileName: options.profile,
+        externalDir: options.externalDir ?? null
       });
       if (action2) fileActions.push(action2);
       continue;
@@ -11177,7 +11201,14 @@ async function planConnect(root, options = {}) {
   };
 }
 async function applyConnect(plan) {
+  if (plan.conflicts.length) throw new Error("Resolve connection conflicts before applying; no files were written.");
   if (!plan.changed) return { applied: false, written: [], backups: [] };
+  for (const action of plan.fileActions) {
+    if (!("expectedHash" in action)) continue;
+    const current = await readIfPresent(action.absolutePath);
+    const hash = current === null ? null : createHash4("sha256").update(current).digest("hex");
+    if (hash !== action.expectedHash) throw new Error(`Connection target changed after preview: ${action.path}.`);
+  }
   const backupDirectory = path11.join(plan.root, ".agentplaybooks", "backups", `connect-${Date.now()}`);
   const { written, backups } = await applyAdapters(plan.fileActions, backupDirectory);
   return { applied: true, written, backups };
@@ -11209,20 +11240,217 @@ conflict (${item.target}): ${item.reason}`);
   }
 }
 
+// src/hermes-setup.js
+import { access as access3, readFile as readFile9, stat, lstat as lstat2 } from "node:fs/promises";
+import { constants } from "node:fs";
+import { createHash as createHash5 } from "node:crypto";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import os5 from "node:os";
+import path12 from "node:path";
+var execute = promisify(execFile);
+var digest2 = (value) => value === null ? null : createHash5("sha256").update(value).digest("hex");
+async function readOptional(file) {
+  try {
+    return await readFile9(file);
+  } catch (error) {
+    if (error.code === "ENOENT") return null;
+    throw error;
+  }
+}
+async function writableDestination(destination) {
+  let candidate = destination;
+  for (; ; ) {
+    try {
+      const info = await stat(candidate);
+      await access3(candidate, constants.W_OK | (info.isDirectory() ? constants.X_OK : 0));
+      if (!info.isDirectory()) await access3(path12.dirname(candidate), constants.W_OK | constants.X_OK);
+      return true;
+    } catch (error) {
+      if (error.code !== "ENOENT") return false;
+      const parent = path12.dirname(candidate);
+      if (parent === candidate) return false;
+      candidate = parent;
+    }
+  }
+}
+function serviceUrl(options) {
+  const base = resolveBaseUrl(options.url, options.env ?? process.env);
+  const url = new URL(base);
+  if (url.username || url.password || url.search || url.hash || !["https:", "http:"].includes(url.protocol) || url.protocol === "http:" && !options.allowInsecureHttp && !["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)) {
+    throw new Error("Use HTTPS, localhost HTTP, or explicitly --allow-insecure-http for an intranet instance.");
+  }
+  return base;
+}
+async function inspectHermes(root, options = {}) {
+  const env = options.env ?? process.env;
+  const profile = await hermesProfile(options);
+  let hermesInstalled = false;
+  try {
+    await (options.execute ?? execute)(options.hermesBin ?? "hermes", ["--version"], {
+      env: { ...env, HERMES_HOME: profile.directory },
+      timeout: 5e3,
+      maxBuffer: 8192
+    });
+    hermesInstalled = true;
+  } catch {
+  }
+  const keyEnvVar = options.keyEnvVar ?? "APBKS_KEY_AGENTPLAYBOOKS";
+  if (!/^[A-Z_][A-Z0-9_]*$/.test(keyEnvVar)) throw new Error("Invalid key environment variable name.");
+  const profileEnv = (await readOptional(path12.join(profile.directory, ".env")))?.toString() ?? "";
+  const declared = profileEnv.split(/\r?\n/).some((line) => new RegExp(`^\\s*(?:export\\s+)?${keyEnvVar}\\s*=`).test(line));
+  return {
+    host: os5.hostname(),
+    profile: profile.directory,
+    nodeSupported: Number(process.versions.node.split(".")[0]) >= 20,
+    hermesInstalled,
+    profileWritable: await (options.writable ?? writableDestination)(path12.join(profile.directory, "config.yaml")),
+    projectWritable: await (options.writable ?? writableDestination)(root),
+    keyEnvVar,
+    keyInProcess: Boolean(env[keyEnvVar]),
+    keyDeclaredInProfile: declared,
+    runtimeHint: "Run on the gateway host/container that owns this profile. Restart the gateway after changing its secret environment."
+  };
+}
+async function planHermesSetup(root, options = {}) {
+  root = path12.resolve(root);
+  const url = serviceUrl(options);
+  const diagnostics = await inspectHermes(root, options);
+  const connect = await planConnect(root, { ...options, url, targets: ["hermes"], externalDir: path12.join(root, ".agents", "skills") });
+  const conflicts = [...connect.conflicts];
+  const fileActions = [...connect.fileActions];
+  for (const [ok, name, reason] of [
+    [diagnostics.nodeSupported, "node", "Node.js 20 or later is required."],
+    [diagnostics.hermesInstalled, "hermes", "Hermes is unavailable on this host; run setup in the gateway host/container."],
+    [diagnostics.profileWritable, "profile", `Hermes profile is not writable: ${diagnostics.profile}. Fix its service-user ownership on the gateway.`],
+    [diagnostics.projectWritable, "project", `Project is not writable: ${root}.`]
+  ]) if (!ok) conflicts.push({ name, reason });
+  if (!options.toolsOnly) {
+    const apiKey = options.apiKey ?? await resolveApiKey(url, options);
+    if (!apiKey) {
+      conflicts.push({ name: "login", reason: "Run apb login for skill download, or use --tools-only to connect hosted tools without restoring local files." });
+    } else {
+      const pull = await planPull(root, options.playbook, { url, apiKey, fetchImpl: options.fetchImpl, skillsOnly: true });
+      conflicts.push(...pull.conflicts);
+      for (const action of pull.actions) fileActions.push({ ...action, expectedHash: null, restore: true, absolutePath: await assertSafeDestination(root, action.path) });
+      fileActions.push({
+        name: "remote link",
+        path: ".agentplaybooks/remote.json",
+        absolutePath: path12.join(root, ".agentplaybooks/remote.json"),
+        content: JSON.stringify({ url, playbookId: pull.playbook.id, guid: pull.playbook.guid, name: pull.playbook.name }, null, 2) + "\n"
+      });
+    }
+  }
+  const changed = [];
+  for (const action of fileActions) {
+    const old = await readOptional(action.absolutePath);
+    const content = Buffer.isBuffer(action.content) ? action.content : Buffer.from(action.content);
+    if ("expectedHash" in action && action.expectedHash !== digest2(old)) {
+      conflicts.push({ name: action.path, reason: "Destination changed while preparing setup; retry the preview." });
+      continue;
+    }
+    if (old?.equals(content)) continue;
+    changed.push({ ...action, action: old === null ? "create" : "merge", expectedHash: digest2(old) });
+    if (!await (options.writable ?? writableDestination)(action.absolutePath)) conflicts.push({ name: action.path, reason: "Destination is not writable." });
+  }
+  return {
+    root,
+    url,
+    diagnostics,
+    fileActions: changed,
+    conflicts,
+    entries: connect.entries,
+    keyEnvVar: connect.keyEnvVar,
+    changed: changed.length > 0,
+    toolsOnly: Boolean(options.toolsOnly)
+  };
+}
+function publicHermesSetup(plan) {
+  return { ...plan, fileActions: plan.fileActions.map(({ content: _content, ...action }) => action) };
+}
+async function applyHermesSetup(plan) {
+  if (plan.conflicts.length) throw new Error("Resolve setup conflicts before applying; no files were written.");
+  for (const action of plan.fileActions) {
+    if (action.restore) await assertSafeDestination(plan.root, action.path);
+    if (action.path === ".agentplaybooks/remote.json") {
+      for (const target of [path12.join(plan.root, ".agentplaybooks"), action.absolutePath]) {
+        const info = await lstat2(target).catch((error) => {
+          if (error.code !== "ENOENT") throw error;
+        });
+        if (info?.isSymbolicLink()) throw new Error("Remote link destination is a symlink.");
+      }
+    }
+    if (digest2(await readOptional(action.absolutePath)) !== action.expectedHash) throw new Error(`Setup target changed after preview: ${action.path}.`);
+    if (!await writableDestination(action.absolutePath)) throw new Error(`Setup destination is no longer writable: ${action.path}.`);
+  }
+  return applyAdapters(plan.fileActions, path12.join(plan.diagnostics.profile, ".agentplaybooks", "backups", `setup-${Date.now()}`));
+}
+async function checkHermesTools(endpoint, options = {}) {
+  serviceUrl({ ...options, url: endpoint.replace(/\/api\/mcp\/[^/]+$/, "") });
+  const keyEnvVar = options.keyEnvVar ?? "APBKS_KEY_AGENTPLAYBOOKS";
+  const key = (options.env ?? process.env)[keyEnvVar];
+  if (!key) return { ok: false, status: "missing-key-in-process", keyEnvVar };
+  const headers = { "Content-Type": "application/json", Accept: "application/json, text/event-stream", "X-API-Key": key };
+  let id = 0;
+  const call = async (method, params, notification = false) => {
+    const response = await (options.fetchImpl ?? fetch)(endpoint, {
+      method: "POST",
+      headers,
+      redirect: "error",
+      signal: AbortSignal.timeout(5e3),
+      body: JSON.stringify({ jsonrpc: "2.0", ...!notification ? { id: ++id } : {}, method, ...params ? { params } : {} })
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const session = response.headers.get("mcp-session-id");
+    if (session) headers["Mcp-Session-Id"] = session;
+    if (notification) {
+      await response.body?.cancel();
+      return null;
+    }
+    const text = await response.text();
+    let message;
+    if (response.headers.get("content-type")?.includes("text/event-stream")) {
+      message = text.split(/\r?\n\r?\n/).map((event) => event.split(/\r?\n/).filter((line) => line.startsWith("data:")).map((line) => line.slice(5).trim()).join("\n")).filter(Boolean).map((value) => JSON.parse(value)).find((value) => value.id === id);
+    } else message = JSON.parse(text);
+    if (!message || message.error || !message.result) throw new Error("MCP rejected request");
+    return message.result;
+  };
+  try {
+    const init = await call("initialize", { protocolVersion: "2025-03-26", capabilities: {}, clientInfo: { name: "agentplaybooks-check", version: "1" } });
+    headers["MCP-Protocol-Version"] = init.protocolVersion ?? "2025-03-26";
+    await call("notifications/initialized", void 0, true);
+    const result = await call("tools/list");
+    if (!Array.isArray(result.tools)) throw new Error("Invalid tools list");
+    return { ok: true, status: "connected", toolCount: result.tools.length, moreTools: Boolean(result.nextCursor) };
+  } catch (error) {
+    return { ok: false, status: /^HTTP \d{3}$/.test(error.message) ? error.message : "connection-or-protocol-error" };
+  }
+}
+function printHermesSetup(plan, log = console.log) {
+  const d = plan.diagnostics;
+  log(`Hermes setup on ${d.host}: ${d.profile}`);
+  log(d.runtimeHint);
+  log(`Credential: ${plan.keyEnvVar}; available in this process: ${d.keyInProcess ? "yes" : "no"}; declared in profile .env: ${d.keyDeclaredInProfile ? "yes" : "no"}.`);
+  log(plan.toolsOnly ? "Connect hosted tools; register the local skill directory." : "Restore complete skill trees and connect hosted tools; register the restored skill directory.");
+  for (const action of plan.fileActions) log(`  ${action.action} ${action.absolutePath}`);
+  for (const item of plan.conflicts) log(`  [conflict] ${item.name}: ${item.reason}`);
+  if (!d.keyInProcess) log(`Configure a playbook-scoped key as ${plan.keyEnvVar} in the profile secret environment; never paste it into chat. Run 'apb hermes doctor <guid> --check' in that environment to verify tools.`);
+}
+
 // src/hermes-memory.js
 var import_yaml6 = __toESM(require_dist(), 1);
-import { readFile as readFile9 } from "node:fs/promises";
-import { createHash as createHash3 } from "node:crypto";
-import path12 from "node:path";
+import { readFile as readFile10 } from "node:fs/promises";
+import { createHash as createHash6 } from "node:crypto";
+import path13 from "node:path";
 import { fileURLToPath } from "node:url";
 var GUID = /^(?:[a-f\d]{8,}|[a-f\d]{8}(?:-[a-f\d]{4}){3}-[a-f\d]{12})$/i;
 var PROVIDER = "agentplaybooks-memory";
 var LEGACY_PROVIDER = "agentplaybooks";
-var PLUGIN_FILES = ["__init__.py", "client.py", "config_schema.py", "plugin.yaml", "README.md", "LICENSE"];
-var digest2 = (value) => value === null ? null : createHash3("sha256").update(value).digest("hex");
-async function readOptional(filename) {
+var PLUGIN_FILES = ["__init__.py", "client.py", "recall.py", "config_schema.py", "plugin.yaml", "README.md", "LICENSE"];
+var digest3 = (value) => value === null ? null : createHash6("sha256").update(value).digest("hex");
+async function readOptional2(filename) {
   try {
-    return await readFile9(filename, "utf8");
+    return await readFile10(filename, "utf8");
   } catch (error) {
     if (error.code === "ENOENT") return null;
     throw error;
@@ -11250,15 +11478,15 @@ async function planHermesMemory(options = {}) {
       kind: "memory-provider",
       name,
       path: `${profile.display}/${name}`,
-      absolutePath: path12.join(profile.directory, name),
+      absolutePath: path13.join(profile.directory, name),
       action: old === null ? "create" : "merge",
-      expectedHash: digest2(old),
+      expectedHash: digest3(old),
       content
     });
   };
   const conflict2 = (name, reason) => conflicts.push({ kind: "memory-provider", name, reason });
-  const configPath = path12.join(profile.directory, "config.yaml");
-  const oldYaml = await readOptional(configPath);
+  const configPath = path13.join(profile.directory, "config.yaml");
+  const oldYaml = await readOptional2(configPath);
   const yaml = (0, import_yaml6.parseDocument)(oldYaml ?? "{}\n");
   if (yaml.errors.length || !(0, import_yaml6.isMap)(yaml.contents)) throw new Error("Hermes config.yaml must be a valid YAML mapping.");
   const memory = yaml.get("memory", true);
@@ -11274,7 +11502,7 @@ async function planHermesMemory(options = {}) {
     add("config.yaml", oldYaml, String(yaml));
   }
   const settingsName = "agentplaybooks/config.json";
-  const oldSettings = await readOptional(path12.join(profile.directory, settingsName));
+  const oldSettings = await readOptional2(path13.join(profile.directory, settingsName));
   const settings = oldSettings === null ? {} : JSON.parse(oldSettings);
   const desired = { base_url: baseUrl, playbook_guid: options.playbook, shared_playbooks: shared.join(",") };
   if (team.length) desired.team_playbooks = team.join(",");
@@ -11287,11 +11515,11 @@ async function planHermesMemory(options = {}) {
   }
   const bundled = fileURLToPath(new URL("../hermes-plugin/", import.meta.url));
   const source = fileURLToPath(new URL("../../hermes-memory/agentplaybooks/", import.meta.url));
-  const pluginDirectory = options.pluginDirectory ?? (await readOptional(path12.join(bundled, "plugin.yaml")) !== null ? bundled : source);
+  const pluginDirectory = options.pluginDirectory ?? (await readOptional2(path13.join(bundled, "plugin.yaml")) !== null ? bundled : source);
   for (const name of PLUGIN_FILES) {
     const relative = `plugins/${PROVIDER}/${name}`;
-    const content = await readFile9(path12.join(pluginDirectory, name), "utf8");
-    const old = await readOptional(path12.join(profile.directory, relative));
+    const content = await readFile10(path13.join(pluginDirectory, name), "utf8");
+    const old = await readOptional2(path13.join(profile.directory, relative));
     if (old !== null && old !== content) conflict2(relative, "An installed plugin file differs; update through Hermes or reconcile it explicitly.");
     add(relative, old, content);
   }
@@ -11308,11 +11536,11 @@ async function planHermesMemory(options = {}) {
 async function applyHermesMemory(plan) {
   if (plan.conflicts.length) throw new Error("Resolve memory setup conflicts before applying; no files were written.");
   for (const action of plan.fileActions) {
-    if (digest2(await readOptional(action.absolutePath)) !== action.expectedHash) {
+    if (digest3(await readOptional2(action.absolutePath)) !== action.expectedHash) {
       throw new Error(`Setup target changed after planning: ${action.path}. Rerun the plan.`);
     }
   }
-  return applyAdapters(plan.fileActions, path12.join(plan.profile, ".agentplaybooks", "backups", `memory-${Date.now()}`));
+  return applyAdapters(plan.fileActions, path13.join(plan.profile, ".agentplaybooks", "backups", `memory-${Date.now()}`));
 }
 function printHermesMemoryPlan(plan, log = console.log) {
   log(`Hermes memory: private playbook ${plan.playbook}`);
@@ -11326,20 +11554,20 @@ function printHermesMemoryPlan(plan, log = console.log) {
 // src/hermes-bundle.js
 var import_yaml7 = __toESM(require_dist(), 1);
 import { spawnSync } from "node:child_process";
-import { createHash as createHash4 } from "node:crypto";
-import { access as access3, chmod as chmod2, mkdir as mkdir6, readFile as readFile10, rename as rename6, rm, writeFile as writeFile6 } from "node:fs/promises";
-import os5 from "node:os";
-import path13 from "node:path";
+import { createHash as createHash7 } from "node:crypto";
+import { access as access4, chmod as chmod2, mkdir as mkdir6, readFile as readFile11, rename as rename6, rm, writeFile as writeFile6 } from "node:fs/promises";
+import os6 from "node:os";
+import path14 from "node:path";
 var GUID2 = /^(?:[a-f\d]{8,}|[a-f\d]{8}(?:-[a-f\d]{4}){3}-[a-f\d]{12})$/i;
 var SAFE_PROFILE_NAME2 = /^[a-z0-9](?:[a-z0-9_-]{0,62}[a-z0-9])?$/;
 var ENV_NAME = /^[A-Z_][A-Z0-9_]*$/;
 var MEMORY_KEY_ENV = "AGENTPLAYBOOKS_MEMORY_API_KEY";
 var HERMES_REQUIRES2 = ">=0.20.0";
 var STATE_FILE = "state.json";
-var digest3 = (value) => value === null ? null : createHash4("sha256").update(value).digest("hex");
-async function readOptional2(filename) {
+var digest4 = (value) => value === null ? null : createHash7("sha256").update(value).digest("hex");
+async function readOptional3(filename) {
   try {
-    return await readFile10(filename, "utf8");
+    return await readFile11(filename, "utf8");
   } catch (error) {
     if (error.code === "ENOENT") return null;
     throw error;
@@ -11347,7 +11575,7 @@ async function readOptional2(filename) {
 }
 async function exists(filename) {
   try {
-    await access3(filename);
+    await access4(filename);
     return true;
   } catch {
     return false;
@@ -11363,9 +11591,9 @@ function assertBundleUrl(baseUrl, allowInsecureHttp = false) {
   }
   return url;
 }
-function defaultManagedDir({ env = process.env, platform = process.platform, homedir = os5.homedir() } = {}) {
-  const base = platform === "win32" && env.LOCALAPPDATA ? env.LOCALAPPDATA : path13.join(homedir, ".local", "share");
-  return path13.join(base, "agentplaybooks", "hermes-managed");
+function defaultManagedDir({ env = process.env, platform = process.platform, homedir = os6.homedir() } = {}) {
+  const base = platform === "win32" && env.LOCALAPPDATA ? env.LOCALAPPDATA : path14.join(homedir, ".local", "share");
+  return path14.join(base, "agentplaybooks", "hermes-managed");
 }
 async function fetchPlaybook(baseUrl, guid, { fetchImpl = fetch } = {}) {
   if (!GUID2.test(guid ?? "")) throw new Error(`'${guid}' is not a playbook GUID.`);
@@ -11559,14 +11787,14 @@ function recordedSource(manifest) {
 function sameSource(recorded, source) {
   if (!recorded) return false;
   const normalize = (value) => {
-    const resolved = path13.resolve(value).replace(/[\\/]+$/, "");
+    const resolved = path14.resolve(value).replace(/[\\/]+$/, "");
     return process.platform === "win32" ? resolved.toLowerCase() : resolved;
   };
   return normalize(recorded) === normalize(source);
 }
 function findHermesBinary(home, explicit) {
   if (explicit) return explicit;
-  const candidates = process.platform === "win32" ? [path13.join(home, "hermes-agent", "venv", "Scripts", "hermes.exe")] : [path13.join(home, "hermes-agent", "venv", "bin", "hermes")];
+  const candidates = process.platform === "win32" ? [path14.join(home, "hermes-agent", "venv", "Scripts", "hermes.exe")] : [path14.join(home, "hermes-agent", "venv", "bin", "hermes")];
   return candidates;
 }
 async function planHermesSync(options = {}) {
@@ -11578,7 +11806,7 @@ async function planHermesSync(options = {}) {
   if (options.memory !== void 0 && !GUID2.test(options.memory)) throw new Error("--memory must be the GUID of a private memory playbook.");
   const fetchImpl = options.fetchImpl ?? fetch;
   const home = await hermesProfile({ env: options.hermesHome ? { ...env, HERMES_HOME: options.hermesHome } : env });
-  const managedDir = path13.resolve(options.managedDir ?? defaultManagedDir({ env }));
+  const managedDir = path14.resolve(options.managedDir ?? defaultManagedDir({ env }));
   const warnings = [];
   const bundle = await fetchPlaybook(baseUrl, options.bundle, { fetchImpl });
   const config = readBundleConfig(bundle);
@@ -11597,7 +11825,7 @@ async function planHermesSync(options = {}) {
     bots.push(bot);
   }
   const managed = structuredClone(config.managed);
-  const skillsDir = path13.join(managedDir, "skills");
+  const skillsDir = path14.join(managedDir, "skills");
   managed.skills = { ...managed.skills ?? {} };
   managed.skills.external_dirs = [.../* @__PURE__ */ new Set([...managed.skills.external_dirs ?? [], skillsDir])];
   if (options.memory) managed.memory = { ...managed.memory ?? {}, provider: "agentplaybooks-memory" };
@@ -11607,15 +11835,15 @@ async function planHermesSync(options = {}) {
     "# replaced on every sync.",
     (0, import_yaml7.stringify)(managed, { lineWidth: 0 })
   ].join("\n");
-  const previousEnv = parseEnv(await readOptional2(path13.join(managedDir, ".env")));
-  const previousState = JSON.parse(await readOptional2(path13.join(managedDir, STATE_FILE)) ?? "{}");
+  const previousEnv = parseEnv(await readOptional3(path14.join(managedDir, ".env")));
+  const previousState = JSON.parse(await readOptional3(path14.join(managedDir, STATE_FILE)) ?? "{}");
   const envValues = { ...previousEnv };
   for (const name of previousState.bundleEnv ?? []) {
     if (!(name in config.env)) delete envValues[name];
   }
   Object.assign(envValues, config.env);
   if (options.envFile) {
-    const fileContent = await readOptional2(path13.resolve(options.envFile));
+    const fileContent = await readOptional3(path14.resolve(options.envFile));
     if (fileContent === null) warnings.push(`--env-file ${options.envFile} is not readable; previously synced values are kept.`);
     else {
       const fileValues = parseEnv(fileContent);
@@ -11638,10 +11866,10 @@ async function planHermesSync(options = {}) {
   const profiles = [{ name: "default", directory: home.directory }];
   const installs = [];
   for (const bot of bots) {
-    const profileDir = path13.join(home.directory, "profiles", bot.profileName);
-    const source = path13.join(managedDir, "bots", bot.profileName);
-    const manifest = await readOptional2(path13.join(profileDir, "distribution.yaml"));
-    if (manifest === null && await exists(path13.join(home.directory, "profiles", ".deleted", bot.profileName))) {
+    const profileDir = path14.join(home.directory, "profiles", bot.profileName);
+    const source = path14.join(managedDir, "bots", bot.profileName);
+    const manifest = await readOptional3(path14.join(profileDir, "distribution.yaml"));
+    if (manifest === null && await exists(path14.join(home.directory, "profiles", ".deleted", bot.profileName))) {
       warnings.push(`Bot '${bot.profileName}' was deleted on this machine; it is not reinstalled.`);
       continue;
     }
@@ -11713,8 +11941,8 @@ function printHermesSyncPlan(plan, log = console.log) {
   for (const warning of plan.warnings) log(`  ! ${warning}`);
 }
 async function writeAtomic(filename, content, mode) {
-  await mkdir6(path13.dirname(filename), { recursive: true });
-  const temporary = path13.join(path13.dirname(filename), `.${path13.basename(filename)}.${process.pid}.tmp`);
+  await mkdir6(path14.dirname(filename), { recursive: true });
+  const temporary = path14.join(path14.dirname(filename), `.${path14.basename(filename)}.${process.pid}.tmp`);
   await writeFile6(temporary, content, { encoding: "utf8", ...mode ? { mode } : {} });
   await rename6(temporary, filename);
   if (mode) await chmod2(filename, mode).catch(() => {
@@ -11725,8 +11953,8 @@ async function replaceDirectory(directory, files) {
   const previous = `${directory}.previous-${process.pid}`;
   await rm(staging, { recursive: true, force: true });
   for (const file of files) {
-    const target = path13.join(staging, ...file.path.split("/"));
-    await mkdir6(path13.dirname(target), { recursive: true });
+    const target = path14.join(staging, ...file.path.split("/"));
+    await mkdir6(path14.dirname(target), { recursive: true });
     await writeFile6(target, file.content, "utf8");
   }
   await mkdir6(staging, { recursive: true });
@@ -11762,18 +11990,18 @@ async function applyHermesSync(plan, { runHermes = defaultRunHermes } = {}) {
   const written = [];
   const failures = [];
   await mkdir6(plan.managedDir, { recursive: true });
-  await writeAtomic(path13.join(plan.managedDir, "config.yaml"), plan.managedConfig);
-  await writeAtomic(path13.join(plan.managedDir, ".env"), plan.managedEnv, 384);
+  await writeAtomic(path14.join(plan.managedDir, "config.yaml"), plan.managedConfig);
+  await writeAtomic(path14.join(plan.managedDir, ".env"), plan.managedEnv, 384);
   written.push("config.yaml", ".env");
   const skillFilesFlat = plan.skills.flatMap((skill) => skill.files.map((file) => ({
     path: `${skill.name}/${file.relativePath}`,
     content: file.content.endsWith("\n") ? file.content : `${file.content}
 `
   })));
-  await replaceDirectory(path13.join(plan.managedDir, "skills"), skillFilesFlat);
+  await replaceDirectory(path14.join(plan.managedDir, "skills"), skillFilesFlat);
   written.push(`skills/ (${plan.skills.length})`);
   for (const bot of plan.bots) {
-    await replaceDirectory(path13.join(plan.managedDir, "bots", bot.profileName), bot.files);
+    await replaceDirectory(path14.join(plan.managedDir, "bots", bot.profileName), bot.files);
   }
   const installed = [];
   for (const install of plan.installs) {
@@ -11794,7 +12022,7 @@ async function applyHermesSync(plan, { runHermes = defaultRunHermes } = {}) {
   for (const profile of plan.profiles) {
     if (!await exists(profile.directory)) continue;
     for (const plugin of plan.plugins ?? []) {
-      if (await exists(path13.join(profile.directory, "plugins", plugin.name))) continue;
+      if (await exists(path14.join(profile.directory, "plugins", plugin.name))) continue;
       const args = [
         ...profile.name === "default" ? [] : ["-p", profile.name],
         "plugins",
@@ -11811,11 +12039,11 @@ async function applyHermesSync(plan, { runHermes = defaultRunHermes } = {}) {
   for (const profile of plan.profiles) {
     if (profile.name !== "default" && !await exists(profile.directory)) continue;
     const bot = plan.bots.find((entry) => entry.profileName === profile.name);
-    const configPath = path13.join(profile.directory, "config.yaml");
+    const configPath = path14.join(profile.directory, "config.yaml");
     try {
-      const merged = mergeDefaults(await readOptional2(configPath), plan.defaults, {
+      const merged = mergeDefaults(await readOptional3(configPath), plan.defaults, {
         mcpServers: bot?.mcpServers,
-        externalDirs: [path13.join(plan.managedDir, "skills")]
+        externalDirs: [path14.join(plan.managedDir, "skills")]
       });
       if (merged !== null) {
         await writeAtomic(configPath, merged);
@@ -11853,21 +12081,21 @@ async function applyHermesSync(plan, { runHermes = defaultRunHermes } = {}) {
     url: plan.url,
     bundle: plan.bundle,
     syncedAt: (/* @__PURE__ */ new Date()).toISOString(),
-    digest: digest3(plan.managedConfig),
+    digest: digest4(plan.managedConfig),
     bundleEnv: plan.bundleEnv,
     skills: plan.skills.map((skill) => skill.name),
     bots: plan.bots.map((bot) => ({ guid: bot.guid, profile: bot.profileName })),
     failures
   };
-  await writeAtomic(path13.join(plan.managedDir, STATE_FILE), `${JSON.stringify(state, null, 2)}
+  await writeAtomic(path14.join(plan.managedDir, STATE_FILE), `${JSON.stringify(state, null, 2)}
 `);
   return { written, installed, plugins, memory, failures };
 }
 
 // src/adopt.js
 var import_yaml8 = __toESM(require_dist(), 1);
-import { readFile as readFile11, writeFile as writeFile7, rename as rename7 } from "node:fs/promises";
-import path14 from "node:path";
+import { readFile as readFile12, writeFile as writeFile7, rename as rename7 } from "node:fs/promises";
+import path15 from "node:path";
 var CREDENTIAL_KEY = /(api[_-]?key|secret|token|password|passwd|credential|auth)/i;
 var NOT_A_VALUE = /^(\s*|\$\{.*\}|\$[A-Za-z_][A-Za-z0-9_]*|env:.*|vault:.*|\*+|x{3,}|\.{3}|<.*>|your[-_].*|changeme|placeholder|redacted|dummy|todo)$/i;
 var EXPANSION_SUPPORT = {
@@ -12000,12 +12228,12 @@ function rewriteConfig(content, format, occurrences, names) {
 `;
 }
 async function applyRewrite(absolutePath, content) {
-  const temporary = path14.join(path14.dirname(absolutePath), `.${path14.basename(absolutePath)}.${process.pid}.tmp`);
+  const temporary = path15.join(path15.dirname(absolutePath), `.${path15.basename(absolutePath)}.${process.pid}.tmp`);
   await writeFile7(temporary, content, { encoding: "utf8", mode: 384 });
   await rename7(temporary, absolutePath);
 }
 async function readConfigForRewrite(absolutePath) {
-  return normalizeText(await readFile11(absolutePath, "utf8"));
+  return normalizeText(await readFile12(absolutePath, "utf8"));
 }
 async function inventoryForAdoption({ global = false, root } = {}) {
   return global ? discoverGlobal() : discover(root);
@@ -12013,8 +12241,8 @@ async function inventoryForAdoption({ global = false, root } = {}) {
 
 // src/secrets.js
 import { spawn } from "node:child_process";
-import path15 from "node:path";
-import { readFile as readFile12 } from "node:fs/promises";
+import path16 from "node:path";
+import { readFile as readFile13 } from "node:fs/promises";
 var SECRET_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
 async function savePlaybookKey(url, guid, apiKey, homedir) {
   const credentials = await loadCredentials(homedir);
@@ -12146,7 +12374,7 @@ function runWithEnvironment(command, args, injected) {
 }
 async function readManifestSecrets(root) {
   try {
-    const manifest = JSON.parse(await readFile12(path15.join(root, "agentplaybook.json"), "utf8"));
+    const manifest = JSON.parse(await readFile13(path16.join(root, "agentplaybook.json"), "utf8"));
     const secrets = manifest?.spec?.secrets;
     return Array.isArray(secrets) ? secrets : [];
   } catch (error) {
@@ -12204,11 +12432,18 @@ Usage:
   agentplaybooks plugin import <plugin-directory> [path] [--apply] [--json]
   agentplaybooks connect <guid>[,<guid>...] [path] [--apply] [--json] [--target=<types>]
                                 [--name=<entry>] [--key-env=<VAR>] [--key-header=<H>]
+                                [--profile=<bot>] [--hermes-home=<directory>]
   agentplaybooks connect --account [path] [--apply] [--json] [--target=<types>]
   agentplaybooks login [--url=<base>]
   agentplaybooks memory setup <guid> --target=hermes [--hermes-home=<directory>]
-                             [--shared=<guids>] [--team=<guids>] [--url=<base>] [--allow-insecure-http]
+                             [--profile=<bot>] [--shared=<guids>] [--team=<guids>] [--url=<base>] [--allow-insecure-http]
                              [--apply] [--json]
+  agentplaybooks hermes setup <guid> [path] [--profile=<bot>] [--hermes-home=<directory>]
+                             [--tools-only] [--key-env=<VAR>] [--url=<base>] [--hermes-bin=<path>]
+                             [--allow-insecure-http] [--apply] [--check] [--json]
+  agentplaybooks hermes doctor <guid> [path] [--profile=<bot>] [--hermes-home=<directory>]
+                             [--key-env=<VAR>] [--url=<base>] [--hermes-bin=<path>]
+                             [--allow-insecure-http] [--check] [--json]
   agentplaybooks hermes sync <bundle-guid> [--url=<base>] [--memory=<guid>]
                              [--managed-dir=<directory>] [--hermes-home=<directory>]
                              [--hermes-bin=<path>] [--env-file=<file>] [--allow-insecure-http]
@@ -12234,7 +12469,11 @@ Usage:
 Commands:
   memory     Install and configure the native Hermes memory provider for a private
              playbook. Plan-only without --apply; credentials are never copied.
-  hermes     'hermes sync' applies an organisation's bundle playbook to this
+  hermes     'hermes setup' previews/restores complete skill trees and connects hosted
+             MCP/OpenAPI tools in one selected profile. --tools-only skips restore.
+             'hermes doctor' checks this host, profile permissions and credential
+             presence; --check performs an MCP handshake and lists tools.
+             'hermes sync' applies an organisation's bundle playbook to this
              machine's Hermes: config.hermes becomes Hermes's managed layer
              (point HERMES_MANAGED_DIR at --managed-dir), the bundle's skills a
              pinned skills directory, each bot playbook a profile installed or
@@ -12322,11 +12561,19 @@ function parse(args) {
   const separator = args.indexOf("--");
   const own = separator === -1 ? args.slice(1) : args.slice(1, separator);
   const rest = separator === -1 ? [] : args.slice(separator + 1);
-  for (const arg of own) {
+  const valueFlags = /* @__PURE__ */ new Set(["--profile", "--hermes-home", "--target", "--name", "--key-env", "--key-header", "--url", "--shared", "--team", "--memory", "--managed-dir", "--hermes-bin", "--env-file", "--output", "--version", "--snapshot", "--client-id", "--playbook", "--from-env", "--rewrite", "--prefix"]);
+  for (let i = 0; i < own.length; i++) {
+    const arg = own[i];
     if (arg.startsWith("--")) {
       const equals = arg.indexOf("=");
-      if (equals === -1) flags.set(arg, true);
-      else flags.set(arg.slice(0, equals), arg.slice(equals + 1));
+      if (equals === -1 && valueFlags.has(arg)) {
+        if (!own[i + 1] || own[i + 1].startsWith("--")) throw new Error(`Missing value for ${arg}.`);
+        flags.set(arg, own[++i]);
+      } else if (equals === -1) flags.set(arg, true);
+      else {
+        if (valueFlags.has(arg.slice(0, equals)) && !arg.slice(equals + 1)) throw new Error(`Missing value for ${arg.slice(0, equals)}.`);
+        flags.set(arg.slice(0, equals), arg.slice(equals + 1));
+      }
     } else {
       positional.push(arg);
     }
@@ -12457,7 +12704,7 @@ async function runSecrets(url, flags, positional, rest) {
   if (subcommand === "run" && rest.length === 0) {
     throw new Error("Usage: agentplaybooks secrets run [path] -- <command> [args...]");
   }
-  const root = flags.has("--global") ? os6.homedir() : path16.resolve(subcommand === "push" ? positional[2] ?? process.cwd() : positional[1] ?? process.cwd());
+  const root = flags.has("--global") ? os7.homedir() : path17.resolve(subcommand === "push" ? positional[2] ?? process.cwd() : positional[1] ?? process.cwd());
   const needsVault = subcommand !== "adopt" || flags.has("--apply");
   const vault = needsVault ? await resolveVaultAccess(url, root, flags) : { guid: null, playbookKey: null };
   const { guid, playbookKey } = vault;
@@ -12609,8 +12856,59 @@ async function runSecrets(url, flags, positional, rest) {
 }
 async function run(args) {
   const { command, flags, positional, rest } = parse(args);
+  if (command === "--version") {
+    console.log(JSON.parse(await readFile14(new URL("../package.json", import.meta.url), "utf8")).version);
+    return;
+  }
   if (!command || flags.has("--help") || command === "help") {
     console.log(HELP);
+    return;
+  }
+  const common = ["--json", "--apply", "--url", "--profile", "--hermes-home"];
+  const allowed = command === "connect" ? [...common, "--account", "--target", "--name", "--key-env", "--key-header"] : command === "memory" ? [...common, "--target", "--shared", "--team", "--allow-insecure-http"] : command === "sync" ? [...common.filter((x) => x !== "--url"), "--global", "--target", "--include-vendored"] : command === "hermes" && ["setup", "doctor"].includes(positional[0]) ? [...common, "--tools-only", "--key-env", "--hermes-bin", "--allow-insecure-http", "--check"] : null;
+  if (allowed) {
+    for (const flag of flags.keys()) if (!allowed.includes(flag)) throw new Error(`Unknown option ${flag} for ${command}.`);
+  }
+  if (command === "sync" && (flags.has("--profile") || flags.has("--hermes-home")) && !String(flags.get("--target") ?? "").split(",").includes("hermes")) {
+    throw new Error("--profile and --hermes-home require --target=hermes.");
+  }
+  if (command === "hermes" && ["setup", "doctor"].includes(positional[0])) {
+    if (!positional[1]) throw new Error("Pass the playbook GUID.");
+    if (positional[0] === "doctor" && (flags.has("--apply") || flags.has("--tools-only"))) throw new Error("hermes doctor is read-only; use hermes setup to apply changes.");
+    const option = (name) => typeof flags.get(name) === "string" ? flags.get(name) : void 0;
+    const options = {
+      playbook: positional[1],
+      profile: option("--profile"),
+      hermesHome: option("--hermes-home"),
+      url: option("--url"),
+      keyEnvVar: option("--key-env"),
+      hermesBin: option("--hermes-bin"),
+      toolsOnly: flags.has("--tools-only"),
+      allowInsecureHttp: flags.has("--allow-insecure-http")
+    };
+    const root = path17.resolve(positional[2] ?? process.cwd());
+    let plan, result, diagnostics, connection;
+    if (positional[0] === "doctor") {
+      const connect = await planConnect(root, { ...options, targets: ["hermes"] });
+      diagnostics = await inspectHermes(root, options);
+      if (flags.has("--check")) connection = await checkHermesTools(connect.entries[0].url, options);
+      if (!diagnostics.nodeSupported || !diagnostics.hermesInstalled || !diagnostics.profileWritable || connect.conflicts.length) process.exitCode = 2;
+      diagnostics.conflicts = connect.conflicts;
+    } else {
+      plan = await planHermesSetup(root, options);
+      if (!flags.has("--json")) printHermesSetup(plan);
+      if (flags.has("--apply")) result = await applyHermesSetup(plan);
+      if ((flags.has("--check") || flags.has("--apply")) && !plan.conflicts.length) connection = await checkHermesTools(plan.entries[0].url, options);
+      if (plan.conflicts.length) process.exitCode = 2;
+    }
+    if (connection && !connection.ok) process.exitCode = 2;
+    const output = { ...plan ? { plan: publicHermesSetup(plan) } : { diagnostics }, ...result ? { result } : {}, ...connection ? { connection } : {} };
+    if (flags.has("--json")) console.log(JSON.stringify(output, null, 2));
+    else {
+      if (diagnostics) console.log(JSON.stringify(diagnostics, null, 2));
+      if (result) console.log(`Wrote ${result.written.length} files. Restart the selected gateway/profile to load the connection.`);
+      if (connection) console.log(`MCP check: ${connection.status}${connection.ok ? ` (${connection.toolCount} tools on first page)` : "; check the key environment and service access"}.`);
+    }
     return;
   }
   if (command === "hermes") {
@@ -12651,6 +12949,7 @@ async function run(args) {
     const plan = await planHermesMemory({
       playbook: positional[1],
       hermesHome: option("--hermes-home"),
+      profile: option("--profile"),
       sharedPlaybooks: option("--shared"),
       teamPlaybooks: option("--team"),
       url: option("--url"),
@@ -12666,7 +12965,7 @@ async function run(args) {
     return;
   }
   if (command === "doctor") {
-    const report = flags.has("--global") ? await runGlobalDoctor({ includeVendored: flags.has("--include-vendored") }) : await runDoctor(path16.resolve(positional[0] ?? process.cwd()));
+    const report = flags.has("--global") ? await runGlobalDoctor({ includeVendored: flags.has("--include-vendored") }) : await runDoctor(path17.resolve(positional[0] ?? process.cwd()));
     if (flags.has("--json")) console.log(JSON.stringify(publicReport(report), null, 2));
     else printDoctor(report);
     if (flags.has("--strict") && report.findings.some((item) => item.severity === "critical" || item.severity === "high")) {
@@ -12678,12 +12977,13 @@ async function run(args) {
     const requestedTargets = typeof flags.get("--target") === "string" ? flags.get("--target").split(",").map((value) => value.trim()).filter(Boolean) : [];
     const options = {
       targets: requestedTargets,
+      env: typeof flags.get("--hermes-home") === "string" ? { ...process.env, HERMES_HOME: flags.get("--hermes-home") } : process.env,
       includeVendored: flags.has("--include-vendored"),
       // `--profile <name>` writes into a Hermes bot or group profile instead of
       // the main one. Ignored by every other target, which has no such concept.
       hermesProfileName: typeof flags.get("--profile") === "string" ? flags.get("--profile") : ""
     };
-    const plan = flags.has("--global") ? await planGlobalSync(options) : await planSync(path16.resolve(positional[0] ?? process.cwd()), options);
+    const plan = flags.has("--global") ? await planGlobalSync(options) : await planSync(path17.resolve(positional[0] ?? process.cwd()), options);
     if (flags.has("--json")) {
       console.log(JSON.stringify({
         action: plan.action,
@@ -12712,12 +13012,12 @@ async function run(args) {
     const subcommand = positional[0];
     let plan;
     if (subcommand === "export") {
-      const root = path16.resolve(positional[1] ?? process.cwd());
-      const output = typeof flags.get("--output") === "string" ? path16.resolve(flags.get("--output")) : void 0;
+      const root = path17.resolve(positional[1] ?? process.cwd());
+      const output = typeof flags.get("--output") === "string" ? path17.resolve(flags.get("--output")) : void 0;
       plan = await planPluginExport(root, { output });
     } else if (subcommand === "import") {
       if (!positional[1]) throw new Error("Usage: agentplaybooks plugin import <plugin-directory> [path] [--apply]");
-      plan = await planPluginImport(path16.resolve(positional[1]), path16.resolve(positional[2] ?? process.cwd()));
+      plan = await planPluginImport(path17.resolve(positional[1]), path17.resolve(positional[2] ?? process.cwd()));
     } else {
       throw new Error("Usage: agentplaybooks plugin <export|import> ...");
     }
@@ -12738,8 +13038,10 @@ async function run(args) {
     const requestedTargets = typeof flags.get("--target") === "string" ? flags.get("--target").split(",").map((value) => value.trim()).filter(Boolean) : [];
     const account = flags.has("--account");
     const requestedPlaybooks = account ? [] : positional[0]?.split(",") ?? [];
-    const plan = await planConnect(path16.resolve(positional[account ? 0 : 1] ?? process.cwd()), {
+    const plan = await planConnect(path17.resolve(positional[account ? 0 : 1] ?? process.cwd()), {
       account,
+      profile: typeof flags.get("--profile") === "string" ? flags.get("--profile") : void 0,
+      hermesHome: typeof flags.get("--hermes-home") === "string" ? flags.get("--hermes-home") : void 0,
       playbooks: requestedPlaybooks,
       targets: requestedTargets,
       name: typeof flags.get("--name") === "string" ? flags.get("--name") : void 0,
@@ -12822,8 +13124,8 @@ async function run(args) {
     if (kind !== "hermes") throw new Error("Usage: agentplaybooks export hermes <dir> [path]");
     const destination = positional[1];
     if (!destination) throw new Error("Usage: agentplaybooks export hermes <dir> [path]");
-    const root = path16.resolve(positional[2] ?? process.cwd());
-    const plan = await planHermesExport(root, path16.resolve(destination), {
+    const root = path17.resolve(positional[2] ?? process.cwd());
+    const plan = await planHermesExport(root, path17.resolve(destination), {
       name: typeof flags.get("--name") === "string" ? flags.get("--name") : void 0,
       version: typeof flags.get("--version") === "string" ? flags.get("--version") : void 0
     });
@@ -12854,7 +13156,7 @@ async function run(args) {
   if (command === "pull") {
     const ref = positional[0];
     if (!ref) throw new Error("Usage: agentplaybooks pull <id|guid> [path]");
-    const root = path16.resolve(positional[1] ?? process.cwd());
+    const root = path17.resolve(positional[1] ?? process.cwd());
     const apiKey = await requireApiKey(url);
     const snapshotId = typeof flags.get("--snapshot") === "string" ? flags.get("--snapshot") : void 0;
     const plan = await planPull(root, ref, { url, apiKey, snapshotId });
@@ -12882,7 +13184,7 @@ async function run(args) {
   }
   if (command === "push") {
     const global = flags.has("--global");
-    const root = global ? os6.homedir() : path16.resolve(positional[0] ?? process.cwd());
+    const root = global ? os7.homedir() : path17.resolve(positional[0] ?? process.cwd());
     const apiKey = await requireApiKey(url);
     const plan = global ? await planGlobalPush({ url, apiKey, includeVendored: flags.has("--include-vendored") }) : await planPush(root, { url, apiKey });
     if (flags.has("--json")) {
@@ -12927,7 +13229,7 @@ async function run(args) {
   if (command === "auth") {
     const provider = positional[0];
     if (!provider) throw new Error("Usage: agentplaybooks auth <provider> [path]");
-    const root = path16.resolve(positional[1] ?? process.cwd());
+    const root = path17.resolve(positional[1] ?? process.cwd());
     const template = await fetchTemplate(url, provider);
     const plan = planConsent(template);
     const vault = await resolveVaultAccess(url, root, flags);

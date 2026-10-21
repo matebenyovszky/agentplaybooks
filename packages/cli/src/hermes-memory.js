@@ -10,7 +10,7 @@ import { resolveBaseUrl } from "./remote.js";
 const GUID = /^(?:[a-f\d]{8,}|[a-f\d]{8}(?:-[a-f\d]{4}){3}-[a-f\d]{12})$/i;
 const PROVIDER = "agentplaybooks-memory";
 const LEGACY_PROVIDER = "agentplaybooks";
-const PLUGIN_FILES = ["__init__.py", "client.py", "config_schema.py", "plugin.yaml", "README.md", "LICENSE"];
+const PLUGIN_FILES = ["__init__.py", "client.py", "recall.py", "config_schema.py", "plugin.yaml", "README.md", "LICENSE"];
 const digest = (value) => value === null ? null : createHash("sha256").update(value).digest("hex");
 
 async function readOptional(filename) {

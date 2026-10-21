@@ -1,4 +1,5 @@
 import os from "node:os";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import readline from "node:readline";
 import { printDoctor, publicReport, runDoctor, runGlobalDoctor } from "./doctor.js";
@@ -19,6 +20,7 @@ import {
   printHermesExportPlan,
 } from "./hermes-distribution.js";
 import { applyConnect, planConnect, printConnectPlan } from "./connect.js";
+import { applyHermesSetup, checkHermesTools, inspectHermes, planHermesSetup, printHermesSetup, publicHermesSetup } from "./hermes-setup.js";
 import { applyHermesMemory, planHermesMemory, printHermesMemoryPlan } from "./hermes-memory.js";
 import { applyHermesSync, planHermesSync, printHermesSyncPlan, publicSyncPlan } from "./hermes-bundle.js";
 import {
@@ -69,11 +71,18 @@ Usage:
   agentplaybooks plugin import <plugin-directory> [path] [--apply] [--json]
   agentplaybooks connect <guid>[,<guid>...] [path] [--apply] [--json] [--target=<types>]
                                 [--name=<entry>] [--key-env=<VAR>] [--key-header=<H>]
+                                [--profile=<bot>] [--hermes-home=<directory>]
   agentplaybooks connect --account [path] [--apply] [--json] [--target=<types>]
   agentplaybooks login [--url=<base>]
   agentplaybooks memory setup <guid> --target=hermes [--hermes-home=<directory>]
-                             [--shared=<guids>] [--team=<guids>] [--url=<base>] [--allow-insecure-http]
+                             [--profile=<bot>] [--shared=<guids>] [--team=<guids>] [--url=<base>] [--allow-insecure-http]
                              [--apply] [--json]
+  agentplaybooks hermes setup <guid> [path] [--profile=<bot>] [--hermes-home=<directory>]
+                             [--tools-only] [--key-env=<VAR>] [--url=<base>] [--hermes-bin=<path>]
+                             [--allow-insecure-http] [--apply] [--check] [--json]
+  agentplaybooks hermes doctor <guid> [path] [--profile=<bot>] [--hermes-home=<directory>]
+                             [--key-env=<VAR>] [--url=<base>] [--hermes-bin=<path>]
+                             [--allow-insecure-http] [--check] [--json]
   agentplaybooks hermes sync <bundle-guid> [--url=<base>] [--memory=<guid>]
                              [--managed-dir=<directory>] [--hermes-home=<directory>]
                              [--hermes-bin=<path>] [--env-file=<file>] [--allow-insecure-http]
@@ -99,7 +108,11 @@ Usage:
 Commands:
   memory     Install and configure the native Hermes memory provider for a private
              playbook. Plan-only without --apply; credentials are never copied.
-  hermes     'hermes sync' applies an organisation's bundle playbook to this
+  hermes     'hermes setup' previews/restores complete skill trees and connects hosted
+             MCP/OpenAPI tools in one selected profile. --tools-only skips restore.
+             'hermes doctor' checks this host, profile permissions and credential
+             presence; --check performs an MCP handshake and lists tools.
+             'hermes sync' applies an organisation's bundle playbook to this
              machine's Hermes: config.hermes becomes Hermes's managed layer
              (point HERMES_MANAGED_DIR at --managed-dir), the bundle's skills a
              pinned skills directory, each bot playbook a profile installed or
@@ -192,11 +205,19 @@ function parse(args) {
   const separator = args.indexOf("--");
   const own = separator === -1 ? args.slice(1) : args.slice(1, separator);
   const rest = separator === -1 ? [] : args.slice(separator + 1);
-  for (const arg of own) {
+  const valueFlags = new Set(["--profile", "--hermes-home", "--target", "--name", "--key-env", "--key-header", "--url", "--shared", "--team", "--memory", "--managed-dir", "--hermes-bin", "--env-file", "--output", "--version", "--snapshot", "--client-id", "--playbook", "--from-env", "--rewrite", "--prefix"]);
+  for (let i = 0; i < own.length; i++) {
+    const arg = own[i];
     if (arg.startsWith("--")) {
       const equals = arg.indexOf("=");
-      if (equals === -1) flags.set(arg, true);
-      else flags.set(arg.slice(0, equals), arg.slice(equals + 1));
+      if (equals === -1 && valueFlags.has(arg)) {
+        if (!own[i + 1] || own[i + 1].startsWith("--")) throw new Error(`Missing value for ${arg}.`);
+        flags.set(arg, own[++i]);
+      } else if (equals === -1) flags.set(arg, true);
+      else {
+        if (valueFlags.has(arg.slice(0, equals)) && !arg.slice(equals + 1)) throw new Error(`Missing value for ${arg.slice(0, equals)}.`);
+        flags.set(arg.slice(0, equals), arg.slice(equals + 1));
+      }
     } else {
       positional.push(arg);
     }
@@ -553,8 +574,56 @@ async function runSecrets(url, flags, positional, rest) {
 
 export async function run(args) {
   const { command, flags, positional, rest } = parse(args);
+  if (command === "--version") {
+    console.log(JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8")).version);
+    return;
+  }
   if (!command || flags.has("--help") || command === "help") {
     console.log(HELP);
+    return;
+  }
+
+  const common = ["--json", "--apply", "--url", "--profile", "--hermes-home"];
+  const allowed = command === "connect" ? [...common, "--account", "--target", "--name", "--key-env", "--key-header"]
+    : command === "memory" ? [...common, "--target", "--shared", "--team", "--allow-insecure-http"]
+    : command === "sync" ? [...common.filter(x => x !== "--url"), "--global", "--target", "--include-vendored"]
+    : command === "hermes" && ["setup", "doctor"].includes(positional[0]) ? [...common, "--tools-only", "--key-env", "--hermes-bin", "--allow-insecure-http", "--check"]
+    : null;
+  if (allowed) for (const flag of flags.keys()) if (!allowed.includes(flag)) throw new Error(`Unknown option ${flag} for ${command}.`);
+  if (command === "sync" && (flags.has("--profile") || flags.has("--hermes-home")) && !String(flags.get("--target") ?? "").split(",").includes("hermes")) {
+    throw new Error("--profile and --hermes-home require --target=hermes.");
+  }
+  if (command === "hermes" && ["setup", "doctor"].includes(positional[0])) {
+    if (!positional[1]) throw new Error("Pass the playbook GUID.");
+    if (positional[0] === "doctor" && (flags.has("--apply") || flags.has("--tools-only"))) throw new Error("hermes doctor is read-only; use hermes setup to apply changes.");
+    const option = name => typeof flags.get(name) === "string" ? flags.get(name) : undefined;
+    const options = { playbook: positional[1], profile: option("--profile"), hermesHome: option("--hermes-home"),
+      url: option("--url"), keyEnvVar: option("--key-env"), hermesBin: option("--hermes-bin"),
+      toolsOnly: flags.has("--tools-only"), allowInsecureHttp: flags.has("--allow-insecure-http") };
+    const root = path.resolve(positional[2] ?? process.cwd());
+    let plan, result, diagnostics, connection;
+    if (positional[0] === "doctor") {
+      // planConnect validates GUID and generates an endpoint without writing.
+      const connect = await planConnect(root, { ...options, targets: ["hermes"] });
+      diagnostics = await inspectHermes(root, options);
+      if (flags.has("--check")) connection = await checkHermesTools(connect.entries[0].url, options);
+      if (!diagnostics.nodeSupported || !diagnostics.hermesInstalled || !diagnostics.profileWritable || connect.conflicts.length) process.exitCode = 2;
+      diagnostics.conflicts = connect.conflicts;
+    } else {
+      plan = await planHermesSetup(root, options);
+      if (!flags.has("--json")) printHermesSetup(plan);
+      if (flags.has("--apply")) result = await applyHermesSetup(plan);
+      if ((flags.has("--check") || flags.has("--apply")) && !plan.conflicts.length) connection = await checkHermesTools(plan.entries[0].url, options);
+      if (plan.conflicts.length) process.exitCode = 2;
+    }
+    if (connection && !connection.ok) process.exitCode = 2;
+    const output = { ...(plan ? { plan: publicHermesSetup(plan) } : { diagnostics }), ...(result ? { result } : {}), ...(connection ? { connection } : {}) };
+    if (flags.has("--json")) console.log(JSON.stringify(output, null, 2));
+    else {
+      if (diagnostics) console.log(JSON.stringify(diagnostics, null, 2));
+      if (result) console.log(`Wrote ${result.written.length} files. Restart the selected gateway/profile to load the connection.`);
+      if (connection) console.log(`MCP check: ${connection.status}${connection.ok ? ` (${connection.toolCount} tools on first page)` : "; check the key environment and service access"}.`);
+    }
     return;
   }
 
@@ -595,7 +664,7 @@ export async function run(args) {
     }
     const option = (name) => typeof flags.get(name) === "string" ? flags.get(name) : undefined;
     const plan = await planHermesMemory({ playbook: positional[1], hermesHome: option("--hermes-home"),
-      sharedPlaybooks: option("--shared"), teamPlaybooks: option("--team"), url: option("--url"),
+      profile: option("--profile"), sharedPlaybooks: option("--shared"), teamPlaybooks: option("--team"), url: option("--url"),
       allowInsecureHttp: flags.has("--allow-insecure-http") });
     if (flags.has("--json")) console.log(JSON.stringify({ ...plan, fileActions: plan.fileActions.map(withoutContent) }, null, 2));
     else printHermesMemoryPlan(plan);
@@ -625,6 +694,7 @@ export async function run(args) {
       : [];
     const options = {
       targets: requestedTargets,
+      env: typeof flags.get("--hermes-home") === "string" ? { ...process.env, HERMES_HOME: flags.get("--hermes-home") } : process.env,
       includeVendored: flags.has("--include-vendored"),
       // `--profile <name>` writes into a Hermes bot or group profile instead of
       // the main one. Ignored by every other target, which has no such concept.
@@ -693,6 +763,8 @@ export async function run(args) {
     const requestedPlaybooks = account ? [] : (positional[0]?.split(",") ?? []);
     const plan = await planConnect(path.resolve(positional[account ? 0 : 1] ?? process.cwd()), {
       account,
+      profile: typeof flags.get("--profile") === "string" ? flags.get("--profile") : undefined,
+      hermesHome: typeof flags.get("--hermes-home") === "string" ? flags.get("--hermes-home") : undefined,
       playbooks: requestedPlaybooks,
       targets: requestedTargets,
       name: typeof flags.get("--name") === "string" ? flags.get("--name") : undefined,

@@ -4,7 +4,7 @@ import { build } from "esbuild";
 
 await mkdir(new URL("../dist/", import.meta.url), { recursive: true });
 await mkdir(new URL("../hermes-plugin/", import.meta.url), { recursive: true });
-for (const filename of ["__init__.py", "client.py", "config_schema.py", "plugin.yaml", "README.md", "LICENSE"]) {
+for (const filename of ["__init__.py", "client.py", "recall.py", "config_schema.py", "plugin.yaml", "README.md", "LICENSE"]) {
   await copyFile(new URL(`../../hermes-memory/agentplaybooks/${filename}`, import.meta.url), new URL(`../hermes-plugin/${filename}`, import.meta.url));
 }
 await build({

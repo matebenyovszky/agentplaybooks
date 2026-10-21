@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { createHash } from "node:crypto";
 import { applyAdapters, planHermesMcpServersAction, planMcpServersAction } from "./adapters.js";
 import { resolveBaseUrl } from "./remote.js";
 
@@ -96,6 +97,9 @@ export async function planConnect(root, options = {}) {
   }
 
   const targets = options.targets?.length ? options.targets : ["claude"];
+  if ((options.profile || options.hermesHome) && !targets.includes("hermes")) {
+    throw new Error("--profile and --hermes-home require --target=hermes.");
+  }
   const baseUrl = resolveBaseUrl(options.url, options.env ?? process.env);
   const entries = account
     ? [{ name: options.name?.trim() || "agentplaybooks-account", url: accountEndpoint(baseUrl), playbook: null }]
@@ -128,6 +132,9 @@ export async function planConnect(root, options = {}) {
         env: options.env,
         homedir: options.homedir,
         platform: options.platform,
+        hermesHome: options.hermesHome,
+        hermesProfileName: options.profile,
+        externalDir: options.externalDir ?? null,
       });
       if (action) fileActions.push(action);
       continue;
@@ -167,7 +174,14 @@ export async function planConnect(root, options = {}) {
 }
 
 export async function applyConnect(plan) {
+  if (plan.conflicts.length) throw new Error("Resolve connection conflicts before applying; no files were written.");
   if (!plan.changed) return { applied: false, written: [], backups: [] };
+  for (const action of plan.fileActions) {
+    if (!("expectedHash" in action)) continue;
+    const current = await readIfPresent(action.absolutePath);
+    const hash = current === null ? null : createHash("sha256").update(current).digest("hex");
+    if (hash !== action.expectedHash) throw new Error(`Connection target changed after preview: ${action.path}.`);
+  }
   const backupDirectory = path.join(plan.root, ".agentplaybooks", "backups", `connect-${Date.now()}`);
   const { written, backups } = await applyAdapters(plan.fileActions, backupDirectory);
   return { applied: true, written, backups };

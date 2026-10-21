@@ -39,7 +39,7 @@ Hermes is available here, and what Claude learns is available there.
   server the tool calls you approve, and receives your playbook data in return.
 - **Claude Code commands:** `/agentplaybooks:doctor` and `/agentplaybooks:sync`
   run the open-source AgentPlaybooks CLI, pinned to an exact version, through
-  `npx` (`@agentplaybooks/cli@0.6.0` from the npm registry). `doctor` only reads
+  `npx` (`@agentplaybooks/cli@0.7.0` from the npm registry). `doctor` only reads
   local files. `sync` writes local files only after you approve its plan. Neither
   sends project files anywhere.
 - Nothing else. The plugin has no hooks and runs nothing in the background.

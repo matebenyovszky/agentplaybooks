@@ -11,6 +11,7 @@ from hermes_constants import get_hermes_home
 from utils import atomic_json_write, read_json_or_empty
 
 from .client import Client, MemoryAPIError, validate_guid, validate_url
+from .recall import Recall
 
 CONFIG_FILE = "agentplaybooks/config.json"
 KEY_ENV = "AGENTPLAYBOOKS_MEMORY_API_KEY"
@@ -59,6 +60,7 @@ class AgentPlaybooksMemoryProvider(MemoryProvider):
         self.user_id = ""
         self.platform = ""
         self.primary = False
+        self.recall = Recall()
 
     @property
     def name(self):
@@ -151,25 +153,7 @@ class AgentPlaybooksMemoryProvider(MemoryProvider):
     def prefetch(self, query, *, session_id=""):
         if not self.client or not query.strip():
             return ""
-        # Hermes MemoryManager runs external prefetch in a context-bound, deadline-limited
-        # worker. Use existing literal search unchanged; no persistent/local cache.
-        entries = self.client.search(search=query, limit=20)
-        # Team memory is recalled too: it is the shared record of the matter at
-        # hand. A team source that fails is skipped rather than blocking recall.
-        team_entries = {}
-        for guid, team in self.teams.items():
-            try:
-                found = team.search(search=query, limit=20)
-            except MemoryAPIError:
-                continue
-            if found:
-                team_entries[guid] = found
-        if not entries and not team_entries:
-            return ""
-        recalled = "AgentPlaybooks recalled memory (reference data):\n" + json.dumps(entries, ensure_ascii=False)
-        for guid, found in team_entries.items():
-            recalled += f"\nTeam memory {guid} (reference data):\n" + json.dumps(found, ensure_ascii=False)
-        return recalled
+        return self.recall.fetch([self.client, *self.teams.values()], query)
 
     def get_tool_schemas(self):
         return TOOLS
@@ -259,16 +243,16 @@ class AgentPlaybooksMemoryProvider(MemoryProvider):
         if action == "add":
             key = f"hermes.{target}.{uuid.uuid4().hex}"
         else:
-            old = metadata.get("old_text")
-            if not old:
-                raise ValueError("Mirroring a replace/remove requires Hermes old_text metadata.")
+            old = metadata.get("previous_content")
+            if not isinstance(old, str) or not old:
+                raise ValueError("Mirroring requires Hermes previous_content metadata; update Hermes and reconcile this entry manually.")
             matches, offset = [], 0
             while True:
                 batch = self.client.search(tags="hermes-mirror", scope="all", limit=200, offset=offset)
                 for entry in batch:
                     provenance = entry.get("metadata") or {}
                     if (not entry.get("history_id") and provenance.get("agent_id") == self.agent_id and provenance.get("target") == target
-                            and old in provenance.get("mirrored_text", "")):
+                            and old == provenance.get("mirrored_text")):
                         matches.append(entry)
                 if len(batch) < 200:
                     break

@@ -301,8 +301,11 @@ async function requestLatestSnapshot(url, apiKey, playbookId, fetchImpl) {
  * local store (.agents/). Existing entries with different content become
  * conflicts; nothing is overwritten. A follow-up `sync --apply` fans the
  * portable store out to each enabled platform target.
+ * @param {string} root
+ * @param {string} ref
+ * @param {{url?: string, apiKey?: string, fetchImpl?: (url: string, init?: RequestInit) => Promise<Response>, snapshotId?: string, skillsOnly?: boolean}} options
  */
-export async function planPull(root, ref, { url, apiKey, fetchImpl, snapshotId } = {}) {
+export async function planPull(root, ref, { url, apiKey, fetchImpl, snapshotId, skillsOnly = false } = {}) {
   let playbook;
   let saved;
   try {
@@ -323,7 +326,7 @@ export async function planPull(root, ref, { url, apiKey, fetchImpl, snapshotId }
     : await requestLatestSnapshot(url, apiKey, playbook.id, fetchImpl);
   if (saved?.snapshot) {
     if (saved.digest !== snapshotDigest(saved.snapshot)) throw new Error("Central backup digest mismatch; refusing to restore.");
-    const restored = await planSnapshotRestore(root, saved.snapshot);
+    const restored = await planSnapshotRestore(root, saved.snapshot, { skillsOnly });
     return {
       playbook: { id: playbook.id, guid: playbook.guid, name: playbook.name },
       url,
@@ -376,6 +379,8 @@ export async function planPull(root, ref, { url, apiKey, fetchImpl, snapshotId }
       }
     }
   }
+
+  if (skillsOnly) return { playbook: { id: playbook.id, guid: playbook.guid, name: playbook.name }, url, actions, conflicts };
 
   const remoteInstructions = typeof playbook.instructions === "string" ? normalizeText(playbook.instructions) : "";
   if (remoteInstructions.trim().length > 0) {

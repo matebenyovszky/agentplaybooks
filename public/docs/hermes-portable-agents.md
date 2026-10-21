@@ -20,13 +20,46 @@ The Hermes catalog package is named `agentplaybooks-tools`:
 ```bash
 hermes plugins install agentplaybooks-tools --no-enable
 hermes plugins enable agentplaybooks-tools
-npm install -g @agentplaybooks/cli@0.6.0
+npm install -g @agentplaybooks/cli@0.7.0
 apb --version
 ```
 
 The CLI requires Node.js 20 or newer. For a remote Hermes gateway, install
 Node.js and `apb` on the gateway host/container. Installing this skill into a
 remote profile does not install the CLI on your Mac or gateway.
+
+## Guided setup (CLI 0.7.0)
+
+Run these commands on the gateway host/container, in the project directory.
+`--profile=work` selects a named profile beneath the installation home;
+`--hermes-home=/path` selects the installation home explicitly. Use the same
+selection for setup, connect, memory setup and diagnostics.
+
+```bash
+apb login
+apb hermes setup <playbook-guid> . --profile=work
+apb hermes setup <playbook-guid> . --profile=work --apply
+apb hermes doctor <playbook-guid> . --profile=work --check
+```
+
+The preview checks Node.js, Hermes, destination permissions and credential
+presence, then lists the playbook files to restore and the profile config to
+merge. Restore includes complete skill trees and their bundled resources. Hosted
+MCP/OpenAPI definitions stay behind the playbook's single MCP endpoint. Existing conflicts
+stop the whole setup. Hosted tools use a single playbook MCP connection; upstream
+service keys remain in the AgentPlaybooks vault.
+
+The default connection references `APBKS_KEY_AGENTPLAYBOOKS`. Configure a
+playbook-scoped key in the selected profile's secret environment; `apb login`
+separately authenticates skill downloads with your account key. `--tools-only`
+skips file restoration and account login. Keys are never copied into config.
+
+`--apply` verifies MCP initialization and tool listing using this process's
+key environment, without invoking any tool. A missing/rejected key gives exit
+code 2 even if the files were installed: configure the key, restart the gateway
+and rerun `doctor --check` from that environment. A variable declared in the
+profile's `.env` is reported separately; it does not prove the running gateway
+loaded it. `doctor` without `--check` makes no network calls.
 
 ## Connect a playbook's tools
 
