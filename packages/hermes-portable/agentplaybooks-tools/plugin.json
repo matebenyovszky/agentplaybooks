@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "agentplaybooks-tools",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Connect AgentPlaybooks skills, MCP servers, and federated OpenAPI tools to Hermes, with guided authentication setup.",
   "author": {
     "name": "AgentPlaybooks",

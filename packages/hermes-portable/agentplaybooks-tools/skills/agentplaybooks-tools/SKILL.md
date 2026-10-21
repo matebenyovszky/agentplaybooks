@@ -18,30 +18,35 @@ gateway, verify Node.js and `apb` on the gateway host/container, not just on the
 desktop client; the CLI must be able to write the selected gateway profile.
 This skill does not install software or run commands by itself.
 
-## Connect MCP/OpenAPI tools and install skills
+## Guided setup
 
-1. For private playbooks or hosted management operations, authenticate the CLI
-   with `apb login`. Never ask for an API key in chat.
-2. Preview `apb connect <guid> --target=hermes` and explain that it adds the
-   hosted playbook MCP endpoint to the selected Hermes profile. This connection
-   exposes that playbook's MCP tools, including its configured federated
-   MCP/OpenAPI tools.
-3. The plan reports the required environment variable. Ask the user to configure
-   a playbook-scoped API key in the selected Hermes profile's secret environment;
-   do not request or print the value.
-4. After the user reviews and approves the planned local change, run
-   `apb connect <guid> --target=hermes --apply`.
-5. To install private skills locally, separately preview `apb pull <guid> .`,
-   then after review run `apb pull <guid> . --apply`.
-6. Preview `apb sync . --target=hermes`. Explain that it registers the pulled
-   skills and merges MCP definitions from the local project into the selected
-   Hermes profile's `config.yaml`. After review, apply with
-   `apb sync . --target=hermes --apply`.
+Requires `@agentplaybooks/cli@0.7.0` or later. Run on the gateway host/container.
+Choose the profile explicitly using `--profile=<name>` and, when needed,
+`--hermes-home=<installation-directory>`; keep that selection on every command.
 
-Public skills can also be installed directly from the playbook's
-`/.well-known/skills/` URL. For an account-wide connection, preview
-`apb connect --account --target=hermes`; after review, apply with
-`apb connect --account --target=hermes --apply`.
+1. Run `apb hermes doctor <guid> . --profile=<name>` to report the runtime,
+   destination permissions and credential presence without network calls.
+2. Use `apb login` for authenticated file downloads. Never request a key in chat.
+3. Preview `apb hermes setup <guid> . --profile=<name>`. Explain the listed
+   files: complete skill trees and their bundled resources are restored. Hosted tools use the playbook MCP endpoint.
+   Use `--tools-only` if only a hosted connection is wanted; account login is
+   then unnecessary.
+4. Explain any conflicts and the required playbook-key variable (by default
+   `APBKS_KEY_AGENTPLAYBOOKS`). The user configures it in the profile's secret
+   environment. Values never belong in chat or generated configuration.
+5. Once the user has authorized the shown changes, run the same setup with
+   `--apply`. Existing authorization covers this step; do not repeatedly ask
+   for approval of the same setup.
+6. Check the result. Apply also probes MCP initialization and tool listing
+   using this process's environment. Missing credentials can give exit code 2
+   after files were installed. Report that distinction; do not claim the
+   connection works until the probe succeeds. After configuring the key and
+   restarting the profile, run `apb hermes doctor <guid> . --profile=<name> --check`
+   from that environment. This check never invokes a remote tool.
+
+The individual `connect`, `pull` and `sync` commands remain available. For
+account-wide tools use `apb connect --account --target=hermes --profile=<name>`.
+Public skills can also be installed from the playbook's well-known skills URL.
 
 ## Authentication and API keys
 

@@ -1,6 +1,8 @@
 name: Hermes memory plugin
 
 on:
+  schedule:
+    - cron: "23 7 * * 1"
   pull_request:
     paths: ["packages/hermes-memory/**", "packages/cli/**", ".github/workflows/hermes-memory.yml"]
   push:
@@ -13,6 +15,10 @@ permissions:
 
 jobs:
   compatibility:
+    strategy:
+      fail-fast: false
+      matrix:
+        hermes: ["v0.22.4", "main"]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -23,7 +29,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: NousResearch/hermes-agent
-          ref: 71a2fe399bbd7a219c71f9d9fca2b313b01f2057
+          ref: ${{ matrix.hermes }}
           path: .tmp/hermes-upstream
       - run: pip install -e .tmp/hermes-upstream
       - run: pip install ./packages/hermes-memory

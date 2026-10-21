@@ -87,10 +87,10 @@ try:
                     {"action": "add", "target": "user", "content": f"Coffee preference {guid}"})
                 assert len(service.books[guid]["entries"]) == 1
             else:
-                manager.notify_memory_tool_write({"success": True},
+                manager.notify_memory_tool_write({"success": True, "replaced_entry": f"Coffee preference {guid}"},
                     {"action": "replace", "target": "user", "old_text": "Coffee preference", "content": "Coffee with milk"})
                 assert "with milk" in manager.prefetch_all("Coffee", session_id=f"session-{index}")
-                manager.notify_memory_tool_write({"success": True},
+                manager.notify_memory_tool_write({"success": True, "removed_entry": "Coffee with milk"},
                     {"action": "remove", "target": "user", "old_text": "with milk"})
                 assert not service.books[A]["entries"]
                 assert len(service.books[B]["entries"]) == 1

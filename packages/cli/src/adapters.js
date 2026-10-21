@@ -1,5 +1,6 @@
 import { access, mkdir, copyFile, readFile, readdir, rename, writeFile } from "node:fs/promises";
 import os from "node:os";
+import { createHash } from "node:crypto";
 import path from "node:path";
 import { isMap, parseDocument } from "yaml";
 import { SAFE_AGENT_NAME, serializeAgent } from "./agents.js";
@@ -713,18 +714,21 @@ export async function planHermesMcpServersAction({
   homedir = os.homedir(),
   env = process.env,
   platform = process.platform,
+  hermesHome,
+  hermesProfileName = "",
+  externalDir = null,
 }) {
-  const profile = await hermesProfile({ homedir, env, platform });
+  const profile = await hermesProfile({ homedir, env, platform, hermesHome, profile: hermesProfileName });
   const configPath = path.join(profile.directory, "config.yaml");
   const display = `${profile.display}/config.yaml`;
   const existingContent = await readIfExists(configPath);
-  const merged = mergedHermesConfig(existingContent, definitions, null, {
+  const merged = mergedHermesConfig(existingContent, definitions, externalDir, {
     conflicts,
     display,
     homedir,
     env,
   });
-  if (merged.content === null || merged.servers.length === 0) return null;
+  if (merged.content === null) return null;
 
   return {
     kind: "mcp-config",
@@ -735,6 +739,7 @@ export async function planHermesMcpServersAction({
     absolutePath: configPath,
     servers: merged.servers,
     content: merged.content,
+    expectedHash: existingContent === null ? null : createHash("sha256").update(existingContent).digest("hex"),
   };
 }
 
@@ -769,6 +774,7 @@ export function planMcpServersAction({ root, target, definitions, existingConten
     absolutePath: path.join(root, ...adapter.mcpPath.split("/")),
     servers: merged.added,
     content: merged.content,
+    expectedHash: existingContent === null ? null : createHash("sha256").update(existingContent).digest("hex"),
   };
 }
 

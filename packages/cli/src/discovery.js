@@ -337,9 +337,13 @@ export function hermesProfileCandidates({ homedir = os.homedir(), env = process.
  * merely might exist.
  */
 export async function hermesProfile(options = {}) {
-  const home = await hermesHome(options);
+  const env = options.hermesHome ? { ...(options.env ?? process.env), HERMES_HOME: options.hermesHome } : options.env;
+  const home = await hermesHome({ ...options, env });
   const named = typeof options.profile === "string" ? options.profile.trim() : "";
   if (named.length === 0) return home;
+  if (!/^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(named)) {
+    throw new Error("Invalid Hermes profile name; use 1–64 letters, digits, underscores or hyphens.");
+  }
   return {
     directory: path.join(home.directory, "profiles", named),
     display: `${home.display}/profiles/${named}`,
