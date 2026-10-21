@@ -339,14 +339,20 @@ export function hermesProfileCandidates({ homedir = os.homedir(), env = process.
 export async function hermesProfile(options = {}) {
   const env = options.hermesHome ? { ...(options.env ?? process.env), HERMES_HOME: options.hermesHome } : options.env;
   const home = await hermesHome({ ...options, env });
-  const named = typeof options.profile === "string" ? options.profile.trim() : "";
+  const named = typeof options.profile === "string" ? options.profile.trim().toLowerCase() : "";
   if (named.length === 0) return home;
   if (!/^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(named)) {
     throw new Error("Invalid Hermes profile name; use 1–64 letters, digits, underscores or hyphens.");
   }
+  // Hermes resolves an already selected profile back to its installation root
+  // before switching profiles; otherwise we would create nested profiles.
+  const nested = path.basename(path.dirname(home.directory)) === "profiles";
+  const root = nested ? path.dirname(path.dirname(home.directory)) : home.directory;
+  const display = nested ? `${home.display}/../..` : home.display;
+  if (named === "default") return { directory: root, display };
   return {
-    directory: path.join(home.directory, "profiles", named),
-    display: `${home.display}/profiles/${named}`,
+    directory: path.join(root, "profiles", named),
+    display: `${display}/profiles/${named}`,
   };
 }
 

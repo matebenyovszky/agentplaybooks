@@ -46,3 +46,13 @@ test("CLI accepts both profile spellings and rejects unknown options before writ
   await assert.rejects(exec(process.execPath, [...runner, "connect", guid, "--profile"], { env }), /Missing value/);
   await assert.rejects(readFile(path.join(home, "config.yaml")), { code: "ENOENT" });
 });
+
+
+test("switching from an active named profile resolves siblings and the default root", async () => {
+  const { hermesProfile } = await import("../src/discovery.js");
+  const root = path.join(os.tmpdir(), "apb-hermes-root");
+  const env = { HERMES_HOME: path.join(root, "profiles", "personal") };
+  assert.equal((await hermesProfile({ env, profile: "Work" })).directory, path.join(root, "profiles", "work"));
+  assert.equal((await hermesProfile({ env, profile: "Default" })).directory, root);
+  assert.equal((await hermesProfile({ env })).directory, env.HERMES_HOME);
+});
