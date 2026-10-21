@@ -34,13 +34,13 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.32.1",
-    "@opennextjs/cloudflare": "1.20.12",
-    "@supabase/supabase-js": "^2.118.0",
+    "@opennextjs/cloudflare": "1.20.13",
+    "@supabase/supabase-js": "2.118.0",
     "clsx": "^2.1.1",
     "framer-motion": "^13.4.5",
     "hono": "^4.13.13",
     "jszip": "^3.10.2",
-    "lucide-react": "^1.59.0",
+    "lucide-react": "^1.61.0",
     "next": "16.4.2",
     "next-intl": "^4.14.9",
     "react": "19.3.1",
@@ -49,8 +49,8 @@
     "yaml": "2.9.1"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "5.20261018.1",
-    "@electric-sql/pglite": "0.5.10",
+    "@cloudflare/workers-types": "5.20261021.1",
+    "@electric-sql/pglite": "0.5.11",
     "@eslint/js": "^9.39.2",
     "@swc/helpers": "^0.5.23",
     "@tailwindcss/postcss": "^4",
@@ -64,7 +64,7 @@
     "tsx": "^4.23.15",
     "typescript": "^5",
     "vitest": "^5.0.5",
-    "wrangler": "4.151.1"
+    "wrangler": "4.151.3"
   },
   "overrides": {
     "nanoid": "3.3.18",
@@ -80,6 +80,7 @@
       "@opennextjs/aws": {
         "@node-minify/core": {
           "glob": {
+            ".": "10.5.0",
             "minimatch": {
               "brace-expansion": "2.1.7"
             }
