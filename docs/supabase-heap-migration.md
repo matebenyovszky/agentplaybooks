@@ -1,8 +1,56 @@
 # AgentPlaybooks heap migration runbook
 
-Status: preparation only, 2026-10-10. Production remains on project
-`bydcjwxfiiolmnddzbpy` in Frankfurt. No production schema, data or application
-configuration has been changed by this preparation.
+Status: refreshed preparation, 2026-10-21. Production still uses
+`bydcjwxfiiolmnddzbpy` in Frankfurt. The target `zcphxfospbvqplonkvco`
+was resumed from an automatic pause and is Healthy. No production cutover or
+application-data restore has occurred. Source and target DB passwords remain
+unavailable; the private input files are empty.
+
+## Verified on 2026-10-21
+
+- Source: PostgreSQL 17.6 / OrioleDB 1.5. The rollback-only nullable-UNIQUE
+  update reproduction still fails with SQLSTATE 22000, `invalid Datum pointer`.
+  A subsequent read confirmed the synthetic table was rolled back.
+- Target: PostgreSQL 17.11, default access method `heap`; no public application
+  tables and no Auth user/client/session data. Every inventoried target table
+  uses heap. The synthetic heap probe passed: one updated row, user assigned.
+  This is a database regression test, **not** a completed real OAuth flow.
+- All 344 inventoried Auth/Storage columns match between the two projects
+  (names, types and nullability); both have 27 Auth tables. This supports a
+  data-only rehearsal, but does not replace constraints/defaults/index checks.
+- Source Vault secrets, MFA factors, custom OAuth provider records, SSO/SAML,
+  WebAuthn, SCIM records, Storage buckets and Storage objects are empty. Recheck
+  in the final snapshot. Application `public.secrets` is populated: preserve
+  the existing Cloudflare encryption key and every encryption-context ID.
+- Existing identities use email, GitHub and Google. Copy both external provider
+  configurations and register the target callback URL before testing login.
+  The custom `on_auth_user_created` trigger calls `public.handle_new_user()`;
+  preserve it, but suppress import-time trigger execution as documented below.
+- Live application migration history has 38 entries, ending at
+  `20261009220418`. `public.secret_clients` and `public.delete_account(uuid)`
+  are absent. Before target activation, reconcile the live history with the
+  repository's older deployment baseline and apply reviewed missing forward
+  migrations; do not manufacture history for unapplied SQL. The production
+  schema verification must pass on the restored target.
+- The GitHub `SUPABASE_DB_URL` secret has not changed since 2026-09-23. The
+  last backup attempt stopped at URL validation, and the latest database
+  deployment (2026-10-13) failed. Do not treat application deployment as proof
+  of database deployment.
+
+Aggregate inventories were saved privately under
+`~/.codex/backups/agentplaybooks/2026-10-21/` as `source-preflight.json` and
+`target-preflight.json`. They contain schema metadata and counts, not data
+backups. Local free disk space was below 1 GiB, so do not start a local Docker
+restore or large dependency install without checking capacity. Prefer the
+existing encrypted backup runner and download its encrypted artifact locally.
+
+The exact target Session pooler is
+`aws-0-eu-west-1.pooler.supabase.com:5432`, login
+`postgres.zcphxfospbvqplonkvco`. Source credentials go into the private local
+`2026-10-21/source-database-password.txt`; target credentials go into
+`2026-10-21/target-database-password.txt`, one existing password per file.
+These are input locations, not generated or verified credentials. Construct
+connection URLs with percent-encoding; never print their passwords.
 
 ## Support and evidence
 
@@ -38,7 +86,7 @@ Do not remove constraints, change ownership, or bypass managed-role protections.
    region change before cutover. Automatic table exposure was disabled on the
    prepared form. The rollback-only nullable UNIQUE probe returned
    `updated_rows=1`, `user_assignment_ok=true`, `default_access_method=heap`.
-   The target is still empty; no application restore or cutover occurred.
+   The target remains empty after being resumed on 2026-10-21; no application restore or cutover occurred.
 3. Access to the owner mailbox is still needed to establish whether support has
    already responded. If there is a supported in-place remedy, reassess the
    full-project migration before production cutover.
@@ -66,6 +114,11 @@ validates the source endpoint. It obtains a single-snapshot custom pg_dump
 archive, role definitions without login passwords, and an inventory of table
 counts, owners, access methods, grants, RLS, indexes, triggers and publications.
 `--no-table-access-method` permits restoring application tables as heap.
+The workflow additionally records the aggregate preflight report, rejects
+connection-string overrides, uses upload-artifact v7, and cleans plaintext
+files on both success and failure. Inventory reads and pg_dump currently use
+separate snapshots: compare live counts only after a verified write freeze;
+the custom pg_dump archive itself is a single consistent snapshot.
 The workflow does not restore or modify a database. It must succeed before
 using any result as a backup. SQL and role dumps remain inside an AES-256-GCM
 CMS envelope in the uploaded artifact, retained for three days.
@@ -75,8 +128,11 @@ The recipient certificate is public; its private key is stored locally under
 filesystem permissions. Keep a recoverable secure copy of that key and download
 the artifact before expiry. Test decryption, unpacking and SHA256SUMS; then
 inspect the archive list and rehearse an actual restore on the fresh target.
-The encryption round trip has been tested; a database backup and database
-restore have **not** succeeded yet.
+The encryption round trip was retested byte-for-byte on 2026-10-21 with the
+existing key. Source URL guards accepted both valid source connection forms and
+rejected missing credentials, the API URL, target project, wrong pooler host,
+transaction pooler and connection overrides. Shell syntax and `git diff --check`
+passed. A database backup and database restore have **not** succeeded yet.
 
 Before restoring, classify the archive. Preserve target-managed schemas and
 roles; do not blindly restore platform DDL or source platform migration tables.
