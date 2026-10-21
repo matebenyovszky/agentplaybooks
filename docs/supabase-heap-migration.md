@@ -33,7 +33,8 @@ unavailable; the private input files are empty.
   migrations; do not manufacture history for unapplied SQL. The production
   schema verification must pass on the restored target.
 - The GitHub `SUPABASE_DB_URL` secret has not changed since 2026-09-23. The
-  last backup attempt stopped at URL validation, and the latest database
+  refreshed backup run [39680394008](https://github.com/matebenyovszky/agentplaybooks/actions/runs/39680394008)
+  also stopped at source URL validation before connecting. The latest database
   deployment (2026-10-13) failed. Do not treat application deployment as proof
   of database deployment.
 
