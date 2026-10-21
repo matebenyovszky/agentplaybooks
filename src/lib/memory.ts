@@ -1,4 +1,5 @@
 import type { Memory } from "@/lib/supabase/types";
+import { isoTimestamp } from "@/lib/timestamp";
 
 export type MemoryScope = "active" | "archived" | "all";
 export type MemoryEntry = Memory & { memory_id: string; history_id: string | null };
@@ -39,14 +40,7 @@ export const MEMORY_SEARCH_PARAMETERS = [
 
 /** Require an unambiguous timestamp, including a timezone. */
 export function memoryTimestamp(value: unknown): string {
-  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/i.test(value) || !Number.isFinite(Date.parse(value))) {
-    throw new Error("memory_at must be an ISO 8601 timestamp with a timezone");
-  }
-  const date = value.slice(0, 10);
-  if (new Date(`${date}T00:00:00Z`).toISOString().slice(0, 10) !== date) {
-    throw new Error("memory_at contains an invalid calendar date");
-  }
-  return new Date(value).toISOString();
+  return isoTimestamp(value, "memory_at");
 }
 
 export function memoryWriteFields(body: Record<string, unknown>): { memory_at?: string; is_archived?: boolean } {

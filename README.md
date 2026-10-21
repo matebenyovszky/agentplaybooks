@@ -6,14 +6,17 @@ Keep your agents yours. AgentPlaybooks stores skills, personas, MCP servers, pro
 
 Your agent setup stays in sync across Claude, ChatGPT, Cursor, Codex, Gemini, local models, and future platforms. The playbook is the portable source of truth—not any single vendor or editor.
 
+It is not another skill store or MCP registry. Skills and MCP connections are parts of a playbook; the playbook is the whole job. That holds for agents with a body too: a skill can carry [demonstrations](https://agentplaybooks.ai/docs/demonstrations), recordings of the task in the order a robot performs them.
+
 ## Highlights
 
 **What a playbook holds**
 
 - Persona: 1 per playbook, stored directly on the playbook record
 - Instructions: always-on project rules — the `AGENTS.md` / `CLAUDE.md` content
-- Skills: JSON schema definitions plus optional SKILL.md content
-- Skill attachments: secure file storage for code, prompts, and docs
+- Skills: `SKILL.md` documents in the Agent Skills format, frontmatter preserved across every client
+- Skill attachments: bundled scripts, references, and templates, round-tripped by the CLI
+- Demonstrations: recordings of a skill being performed — YouTube, a pinned URL, or a LeRobot dataset — with timestamped segments, [for agents that learn by watching](https://agentplaybooks.ai/docs/demonstrations)
 - MCP servers: tools and resources in Model Context Protocol format
 - Memory: key-value store with tags and descriptions, with a [native Hermes memory provider](https://agentplaybooks.ai/docs/hermes-memory)
 - Hermes Tools plugin: [connect playbook skills, MCP/OpenAPI tools, and credentials](https://agentplaybooks.ai/docs/hermes-portable-agents)
@@ -24,7 +27,9 @@ Your agent setup stays in sync across Claude, ChatGPT, Cursor, Codex, Gemini, lo
 
 - Secrets vault: AES-256-GCM, per-user derived keys. Agents reference a secret by
   name and the platform injects it server-side (`use_secret`), so the value never
-  enters an agent's context. Optional per-secret host allow-lists.
+  enters an agent's context. Optional per-secret host allow-lists, and an
+  expiry that is enforced: an expired secret is refused by every path that
+  would use it.
 - Federation: other MCP servers and OpenAPI services become tools on your
   playbook, with their credentials resolved from that same vault by name
 - Audit trail: every federated call and every vault operation, refusals included
@@ -368,6 +373,10 @@ DELETE /api/playbooks/:guid/memory/:key
 ```
 
 ### MCP endpoints
+
+For clients that require a local stdio process, see the [local MCP transport](docs/mcp-stdio.md).
+It uses the same account tools and authorization handlers; protocol discovery
+starts without credentials, while data operations require your instance configuration.
 
 ```
 GET  /api/mcp/:guid                    # MCP manifest

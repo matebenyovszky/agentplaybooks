@@ -198,7 +198,7 @@ Open, in rough order of value:
 
 > **Set aside for now (October 2026).** A vault already works with the CLI as
 > it is: a folder laid out as `<name>/SKILL.md` is what `apb push` reads, and
-> `apb sync` fans it out to every agent tool. A plugin would add a second distribution
+> `apb sync --target=…` writes it into the agent tools you enable. A plugin would add a second distribution
 > channel (Obsidian's community directory needs a dedicated repository with one
 > release per version), a second place the skill rules must stay correct, and
 > a credential problem of its own (plugin settings live inside the vault, so in
@@ -255,6 +255,11 @@ Open, in rough order of value:
   - Keep confidence, provenance and additional time semantics in the memory
     value; no extra mandatory memory structure.
 
+- [x] **Episodic memory for agents with a body** — `metadata.episode`
+  (`{ location, task, outcome }`) and `metadata.recording`, a recording of the
+  episode in the same shape a skill's demonstrations use. When it happened is
+  `memory_at`. See [Demonstrations](./demonstrations.md).
+
 - [ ] **Structured Memory Types**
   - Facts (persistent knowledge)
   - Episodes (conversation history)
@@ -263,6 +268,36 @@ Open, in rough order of value:
 - [ ] **Memory Namespaces**
   - Separate memory per user/session
   - Cross-playbook memory sharing
+
+### Agents With a Body 🚧
+
+Robot foundation models are steered by language and, increasingly, learn a task
+from a demonstration placed in their context. A playbook already holds the
+language; these items let it hold the demonstrations and the building's
+credentials too. The guiding pattern: **the robot holds the connection; the
+vault holds the credential.**
+
+- [x] **Demonstrations** — a skill points at recordings of itself being
+  performed, in `SKILL.md` frontmatter, in execution order. Video or
+  sensorimotor fidelity, timestamped segments, `role: warning` for failure
+  modes, `sha256` pinning for URLs. Resolved by `get_skill`, rendered in the
+  markdown export, checked by `apb doctor`, listed in the manifest. See
+  [Demonstrations](./demonstrations.md).
+- [x] **Enforced secret expiry** — an expired secret is refused by the proxy,
+  `use_secret`, federated servers, OAuth exchange, and reveal by API key.
+- [ ] **Embodiment profile** — `spec.embodiment` in the manifest
+  (`type`, `capabilities`, `safety_notes`), so an export knows which skills fit
+  which robot.
+- [ ] **Separate reveal permission** — `secrets:reveal`, distinct from
+  `secrets:read`, for the few secrets a robot must type in itself (Wi-Fi,
+  door codes); robot keys get proxy-only access by default.
+- [ ] **Connect-your-robot guide** — a robot reaches a playbook over MCP or HTTP
+  with a key, not through `apb sync`; a worked example with a tool-calling loop.
+- [ ] **End-to-end dogfood** — a robot or simulator completing a real task from
+  a playbook.
+- Not planned: an MQTT bridge for VDA 5050 fleets. It would be the only stateful
+  component in a stateless service; the robot can hold its own broker
+  connection and take only the credential from the vault.
 
 ---
 

@@ -83,7 +83,8 @@ Portable SKILL.md instructions and knowledge the agent can load. Skills describe
 - Structured task definitions
 - Company-specific procedures
 - Domain expertise (legal, medical, technical)
-- *Coming soon: Attach documents for deeper knowledge*
+- Bundled files — scripts, references, templates — that travel with the skill
+- [Demonstrations](./demonstrations.md): recordings of the task being performed, in execution order, for agents that learn by watching
 
 ### 4. MCP Servers - Tools & Integrations
 

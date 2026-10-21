@@ -4,13 +4,14 @@ import { getServiceSupabase } from "@/app/api/_shared/supabase";
 import { getAuthenticatedUser, requireAuth, validateApiKey } from "@/app/api/_shared/auth";
 import { checkPlaybookWriteAccess, getPlaybookByGuid } from "@/app/api/_shared/guards";
 import { slugifyCanvasName } from "@/lib/canvas";
+import { matchesPlaybook } from "@/lib/playbook-identifier";
 
 const app = createApiApp("/api/playbooks/:guid/canvas");
 
 async function getReadablePlaybook(request: Request, guid: string, runId: string) {
   const apiKey = await validateApiKey(request, "canvas:read");
   if (apiKey) {
-    return apiKey.playbooks.guid === guid ? apiKey.playbooks : null;
+    return matchesPlaybook(apiKey.playbooks, guid) ? apiKey.playbooks : null;
   }
   const user = await getAuthenticatedUser(request);
   if (!user) return null;
@@ -23,7 +24,7 @@ async function getReadablePlaybook(request: Request, guid: string, runId: string
 async function getWritablePlaybook(request: Request, guid: string, runId: string) {
   const apiKey = await validateApiKey(request, "canvas:write");
   if (apiKey) {
-    return apiKey.playbooks.guid === guid ? apiKey.playbooks : null;
+    return matchesPlaybook(apiKey.playbooks, guid) ? apiKey.playbooks : null;
   }
   const user = await requireAuth(request);
   if (!user) return null;

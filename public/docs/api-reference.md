@@ -10,6 +10,13 @@ https://apbks.com/api
 
 For self-hosted instances, replace with your domain.
 
+### Playbook identifiers
+
+A playbook has two identifiers: its **GUID**, the short id in every URL and on
+the Integrations tab (for example `a1b2c3d4e5f60718`), and its **id**, a UUID.
+Every endpoint accepts either one wherever a path says `:guid` or `:id`, so use
+whichever you have; the GUID is the one to share.
+
 ## Agent Reliability Loop
 
 For production agent workflows, use this loop:
@@ -795,6 +802,8 @@ Content-Type: application/json
 
 The `value` is encrypted immediately and never stored in plaintext.
 
+`expires_at` is optional and must carry a timezone (`Z` or `+02:00`); a time without one is refused with `400`, because the server would otherwise have to guess which instant it means. Once it passes, the secret can no longer be used: the proxy, `use_secret`, federated servers, and reveal by API key all refuse it with `403`, and the refusal is recorded in the audit log. The owner can still reveal it in the dashboard, in order to replace it.
+
 ### Reveal Secret
 
 ```http
@@ -803,6 +812,17 @@ Authorization: Bearer <jwt_or_api_key>
 ```
 
 Returns the decrypted value. If called with an API key, the request will only succeed if the secret has `allow_api_key_reveal` set to true. Otherwise, it will return a 403 Forbidden error (Proxy Only mode).
+
+### Load Runtime Secrets
+
+For application startup loading, use `POST /api/playbooks/:guid/secrets/resolve`
+with `names`, optional `optional_names`, and `auth_mode` (`api_key` or `mtls`).
+API keys require `secrets:read`. Certificate clients require a Cloudflare-verified,
+owner-registered certificate with explicit allowed names. Both require the secret's
+`allow_api_key_reveal` flag and refuse expired secrets. The response contains `values`
+and `missing_optional`; a failed batch contains no plaintext values. Maximum 100
+distinct names. See [Python Secrets](./python-secrets.md) for the client package,
+Docker examples, and owner-only certificate management endpoints.
 
 ### Use Secret (Proxy)
 
@@ -905,6 +925,8 @@ Content-Type: application/json
   "description": "Updated key"
 }
 ```
+
+Rotating keeps the expiry: it is the owner's rule, not part of the value. To bring an expired secret back, send a later `expires_at`, or `null` to remove it.
 
 ### Delete Secret
 

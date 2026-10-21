@@ -18,7 +18,7 @@
   "landing": {
     "hero": {
       "title": "One playbook. Every agent.",
-      "subtitle": "Skills, MCP servers, project instructions, and memory in one portable source of truth — deployed to Claude Code, Cursor, Codex, Antigravity, and Hermes from a single command.",
+      "subtitle": "Not another skill store: one vendor-neutral playbook for the whole job — skills, MCP servers, instructions, memory, and credentials your agent uses without seeing — deployed to Claude Code, Cursor, Codex, Antigravity, and Hermes in one command.",
       "cta": "Explore Playbooks",
       "tryDemo": "Try Demo"
     },
@@ -35,7 +35,7 @@
         "skills": {
           "title": "Skills",
           "subtitle": "Knowledge & Capabilities",
-          "description": "Structured task definitions and knowledge the agent can use. Skills define WHAT the agent knows and can do. Later: attach documents for deeper knowledge."
+          "description": "Structured task definitions and knowledge the agent can use. Skills define WHAT the agent knows and can do — and can bundle files, or point at recordings of the task being performed, for agents that learn by watching."
         },
         "mcp": {
           "title": "MCP Servers",
@@ -130,7 +130,7 @@
         },
         "futureProof": {
           "question": "Worried about being locked into today's AI platform?",
-          "answer": "AgentPlaybooks is open source with standard formats. Your playbooks will work with tomorrow's AIs and robots - we're building for the future."
+          "answer": "AgentPlaybooks is open source with standard formats, and already ready for agents with a body: a skill can carry demonstrations — timestamped recordings of the task, in the order a robot performs them."
         },
         "localLlm": {
           "question": "Running local LLMs but want the same capabilities as cloud services?",

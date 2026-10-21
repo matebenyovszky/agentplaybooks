@@ -57,6 +57,12 @@ export const docsEntries: DocEntry[] = [
     section: "guides",
   },
   {
+    slug: "python-secrets",
+    title: "Python Secrets",
+    description: "Startup secret loading with API keys or mTLS, locally and in Docker",
+    section: "guides",
+  },
+  {
     slug: "portable-agent-backups",
     title: "Cross-platform Agent Backups",
     description: "Portable AI agent configuration, Agent Skills migration, and private versioned backups",

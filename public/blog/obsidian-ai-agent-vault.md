@@ -1,6 +1,6 @@
 ---
 title: Your Obsidian Vault Can Be Your Agent's Library, Not Its Runtime
-description: Obsidian is optimized for humans, AgentPlaybooks for machines. Where the two overlap, what Obsidian does better, and how to publish skills from a vault to Claude Code, Cursor, and Codex without leaving Obsidian.
+description: Obsidian is optimized for humans, AgentPlaybooks for machines. Where the two overlap, what Obsidian does better, and how to publish skills from a vault to Claude Code, Cursor, and Codex while your notes stay in Obsidian.
 date: 2026-08-03
 author: Mate Benyovszky
 ---
@@ -57,7 +57,7 @@ These are not missing features. They follow from what a folder of notes *is*:
 `.claude/skills/`, `.cursor/skills/`, `.codex/skills/` plus a `config.toml`,
 `.agents/skills/`, and `~/.hermes/config.yaml` — each with the correct layout,
 and with drift between the copies actually detected. A vault has no concept of a
-deployment target. `apb sync` does nothing else.
+deployment target. That is what `apb sync` is for.
 
 **Hold a credential safely.** This is the sharp one. The moment a vault-based AI
 setup needs an API key, that key goes in plaintext into
@@ -67,8 +67,9 @@ it server-side, so the plaintext never reaches the disk or the agent's context.
 
 **Let two agents write at once.** A Canvas document takes an `expectedVersion`
 and returns HTTP `409` on a stale write, so the losing agent *knows* it lost. Two
-agents editing one note through Sync produce `note (conflicted copy).md` and
-nobody finds out until much later.
+agents editing one note through a file-sync service get their writes merged or
+saved side by side, depending on the service — and neither is told the other
+was there.
 
 **Express permissions.** Sharing a vault shares all of it. There is no "this
 teammate may edit skills but not rotate secrets" in a folder.
@@ -87,13 +88,16 @@ MyVault/
 
 ```bash
 cd MyVault
+apb login
 apb push --apply
 ```
 
-You write in Obsidian. Your teammates get those skills in whichever tool they
-use. Pull the other direction and shared skills arrive as plain markdown you can
-drop into the vault and link like any other note — so the project note can link
-to the skill that automates the project.
+You write in Obsidian; the playbook carries the skills to your teammates'
+projects (see the last section). The other direction works too: `apb pull`
+brings shared skills down as plain markdown into `.agents/skills/` — a hidden
+folder Obsidian does not show — so copy the ones you want into `Skills/` to read
+and link them like any other note, and the project note can link to the skill
+that automates the project.
 
 And when an agent finishes a long task, its Canvas document is markdown too.
 The agent writes where writing is safe and versioned; you read where reading is
@@ -125,11 +129,17 @@ It reads skills, agent instructions, and MCP configurations — not other
 plugins' settings — so a key sitting in some plugin's `data.json` is one to look
 for by hand.
 
-Then, when you want the prompts to actually work inside every agent tool you
-have installed:
+The vault is where skills are written; agent tools read them from your
+projects. Once the skills are pushed, run this in each project:
 
 ```bash
-apb sync /path/to/MyVault --apply
+apb pull <guid> --apply
+apb sync --target=claude,codex --apply
 ```
 
-Your vault is untouched. Keep Obsidian.
+`pull` puts the skills in `.agents/skills/`, and `sync` writes them into the
+tools you name — here `.claude/skills/` and `.codex/skills/`. Only a `SKILL.md`
+with `name` and `description` in its frontmatter, in a folder named after the
+skill, counts as a skill; the rest of a `Prompts/` folder is left alone.
+
+Your notes never move. Keep Obsidian.
