@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -228,5 +228,22 @@ describe("Claude plugin catalog manifests", () => {
     const server = plugin.mcpServers["agentplaybooks-account"];
     expect(plugin.name).toBe("agentplaybooks");
     expect(server).toEqual({ type: "http", url: "https://agentplaybooks.ai/api/mcp/manage" });
+  });
+
+  it("runs its local server as a file in the plugin, in the form the directory reads", () => {
+    // Chat skips a local server; Claude Code and Cowork on the user's machine
+    // start it. The directory holds anything but a plain `node <file in the
+    // plugin>` for a reviewer, and a file over 256 KiB as well.
+    const plugin = JSON.parse(source(`${pluginRoot}/.claude-plugin/plugin.json`)) as {
+      mcpServers: Record<string, unknown>;
+    };
+    expect(plugin.mcpServers["agentplaybooks-servers"]).toEqual({
+      command: "node",
+      args: ["${CLAUDE_PLUGIN_ROOT}/server/servers.mjs"],
+    });
+    const file = path.join(process.cwd(), pluginRoot, "server", "servers.mjs");
+    expect(statSync(file).size).toBeLessThan(256 * 1024);
+    // No launcher and no subprocess: the file is all the directory has to read.
+    expect(source(`${pluginRoot}/server/servers.mjs`)).not.toContain("child_process");
   });
 });
