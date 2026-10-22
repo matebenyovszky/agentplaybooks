@@ -47,7 +47,7 @@ class Client:
         self.path = f"/api/playbooks/{quote(guid, safe='')}/memory"
         self.opener = build_opener(NoRedirects())
 
-    def request(self, method, path, body=None, authenticated=True):
+    def request(self, method, path, body=None, authenticated=True, timeout=15):
         headers = {"Accept": "application/json"}
         if authenticated and self.api_key:
             headers["X-API-Key"] = self.api_key
@@ -56,7 +56,7 @@ class Client:
             headers["Content-Type"] = "application/json"
             data = json.dumps(body, ensure_ascii=False).encode("utf-8")
         try:
-            with self.opener.open(Request(self.base_url + path, data=data, headers=headers, method=method), timeout=15) as response:
+            with self.opener.open(Request(self.base_url + path, data=data, headers=headers, method=method), timeout=timeout) as response:
                 return json.loads(response.read())
         except HTTPError as exc:
             # Do not expose response bodies, credentials or request headers to the model/log.
@@ -82,9 +82,9 @@ class Client:
             raise MemoryAPIError("Personal memory requires a private playbook. Public and unlisted playbooks are refused.")
         self.search(limit=1)
 
-    def search(self, **params):
+    def search(self, *, timeout=15, **params):
         query = urlencode({k: v for k, v in params.items() if v is not None})
-        return self.request("GET", self.path + ("?" + query if query else ""))
+        return self.request("GET", self.path + ("?" + query if query else ""), timeout=timeout)
 
     def read(self, key):
         return self.search(key=key)
