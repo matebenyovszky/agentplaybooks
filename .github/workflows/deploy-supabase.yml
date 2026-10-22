@@ -39,6 +39,8 @@ jobs:
             exit 1
           fi
       - run: npm ci
+      - name: Build CLI assets required by its tests
+        run: npm --prefix packages/cli ci && npm --prefix packages/cli run build
       - name: Generate blog index for tests
         run: npm run prebuild
       - name: Test before deployment

@@ -28,6 +28,8 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - name: Build CLI assets required by its tests
+        run: npm --prefix packages/cli ci && npm --prefix packages/cli run build
       - run: npm run release:check
       - run: npm run prebuild
       - run: npm run lint

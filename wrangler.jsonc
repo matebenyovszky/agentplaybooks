@@ -19,6 +19,7 @@
     "binding": "ASSETS"
   },
   "observability": {
+    "enabled": true,
     "logs": {
       "enabled": true,
       "head_sampling_rate": 1,
