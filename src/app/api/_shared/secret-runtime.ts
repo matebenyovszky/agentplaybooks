@@ -41,7 +41,7 @@ export async function authorizeSecretRuntime(
 
   // A certificate credential never implicitly inherits a bearer key's privileges.
   if (presentedApiKey(request)) return null;
-  const fingerprint = verifiedClientFingerprint();
+  const fingerprint = verifiedClientFingerprint(request);
   if (!fingerprint) return null;
   const db = getServiceSupabase();
   const { data: playbook, error: playbookError } = await db.from("playbooks")
