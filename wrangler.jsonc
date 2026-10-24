@@ -19,6 +19,8 @@
     "binding": "ASSETS"
   },
   "observability": {
+    // Keep URL query parameters out of request logs and traces.
+    "redact_query_string": true,
     "logs": {
       "enabled": true,
       "head_sampling_rate": 1,
