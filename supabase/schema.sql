@@ -1528,7 +1528,7 @@ DROP POLICY IF EXISTS "Auditors can read playbook metadata" ON public.playbooks;
 COMMIT;
 
 -- --------------------------------------------------------------------
--- Folded in from 20261025120000_audit_logs_tamper_resistance.sql
+-- Folded in from 20261025124500_audit_logs_tamper_resistance.sql
 -- Keep this section identical to the migration.
 -- --------------------------------------------------------------------
 
