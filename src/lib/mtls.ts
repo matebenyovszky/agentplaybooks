@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, timingSafeEqual, X509Certificate } from "node:crypto";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 export type MtlsMode = "cloudflare" | "proxy" | "off";
@@ -52,25 +52,19 @@ export function verifiedClientFingerprint(request?: Request): string | null {
 }
 
 /**
- * Immediate connection peer used to authorize proxy-injected mTLS headers.
- * Next.js `Request.ip` is the TCP peer and wins over X-Forwarded-For, so a client
- * that spoofs the forwarding header while connecting directly is rejected.
+ * Next.js route Requests do not expose the TCP peer. Forwarding headers and
+ * arbitrary .ip properties cannot authenticate a TLS terminator. Authenticate
+ * its private channel token before reading its explicitly stamped address.
  */
-export function requestPeerAddress(request: Request): string | null {
-  const ipProp = (request as Request & { ip?: unknown }).ip;
-  if (typeof ipProp === "string") {
-    const fromSocket = canonicalizeIp(ipProp);
-    if (fromSocket) return fromSocket;
-  }
-  const forwarded = request.headers.get("x-forwarded-for");
-  if (forwarded) {
-    const hops = forwarded.split(",");
-    for (let i = hops.length - 1; i >= 0; i--) {
-      const hop = canonicalizeIp(hops[i]);
-      if (hop) return hop;
-    }
-  }
-  return canonicalizeIp(request.headers.get("x-real-ip") ?? "");
+export function authenticatedProxyAddress(request: Request): string | null {
+  const expected = process.env.MTLS_PROXY_SHARED_SECRET;
+  if (!expected || !/^[A-Za-z0-9_-]{43,128}$/.test(expected)) return null;
+  const supplied = request.headers.get("x-apb-proxy-token") ?? "";
+  const expectedBytes = Buffer.from(expected);
+  const suppliedBytes = Buffer.from(supplied);
+  if (expectedBytes.length !== suppliedBytes.length
+    || !timingSafeEqual(expectedBytes, suppliedBytes)) return null;
+  return canonicalizeIp(request.headers.get("x-apb-proxy-address") ?? "");
 }
 
 function cloudflareClientFingerprint(): string | null {
@@ -89,10 +83,10 @@ function proxyClientFingerprint(request?: Request): string | null {
   const headerName = process.env.MTLS_PROXY_FINGERPRINT_HEADER?.trim();
   const proxies = parseTrustedProxies(process.env.MTLS_TRUSTED_PROXIES);
   if (!headerName || !proxies) return null;
-  const peer = requestPeerAddress(request);
+  const peer = authenticatedProxyAddress(request);
   if (!peer || !ipMatchesTrustedProxies(peer, proxies)) return null;
   const verifyHeader = process.env.MTLS_PROXY_VERIFY_HEADER?.trim();
-  if (verifyHeader && request.headers.get(verifyHeader)?.trim() !== "SUCCESS") return null;
+  if (!verifyHeader || request.headers.get(verifyHeader)?.trim() !== "SUCCESS") return null;
   return fingerprintFromCertificateHeader(request.headers.get(headerName));
 }
 
@@ -211,7 +205,7 @@ function parseIpv6(ip: string): Uint8Array | null {
   const missing = 8 - left.length - right.length;
   if (sides.length === 1) {
     if (left.length !== 8) return null;
-  } else if (missing < 0) return null;
+  } else if (missing <= 0) return null;
   const groups = sides.length === 1 ? left : [...left, ...Array(Math.max(missing, 0)).fill(0), ...right];
   if (groups.length !== 8) return null;
   if (groups[0] === 0 && groups[1] === 0 && groups[2] === 0 && groups[3] === 0
@@ -238,13 +232,19 @@ function derFromCertificateHeader(value: string): Buffer | null {
     }
   }
   decoded = decoded.replace(/\\n/g, "\n");
-  if (!/BEGIN [A-Z0-9 ]*CERTIFICATE/.test(decoded)) return null;
-  const body = decoded
+  // Traefik removes PEM delimiters/newlines and joins a certificate chain with
+  // commas. Only the first (leaf) certificate identifies the authenticated client.
+  const body = decoded.split(",", 1)[0]
     .replace(/-----BEGIN [A-Z0-9 ]*CERTIFICATE-----/g, "")
     .replace(/-----END [A-Z0-9 ]*CERTIFICATE-----/g, "")
     .replace(/\s+/g, "");
   if (!body) return null;
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(body) || body.length > MAX_PROXY_CERT_DER * 2) return null;
   const der = Buffer.from(body.replace(/-/g, "+").replace(/_/g, "/"), "base64");
   if (der.byteLength === 0 || der.byteLength > MAX_PROXY_CERT_DER) return null;
-  return der;
+  try {
+    return new X509Certificate(der).raw;
+  } catch {
+    return null;
+  }
 }

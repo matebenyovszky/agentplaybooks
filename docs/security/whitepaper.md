@@ -224,3 +224,5 @@ Detailed mapping: [risk-assessment.md](./risk-assessment.md).
 | Self-host | `docker-compose.yml`, `Dockerfile`, `public/docs/self-hosting.md`, `src/app/fonts/Geist-Variable.woff2`, `deploy/airgap/`, `.github/workflows/no-egress.yml`, `docs/self-host/backup-restore.md`, `scripts/self-host/backup.sh`, `.github/workflows/self-host-restore-drill.yml` |
 | SDLC | `.github/dependabot.yml`, `.github/workflows/ci.yml`, `.github/workflows/publish-cli.yml`, `.github/workflows/codeql.yml`, `.github/workflows/sbom.yml`, `.github/workflows/no-egress.yml`, `scripts/audit-production.mjs`, `SECURITY.md`, `docs/security/incident-runbook.md`, `docs/security/supply-chain.md` |
 | Live inventory | `scripts/list-self-host-stack.mjs` |
+
+Self-host proxy mode additionally requires MTLS_PROXY_SHARED_SECRET to authenticate the proxy channel; forwarded IP headers alone are insufficient. See the updated mTLS runbook.

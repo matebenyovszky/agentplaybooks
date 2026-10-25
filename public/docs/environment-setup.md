@@ -17,6 +17,7 @@ NEXT_PUBLIC_APP_URL=https://apbks.com
 # MTLS_MODE=proxy
 # MTLS_PROXY_FINGERPRINT_HEADER=X-SSL-Client-Fingerprint
 # MTLS_PROXY_VERIFY_HEADER=X-SSL-Client-Verify
+# MTLS_PROXY_SHARED_SECRET=<private random token from openssl rand -hex 32>
 # MTLS_TRUSTED_PROXIES=172.28.0.10/32
 ```
 
