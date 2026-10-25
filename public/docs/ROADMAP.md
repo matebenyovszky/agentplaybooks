@@ -214,7 +214,7 @@ Open, in rough order of value:
   - Contributing guidelines (CONTRIBUTING.md)
   - Code of conduct
   - ~~License review (MIT)~~ — done, relicensed to MIT
-  - Security policy (SECURITY.md)
+  - ~~Security policy (SECURITY.md)~~ — done, see repository root and `docs/security/`
   - Issue templates
   - PR templates
 

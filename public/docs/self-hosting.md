@@ -311,3 +311,5 @@ supabase db dump > backup.sql
 - [ ] RLS is enabled on all tables
 - [ ] Auth providers configured with correct redirect URLs
 - [ ] Custom domain uses HTTPS
+- [ ] Vulnerability reports follow [SECURITY.md](https://github.com/matebenyovszky/agentplaybooks/blob/main/SECURITY.md); incident filing uses the [incident runbook](https://github.com/matebenyovszky/agentplaybooks/blob/main/docs/security/incident-runbook.md) (the operator is the reporting entity)
+- [ ] Release SBOMs are verified with [`cosign verify-blob`](https://github.com/matebenyovszky/agentplaybooks/blob/main/docs/security/supply-chain.md) before production deploy
