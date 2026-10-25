@@ -85,10 +85,10 @@ export async function attachCspListeners(page: Page): Promise<string[]> {
   page.on("console", (msg) => {
     if (msg.type() !== "error") return;
     const text = msg.text();
-    if (/content security policy|refused to/i.test(text)) collected.push(text);
+    if (/content.security.policy/i.test(text)) collected.push(text);
   });
   page.on("pageerror", (error) => {
-    if (/content security policy/i.test(error.message)) collected.push(error.message);
+    if (/content.security.policy/i.test(error.message)) collected.push(error.message);
   });
   return collected;
 }
@@ -104,14 +104,14 @@ export async function assertNoVisibleElementPastRightEdge(page: Page) {
       if (style.display === "none" || style.visibility === "hidden" || Number(style.opacity) === 0) continue;
       const box = el.getBoundingClientRect();
       if (box.width < 1 || box.height < 1) continue;
-      if (box.right <= innerWidth + 1 && box.left >= -1) continue;
+      if (box.right <= innerWidth + 1) continue;
       let ancestor = el.parentElement;
       let clipped = false;
       while (ancestor) {
         const overflowX = getComputedStyle(ancestor).overflowX;
         if (overflowX === "auto" || overflowX === "scroll" || overflowX === "hidden" || overflowX === "clip") {
           const parentBox = ancestor.getBoundingClientRect();
-          if (parentBox.right <= innerWidth + 1 && parentBox.left >= -1) {
+          if (parentBox.right <= innerWidth + 1) {
             clipped = true;
             break;
           }

@@ -16,7 +16,9 @@ export default defineConfig({
     trace: "off",
   },
   webServer: {
-    command: process.env.E2E_WEB_SERVER || "npx next start --hostname 127.0.0.1 --port 3000",
+    command:
+      process.env.E2E_WEB_SERVER ||
+      "rm -rf .next/standalone/.next/static && cp -a .next/static .next/standalone/.next/static && HOSTNAME=127.0.0.1 PORT=3000 node .next/standalone/server.js",
     url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
