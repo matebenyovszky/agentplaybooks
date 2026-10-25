@@ -4,7 +4,7 @@
 
 **Audience:** the customer's information-security officer (IBF), risk, legal, and operations teams. Written for a Hungarian public-sector supplier assessment and EIR security classification.
 
-**Verified against source:** 2026-10-25, on the `main` branch as of that date (includes merged [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200), [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201), [#203](https://github.com/matebenyovszky/agentplaybooks/pull/203), [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204), [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205)). Parallel open PRs that are not on `main` yet are marked **Folyamatban / In progress** on the gap list.
+**Verified against source:** 2026-10-25, on the `main` branch as of that date (includes merged [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200), [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201), [#203](https://github.com/matebenyovszky/agentplaybooks/pull/203), [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204), [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205), [#207](https://github.com/matebenyovszky/agentplaybooks/pull/207)). Parallel open PRs that are not on `main` yet are marked **Folyamatban / In progress** on the gap list.
 
 > **jogi ellenőrzés szükséges.** This pack is not legal advice, not a certification, and not a substitute for the customer's own risk analysis or control selection under 7/2024. (VI. 24.) MK rendelet. Every note on scope, classification, responsibility split, or legal interpretation must be approved by the customer's counsel and IBF before production use.
 
@@ -60,6 +60,7 @@ These gaps closed on `main`. Whitepaper rows keep the merged PR links.
 | 11 isolated no-egress CI (`deploy/airgap/`) | [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204) |
 | 8 on-prem backup / restore runbook + empty-machine drill | [#203](https://github.com/matebenyovszky/agentplaybooks/pull/203) |
 | 7 `SECURITY.md` / incident runbook; 9 CodeQL, CycloneDX SBOM, cosign of SBOM blobs | [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205) |
+| 7 GitHub private vulnerability reporting as the only contact (no security email; best-effort review) | [#207](https://github.com/matebenyovszky/agentplaybooks/pull/207) |
 
 ## Parallel PRs (not on `main`)
 

@@ -4,7 +4,7 @@
 
 **Közönség:** ügyfél információbiztonságért felelős személye (IBF), kockázatkezelés, jog, üzemeltetés. Készült magyar állami / önkormányzati beszállítói értékeléshez és EIR biztonsági osztályba soroláshoz.
 
-**Ellenőrzés dátuma:** 2026-10-25. A kódbeli állítások a `main` ág akkor aktuális forrására vonatkoznak (benne a merge-elt [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200), [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201), [#203](https://github.com/matebenyovszky/agentplaybooks/pull/203), [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204), [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205)). Párhuzamos, még nem merge-elt PR-ek a gap listában **Folyamatban / In progress** jelöléssel szerepelnek.
+**Ellenőrzés dátuma:** 2026-10-25. A kódbeli állítások a `main` ág akkor aktuális forrására vonatkoznak (benne a merge-elt [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200), [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201), [#203](https://github.com/matebenyovszky/agentplaybooks/pull/203), [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204), [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205), [#207](https://github.com/matebenyovszky/agentplaybooks/pull/207)). Párhuzamos, még nem merge-elt PR-ek a gap listában **Folyamatban / In progress** jelöléssel szerepelnek.
 
 > **Jogi ellenőrzés szükséges.** Ez a csomag nem jogi tanács, nem tanúsítvány, és nem helyettesíti az ügyfél saját kockázatelemzését vagy a 7/2024. (VI. 24.) MK rendelet szerinti védelmi intézkedés-kiválasztást. Minden hatály-, osztályba sorolási, felelősségmegosztási és jogértelmezési megjegyzést az ügyfél jogászának és IBF-jének jóvá kell hagynia éles bevezetés előtt.
 
@@ -60,6 +60,7 @@ Ezek a gapek a `main`-en záródtak. A fehérkönyv sorai a merge-elt PR-ekre hi
 | 11 izolált no-egress CI (`deploy/airgap/`) | [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204) |
 | 8 helyszíni mentés / restore-runbook + üres-gép drill | [#203](https://github.com/matebenyovszky/agentplaybooks/pull/203) |
 | 7 `SECURITY.md` / incidens-runbook; 9 CodeQL, CycloneDX SBOM, SBOM-blob cosign | [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205) |
+| 7 GitHub privát sérülékenység-jelentés mint egyetlen kapcsolat (nincs security e-mail; best-effort review) | [#207](https://github.com/matebenyovszky/agentplaybooks/pull/207) |
 
 ## Párhuzamos PR-ek (nincsenek a `main`-en)
 
