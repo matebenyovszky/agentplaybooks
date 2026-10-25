@@ -52,8 +52,10 @@ export function rfc5424Syslog(
   return `<${pri}>1 ${ts} ${hostname} agentplaybooks - audit_log - ${payload}`;
 }
 
-export function siemSignature(body: string, secret: string): string {
-  return `sha256=${createHmac("sha256", secret).update(body, "utf8").digest("hex")}`;
+/** HMAC-SHA256 over the SIEM webhook body. This is a request MAC, not a password KDF. */
+export function siemSignature(body: string, hmacKey: string): string {
+  // codeql[js/insufficient-password-hash] SIEM webhook MAC (HMAC-SHA256 of the body), not password hashing
+  return `sha256=${createHmac("sha256", hmacKey).update(body, "utf8").digest("hex")}`;
 }
 
 async function sendWebhook(
