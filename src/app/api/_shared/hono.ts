@@ -5,10 +5,32 @@ import { cors } from "hono/cors";
  * Origins allowed to make credentialed cross-origin API calls.
  *
  * Self-hosted deployments set `ALLOWED_ORIGINS` (comma-separated) to replace
- * the list entirely — otherwise the project's own hosted domains would stay
- * trusted on an unrelated instance. Leaving it unset keeps the previous
- * behaviour, so hosted deployments are unaffected.
+ * the list entirely. If that is unset but `NEXT_PUBLIC_APP_URL` is a origin
+ * that is not one of this project's hosted sites, only that origin is trusted
+ * — otherwise a private instance would keep the public product domains on its
+ * CORS allow-list. Unset APP_URL keeps the hosted list, so the public service
+ * is unaffected.
  */
+
+const HOSTED_ORIGINS = [
+  "https://agentplaybooks.ai",
+  "https://www.agentplaybooks.ai",
+  "https://apbks.com",
+  "https://www.apbks.com",
+  "https://apbks.online",
+  "https://www.apbks.online",
+] as const;
+
+function originOf(value: string | undefined): string | null {
+  if (!value) return null;
+  try {
+    return new URL(value).origin;
+  } catch {
+    const trimmed = value.replace(/\/$/, "");
+    return trimmed || null;
+  }
+}
+
 export function resolveAllowedOrigins(
   configured = process.env.ALLOWED_ORIGINS,
   appUrl = process.env.NEXT_PUBLIC_APP_URL,
@@ -22,15 +44,15 @@ export function resolveAllowedOrigins(
     return explicit;
   }
 
-  return [
-    appUrl || "https://agentplaybooks.ai",
-    "https://agentplaybooks.ai",
-    "https://www.agentplaybooks.ai",
-    "https://apbks.com",
-    "https://www.apbks.com",
-    "https://apbks.online",
-    "https://www.apbks.online",
-  ].filter(Boolean);
+  const hosted = [...HOSTED_ORIGINS];
+  const appOrigin = originOf(appUrl);
+  if (appOrigin && !hosted.includes(appOrigin)) {
+    return [appOrigin];
+  }
+  if (appOrigin) {
+    return [appOrigin, ...hosted.filter((origin) => origin !== appOrigin)];
+  }
+  return hosted;
 }
 
 export function createApiApp(basePath?: string) {
