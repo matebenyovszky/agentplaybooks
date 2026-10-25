@@ -29,6 +29,7 @@ Welcome to the AgentPlaybooks documentation.
 - [Management API & MCP](./management-api.md) - AI-driven playbook management
 - [Developer Guide](./developer-guide.md) - Contributing and development
 - [Self-Hosting](./self-hosting.md) - Deploy your own instance
+- [On-prem backup and restore](./backup-restore.md) - NIS2 21(2)(c) backup, restore drill, RPO/RTO
 - [Self-hosted mTLS](./self-hosted-mtls.md) - Client-certificate secret loading on Docker/local (nginx, Caddy, Traefik)
 - [Architecture](./architecture.md) - System design and components
 

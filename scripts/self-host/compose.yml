@@ -1,0 +1,54 @@
+# On-prem data plane for AgentPlaybooks backup/restore.
+#
+# The application compose file at the repository root is stateless: it talks to
+# Supabase (Data API + Auth), not to Postgres directly. This file is the
+# Postgres + object-storage half of a self-hosted deployment — the part a
+# backup must capture. Operators running the official Supabase Docker stack
+# should point the backup scripts at that compose project instead
+# (COMPOSE_FILE / DB_SERVICE / STORAGE_SERVICE).
+#
+# From the repository root:
+#   docker compose -f scripts/self-host/compose.yml up -d
+#   ./scripts/self-host/backup.sh
+#   ./scripts/self-host/restore.sh --archive backups/<file>.tar.gz.enc
+
+name: agentplaybooks-selfhost
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+    ports:
+      - "${POSTGRES_PORT:-54322}:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-postgres}"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+      start_period: 5s
+
+  # File stand-in for Supabase Storage (or any object store). Official
+  # self-hosted Supabase uses its own storage service and volume; set
+  # STORAGE_SERVICE / STORAGE_PATH to match that deployment.
+  storage:
+    image: alpine:3.21
+    restart: unless-stopped
+    command: ["tail", "-f", "/dev/null"]
+    healthcheck:
+      test: ["CMD-SHELL", "test -d /var/lib/storage"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    volumes:
+      - storage_data:/var/lib/storage
+
+volumes:
+  db_data:
+  storage_data:

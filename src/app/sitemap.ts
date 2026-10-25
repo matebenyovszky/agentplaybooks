@@ -26,6 +26,7 @@ const docSlugs = [
   "api-reference",
   "architecture",
   "audit-logs",
+  "backup-restore",
   "bot-platform-integrations",
   "claude",
   "cli",
