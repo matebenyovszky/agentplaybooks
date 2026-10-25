@@ -11,7 +11,8 @@ const GUID = "restore-drill-playbook";
 const PLAYBOOK_NAME = "Restore drill playbook";
 const SECRET_NAME = "DRILL_TOKEN";
 const SECRET_VALUE = "drill-secret-value-do-not-use-in-prod";
-const AUDIT_COUNT = 3;
+// 3 explicit audit_logs inserts plus playbook.create from audit_config_change.
+const AUDIT_COUNT = 4;
 
 function sqlLiteral(value: string): string {
   return `'${value.replaceAll("'", "''")}'`;
@@ -39,6 +40,7 @@ INSERT INTO public.profiles (id, auth_user_id, display_name, is_virtual, is_veri
 VALUES (${sqlLiteral(OWNER)}, ${sqlLiteral(OWNER)}, 'Restore Drill', false, false)
 ON CONFLICT (id) DO NOTHING;
 
+-- audit_config_change records playbook.create for this row (counted in AUDIT_COUNT).
 INSERT INTO public.playbooks (id, user_id, guid, name, description, visibility)
 VALUES (
   ${sqlLiteral(PLAYBOOK_ID)},

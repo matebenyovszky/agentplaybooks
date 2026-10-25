@@ -150,12 +150,12 @@ app.post("/", async (c) => {
   const body = await c.req.json();
   const { name, value, description, category, expires_at, allow_api_key_reveal, allowed_hosts } = body;
 
-  // Only the owner decides that a secret's plaintext may be read with a key.
-  // Otherwise a key could create a name with reveal on and wait for the owner
-  // to rotate a real credential into it.
-  if (!isOwner && allow_api_key_reveal) {
+  // Only an owner or editor session decides that a secret's plaintext may be
+  // read with a key. Otherwise a key could create a name with reveal on and
+  // wait for a human to rotate a real credential into it.
+  if (!canManageSecrets && allow_api_key_reveal) {
     await recordSecretAudit(audit, { operation: "secret.create", status: "denied", reason: "reveal_requires_owner" });
-    return c.json({ error: "Only the playbook owner can allow API-key reveal" }, 403);
+    return c.json({ error: "Only the playbook owner or an editor can allow API-key reveal" }, 403);
   }
 
   if (!name || typeof name !== "string" || name.trim().length === 0) {
@@ -392,11 +392,6 @@ app.put("/:name", async (c) => {
   const body = await c.req.json().catch(() => ({}));
   const { value, description, category, expires_at, allow_api_key_reveal, allowed_hosts } = body;
 
-  // A credential must not grant itself raw-value access or widen its proxy destinations.
-  if (!canManageSecrets && (allow_api_key_reveal !== undefined || allowed_hosts !== undefined)) {
-    return c.json({ error: "Secret access policy requires an owner or editor session" }, 403);
-  }
-
   if (allow_api_key_reveal !== undefined && typeof allow_api_key_reveal !== "boolean") {
     return c.json({ error: "allow_api_key_reveal must be a boolean" }, 400);
   }
@@ -439,9 +434,9 @@ app.put("/:name", async (c) => {
     return c.json({ error: "Secret not found" }, 404);
   }
 
-  // A key may rotate a value or tighten where it goes; only the owner may
-  // allow reading it back, or send it somewhere new.
-  if (!isOwner) {
+  // A key may rotate a value or tighten where it goes; only an owner or editor
+  // session may allow reading it back, or send it somewhere new.
+  if (!canManageSecrets) {
     const enablesReveal = Boolean(allow_api_key_reveal) && !existing.allow_api_key_reveal;
     const widensHosts = allowed_hosts !== undefined && !narrowsAllowedHosts(existing.allowed_hosts, allowed_hosts);
     if (enablesReveal || widensHosts) {
@@ -453,8 +448,8 @@ app.put("/:name", async (c) => {
       });
       return c.json({
         error: enablesReveal
-          ? "Only the playbook owner can allow API-key reveal"
-          : "An API key may only narrow allowed_hosts; widening or clearing it needs the playbook owner",
+          ? "Only the playbook owner or an editor can allow API-key reveal"
+          : "An API key may only narrow allowed_hosts; widening or clearing it needs an owner or editor session",
       }, 403);
     }
   }
