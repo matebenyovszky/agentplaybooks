@@ -1,9 +1,10 @@
 name: No egress
 
 # Isolated-network E2E for self-hosted AgentPlaybooks. Images are built and
-# pulled on the runner (build-time fetches, including next/font/google on main,
-# are not part of this proof). Runtime is a Docker network with internal: true
-# plus a DNS sink; the job fails on any external lookup or outbound packet.
+# pulled on the runner (`npm ci` and base images need the network; Geist is
+# local via next/font/local since #200). Runtime is a Docker network with
+# internal: true plus a DNS sink; the job fails on any external lookup or
+# outbound packet.
 
 on:
   pull_request:

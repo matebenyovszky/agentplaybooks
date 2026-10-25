@@ -169,6 +169,16 @@ This records `"allow_insecure_http": true` in the profile's
 `agentplaybooks/config.json`. Put the instance behind HTTPS before production
 use.
 
+### Client-certificate (mTLS) secret loading
+
+API keys work against the Node/Docker origin unchanged. Certificate clients do
+not: the origin only trusts Cloudflare's TLS context by default, so mTLS fails
+closed until a terminator verifies client certs and `MTLS_MODE=proxy` is set.
+
+The [self-hosted mTLS guide](./self-hosted-mtls.md) covers nginx, Caddy, and
+Traefik, a `deploy/self-host/docker-compose.mtls.yml` example, and openssl
+commands for a test CA. Hungarian: [Önhosztolt mTLS](./self-hosted-mtls.hu.md).
+
 ### Run
 
 ```bash
@@ -215,6 +225,10 @@ an empty database: the incremental history cannot create the core tables.
 | `SECRETS_REQUIRE_ALLOWED_HOSTS` | No | Set to `true` to refuse outbound use of any secret that has not declared `allowed_hosts`. Off by default. |
 | `NO_EGRESS` | No | Set to `true` on an air-gapped instance to disable optional outbound calls (today: MCP registry search) unless `MCP_REGISTRY_URL` points at an internal mirror. Unset keeps the hosted default. |
 | `MCP_REGISTRY_URL` | No | Override for `GET /api/mcp-registry/search`. Unset uses the official registry. Empty disables it. An internal URL is used even when `NO_EGRESS=true`. |
+| `MTLS_MODE` | No | Secret-client certificate auth. Default `cloudflare` (hosted production). Set `proxy` behind a TLS terminator that verifies client certs; `off` disables certificate auth. Unknown values fail closed. See [Self-hosted mTLS](./self-hosted-mtls.md). |
+| `MTLS_PROXY_FINGERPRINT_HEADER` | No | Required when `MTLS_MODE=proxy`. Header the terminator sets after verifying the client cert (hex SHA-256 or PEM). |
+| `MTLS_PROXY_VERIFY_HEADER` | No | Optional. When set, that header must equal `SUCCESS` or mTLS is rejected. |
+| `MTLS_TRUSTED_PROXIES` | No | Required when `MTLS_MODE=proxy`. Comma-separated IPs/CIDRs of the terminator. Headers from any other source are ignored. |
 
 ### Air-gapped / no-egress
 
@@ -229,7 +243,7 @@ attempted.
 
 | Call | When | Disable / pin |
 | --- | --- | --- |
-| Google Fonts (`next/font/google` Geist) | **Build time** (`next build`). Open PR #200 replaces this with `next/font/local`. | Build the image on a networked host, then copy it in. After #200 lands, `next build` no longer needs Google. `npm ci` still needs a registry (or an offline cache). |
+| Geist fonts (`next/font/local`) | **Build time.** Committed variable fonts in `src/app/fonts/` (merged in #200). `next build` does not fetch Google Fonts. | Nothing to disable. `npm ci` still needs a registry (or an offline cache). |
 | Next.js telemetry | Disabled in the production image (`NEXT_TELEMETRY_DISABLED=1`). | Keep that env set. |
 | Official MCP registry (`registry.modelcontextprotocol.io`) | `GET /api/mcp-registry/search` only, when someone uses the dashboard search. | `NO_EGRESS=true`, or `MCP_REGISTRY_URL=` to disable, or `MCP_REGISTRY_URL=http://…` for an internal mirror. |
 | `use_secret` / secrets proxy | Whenever an agent or API client names a URL. That is the feature. | Pin each secret with `allowed_hosts`; set `SECRETS_REQUIRE_ALLOWED_HOSTS=true` so unpinned secrets cannot leave. |
@@ -238,9 +252,9 @@ attempted.
 | Seed / import scripts | Manual tooling (`scripts/seed-data.ts` talks to GitHub). | Do not run them on the air-gapped host. |
 | Hosted product URLs in generated text (`agentplaybooks.ai` in OAuth metadata, plugin export, docs links) | String construction, not a network call. | Set `NEXT_PUBLIC_APP_URL` to this instance at **build** time. |
 
-The air-gap CI job builds the app image **before** isolating the network
-because of the build-time font fetch on `main`. Runtime of that image, with
-`NO_EGRESS=true`, is what the observer measures.
+The air-gap CI job still builds and pulls images **before** isolating the
+network (`npm ci` and base-image pulls need it). Fonts no longer do. Runtime of
+that image, with `NO_EGRESS=true`, is what the observer measures.
 
 ### Pinning a secret to specific destinations
 
@@ -339,3 +353,5 @@ supabase db dump > backup.sql
 - [ ] RLS is enabled on all tables
 - [ ] Auth providers configured with correct redirect URLs
 - [ ] Custom domain uses HTTPS
+- [ ] Vulnerability reports follow [SECURITY.md](https://github.com/matebenyovszky/agentplaybooks/blob/main/SECURITY.md); incident filing uses the [incident runbook](https://github.com/matebenyovszky/agentplaybooks/blob/main/docs/security/incident-runbook.md) (the operator is the reporting entity)
+- [ ] Release SBOMs are verified with [`cosign verify-blob`](https://github.com/matebenyovszky/agentplaybooks/blob/main/docs/security/supply-chain.md) before production deploy

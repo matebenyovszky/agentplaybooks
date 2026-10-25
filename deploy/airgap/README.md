@@ -26,11 +26,11 @@ they are not on the secrets path, and several of them phone home.
 
 ## Build before isolating
 
-`next/font/google` in `src/app/layout.tsx` fetches Geist from Google at
-`next build` (open PR #200 switches that to `next/font/local`). `npm ci` also
-needs the registry. The workflow therefore **builds and pulls every image on
-the runner, then starts this compose file**. Runtime isolation does not cover
-build-time fetches.
+Geist is self-hosted with `next/font/local` (merged in #200), so `next build`
+does not fetch Google Fonts. `npm ci` and pulling base images still need the
+network. The workflow therefore **builds and pulls every image on the runner,
+then starts this compose file**. Runtime isolation does not cover those
+pre-isolation fetches.
 
 ## Operator flags
 
