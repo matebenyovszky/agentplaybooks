@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { FloatingNav } from "@/components/ui/floating-navbar";
 import type { LegalSection } from "@/lib/legal-copy";
 
-const LINK_CLASS = "text-indigo-600 dark:text-indigo-400 underline underline-offset-2";
+const LINK_CLASS = "break-words wrap-anywhere text-indigo-600 underline underline-offset-2 dark:text-indigo-400";
 
 // https URLs in the copy become links; everything else stays plain text.
 // Contact is GitHub, not email — do not mint mailto: links.
@@ -34,7 +34,7 @@ export function LegalDocument({
   return (
     <div className="min-h-screen bg-background text-foreground">
       <FloatingNav />
-      <main className="max-w-3xl mx-auto px-6 pt-32 pb-20">
+      <main className="mx-auto w-full min-w-0 max-w-3xl px-6 pb-20 pt-32">
         <h1 className="text-4xl font-bold mb-8 text-neutral-900 dark:text-white">{title}</h1>
         <article className="space-y-10">
           {allSections.map((section, sectionIndex) => (
