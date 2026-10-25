@@ -111,7 +111,7 @@ describe("encrypted archive authentication (encrypt-then-MAC)", () => {
     expect(result.stderr).toContain("no authentication tag");
   });
   it("keeps the passphrase off the command line", () => {
-    expect(readFileSync(resolve("scripts/self-host/backup.sh"), "utf8")).toMatch(/archive.py" seal "${FINAL_ARCHIVE}"/);
+    expect(readFileSync(resolve("scripts/self-host/backup.sh"), "utf8")).toContain('archive.py" seal "${FINAL_ARCHIVE}"');
     expect(readFileSync(resolve("scripts/self-host/restore.sh"), "utf8")).toContain("BACKUP_ALLOW_UNSEALED");
   });
 });
