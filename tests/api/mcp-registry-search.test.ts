@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { resolveMcpRegistryServersUrl } from "@/lib/mcp-registry";
 
 beforeEach(() => vi.resetModules());
-afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
+afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); vi.useRealTimers(); });
 
 describe("native public registry search", () => {
   it("shares searches and caches successful public data without forwarding credentials", async () => {
@@ -38,6 +39,52 @@ describe("native public registry search", () => {
     expect((await GET(new Request("https://example.com/api/mcp-registry/search"))).status).toBe(502);
   });
 
+  it("does not fetch the public registry when NO_EGRESS is true", async () => {
+    vi.stubEnv("NO_EGRESS", "true");
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    const { GET } = await import("@/app/api/mcp-registry/search/route");
+    const response = await GET(new Request("https://example.com/api/mcp-registry/search?q=cloudflare"));
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({
+      error: "MCP Registry access is disabled on this instance.",
+    });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("uses MCP_REGISTRY_URL as an internal mirror even when NO_EGRESS is true", async () => {
+    vi.stubEnv("NO_EGRESS", "true");
+    vi.stubEnv("MCP_REGISTRY_URL", "http://registry.airgap/v0.1/servers");
+    const fetch = vi.fn(async (url: string) => {
+      expect(url).toContain("http://registry.airgap/v0.1/servers");
+      return Response.json({ servers: [], metadata: { count: 0 } });
+    });
+    vi.stubGlobal("fetch", fetch);
+    const { GET } = await import("@/app/api/mcp-registry/search/route");
+    expect((await GET(new Request("https://example.com/api/mcp-registry/search"))).status).toBe(200);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("resolveMcpRegistryServersUrl", () => {
+  it("keeps the official registry when nothing is configured", () => {
+    expect(resolveMcpRegistryServersUrl(undefined, undefined))
+      .toBe("https://registry.modelcontextprotocol.io/v0.1/servers");
+  });
+
+  it("disables the lookup for air-gapped instances and empty overrides", () => {
+    expect(resolveMcpRegistryServersUrl("true", undefined)).toBeNull();
+    expect(resolveMcpRegistryServersUrl(undefined, "")).toBeNull();
+    expect(resolveMcpRegistryServersUrl("true", "  ")).toBeNull();
+  });
+
+  it("prefers an explicit mirror over NO_EGRESS", () => {
+    expect(resolveMcpRegistryServersUrl("true", "http://registry.internal/servers"))
+      .toBe("http://registry.internal/servers");
+  });
+});
+
+describe("native public registry search timeouts", () => {
   it("times out an upstream that sends headers but never finishes its body", async () => {
     vi.useFakeTimers();
     vi.stubGlobal("fetch", vi.fn(async (_url: string, init: RequestInit) => new Response(new ReadableStream({
