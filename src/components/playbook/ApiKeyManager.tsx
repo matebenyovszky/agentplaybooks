@@ -17,6 +17,7 @@ import {
   RotateCw
 } from "lucide-react";
 import type { ApiKey } from "@/lib/supabase/types";
+import { PLAYBOOK_API_KEY_ROLE_PERMISSIONS } from "@/lib/playbook-api-key-roles";
 
 interface ApiKeyManagerProps {
   playbook_id: string;
@@ -35,13 +36,7 @@ const ROLES = [
   { value: "admin", label: "Admin", description: "Full access to modify playbook structure" },
 ];
 
-const ROLE_PERMISSIONS: Record<string, string[]> = {
-  viewer: ["memory:read", "canvas:read", "skills:read", "personas:read", "secrets:read"],
-  proposer: ["memory:read", "memory:propose", "canvas:read", "skills:read", "skills:propose", "personas:read", "secrets:read"],
-  coworker: ["memory:read", "memory:write", "canvas:read", "canvas:write", "skills:read", "skills:write", "personas:read", "personas:write", "secrets:read", "secrets:write"],
-  auditor: ["audit:read", "playbooks:read"],
-  admin: ["full"],
-};
+const ROLE_PERMISSIONS = PLAYBOOK_API_KEY_ROLE_PERMISSIONS;
 
 export function ApiKeyManager({ playbook_id, apiKeys, onUpdate, readOnly = false }: ApiKeyManagerProps) {
   const [newApiKey, setNewApiKey] = useState<string | null>(null);
