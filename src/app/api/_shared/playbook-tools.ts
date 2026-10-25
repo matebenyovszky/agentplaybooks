@@ -110,7 +110,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   {
     name: "write_memory",
     title: "Write memory",
-    description: "Create or update a memory by key; previous contents are saved automatically and readable with get_memory_history. memory_at is optional and defaults to this save's time; supply an ISO timestamp to preserve an earlier time. is_archived=true hides the entry from normal search/context; false restores it. Tier controls context priority independently of archiving. Requires memory:write or full permission; with memory:propose the write is saved as a proposal (status pending_review) that changes nothing until the owner or an editor approves it.",
+    description: "Create or update a memory by key; previous contents are saved automatically and readable with get_memory_history. Keep entries concise and actionable: save durable facts, decisions, and useful next steps rather than raw transcripts or repeated detail, and provide a short summary. When current evidence corrects an existing fact, update its existing key instead of adding a contradictory duplicate; archive obsolete entries with archive_memories. memory_at is optional and defaults to this save's time; supply an ISO timestamp to preserve an earlier time. is_archived=true hides the entry from normal search/context; false restores it. Tier controls context priority independently of archiving. Requires memory:write or full permission; with memory:propose the write is saved as a proposal (status pending_review) that changes nothing until the owner or an editor approves it.",
     inputSchema: {
       type: "object",
       properties: {
@@ -204,7 +204,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   {
     name: "archive_memories",
     title: "Archive memories",
-    description: "Hide matching memories from normal search and context, retaining them in the longterm tier. Search scope='archived' to find them or read_memory by key. Filters combine as AND; older_than_hours uses memory_at. Permanent-retention entries are skipped. promote_memory restores visibility. Requires memory:write or full permission.",
+    description: "Hide matching memories from normal search and context, retaining them in the longterm tier. When you encounter confirmed obsolete or superseded entries during normal work, archive their specific keys; update still-useful facts with write_memory instead. Age alone does not mean a memory is obsolete. Search scope='archived' to find them or read_memory by key. Filters combine as AND; older_than_hours uses memory_at. Permanent-retention entries are skipped. promote_memory restores visibility. Requires memory:write or full permission.",
     inputSchema: {
       type: "object",
       properties: {
