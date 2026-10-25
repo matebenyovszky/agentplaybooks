@@ -13,6 +13,10 @@
 # On-prem backup of the data plane (Postgres/Supabase including vault tables,
 # storage, redacted config; encryption master key stored separately):
 # scripts/self-host/backup.sh, restore.sh, and docs/self-host/backup-restore.md.
+#
+# Certificate (mTLS) secret loading needs a TLS terminator in front of this
+# service: deploy/self-host/docker-compose.mtls.yml and
+# public/docs/self-hosted-mtls.md.
 
 services:
   app:

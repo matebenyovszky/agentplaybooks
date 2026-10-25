@@ -169,6 +169,16 @@ This records `"allow_insecure_http": true` in the profile's
 `agentplaybooks/config.json`. Put the instance behind HTTPS before production
 use.
 
+### Client-certificate (mTLS) secret loading
+
+API keys work against the Node/Docker origin unchanged. Certificate clients do
+not: the origin only trusts Cloudflare's TLS context by default, so mTLS fails
+closed until a terminator verifies client certs and `MTLS_MODE=proxy` is set.
+
+The [self-hosted mTLS guide](./self-hosted-mtls.md) covers nginx, Caddy, and
+Traefik, a `deploy/self-host/docker-compose.mtls.yml` example, and openssl
+commands for a test CA. Hungarian: [Önhosztolt mTLS](./self-hosted-mtls.hu.md).
+
 ### Run
 
 ```bash
@@ -213,6 +223,10 @@ an empty database: the incremental history cannot create the core tables.
 | `SECRETS_ENCRYPTION_KEY` | Yes for the secrets vault | 64 hexadecimal characters. Rotating it makes existing secrets undecryptable — there is no re-encryption tooling yet. |
 | `ALLOWED_ORIGINS` | No | Comma-separated origins allowed to make credentialed cross-origin API calls. Setting it **replaces** the default list, which is what a self-hosted instance wants — otherwise the project's own domains stay trusted. Unset keeps the previous behaviour. |
 | `SECRETS_REQUIRE_ALLOWED_HOSTS` | No | Set to `true` to refuse outbound use of any secret that has not declared `allowed_hosts`. Off by default. |
+| `MTLS_MODE` | No | Secret-client certificate auth. Default `cloudflare` (hosted production). Set `proxy` behind a TLS terminator that verifies client certs; `off` disables certificate auth. Unknown values fail closed. See [Self-hosted mTLS](./self-hosted-mtls.md). |
+| `MTLS_PROXY_FINGERPRINT_HEADER` | No | Required when `MTLS_MODE=proxy`. Header the terminator sets after verifying the client cert (hex SHA-256 or PEM). |
+| `MTLS_PROXY_VERIFY_HEADER` | No | Optional. When set, that header must equal `SUCCESS` or mTLS is rejected. |
+| `MTLS_TRUSTED_PROXIES` | No | Required when `MTLS_MODE=proxy`. Comma-separated IPs/CIDRs of the terminator. Headers from any other source are ignored. |
 
 ### Pinning a secret to specific destinations
 
@@ -324,3 +338,5 @@ archive in the runbook, and it does not include `SECRETS_ENCRYPTION_KEY`.
 - [ ] Encrypted database and storage backups run on a schedule, with an offsite copy
 - [ ] `SECRETS_ENCRYPTION_KEY` is stored separately from the backup archive
 - [ ] Empty-machine restore drill has been run and RTO recorded
+- [ ] Vulnerability reports follow [SECURITY.md](https://github.com/matebenyovszky/agentplaybooks/blob/main/SECURITY.md); incident filing uses the [incident runbook](https://github.com/matebenyovszky/agentplaybooks/blob/main/docs/security/incident-runbook.md) (the operator is the reporting entity)
+- [ ] Release SBOMs are verified with [`cosign verify-blob`](https://github.com/matebenyovszky/agentplaybooks/blob/main/docs/security/supply-chain.md) before production deploy

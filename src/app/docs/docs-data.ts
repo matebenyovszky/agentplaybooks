@@ -59,7 +59,7 @@ export const docsEntries: DocEntry[] = [
   {
     slug: "python-secrets",
     title: "Python Secrets",
-    description: "Startup secret loading with API keys or mTLS, locally and in Docker",
+    description: "Startup secret loading with API keys or mTLS, including self-hosted proxy mode",
     section: "guides",
   },
   {
@@ -150,6 +150,12 @@ export const docsEntries: DocEntry[] = [
     slug: "backup-restore",
     title: "On-prem Backup and Restore",
     description: "NIS2 21(2)(c) backup, empty-machine restore drill, RPO/RTO",
+    section: "reference",
+  },
+  {
+    slug: "self-hosted-mtls",
+    title: "Self-hosted mTLS",
+    description: "Client-certificate secret loading on Docker and local installs",
     section: "reference",
   },
   {

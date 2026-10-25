@@ -1,0 +1,61 @@
+# Self-hosted secret-client mTLS. The TLS terminator verifies client
+# certificates and forwards X-SSL-Client-Verify / X-SSL-Client-Fingerprint.
+# The app port is not published; only the proxy can reach it.
+#
+# From the repository root:
+#   ./deploy/self-host/generate-test-certs.sh
+#   docker compose -f deploy/self-host/docker-compose.mtls.yml up --build
+#
+# Then register the printed SHA-256 fingerprint under API Keys → Certificate
+# access for applications.
+
+name: agentplaybooks-mtls
+
+networks:
+  frontend:
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24
+
+services:
+  proxy:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    networks:
+      frontend:
+        ipv4_address: 172.28.0.10
+    ports:
+      - "${MTLS_PROXY_PORT:-8443}:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs/server.crt:/etc/nginx/certs/server.crt:ro
+      - ./certs/server.key:/etc/nginx/certs/server.key:ro
+      - ./certs/ca.crt:/etc/nginx/certs/ca.crt:ro
+    depends_on:
+      - app
+
+  app:
+    build:
+      context: ../..
+      args:
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-}
+    restart: unless-stopped
+    networks:
+      frontend:
+        ipv4_address: 172.28.0.20
+    environment:
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      SECRETS_ENCRYPTION_KEY: ${SECRETS_ENCRYPTION_KEY}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
+      SECRETS_REQUIRE_ALLOWED_HOSTS: ${SECRETS_REQUIRE_ALLOWED_HOSTS:-}
+      MTLS_MODE: proxy
+      MTLS_PROXY_FINGERPRINT_HEADER: X-SSL-Client-Fingerprint
+      MTLS_PROXY_VERIFY_HEADER: X-SSL-Client-Verify
+      # Exact proxy address. Do not publish app:3000; other containers on this
+      # network could otherwise spoof the identity headers.
+      MTLS_TRUSTED_PROXIES: 172.28.0.10/32

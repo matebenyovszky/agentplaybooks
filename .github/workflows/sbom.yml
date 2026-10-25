@@ -1,0 +1,122 @@
+name: SBOM
+
+# CycloneDX SBOMs for the npm lockfiles, Python packages, and (on tags) the
+# container image. Keyless cosign signing runs only on cli-v* tags so pull
+# requests stay green if Fulcio/Rekor is unavailable.
+#
+# npm publish stays in publish-cli.yml and is not gated on this workflow.
+
+on:
+  pull_request:
+  push:
+    tags: ["cli-v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sbom-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  sbom:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write
+      id-token: write
+    env:
+      SBOM_DIR: ${{ github.workspace }}/dist/sbom
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Generate npm and Python SBOMs
+        run: bash scripts/generate-sbom.sh
+
+      - name: Build container image SBOM
+        if: startsWith(github.ref, 'refs/tags/cli-v')
+        run: |
+          docker build \
+            --build-arg NEXT_PUBLIC_SUPABASE_URL=https://example.supabase.co \
+            --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY=sbom-placeholder \
+            --build-arg NEXT_PUBLIC_APP_URL=https://example.invalid \
+            -t agentplaybooks:sbom \
+            .
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh \
+            | sh -s -- -b "$HOME/.local/bin"
+          "$HOME/.local/bin/syft" "agentplaybooks:sbom" \
+            -o "cyclonedx-json=${SBOM_DIR}/sbom-image.cdx.json"
+
+      - name: Checksums
+        if: startsWith(github.ref, 'refs/tags/cli-v')
+        working-directory: ${{ env.SBOM_DIR }}
+        run: sha256sum *.cdx.json > SHA256SUMS
+
+      # Pin a release tag: this repo has no floating `v4` ref, and GitHub
+      # resolves `uses:` even when the step's `if:` is false (PRs).
+      - uses: sigstore/cosign-installer@v4.1.2
+        if: startsWith(github.ref, 'refs/tags/cli-v')
+
+      - name: Sign SBOMs (tags only, GitHub OIDC)
+        if: startsWith(github.ref, 'refs/tags/cli-v')
+        run: |
+          for f in "$SBOM_DIR"/*.cdx.json "$SBOM_DIR"/SHA256SUMS; do
+            [ -f "$f" ] || continue
+            echo "signing $(basename "$f")"
+            cosign sign-blob --yes --bundle "${f}.sigstore.json" "$f"
+          done
+
+      - name: Verify a signed SBOM
+        if: startsWith(github.ref, 'refs/tags/cli-v')
+        run: |
+          cosign verify-blob "$SBOM_DIR/sbom-npm.cdx.json" \
+            --bundle "$SBOM_DIR/sbom-npm.cdx.json.sigstore.json" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            --certificate-identity-regexp \
+            '^https://github.com/matebenyovszky/agentplaybooks/\.github/workflows/sbom\.yml@refs/tags/cli-v.+$'
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sbom
+          path: dist/sbom/
+          if-no-files-found: error
+
+      - name: Attach to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/cli-v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          notes="$(mktemp)"
+          cat > "$notes" <<EOF
+          Supply-chain artifacts for \`${tag}\`.
+
+          The npm package \`@agentplaybooks/cli\` is published separately by \`publish-cli.yml\` with trusted publishing and provenance. These files are CycloneDX SBOMs and cosign bundles.
+
+          Verify:
+
+          \`\`\`bash
+          cosign verify-blob sbom-npm.cdx.json \\
+            --bundle sbom-npm.cdx.json.sigstore.json \\
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \\
+            --certificate-identity-regexp \\
+            '^https://github.com/matebenyovszky/agentplaybooks/\\.github/workflows/sbom\\.yml@refs/tags/cli-v.+$'
+          \`\`\`
+
+          See \`docs/security/supply-chain.md\`.
+          EOF
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" "$SBOM_DIR"/* --clobber
+          else
+            gh release create "$tag" "$SBOM_DIR"/* --title "$tag" --notes-file "$notes"
+          fi
