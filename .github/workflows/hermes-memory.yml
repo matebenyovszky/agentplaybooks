@@ -15,10 +15,6 @@ permissions:
 
 jobs:
   compatibility:
-    # Tracking-head (`main`) can fail when hermes-agent itself is uninstallable
-    # (currently Pillow==13.0.0 on Python 3.14 vs browser-harness pillow==12.3.0).
-    # The pinned v0.22.4 cell remains required.
-    continue-on-error: ${{ matrix.hermes == 'main' }}
     strategy:
       fail-fast: false
       matrix:
