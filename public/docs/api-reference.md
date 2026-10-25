@@ -802,7 +802,7 @@ Content-Type: application/json
 
 The `value` is encrypted immediately and never stored in plaintext.
 
-`expires_at` is optional and must carry a timezone (`Z` or `+02:00`); a time without one is refused with `400`, because the server would otherwise have to guess which instant it means. Once it passes, the secret can no longer be used: the proxy, `use_secret`, federated servers, and reveal by API key all refuse it with `403`, and the refusal is recorded in the audit log. The owner can still reveal it in the dashboard, in order to replace it.
+`expires_at` is optional and must carry a timezone (`Z` or `+02:00`); a time without one is refused with `400`, because the server would otherwise have to guess which instant it means. Once it passes, the secret can no longer be used: the proxy, `use_secret`, federated servers, and reveal by API key all refuse it with `403`, and the refusal is recorded in the audit log. Owners and accepted editors can still reveal it through their dashboard session in order to replace it.
 
 ### Reveal Secret
 
@@ -842,7 +842,7 @@ Content-Type: application/json
 }
 ```
 
-Makes an HTTP request with the secret injected server-side into the request to the provider. The caller authenticates with the owner's session JWT or a playbook API key with `secrets:read` / `full` permission. The provider key is not included in the proxy response. Set `allowed_hosts` on the secret to trusted provider hosts; the provider controls its response body.
+Makes an HTTP request with the secret injected server-side into the request to the provider. The caller authenticates with an owner/editor session JWT or a playbook API key with `secrets:read` / `full` permission. The provider key is not included in the proxy response. Set `allowed_hosts` on the secret to trusted provider hosts; the provider controls its response body.
 
 By default (`response_mode: "json"`), the response is buffered and returned as `{ "status": 200, "status_text": "OK", "body": ... }`. Existing callers keep this format.
 
@@ -928,7 +928,9 @@ Content-Type: application/json
 }
 ```
 
-Rotating keeps the expiry: it is the owner's rule, not part of the value. To bring an expired secret back, send a later `expires_at`, or `null` to remove it.
+An owner/editor session may also update `allow_api_key_reveal` (boolean) and `allowed_hosts`. A playbook API key cannot change these access-policy fields.
+
+Rotating keeps the expiry: it is the playbook policy, not part of the value. To bring an expired secret back, send a later `expires_at`, or `null` to remove it.
 
 ### Delete Secret
 
@@ -937,7 +939,7 @@ DELETE /api/playbooks/:guid/secrets/:name
 Authorization: Bearer <jwt>
 ```
 
-Owner only. Permanently deletes the secret.
+Owner or accepted editor session only. Permanently deletes the secret.
 
 ### Audit Trail
 

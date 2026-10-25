@@ -28,12 +28,12 @@ lives only on a local machine: everything below is on `main`.
   the owner's decision: contact goes through the repository's issues.
 - `npm run seed:reviewer` to populate a reviewer account.
 
-**Continue here — the OAuth sign-in is not working yet.** There is a known
-OAuth bug when the database runs on OrioleDB (the production Supabase project
-does, `17-oriole`), being fixed separately. Until it is fixed, everything from
-step 1 down waits on it.
+**Continue here — verify OAuth on the current production deployment.**
+Production has moved from the previous OrioleDB project to the heap project
+checked by `scripts/prepare-supabase-deploy.mjs`. That removes the old deployment
+assumption; it does not prove that every connector completes sign-in.
 
-1. Fix the OAuth bug on OrioleDB, then test the connector from claude.ai
+1. Verify sign-in, private-playbook access and token revocation from claude.ai
    (*Customize → Connectors → Add custom connector*,
    `https://agentplaybooks.ai/api/mcp/manage`) and from Claude Code (`/mcp`).
 2. Confirm that deleting a throwaway playbook and a throwaway account works in

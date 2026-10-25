@@ -64,10 +64,10 @@ The service role bypasses RLS. Authorization lives in application code: [`src/ap
 | Class | Where | Protection | Who |
 |-------|-------|------------|-----|
 | Secret plaintext | Memory only, during proxy/reveal | Never at rest | App process |
-| Secret ciphertext | `secrets` table | AES-256-GCM, per-user HKDF | Owner (API); RLS owner + service_role |
+| Secret ciphertext | `secrets` table | AES-256-GCM, per-user HKDF | Owner/editor through the authorized API; direct RLS owner + service_role |
 | Master key | Process env `SECRETS_ENCRYPTION_KEY` | 32-byte hex; no KMS | Operator |
 | Playbook content | Postgres | Transport TLS is the customer's | owner / editor / API-key role |
-| Audit | `audit_logs` | No hash chain; no secret values | Playbook owner |
+| Audit | `audit_logs` | Per-playbook hash chain; no secret values | Owner / auditor |
 | API key | SHA-256 hash + prefix | Plaintext shown once | Owner |
 | Invite token | SHA-256 hash, 72 h | [`src/lib/utils.ts`](../../src/lib/utils.ts) | — |
 | mTLS client | SHA-256 fingerprint, secret names | Private key stays on the client | Owner |
@@ -128,9 +128,9 @@ Vault operations: `secret.create`, `secret.rotate`, `secret.update`, `secret.del
 
 Rule: no secret value, no full URL, no API key in the row. A write failure does not fail the vault operation ([`src/app/api/_shared/audit.ts`](../../src/app/api/_shared/audit.ts)).
 
-Read: `GET /api/playbooks/:guid/audit` (legacy `GET /api/mcp/audit/:guid`), limit ≤ 500, filters `operation`, `secret.` prefix, `secret=` name — [`src/app/api/playbooks/[guid]/audit/app.ts`](../../src/app/api/playbooks/[guid]/audit/app.ts). Deliberately not readable with a playbook API key.
+Read/export/verify: owner or auditor session/account role, or a scoped auditor playbook key. Other playbook-key roles do not read the trail. Filters and JSONL/CSV formats are documented in [Audit Logs](../../public/docs/audit-logs.md).
 
-**Missing on `main`:** SIEM / syslog export, retention job, hash chain. Skills / memory / canvas writes are not logged. **Folyamatban / In progress** (export, syslog/SIEM, retention, hash chain, auditor read): [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202).
+**Shipped on `main`:** JSONL/CSV export, optional SIEM forwarding, configurable retention with chain checkpoints, a per-playbook hash chain and auditor access ([#202](https://github.com/matebenyovszky/agentplaybooks/pull/202)). Remaining gap: skill, memory and canvas writes are not logged. The chain provides tamper evidence, not independent proof against a database administrator without external anchoring.
 
 ## 8. Secret expiry and revocation
 
@@ -175,7 +175,7 @@ HTTP headers (HSTS, `X-Frame-Options: DENY`, nosniff, Permissions-Policy): [`src
 | CycloneDX SBOM | Yes on `main` | [`.github/workflows/sbom.yml`](../../.github/workflows/sbom.yml), [`docs/security/supply-chain.md`](./supply-chain.md). **Done on `main`:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205) |
 | Cosign of SBOM blobs on `cli-v*` tags | Yes on `main` | [`docs/security/supply-chain.md`](./supply-chain.md). No signed container **registry** publish |
 | `SECURITY.md`, incident runbook | Yes on `main` | [`SECURITY.md`](../../SECURITY.md), [`docs/security/incident-runbook.md`](./incident-runbook.md). **Done on `main`:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205) (runbook), [#207](https://github.com/matebenyovszky/agentplaybooks/pull/207) (GitHub private vulnerability reporting is the only contact; there is no security email). Maintainer review is best-effort; 24/72h clocks are operator duties, not reporter SLAs |
-| Encrypted on-prem backup / restore + empty-machine drill | Yes on `main` | [`docs/self-host/backup-restore.md`](../self-host/backup-restore.md), [`scripts/self-host/backup.sh`](../../scripts/self-host/backup.sh), [`.github/workflows/self-host-restore-drill.yml`](../../.github/workflows/self-host-restore-drill.yml). **Done on `main`:** [#203](https://github.com/matebenyovszky/agentplaybooks/pull/203). Master key is still stored separately; hash-chain verify in the drill is conditional until [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202) |
+| Encrypted on-prem backup / restore + empty-machine drill | Yes on `main` | [`docs/self-host/backup-restore.md`](../self-host/backup-restore.md), [`scripts/self-host/backup.sh`](../../scripts/self-host/backup.sh), [`.github/workflows/self-host-restore-drill.yml`](../../.github/workflows/self-host-restore-drill.yml). **Done on `main`:** [#203](https://github.com/matebenyovszky/agentplaybooks/pull/203). Master key is still stored separately; the drill invokes the available hash-chain verifier; older revisions without a verifier emit a skip notice |
 
 Lockfiles (`package-lock.json`, `packages/cli/package-lock.json`) are the reproducible-install input.
 
@@ -188,9 +188,9 @@ Honest list for the supplier assessment. Status follows `main` as of 2026-10-25.
 3. **No application-level MFA.** MFA is IdP-only (e.g. Entra conditional access).
 4. **Audit access is not content access.** Auditors cannot read secrets or fork content. Independently issued agent credentials must be revoked separately.
 5. **No SAML SSO.** OIDC/OAuth via GoTrue if the customer enables it.
-6. **Audit: no export, retention, or hash chain on `main`.** Skills / memory / canvas writes are not logged. **Folyamatban / In progress** (export, syslog/SIEM, retention, hash chain): [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202).
+6. **Audit coverage:** skill, memory and canvas writes remain unrecorded. Export, retention, hash chaining and auditor access are implemented; operators must configure retention and external forwarding.
 7. **`SECURITY.md` and 24/72h / 1-month incident runbook are on `main`.** **Done on `main`:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205) — [`SECURITY.md`](../../SECURITY.md), [`docs/security/incident-runbook.md`](./incident-runbook.md). GitHub private vulnerability reporting is the only security contact (**Done on `main`:** [#207](https://github.com/matebenyovszky/agentplaybooks/pull/207)); there is no security email. Maintainer review is best-effort. The 24/72h / 1-month clocks remain operator duties under 418/2024. § 77, not a reporter SLA. NKI notification remains the customer's process — **jogi ellenőrzés szükséges**.
-8. **On-prem backup / restore runbook and empty-machine drill are on `main`.** **Done on `main`:** [#203](https://github.com/matebenyovszky/agentplaybooks/pull/203) — [`docs/self-host/backup-restore.md`](../self-host/backup-restore.md), [`scripts/self-host/backup.sh`](../../scripts/self-host/backup.sh), [`scripts/self-host/restore-drill.sh`](../../scripts/self-host/restore-drill.sh), [`.github/workflows/self-host-restore-drill.yml`](../../.github/workflows/self-host-restore-drill.yml). Archives are AES-256-CBC; `SECRETS_ENCRYPTION_KEY` is never in the archive. Playbook snapshots still do not include vault values. Hash-chain verify in the drill stays optional until [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202).
+8. **On-prem backup / restore runbook and empty-machine drill are on `main`.** **Done on `main`:** [#203](https://github.com/matebenyovszky/agentplaybooks/pull/203) — [`docs/self-host/backup-restore.md`](../self-host/backup-restore.md), [`scripts/self-host/backup.sh`](../../scripts/self-host/backup.sh), [`scripts/self-host/restore-drill.sh`](../../scripts/self-host/restore-drill.sh), [`.github/workflows/self-host-restore-drill.yml`](../../.github/workflows/self-host-restore-drill.yml). Archives are AES-256-CBC; `SECRETS_ENCRYPTION_KEY` is never in the archive. Playbook snapshots still do not include vault values. The drill invokes the available hash-chain verifier; a legacy revision without one emits a skip notice.
 9. **CodeQL, CycloneDX SBOMs, and cosign of SBOM blobs are on `main`.** **Done on `main`:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205) — [`.github/workflows/codeql.yml`](../../.github/workflows/codeql.yml), [`.github/workflows/sbom.yml`](../../.github/workflows/sbom.yml), [`docs/security/supply-chain.md`](./supply-chain.md). Dependabot + production npm audit + CLI provenance remain. There is still no signed container **registry** publish.
 10. **Self-host mTLS via trusted proxy is on `main`.** **Done on `main`:** [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201) — `MTLS_MODE=proxy`, [`public/docs/self-hosted-mtls.md`](../../public/docs/self-hosted-mtls.md), [`deploy/self-host/docker-compose.mtls.yml`](../../deploy/self-host/docker-compose.mtls.yml). Node still does not terminate TLS; without a terminator the default stays fail-closed.
 11. **Isolated no-egress CI evidence is on `main`.** **Done on `main`:** fonts [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200) (`next/font/local`); secrets-flow CI [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204) — [`.github/workflows/no-egress.yml`](../../.github/workflows/no-egress.yml), [`deploy/airgap/`](../../deploy/airgap/). Production compose is still app-only. `npm ci` and base-image pulls happen before isolation. `use_secret` still leaves the network unless destinations are pinned.
@@ -219,7 +219,7 @@ Detailed mapping: [risk-assessment.md](./risk-assessment.md).
 | Crypto | `src/lib/crypto.ts`, `src/lib/crypto.test.ts` |
 | mTLS | `src/lib/mtls.ts`, `src/lib/mtls.test.ts`, `supabase/migrations/20261010081252_secret_clients.sql`, `public/docs/self-hosted-mtls.md`, `deploy/self-host/docker-compose.mtls.yml` |
 | Authz | `src/app/api/_shared/guards.ts`, `src/app/api/_shared/permissions.ts`, `src/app/api/_shared/auth.ts`, `permissions.md` |
-| Audit | `src/app/api/_shared/audit.ts`, `src/app/api/playbooks/[guid]/audit/app.ts`, `supabase/migrations/20260819_audit_logs_secrets.sql` |
+| Audit | `src/app/api/_shared/audit.ts`, `src/app/api/playbooks/[guid]/audit/app.ts`, `supabase/migrations/20260819_audit_logs_secrets.sql`, `src/lib/audit-chain.ts`, `supabase/migrations/20261024120000_audit_logs_compliance.sql` |
 | Expiry / SSRF | `src/lib/secret-expiry.ts`, `src/lib/secret-destinations.ts`, `src/lib/mcp/federation.ts` |
 | Self-host | `docker-compose.yml`, `Dockerfile`, `public/docs/self-hosting.md`, `src/app/fonts/Geist-Variable.woff2`, `deploy/airgap/`, `.github/workflows/no-egress.yml`, `docs/self-host/backup-restore.md`, `scripts/self-host/backup.sh`, `.github/workflows/self-host-restore-drill.yml` |
 | SDLC | `.github/dependabot.yml`, `.github/workflows/ci.yml`, `.github/workflows/publish-cli.yml`, `.github/workflows/codeql.yml`, `.github/workflows/sbom.yml`, `.github/workflows/no-egress.yml`, `scripts/audit-production.mjs`, `SECURITY.md`, `docs/security/incident-runbook.md`, `docs/security/supply-chain.md` |
