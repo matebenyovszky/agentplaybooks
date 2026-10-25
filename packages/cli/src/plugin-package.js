@@ -1,17 +1,17 @@
 /** Pure Agent Plugins 1.0 document builders shared by the CLI and web export. */
+import { trimEndCharacters } from "./text.js";
 export const PLUGIN_SCHEMA = "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json";
 export const MCP_SCHEMA = "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json";
 
 const PLUGIN_NAME = /^(?!.*(?:--|\.\.))[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/;
 
 export function pluginName(value) {
-  const slug = String(value).toLowerCase()
+  const slug = trimEndCharacters(String(value).toLowerCase()
     .replace(/[^a-z0-9.-]+/g, "-")
     .replace(/-+/g, "-")
     .replace(/\.+/g, ".")
-    .replace(/^[.-]+|[.-]+$/g, "")
-    .slice(0, 64)
-    .replace(/[.-]+$/g, "");
+    .replace(/^[.-]+/, "")
+    .slice(0, 64), ".-");
   return PLUGIN_NAME.test(slug) ? slug : "agent-playbook";
 }
 
