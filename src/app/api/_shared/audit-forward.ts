@@ -5,6 +5,7 @@
  */
 
 import { createHmac } from "node:crypto";
+import { isIP } from "node:net";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import type { AuditChainEntry } from "@/lib/audit-chain";
 import { auditLogToExportRow } from "@/lib/audit-chain";
@@ -119,7 +120,7 @@ function parseSyslogTarget(url: string): { protocol: "udp" | "tcp" | "tls"; host
   try {
     const parsed = new URL(url);
     const protocol = parsed.protocol.replace(":", "").toLowerCase();
-    const host = parsed.hostname;
+    const host = parsed.hostname.replace(/^\[|\]$/g, "");
     if (!host) return null;
     if (protocol === "udp" || protocol === "syslog") {
       return { protocol: "udp", host, port: parsed.port ? Number(parsed.port) : 514 };
@@ -144,12 +145,19 @@ export async function sendSyslogMessage(url: string, message: string): Promise<v
   if (target.protocol === "udp") {
     const dgram = await import("node:dgram");
     await new Promise<void>((resolve, reject) => {
-      const socket = dgram.createSocket("udp4");
-      socket.send(payload, target.port, target.host, (error) => {
-        socket.close();
+      const socket = dgram.createSocket(isIP(target.host) === 6 ? "udp6" : "udp4");
+      let settled = false;
+      const timer = setTimeout(() => finish(new Error("Syslog datagram timed out")), 5000);
+      const finish = (error?: Error) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        try { socket.close(); } catch { /* A bind failure may leave it unopened. */ }
         if (error) reject(error);
         else resolve();
-      });
+      };
+      socket.once("error", finish);
+      socket.send(payload, target.port, target.host, error => finish(error ?? undefined));
     });
     return;
   }
@@ -158,21 +166,24 @@ export async function sendSyslogMessage(url: string, message: string): Promise<v
     const net = useTls ? await import("node:tls") : await import("node:net");
     await new Promise<void>((resolve, reject) => {
       const socket = useTls
-        ? (net as typeof import("node:tls")).connect({ host: target.host, port: target.port }, () => {
-          socket.write(payload, (error) => {
-            socket.end();
-            if (error) reject(error);
-            else resolve();
-          });
+        ? (net as typeof import("node:tls")).connect({
+          host: target.host, port: target.port,
+          servername: isIP(target.host) ? undefined : target.host,
         })
-        : (net as typeof import("node:net")).connect(target.port, target.host, () => {
-          socket.write(payload, (error) => {
-            socket.end();
-            if (error) reject(error);
-            else resolve();
-          });
-        });
-      socket.on("error", reject);
+        : (net as typeof import("node:net")).connect(target.port, target.host);
+      let settled = false;
+      const timer = setTimeout(() => finish(new Error("Syslog connection timed out")), 5000);
+      const finish = (error?: Error) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        socket.destroy();
+        if (error) reject(error);
+        else resolve();
+      };
+      socket.once("error", finish);
+      socket.once("close", () => finish(new Error("Syslog connection closed before delivery")));
+      socket.once(useTls ? "secureConnect" : "connect", () => socket.end(payload, () => finish()));
     });
   };
 

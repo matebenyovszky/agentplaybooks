@@ -1,6 +1,9 @@
+import { EventEmitter } from "node:events";
 import { describe, expect, it, vi } from "vitest";
 const { cloudflareContext } = vi.hoisted(() => ({ cloudflareContext: vi.fn() }));
+const { tlsConnect } = vi.hoisted(() => ({ tlsConnect: vi.fn() }));
 vi.mock("@opennextjs/cloudflare", () => ({ getCloudflareContext: cloudflareContext }));
+vi.mock("node:tls", () => ({ connect: tlsConnect }));
 import {
   rfc5424Syslog,
   siemSignature,
@@ -8,6 +11,7 @@ import {
   readAuditForwardConfig,
   SIEM_HMAC_KEY_MIN_BYTES,
   scheduleBackground,
+  sendSyslogMessage,
 } from "./audit-forward";
 import { GENESIS_HASH, hashAuditEntry } from "@/lib/audit-chain";
 
@@ -29,6 +33,22 @@ const entry = {
 entry.hash = hashAuditEntry(entry, GENESIS_HASH);
 
 describe("audit forwarding", () => {
+  it("uses TLS SNI and closes stalled syslog connections within a deadline", async () => {
+    vi.useFakeTimers();
+    try {
+      const socket = Object.assign(new EventEmitter(), { end: vi.fn(), destroy: vi.fn() });
+      tlsConnect.mockReturnValue(socket);
+      const result = sendSyslogMessage("tls://siem.example:6514", "test").catch(error => error);
+      await vi.waitFor(() => expect(tlsConnect).toHaveBeenCalled());
+      expect(tlsConnect).toHaveBeenLastCalledWith({ host: "siem.example", port: 6514, servername: "siem.example" });
+      await vi.advanceTimersByTimeAsync(5001);
+      expect(await result).toMatchObject({ message: "Syslog connection timed out" });
+      expect(socket.destroy).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+      tlsConnect.mockReset();
+    }
+  });
   it("builds RFC 5424 syslog with PRI 133 (local0 notice)", () => {
     const line = rfc5424Syslog("{}", "host.example", new Date("2026-08-19T09:12:44.000Z"));
     expect(line.startsWith("<133>1 2026-08-19T09:12:44.000Z host.example agentplaybooks - audit_log - {}")).toBe(true);

@@ -535,7 +535,7 @@ That runs:
 - second rollback (idempotent)
 
 Expected: `PASS: local rehearsal complete` with
-`PASS: rollback preflight matches original checksum_original=… count=1000`.
+`PASS: rollback retains new events and matches original checksum_original=… count=1003`.
 
 
 ## Audit corrections (2026-10-25)
