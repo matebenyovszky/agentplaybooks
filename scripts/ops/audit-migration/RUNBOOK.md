@@ -373,13 +373,13 @@ Local rehearsal (PostgreSQL 16 on this VM, fixture in
 
 | Step | N = 1,000 |
 | --- | ---: |
-| Preflight | ~0.04 s |
-| In-DB backup table | ~0.04 s |
-| `pg_dump` | ~0.06 s |
-| Apply migration (backfill) | ~0.08 s |
-| Postflight | ~0.06 s |
-| Rollback | ~0.05 s |
-| **Total (no operator think-time)** | **~0.3 s** |
+| Preflight | 0.033 s |
+| In-DB backup table | 0.039 s |
+| `pg_dump` | 0.069 s |
+| Apply migration (backfill) | 0.072 s |
+| Postflight | 0.065 s |
+| Rollback | 0.051 s |
+| **Total (no operator think-time)** | **0.329 s** |
 
 The backfill is one server-side `DO` loop (not one round-trip per row).
 

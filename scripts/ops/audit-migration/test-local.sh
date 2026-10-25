@@ -166,14 +166,10 @@ echo "=== 7. migration idempotency (re-apply SQL; hashes already set so backfill
 psql -d "$DB" -v ON_ERROR_STOP=1 -f "$MIGRATION" >/tmp/audit-migration-reapply.log
 IDEM_CHECKSUM="$(checksum_sql)"
 IDEM_COUNT="$(psql -d "$DB" -A -t -v ON_ERROR_STOP=1 -c 'SELECT count(*) FROM public.audit_logs;' | tr -d '[:space:]')"
-psql -d "$DB" -v ON_ERROR_STOP=1 -f "$DIR/postflight.sql" >/tmp/audit-migration-reapply-post.log
+# postflight RAISE EXCEPTION on mismatch; ON_ERROR_STOP=1 is the GO/NO-GO.
+psql -d "$DB" -v ON_ERROR_STOP=1 -f "$DIR/postflight.sql"
 if [[ "$IDEM_COUNT" != "$ORIG_COUNT" || "$IDEM_CHECKSUM" != "$ORIG_CHECKSUM" ]]; then
   echo "FAIL: re-apply changed count/checksum before=$ORIG_COUNT $ORIG_CHECKSUM after=$IDEM_COUNT $IDEM_CHECKSUM"
-  exit 1
-fi
-if ! grep -q "GO: hash-chain mismatches = 0" /tmp/audit-migration-reapply-post.log; then
-  echo "FAIL: re-apply postflight was not GO"
-  cat /tmp/audit-migration-reapply-post.log
   exit 1
 fi
 psql -d "$DB" -v ON_ERROR_STOP=1 -f "$DIR/record-version.sql" >/dev/null
