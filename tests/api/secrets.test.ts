@@ -61,6 +61,8 @@ describe('Secrets API - Security Tests', () => {
       
       vi.mocked(getServiceSupabase).mockReturnValue({
         from: vi.fn().mockReturnValue({
+          // The audit row of a reveal must be written before the value is released.
+          insert: vi.fn(() => ({ select: () => ({ single: async () => ({ data: {}, error: null }) }) })),
           select: vi.fn().mockReturnValue({
             eq: vi.fn().mockReturnThis(),
             single: mockSingle
@@ -109,6 +111,8 @@ describe('Secrets API - Security Tests', () => {
       
       vi.mocked(getServiceSupabase).mockReturnValue({
         from: vi.fn().mockReturnValue({
+          // The audit row of a reveal must be written before the value is released.
+          insert: vi.fn(() => ({ select: () => ({ single: async () => ({ data: {}, error: null }) }) })),
           select: vi.fn().mockReturnValue({
             eq: vi.fn().mockReturnThis(),
             single: mockSingle
@@ -152,6 +156,8 @@ describe('Secrets API - Security Tests', () => {
       
       vi.mocked(getServiceSupabase).mockReturnValue({
         from: vi.fn().mockReturnValue({
+          // The audit row of a reveal must be written before the value is released.
+          insert: vi.fn(() => ({ select: () => ({ single: async () => ({ data: {}, error: null }) }) })),
           select: vi.fn().mockReturnValue({
             eq: vi.fn().mockReturnThis(),
             single: mockSingle
@@ -204,7 +210,7 @@ describe('Secrets API - audit trail', () => {
    * was written to `audit_logs` while `secrets` answers normally.
    */
   function mockSupabaseWithAudit(secretRow: Record<string, unknown> | null) {
-    const auditInsert = vi.fn().mockResolvedValue({ error: null });
+    const auditInsert = vi.fn((_row: Record<string, unknown>) => ({ select: () => ({ single: async () => ({ data: {}, error: null }) }) }));
     vi.mocked(getServiceSupabase).mockReturnValue({
       from: vi.fn((table: string) => {
         if (table === 'audit_logs') return { insert: auditInsert };
@@ -295,7 +301,7 @@ describe('Secrets API - audit trail', () => {
     expect(row).not.toContain('decrypted_value');
   });
 
-  it('never lets an audit write failure break the operation', async () => {
+  it('withholds a revealed value when its audit row cannot be written', async () => {
     vi.mocked(getAuthenticatedUser).mockResolvedValue({ id: 'user1' });
     vi.mocked(getPlaybookByGuid).mockResolvedValue({
       id: 'playbook1',
@@ -322,7 +328,9 @@ describe('Secrets API - audit trail', () => {
 
     const res = await app.request('/api/playbooks/guid1/secrets/reveal/my-secret', { method: 'GET' });
 
-    expect(res.status).toBe(200);
+    // Fail closed: a reveal nobody could account for later is not released.
+    expect(res.status).toBe(503);
+    expect(JSON.stringify(await res.json())).not.toContain('decrypted');
     consoleError.mockRestore();
   });
 });
@@ -349,7 +357,7 @@ describe("Secrets API - editor access and reveal policy", () => {
     };
     update = chain.update;
     from = vi.fn((table: string) => table === "audit_logs"
-      ? { insert: vi.fn(async () => ({ error: null })) }
+      ? { insert: vi.fn(() => ({ select: () => ({ single: async () => ({ data: {}, error: null }) }) })) }
       : chain);
     vi.mocked(getServiceSupabase).mockReturnValue({ from } as unknown as ReturnType<typeof getServiceSupabase>);
   });

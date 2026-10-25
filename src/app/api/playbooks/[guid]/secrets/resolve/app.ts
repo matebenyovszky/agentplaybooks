@@ -8,7 +8,7 @@ import {
   playbookOwnerByGuid,
   secretNames,
 } from "@/app/api/_shared/secret-runtime";
-import { recordSecretAudit, type AuditContext } from "@/app/api/_shared/audit";
+import { AUDIT_UNAVAILABLE, recordSecretAudit, type AuditContext } from "@/app/api/_shared/audit";
 import { decryptSecret } from "@/lib/crypto";
 
 export const app = createApiApp("/api/playbooks/:guid/secrets/resolve");
@@ -110,10 +110,12 @@ app.post("/", async c => {
     return c.json({ error: "Secret loading failed" }, 500);
   }
   const now = new Date().toISOString();
-  await Promise.all(rows.map(async row => {
+  const recorded = await Promise.all(rows.map(async row => {
     await db.from("secrets").update({ last_used_at: now, use_count: row.use_count + 1 }).eq("id", row.id);
-    await recordSecretAudit(audit, { operation: "secret.reveal", status: "success", secretName: row.name });
+    return recordSecretAudit(audit, { operation: "secret.reveal", status: "success", secretName: row.name });
   }));
+  // Fail closed: values are released only when every reveal is on record.
+  if (recorded.some(ok => !ok)) return c.json({ error: AUDIT_UNAVAILABLE }, 503);
   if (clientId) await db.from("secret_clients").update({ last_used_at: now }).eq("id", clientId);
   return c.json({ values, missing_optional: optional.filter(name => !byName.has(name)) });
 });

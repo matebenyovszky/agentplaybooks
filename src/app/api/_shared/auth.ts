@@ -6,6 +6,7 @@ import { getPlaybookAccessRole } from "./guards";
 import { grantsPermission } from "./permissions";
 import { roleMayPerform } from "@/lib/audit-access";
 import { noteAuditActor } from "@/lib/audit-context";
+import { accountIsActive } from "./account-status";
 
 type ApiKeyWithPlaybook = ApiKey & {
   playbooks: { id: string; guid: string };
@@ -66,10 +67,14 @@ function lookupPlaybookKey(request: Request): Promise<ApiKey | null> {
     const keyHash = await keyHashForRequest(request);
     if (!keyHash) return null;
     const { data, error } = await getServiceSupabase().from("api_keys")
-      .select("*").eq("key_hash", keyHash).eq("is_active", true).maybeSingle();
+      .select("*, owner:playbooks!inner(user_id)").eq("key_hash", keyHash).eq("is_active", true).maybeSingle();
     if (error || !data || (data.expires_at && Date.parse(data.expires_at) <= Date.now())) return null;
-    noteAuditActor(request, { type: "api_key", id: data.key_prefix || null });
-    return data as ApiKey;
+    // A playbook key acts for the playbook's owner: once that account is
+    // banned or deleted, its playbooks' keys stop working too.
+    const { owner, ...key } = data as ApiKey & { owner?: { user_id?: string } | null };
+    if (!owner?.user_id || !(await accountIsActive(request, owner.user_id))) return null;
+    noteAuditActor(request, { type: "api_key", id: key.key_prefix || null });
+    return key as ApiKey;
   })();
   playbookKeyLookups.set(request, lookup);
   return lookup;
@@ -100,6 +105,7 @@ function lookupUserKey(request: Request): Promise<UserApiKeyData | null> {
     const { data, error } = await getServiceSupabase().from("user_api_keys")
       .select("*").eq("key_hash", keyHash).eq("is_active", true).maybeSingle();
     if (error || !data || (data.expires_at && Date.parse(data.expires_at) <= Date.now())) return null;
+    if (!(await accountIsActive(request, data.user_id))) return null;
     noteAuditActor(request, { type: "api_key", id: data.key_prefix || null });
     return data as UserApiKeyData;
   })();
@@ -138,6 +144,8 @@ export async function getAuthenticatedUser(request?: Request): Promise<{ id: str
     const token = authHeader.slice("Bearer ".length);
     const { data: { user }, error } = await getSupabase().auth.getUser(token);
     if (error || !user) return null;
+    // An access token outlives a ban until it expires; refuse it now.
+    if (!(await accountIsActive(request, user.id))) return null;
     noteAuditActor(request, { type: "owner", id: user.id });
     return { id: user.id };
   })();

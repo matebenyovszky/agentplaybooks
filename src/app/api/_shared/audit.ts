@@ -17,7 +17,11 @@
  *
  * A write never throws. An audit backend that is briefly unavailable must not
  * take the vault down with it; the failure goes to the server log, the same
- * choice the federation writer makes.
+ * choice the federation writer makes. The one exception is releasing a
+ * secret's plaintext to the caller (`secret.reveal` success): the handlers
+ * check the boolean recordSecretAudit returns and withhold the value when the
+ * row was not written, because a reveal nobody can later account for is
+ * exactly what the trail exists to prevent.
  */
 
 import { getServiceSupabase } from "./supabase";
@@ -149,7 +153,7 @@ export function destinationHostOf(url: string | null | undefined): string | null
  * trail. Both MCP entry points use this one rather than each keeping its own
  * copy of the insert.
  */
-async function insertAuditLog(row: AuditLogInsert): Promise<void> {
+async function insertAuditLog(row: AuditLogInsert): Promise<boolean> {
   const safe = sanitizeAuditInsert(row);
   const { data, error } = await getServiceSupabase()
     .from("audit_logs")
@@ -158,9 +162,10 @@ async function insertAuditLog(row: AuditLogInsert): Promise<void> {
     .single();
   if (error) {
     console.error("Failed to write audit log", error.message);
-    return;
+    return false;
   }
   scheduleAuditForward(data ?? safe);
+  return true;
 }
 
 export function federationAuditWriter(playbookId: string, requestId?: string | null) {
@@ -184,12 +189,13 @@ export function federationAuditWriter(playbookId: string, requestId?: string | n
   };
 }
 
+/** Writes the row; resolves to whether it was written. Never throws. */
 export async function recordSecretAudit(
   context: AuditContext,
   draft: SecretAuditDraft,
-): Promise<void> {
+): Promise<boolean> {
   try {
-    await insertAuditLog({
+    return await insertAuditLog({
       playbook_id: context.playbookId,
       // No federated server is involved in a vault operation.
       mcp_server_id: null,
@@ -204,8 +210,12 @@ export async function recordSecretAudit(
     });
   } catch (err) {
     console.error("Failed to write audit log", err);
+    return false;
   }
 }
+
+/** Response body when a plaintext release could not be recorded. */
+export const AUDIT_UNAVAILABLE = "The audit trail could not record this reveal, so the value was not released. Try again.";
 
 /**
  * Record the outcome of a handler that kept a draft.

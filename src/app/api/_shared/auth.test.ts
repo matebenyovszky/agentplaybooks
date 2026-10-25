@@ -21,6 +21,10 @@ vi.mock("./supabase", () => ({
   getSupabase: vi.fn(),
 }));
 
+// Offboarding has its own tests (tests/api/mcp-bound-key-lookup.test.ts);
+// here every account is active.
+vi.mock("./account-status", () => ({ accountIsActive: vi.fn(async () => true) }));
+
 import { storedDisplayPrefix, validateApiKey, validateUserApiKey } from "./auth";
 
 type QueryResult = {
@@ -52,6 +56,7 @@ describe("API key authentication", () => {
       data: {
         id: "key-1",
         playbook_id: "playbook-1",
+        owner: { user_id: "owner-1" },
         key_hash: "hashed-key",
         key_prefix: "apb_test",
         name: "Automation",
@@ -96,6 +101,7 @@ describe("API key authentication", () => {
       data: {
         id: "key-1",
         playbook_id: "playbook-1",
+        owner: { user_id: "owner-1" },
         key_prefix: "apb_test",
         role: "viewer",
         permissions: ["memory:read"],

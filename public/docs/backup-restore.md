@@ -60,7 +60,7 @@ Load `scripts/self-host/backup.env.example` into `/etc/agentplaybooks/backup.env
 
 ## Encryption of backups
 
-Archives are encrypted at rest with **AES-256-CBC, PBKDF2, 310 000 iterations**, via OpenSSL, using `BACKUP_ENCRYPTION_PASSPHRASE`.
+Archives are encrypted at rest with **AES-256-CBC, PBKDF2, 310 000 iterations**, via OpenSSL, using `BACKUP_ENCRYPTION_PASSPHRASE`, and **authenticated** with an HMAC-SHA256 tag appended to the file (encrypt-then-MAC; the MAC key is derived separately from the same passphrase). `restore.sh` verifies the tag in constant time before decrypting anything and refuses an altered archive or a wrong passphrase. An archive made before tags were added restores only with `BACKUP_ALLOW_UNSEALED=1`, with a warning that its integrity is not verified.
 
 - This passphrase **must not** be `SECRETS_ENCRYPTION_KEY`
 - Backup files are written mode `0600` into `BACKUP_DIR` (default `./backups`, mode `0700`)

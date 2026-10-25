@@ -18,7 +18,7 @@ vi.mock("@/app/api/_shared/guards", () => ({ getPlaybookByGuid: vi.fn() }));
 vi.mock("@/app/api/_shared/supabase", () => ({ getServiceSupabase: vi.fn() }));
 vi.mock("@/lib/crypto", () => ({ encryptSecret: vi.fn(), decryptSecret: vi.fn() }));
 vi.mock("@/app/api/_shared/audit", async (original) => ({
-  ...await original<object>(), recordSecretAudit: vi.fn().mockResolvedValue(undefined),
+  ...await original<object>(), recordSecretAudit: vi.fn().mockResolvedValue(true),
 }));
 
 const PAST = "2020-01-01T00:00:00.000Z";

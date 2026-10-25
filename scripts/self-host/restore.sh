@@ -58,10 +58,21 @@ mkdir -p "${EXTRACT}"
 case "${ARCHIVE}" in
   *.enc)
     [ -n "${BACKUP_ENCRYPTION_PASSPHRASE:-}" ] || die "BACKUP_ENCRYPTION_PASSPHRASE is required to decrypt ${ARCHIVE}"
-    openssl enc -d -aes-256-cbc -pbkdf2 -iter 310000 \
-      -in "${ARCHIVE}" \
-      -out "${WORK}/bundle.tar.gz" \
-      -pass env:BACKUP_ENCRYPTION_PASSPHRASE
+    # Authenticate before decrypting (encrypt-then-MAC, see archive.py). Only
+    # the verified ciphertext bytes are passed to openssl.
+    if CIPHER_BYTES="$(python3 "${SCRIPT_DIR}/archive.py" verify "${ARCHIVE}" 2>"${WORK}/verify.err")"; then
+      head -c "${CIPHER_BYTES}" "${ARCHIVE}" | openssl enc -d -aes-256-cbc -pbkdf2 -iter 310000 \
+        -out "${WORK}/bundle.tar.gz" \
+        -pass env:BACKUP_ENCRYPTION_PASSPHRASE
+    elif grep -q "no authentication tag" "${WORK}/verify.err" && [ "${BACKUP_ALLOW_UNSEALED:-0}" = "1" ]; then
+      err "WARNING: ${ARCHIVE} has no authentication tag (made before archives were sealed). Restoring it because BACKUP_ALLOW_UNSEALED=1; its integrity is not verified."
+      openssl enc -d -aes-256-cbc -pbkdf2 -iter 310000 \
+        -in "${ARCHIVE}" \
+        -out "${WORK}/bundle.tar.gz" \
+        -pass env:BACKUP_ENCRYPTION_PASSPHRASE
+    else
+      die "$(cat "${WORK}/verify.err")"
+    fi
     python3 "${SCRIPT_DIR}/archive.py" extract "${WORK}/bundle.tar.gz" "${EXTRACT}"
     ;;
   *.tar.gz)

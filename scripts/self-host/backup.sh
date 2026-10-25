@@ -135,6 +135,9 @@ if [ "${ENCRYPT}" -eq 1 ]; then
     -in "${PLAIN_ARCHIVE}" \
     -out "${FINAL_ARCHIVE}" \
     -pass env:BACKUP_ENCRYPTION_PASSPHRASE
+  # openssl enc is not authenticated: append an HMAC-SHA256 tag (encrypt-then-
+  # MAC) so restore.sh refuses an altered archive before decrypting it.
+  python3 "${SCRIPT_DIR}/archive.py" seal "${FINAL_ARCHIVE}"
   chmod 600 "${FINAL_ARCHIVE}"
   rm -f "${PLAIN_ARCHIVE}"
 fi

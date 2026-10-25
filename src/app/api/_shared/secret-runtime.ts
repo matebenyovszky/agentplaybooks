@@ -1,5 +1,6 @@
 import { presentedApiKey, validateApiKey } from "./auth";
 import { getServiceSupabase } from "./supabase";
+import { accountIsActive } from "./account-status";
 import { verifiedClientFingerprint } from "@/lib/mtls";
 import { recordSecretAudit } from "./audit";
 import { playbookIdentifierColumn } from "@/lib/playbook-identifier";
@@ -55,15 +56,24 @@ export async function mtlsRuntimeGrant(
   if (presentedApiKey(request)) return null;
   const fingerprint = verifiedClientFingerprint(request);
   if (!fingerprint) return null;
-  const { data: client, error } = await getServiceSupabase().from("secret_clients").select("*")
+  const { data: row, error } = await getServiceSupabase().from("secret_clients")
+    .select("*, owner:playbooks!inner(user_id)")
     .eq("playbook_id", playbookId).eq("certificate_sha256", fingerprint)
     .eq("is_active", true).maybeSingle();
-  if (error || !client || (client.expires_at && Date.parse(client.expires_at) <= Date.now())) {
+  const { owner, ...client } = (row ?? {}) as NonNullable<typeof row> & { owner?: { user_id?: string } | null };
+  const found = Boolean(row);
+  // The certificate acts for the playbook's owner; a disabled account's
+  // clients stop working with it.
+  const ownerActive = found && Boolean(owner?.user_id) && await accountIsActive(request, owner!.user_id!);
+  if (error || !found || (client.expires_at && Date.parse(client.expires_at) <= Date.now()) || !ownerActive) {
     await recordSecretAudit({
-      playbookId, actor: { type: "mtls", id: client?.id ?? null }, requestId,
+      playbookId, actor: { type: "mtls", id: found ? client.id : null }, requestId,
     }, {
       operation: "secret.reveal", status: "denied",
-      reason: error ? "client_lookup_failed" : client ? "client_expired" : "client_not_registered_or_revoked",
+      reason: error ? "client_lookup_failed"
+        : !found ? "client_not_registered_or_revoked"
+        : !ownerActive ? "account_disabled"
+        : "client_expired",
     });
     return null;
   }
