@@ -11,7 +11,7 @@ that are not code are listed at the end as blockers.
 ## Where this stands (10 October 2026)
 
 Paused here, to be picked up later. The public summary is the *Claude Plugin &
-Directory Listing* section of `public/docs/ROADMAP.md`. Nothing about this work
+Directory Listing* section of `public/docs/roadmap.md`. Nothing about this work
 lives only on a local machine: everything below is on `main`.
 
 **Done (PR #173, merged):**

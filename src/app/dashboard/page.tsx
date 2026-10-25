@@ -119,9 +119,9 @@ export default function DashboardPage() {
 
   return (
     <>
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-neutral-900 dark:text-white">
+      <div className="mb-8 flex min-w-0 flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="min-w-0 wrap-anywhere text-3xl font-bold text-neutral-900 dark:text-white">
             {t("dashboard.welcome")}, {user?.email?.split("@")[0]}
           </h1>
           <p className="text-neutral-600 dark:text-slate-400 mt-1">{t("dashboard.myPlaybooks")}</p>
@@ -170,7 +170,7 @@ export default function DashboardPage() {
                 className="block p-6 bg-white dark:bg-blue-950/30 border border-neutral-200 dark:border-blue-900/50 rounded-xl hover:border-amber-500/30 hover:shadow-lg dark:hover:shadow-none transition-all"
               >
                 <div className="flex items-start justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-neutral-900 dark:text-white">{playbook.name}</h3>
+                  <h3 className="min-w-0 wrap-anywhere text-lg font-semibold text-neutral-900 dark:text-white">{playbook.name}</h3>
                   {playbook.current_user_role === "editor" || playbook.current_user_role === "auditor" ? (
                     <span className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-500/10 px-2 py-1 rounded-full">
                       <UsersRound className="h-3 w-3" />
@@ -200,7 +200,7 @@ export default function DashboardPage() {
                   </p>
                 )}
 
-                <div className="flex items-center gap-4 text-sm text-neutral-500 dark:text-slate-500">
+                <div className="flex min-w-0 flex-wrap items-center gap-4 text-sm text-neutral-500 dark:text-slate-500">
                   <span className="flex items-center gap-1">
                     <Zap className="h-4 w-4" />
                     {playbook.skill_count || 0} {t("dashboard.playbookCard.skills")}
@@ -216,7 +216,7 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="mt-4 pt-4 border-t border-neutral-100 dark:border-blue-900/30">
-                  <code className="text-xs text-neutral-400 dark:text-slate-500 font-mono">
+                  <code className="min-w-0 wrap-anywhere font-mono text-xs text-neutral-400 dark:text-slate-500">
                     /{playbook.guid}
                   </code>
                 </div>
