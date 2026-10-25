@@ -227,6 +227,8 @@ services:
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://app:3000}
       SECRETS_REQUIRE_ALLOWED_HOSTS: "true"
       NO_EGRESS: "true"
+      # The airgap network has no external route; see public/docs/self-hosting.md.
+      OUTBOUND_DNS_CHECK: "false"
       NEXT_TELEMETRY_DISABLED: "1"
     networks:
       airgap:

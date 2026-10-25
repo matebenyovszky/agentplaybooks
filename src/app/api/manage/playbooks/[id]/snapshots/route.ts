@@ -1,5 +1,6 @@
 // Native Request/Response handler: shared by Next.js and the Worker dispatcher.
 // @worker-native
+import { runWithAuditRequest } from "@/lib/audit-context";
 import { getUserFromAuthOrApiKey } from "@/app/api/_shared/auth";
 import { getPlaybookAccessRole } from "@/app/api/_shared/guards";
 import { getServiceSupabase } from "@/app/api/_shared/supabase";
@@ -22,7 +23,7 @@ export async function GET(request: Request, { params }: Context) {
   return Response.json(data ?? []);
 }
 
-export async function POST(request: Request, { params }: Context) {
+async function handlePOST(request: Request, { params }: Context) {
   const { id } = await params;
   const user = await authorized(request, id, "playbooks:write");
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
@@ -57,4 +58,8 @@ export async function POST(request: Request, { params }: Context) {
   }).select("id,digest,file_count,size_bytes,created_at").single();
   if (error) return Response.json({ error: error.message }, { status: 500 });
   return Response.json(data, { status: 201 });
+}
+
+export async function POST(request: Request, { params }: Context) {
+  return runWithAuditRequest(request, () => handlePOST(request, { params }));
 }
