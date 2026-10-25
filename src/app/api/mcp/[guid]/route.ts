@@ -8,6 +8,7 @@ import {
   resolvePrivatePlaybookActor,
   validatePlaybookCredential,
   type PrivatePlaybookActor,
+  storedDisplayPrefix,
 } from "@/app/api/_shared/auth";
 import { READ_TOOL_PERMISSIONS, readPermissionForResource } from "@/app/api/_shared/private-read-scopes";
 import { getServiceSupabase, getSupabase } from "@/app/api/_shared/supabase";
@@ -86,7 +87,7 @@ type PersonaSource = Pick<Playbook, "id" | "persona_name" | "persona_system_prom
  * Keep the route-bound playbook identity in one place while accepting either
  * a direct playbook key or the user's control-plane key.
  */
-async function validateApiKey(request: Request, requiredPermission: string) {
+async function acceptPlaybookCredential(request: Request, requiredPermission: string) {
   const pathname = new URL(request.url).pathname;
   const identifier = pathname.match(/\/api\/mcp\/([^/]+)/)?.[1];
   return identifier
@@ -756,7 +757,7 @@ app.post("/", async (c) => {
         }
         const access = (serverRow.transport_config as { access?: string } | null)?.access;
         if (access !== "public") {
-          const apiKey = await validateApiKey(c.req.raw, "tools:call");
+          const apiKey = await acceptPlaybookCredential(c.req.raw, "tools:call");
           if (!apiKey || apiKey.playbooks.id !== playbook.id) {
             return c.json({
               jsonrpc: "2.0",
@@ -1126,7 +1127,7 @@ use_secret_write({
         const server = federatedServer;
         const access = (server.transport_config as { access?: string } | null)?.access;
         if (access !== "public") {
-          const apiKey = await validateApiKey(c.req.raw, "tools:call");
+          const apiKey = await acceptPlaybookCredential(c.req.raw, "tools:call");
           if (!apiKey || apiKey.playbooks.id !== playbook.id) {
             return c.json({
               jsonrpc: "2.0",
@@ -1164,13 +1165,13 @@ use_secret_write({
       // caller's key has been accepted, which is what lets the shared catch
       // classify a failure without reading its own error messages.
       let secretAudit: SecretAuditDraft | null = null;
-      // The key prefix is only known once validateApiKey accepts it; a refused
+      // The key prefix is only known once the stored column is loaded; a refused
       // caller stays anonymous rather than having a rejected credential's
       // fragments copied into the trail.
       let secretAuditKeyPrefix: string | null = null;
       const secretAuditContext = () => ({
         playbookId: playbook.id,
-        actor: auditActor(null, secretAuditKeyPrefix ? { key_prefix: secretAuditKeyPrefix } : null),
+        actor: auditActor(null, secretAuditKeyPrefix),
         requestId: c.req.header("cf-ray") || c.req.header("x-request-id") || null,
       });
 
@@ -1289,9 +1290,9 @@ use_secret_write({
 
           case "write_memory": {
             // Requires API key; one with only memory:propose stores a proposal
-            const apiKeyData = await validateApiKey(c.req.raw, "memory:write");
+            const apiKeyData = await acceptPlaybookCredential(c.req.raw, "memory:write");
             const writer = apiKeyData?.playbooks.id === playbook.id ? apiKeyData : null;
-            const proposerKey = writer ? null : await validateApiKey(c.req.raw, "memory:propose");
+            const proposerKey = writer ? null : await acceptPlaybookCredential(c.req.raw, "memory:propose");
             const proposer = proposerKey?.playbooks.id === playbook.id ? proposerKey : null;
             if (!writer && !proposer) {
               throw new Error("API key with memory:write or memory:propose permission required");
@@ -1353,7 +1354,7 @@ use_secret_write({
 
           case "delete_memory": {
             // Requires API key
-            const apiKeyData = await validateApiKey(c.req.raw, "memory:write");
+            const apiKeyData = await acceptPlaybookCredential(c.req.raw, "memory:write");
             if (!apiKeyData || apiKeyData.playbooks.id !== playbook.id) {
               throw new Error("API key with memory:write permission required");
             }
@@ -1374,7 +1375,7 @@ use_secret_write({
 
           case "consolidate_memories": {
             // Requires API key
-            const apiKeyData = await validateApiKey(c.req.raw, "memory:write");
+            const apiKeyData = await acceptPlaybookCredential(c.req.raw, "memory:write");
             if (!apiKeyData || apiKeyData.playbooks.id !== playbook.id) {
               throw new Error("API key with memory:write permission required");
             }
@@ -1452,7 +1453,7 @@ use_secret_write({
 
           case "promote_memory": {
             // Requires API key
-            const apiKeyData = await validateApiKey(c.req.raw, "memory:write");
+            const apiKeyData = await acceptPlaybookCredential(c.req.raw, "memory:write");
             if (!apiKeyData || apiKeyData.playbooks.id !== playbook.id) {
               throw new Error("API key with memory:write permission required");
             }
@@ -1576,7 +1577,7 @@ use_secret_write({
 
           case "archive_memories": {
             // Requires API key
-            const apiKeyData = await validateApiKey(c.req.raw, "memory:write");
+            const apiKeyData = await acceptPlaybookCredential(c.req.raw, "memory:write");
             if (!apiKeyData || apiKeyData.playbooks.id !== playbook.id) {
               throw new Error("API key with memory:write permission required");
             }
@@ -1705,7 +1706,7 @@ use_secret_write({
           // ===== Hierarchical Task Graph Tools =====
 
           case "create_task_graph": {
-            const apiKeyData = await validateApiKey(c.req.raw, "memory:write");
+            const apiKeyData = await acceptPlaybookCredential(c.req.raw, "memory:write");
             if (!apiKeyData || apiKeyData.playbooks.id !== playbook.id) {
               throw new Error("API key with memory:write permission required");
             }
@@ -1788,7 +1789,7 @@ use_secret_write({
           }
 
           case "update_task_status": {
-            const apiKeyData = await validateApiKey(c.req.raw, "memory:write");
+            const apiKeyData = await acceptPlaybookCredential(c.req.raw, "memory:write");
             if (!apiKeyData || apiKeyData.playbooks.id !== playbook.id) {
               throw new Error("API key with memory:write permission required");
             }
@@ -1905,7 +1906,7 @@ use_secret_write({
           }
 
           case "write_canvas": {
-            const apiKeyData = await validateApiKey(c.req.raw, "canvas:write");
+            const apiKeyData = await acceptPlaybookCredential(c.req.raw, "canvas:write");
             if (!apiKeyData || apiKeyData.playbooks.id !== playbook.id) {
               throw new Error("Credential with canvas:write or full permission required");
             }
@@ -1949,7 +1950,7 @@ use_secret_write({
           }
 
           case "patch_canvas_section": {
-            const apiKeyData = await validateApiKey(c.req.raw, "canvas:write");
+            const apiKeyData = await acceptPlaybookCredential(c.req.raw, "canvas:write");
             if (!apiKeyData || apiKeyData.playbooks.id !== playbook.id) {
               throw new Error("Credential with canvas:write or full permission required");
             }
@@ -2044,7 +2045,7 @@ use_secret_write({
           }
 
           case "lock_canvas_section": {
-            const apiKeyData = await validateApiKey(c.req.raw, "canvas:write");
+            const apiKeyData = await acceptPlaybookCredential(c.req.raw, "canvas:write");
             if (!apiKeyData || apiKeyData.playbooks.id !== playbook.id) {
               throw new Error("Credential with canvas:write or full permission required");
             }
@@ -2095,7 +2096,7 @@ use_secret_write({
           }
 
           case "unlock_canvas_section": {
-            const apiKeyData = await validateApiKey(c.req.raw, "canvas:write");
+            const apiKeyData = await acceptPlaybookCredential(c.req.raw, "canvas:write");
             if (!apiKeyData || apiKeyData.playbooks.id !== playbook.id) {
               throw new Error("Credential with canvas:write or full permission required");
             }
@@ -2139,9 +2140,9 @@ use_secret_write({
           // ===== Self-Modification / Evolution Tools =====
 
           case "create_skill": {
-            const apiKeyData = await validateApiKey(c.req.raw, "skills:write");
+            const apiKeyData = await acceptPlaybookCredential(c.req.raw, "skills:write");
             const writer = apiKeyData?.playbooks.id === playbook.id ? apiKeyData : null;
-            const proposerKey = writer ? null : await validateApiKey(c.req.raw, "skills:propose");
+            const proposerKey = writer ? null : await acceptPlaybookCredential(c.req.raw, "skills:propose");
             const proposer = proposerKey?.playbooks.id === playbook.id ? proposerKey : null;
             if (!writer && !proposer) {
               throw new Error("API key with skills:write or skills:propose permission required");
@@ -2181,9 +2182,9 @@ use_secret_write({
           }
 
           case "update_skill": {
-            const apiKeyData = await validateApiKey(c.req.raw, "skills:write");
+            const apiKeyData = await acceptPlaybookCredential(c.req.raw, "skills:write");
             const writer = apiKeyData?.playbooks.id === playbook.id ? apiKeyData : null;
-            const proposerKey = writer ? null : await validateApiKey(c.req.raw, "skills:propose");
+            const proposerKey = writer ? null : await acceptPlaybookCredential(c.req.raw, "skills:propose");
             const proposer = proposerKey?.playbooks.id === playbook.id ? proposerKey : null;
             if (!writer && !proposer) {
               throw new Error("API key with skills:write or skills:propose permission required");
@@ -2245,7 +2246,7 @@ use_secret_write({
           }
 
           case "delete_skill": {
-            const apiKeyData = await validateApiKey(c.req.raw, "skills:write");
+            const apiKeyData = await acceptPlaybookCredential(c.req.raw, "skills:write");
             if (!apiKeyData || apiKeyData.playbooks.id !== playbook.id) {
               throw new Error("API key with skills:write permission required");
             }
@@ -2302,7 +2303,7 @@ use_secret_write({
           }
 
           case "rollback_skill": {
-            const apiKeyData = await validateApiKey(c.req.raw, "skills:write");
+            const apiKeyData = await acceptPlaybookCredential(c.req.raw, "skills:write");
             if (!apiKeyData || apiKeyData.playbooks.id !== playbook.id) {
               throw new Error("API key with skills:write permission required");
             }
@@ -2339,7 +2340,7 @@ use_secret_write({
           }
 
           case "update_playbook": {
-            const apiKeyData = await validateApiKey(c.req.raw, "playbooks:write");
+            const apiKeyData = await acceptPlaybookCredential(c.req.raw, "playbooks:write");
             if (!apiKeyData || apiKeyData.playbooks.id !== playbook.id) {
               throw new Error("API key with playbooks:write or full permission required for this playbook");
             }
@@ -2402,7 +2403,7 @@ use_secret_write({
 
             const access = (server.transport_config as { access?: string } | null)?.access;
             if (access !== "public") {
-              const credential = await validateApiKey(c.req.raw, "tools:call");
+              const credential = await acceptPlaybookCredential(c.req.raw, "tools:call");
               if (!credential || credential.playbooks.id !== playbook.id) {
                 throw new Error("Credential with tools:call or full permission required");
               }
@@ -2436,7 +2437,7 @@ use_secret_write({
           }
 
           case "create_mcp_server": {
-            const credential = await validateApiKey(c.req.raw, "playbooks:write");
+            const credential = await acceptPlaybookCredential(c.req.raw, "playbooks:write");
             if (!credential || credential.playbooks.id !== playbook.id) {
               throw new Error("Credential with playbooks:write or full permission required");
             }
@@ -2473,7 +2474,7 @@ use_secret_write({
           }
 
           case "update_mcp_server": {
-            const credential = await validateApiKey(c.req.raw, "playbooks:write");
+            const credential = await acceptPlaybookCredential(c.req.raw, "playbooks:write");
             if (!credential || credential.playbooks.id !== playbook.id) {
               throw new Error("Credential with playbooks:write or full permission required");
             }
@@ -2513,7 +2514,7 @@ use_secret_write({
           }
 
           case "delete_mcp_server": {
-            const credential = await validateApiKey(c.req.raw, "playbooks:write");
+            const credential = await acceptPlaybookCredential(c.req.raw, "playbooks:write");
             if (!credential || credential.playbooks.id !== playbook.id) {
               throw new Error("Credential with playbooks:write or full permission required");
             }
@@ -2543,7 +2544,7 @@ use_secret_write({
           }
 
           case "create_run": {
-            const credential = await validateApiKey(c.req.raw, "canvas:write");
+            const credential = await acceptPlaybookCredential(c.req.raw, "canvas:write");
             if (!credential || credential.playbooks.id !== playbook.id) {
               throw new Error("Credential with canvas:write or full permission required");
             }
@@ -2566,7 +2567,7 @@ use_secret_write({
           }
 
           case "update_run": {
-            const credential = await validateApiKey(c.req.raw, "canvas:write");
+            const credential = await acceptPlaybookCredential(c.req.raw, "canvas:write");
             if (!credential || credential.playbooks.id !== playbook.id) {
               throw new Error("Credential with canvas:write or full permission required");
             }
@@ -2595,7 +2596,7 @@ use_secret_write({
           }
 
           case "delete_run": {
-            const credential = await validateApiKey(c.req.raw, "canvas:write");
+            const credential = await acceptPlaybookCredential(c.req.raw, "canvas:write");
             if (!credential || credential.playbooks.id !== playbook.id) {
               throw new Error("Credential with canvas:write or full permission required");
             }
@@ -2614,12 +2615,12 @@ use_secret_write({
           // ===== Secrets Tools =====
           case "list_secrets": {
             secretAudit = beginSecretAudit("secret.list");
-            const secretsApiKey = await validateApiKey(c.req.raw, "secrets:read");
+            const secretsApiKey = await acceptPlaybookCredential(c.req.raw, "secrets:read");
             if (!secretsApiKey || secretsApiKey.playbooks.id !== playbook.id) {
               secretAudit.reason = "not_authorized";
               throw new Error("API key with secrets:read or full permission required");
             }
-            secretAuditKeyPrefix = secretsApiKey.key_prefix;
+            secretAuditKeyPrefix = await storedDisplayPrefix(c.req.raw);
             secretAudit.status = "error";
 
             let secretsQuery = serviceSupabase
@@ -2658,12 +2659,12 @@ use_secret_write({
             // Proxy pattern: decrypt secret server-side, inject into HTTP request,
             // return only the response. The agent NEVER sees the secret value.
             secretAudit = beginSecretAudit("secret.use");
-            const useSecretApiKey = await validateApiKey(c.req.raw, "secrets:read");
+            const useSecretApiKey = await acceptPlaybookCredential(c.req.raw, "secrets:read");
             if (!useSecretApiKey || useSecretApiKey.playbooks.id !== playbook.id) {
               secretAudit.reason = "not_authorized";
               throw new Error("API key with secrets:read or full permission required");
             }
-            secretAuditKeyPrefix = useSecretApiKey.key_prefix;
+            secretAuditKeyPrefix = await storedDisplayPrefix(c.req.raw);
             secretAudit.status = "error";
 
             const useSecretName = args.secret_name as string;
@@ -2814,12 +2815,12 @@ use_secret_write({
 
           case "store_secret": {
             secretAudit = beginSecretAudit("secret.create");
-            const storeSecretApiKey = await validateApiKey(c.req.raw, "secrets:write");
+            const storeSecretApiKey = await acceptPlaybookCredential(c.req.raw, "secrets:write");
             if (!storeSecretApiKey || storeSecretApiKey.playbooks.id !== playbook.id) {
               secretAudit.reason = "not_authorized";
               throw new Error("API key with secrets:write or full permission required");
             }
-            secretAuditKeyPrefix = storeSecretApiKey.key_prefix;
+            secretAuditKeyPrefix = await storedDisplayPrefix(c.req.raw);
             secretAudit.status = "error";
 
             const storeName = args.name as string;
@@ -2879,12 +2880,12 @@ use_secret_write({
 
           case "rotate_secret": {
             secretAudit = beginSecretAudit("secret.rotate");
-            const rotateApiKey = await validateApiKey(c.req.raw, "secrets:write");
+            const rotateApiKey = await acceptPlaybookCredential(c.req.raw, "secrets:write");
             if (!rotateApiKey || rotateApiKey.playbooks.id !== playbook.id) {
               secretAudit.reason = "not_authorized";
               throw new Error("API key with secrets:write or full permission required");
             }
-            secretAuditKeyPrefix = rotateApiKey.key_prefix;
+            secretAuditKeyPrefix = await storedDisplayPrefix(c.req.raw);
             secretAudit.status = "error";
 
             const rotateName = args.name as string;
@@ -2936,12 +2937,12 @@ use_secret_write({
 
           case "delete_secret": {
             secretAudit = beginSecretAudit("secret.delete");
-            const deleteSecretApiKey = await validateApiKey(c.req.raw, "secrets:write");
+            const deleteSecretApiKey = await acceptPlaybookCredential(c.req.raw, "secrets:write");
             if (!deleteSecretApiKey || deleteSecretApiKey.playbooks.id !== playbook.id) {
               secretAudit.reason = "not_authorized";
               throw new Error("API key with secrets:write or full permission required");
             }
-            secretAuditKeyPrefix = deleteSecretApiKey.key_prefix;
+            secretAuditKeyPrefix = await storedDisplayPrefix(c.req.raw);
             secretAudit.status = "error";
 
             const deleteSecretName = args.name as string;

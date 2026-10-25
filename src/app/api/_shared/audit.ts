@@ -23,7 +23,6 @@
 import { getServiceSupabase } from "./supabase";
 import type { FederationAuditEvent } from "@/lib/mcp/federation";
 import type { AuditActorType, AuditLogRow, SecretAuditOperation } from "@/lib/supabase/types";
-import { getKeyPrefix } from "@/lib/utils";
 import { scheduleAuditForward } from "./audit-forward";
 
 type AuditLogInsert = Partial<AuditLogRow> & Pick<AuditLogRow, "playbook_id" | "operation" | "status">;
@@ -32,10 +31,13 @@ type AuditLogInsert = Partial<AuditLogRow> & Pick<AuditLogRow, "playbook_id" | "
 const FULL_APB_KEY = /\bapb_(?:live|test)_[A-Za-z0-9]{16,}\b/g;
 const FULL_APB_KEY_EXACT = /^apb_(?:live|test)_[A-Za-z0-9]{16,}$/;
 
+/** Literal so a raw key never flows (via slice) into the SIEM HMAC body. */
+const REDACTED_KEY = "[redacted-key]";
+
 export function redactAuditSecrets(value: string): string {
   return value
     .replace(/Bearer\s+\S+/gi, "Bearer [redacted]")
-    .replace(FULL_APB_KEY, (match) => getKeyPrefix(match));
+    .replace(FULL_APB_KEY, REDACTED_KEY);
 }
 
 /** Host only for http(s); other URLs drop userinfo, query, and fragment. */
@@ -64,7 +66,7 @@ export function sanitizeAuditInsert<T extends AuditLogInsert>(row: T): T {
       actor == null
         ? actor
         : FULL_APB_KEY_EXACT.test(actor)
-          ? getKeyPrefix(actor)
+          ? REDACTED_KEY
           : redactAuditSecrets(actor),
     target: sanitizeAuditTarget(row.target),
     error_code: row.error_code == null ? row.error_code : redactAuditSecrets(row.error_code),
@@ -120,10 +122,10 @@ export function beginSecretAudit(
  */
 export function auditActor(
   user: { id: string } | null | undefined,
-  apiKey: { key_prefix?: string | null } | null | undefined,
+  storedDisplayPrefix: string | null | undefined,
 ): AuditActor {
   if (user) return { type: "owner", id: user.id };
-  if (apiKey) return { type: "api_key", id: apiKey.key_prefix || null };
+  if (storedDisplayPrefix) return { type: "api_key", id: storedDisplayPrefix };
   return { type: "anonymous", id: null };
 }
 

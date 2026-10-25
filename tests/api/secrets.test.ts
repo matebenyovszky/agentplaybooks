@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { app } from '@/app/api/playbooks/[guid]/secrets/app';
-import { getAuthenticatedUser, validateApiKey } from '@/app/api/_shared/auth';
+import { getAuthenticatedUser, storedDisplayPrefix, validateApiKey } from '@/app/api/_shared/auth';
 import { getPlaybookByGuid } from '@/app/api/_shared/guards';
 import { getServiceSupabase } from '@/app/api/_shared/supabase';
 
@@ -8,6 +8,7 @@ import { getServiceSupabase } from '@/app/api/_shared/supabase';
 vi.mock('@/app/api/_shared/auth', () => ({
   getAuthenticatedUser: vi.fn(),
   validateApiKey: vi.fn(),
+  storedDisplayPrefix: vi.fn(),
 }));
 
 vi.mock('@/app/api/_shared/guards', () => ({
@@ -26,6 +27,7 @@ vi.mock('@/lib/crypto', () => ({
 describe('Secrets API - Security Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(storedDisplayPrefix).mockResolvedValue("apb_live_abc");
   });
 
   describe('GET /reveal/:name', () => {
@@ -191,6 +193,7 @@ describe('Secrets API - Security Tests', () => {
 describe('Secrets API - audit trail', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(storedDisplayPrefix).mockResolvedValue("apb_live_abc");
   });
 
   /**

@@ -1,6 +1,6 @@
 import { createApiApp } from "@/app/api/_shared/hono";
 import { getServiceSupabase } from "@/app/api/_shared/supabase";
-import { getAuthenticatedUser, validateApiKey } from "@/app/api/_shared/auth";
+import { getAuthenticatedUser, storedDisplayPrefix, validateApiKey } from "@/app/api/_shared/auth";
 import { getPlaybookByGuid } from "@/app/api/_shared/guards";
 import { encryptSecret, decryptSecret } from "@/lib/crypto";
 import { expiredSecretMessage, expiresAtInput, isSecretExpired } from "@/lib/secret-expiry";
@@ -34,13 +34,23 @@ function auditContext(
   c: { req: { header: (name: string) => string | undefined } },
   playbookId: string,
   user: { id: string } | null | undefined,
-  apiKey: { key_prefix?: string | null } | null | undefined,
+  displayPrefix: string | null,
 ): AuditContext {
   return {
     playbookId,
-    actor: auditActor(user, apiKey),
+    actor: auditActor(user, displayPrefix),
     requestId: c.req.header("cf-ray") || c.req.header("x-request-id") || null,
   };
+}
+
+async function auditContextFor(
+  c: { req: { raw: Request; header: (name: string) => string | undefined } },
+  playbookId: string,
+  user: { id: string } | null | undefined,
+  credentialAccepted: boolean,
+): Promise<AuditContext> {
+  const displayPrefix = !user && credentialAccepted ? await storedDisplayPrefix(c.req.raw) : null;
+  return auditContext(c, playbookId, user, displayPrefix);
 }
 
 // Secrets responses must never be cached by browsers/CDNs.
@@ -85,7 +95,7 @@ app.get("/", async (c) => {
   // Only owner or API key holder for this playbook can access secrets
   const isOwner = user && playbook.user_id === user.id;
   const isApiKeyForPlaybook = apiKey && apiKey.playbooks.id === playbook.id;
-  const audit = auditContext(c, playbook.id, user, apiKey);
+  const audit = await auditContextFor(c, playbook.id, user, Boolean(apiKey));
   if (!isOwner && !isApiKeyForPlaybook) {
     await recordSecretAudit(audit, { operation: "secret.list", status: "denied", reason: "not_authorized" });
     return c.json({ error: "Forbidden: secrets are only accessible to the playbook owner" }, 403);
@@ -129,7 +139,7 @@ app.post("/", async (c) => {
 
   const isOwner = user && playbook.user_id === user.id;
   const isApiKeyForPlaybook = apiKey && apiKey.playbooks.id === playbook.id;
-  const audit = auditContext(c, playbook.id, user, apiKey);
+  const audit = await auditContextFor(c, playbook.id, user, Boolean(apiKey));
   if (!isOwner && !isApiKeyForPlaybook) {
     await recordSecretAudit(audit, { operation: "secret.create", status: "denied", reason: "not_authorized" });
     return c.json({ error: "Forbidden" }, 403);
@@ -259,7 +269,7 @@ app.get("/reveal/:name", async (c) => {
 
   const isOwner = user && playbook.user_id === user.id;
   const isApiKeyForPlaybook = apiKey && apiKey.playbooks.id === playbook.id;
-  const audit = auditContext(c, playbook.id, user, apiKey);
+  const audit = await auditContextFor(c, playbook.id, user, Boolean(apiKey));
 
   if (!isOwner && !isApiKeyForPlaybook) {
     await recordSecretAudit(audit, {
@@ -367,7 +377,7 @@ app.put("/:name", async (c) => {
 
   const isOwner = user && playbook.user_id === user.id;
   const isApiKeyForPlaybook = apiKey && apiKey.playbooks.id === playbook.id;
-  const audit = auditContext(c, playbook.id, user, apiKey);
+  const audit = await auditContextFor(c, playbook.id, user, Boolean(apiKey));
 
   const body = await c.req.json().catch(() => ({}));
   const { value, description, category, expires_at, allow_api_key_reveal, allowed_hosts } = body;
@@ -534,7 +544,7 @@ app.post("/proxy", async (c) => {
 
   const isOwner = user && playbook.user_id === user.id;
   const isApiKeyForPlaybook = apiKey && apiKey.playbooks.id === playbook.id;
-  const audit = auditContext(c, playbook.id, user, apiKey);
+  const audit = await auditContextFor(c, playbook.id, user, Boolean(apiKey));
   if (!isOwner && !isApiKeyForPlaybook) {
     await recordSecretAudit(audit, { operation: "secret.use", status: "denied", reason: "not_authorized" });
     return c.json({ error: "Forbidden" }, 403);
@@ -797,7 +807,7 @@ app.post("/oauth-exchange", async (c) => {
 
   const isOwner = user && playbook.user_id === user.id;
   const isApiKeyForPlaybook = apiKey && apiKey.playbooks.id === playbook.id;
-  const audit = auditContext(c, playbook.id, user, apiKey);
+  const audit = await auditContextFor(c, playbook.id, user, Boolean(apiKey));
   const operation = "secret.oauth_exchange";
   if (!isOwner && !isApiKeyForPlaybook) {
     await recordSecretAudit(audit, { operation, status: "denied", reason: "not_authorized" });

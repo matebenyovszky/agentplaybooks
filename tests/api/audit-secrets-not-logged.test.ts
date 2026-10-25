@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { app } from "@/app/api/playbooks/[guid]/secrets/app";
-import { getAuthenticatedUser, validateApiKey } from "@/app/api/_shared/auth";
+import { getAuthenticatedUser, storedDisplayPrefix, validateApiKey } from "@/app/api/_shared/auth";
 import { getPlaybookByGuid } from "@/app/api/_shared/guards";
 import { getServiceSupabase } from "@/app/api/_shared/supabase";
 import { federationAuditWriter } from "@/app/api/_shared/audit";
@@ -15,6 +15,7 @@ import { getKeyPrefix } from "@/lib/utils";
 vi.mock("@/app/api/_shared/auth", () => ({
   getAuthenticatedUser: vi.fn(),
   validateApiKey: vi.fn(),
+  storedDisplayPrefix: vi.fn(),
 }));
 vi.mock("@/app/api/_shared/guards", () => ({
   getPlaybookByGuid: vi.fn(),
@@ -90,6 +91,7 @@ describe("audit trail never stores API keys or secret plaintext", () => {
       playbooks: { id: PLAYBOOK.id, guid: PLAYBOOK.guid },
       key_prefix: KEY_PREFIX,
     } as never);
+    vi.mocked(storedDisplayPrefix).mockResolvedValue(KEY_PREFIX);
     vi.mocked(getPlaybookByGuid).mockResolvedValue(PLAYBOOK as never);
     mockDb({
       id: "sec1",

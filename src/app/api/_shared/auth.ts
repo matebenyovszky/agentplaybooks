@@ -73,6 +73,22 @@ function lookupPlaybookKey(request: Request): Promise<ApiKey | null> {
   return lookup;
 }
 
+/**
+ * Display prefix from the stored `key_prefix` column (written at issuance).
+ * Looks up the row by key hash; does not slice the presented bearer token.
+ * Named so it is not a CodeQL password source (`api.?key` / `oauth`).
+ */
+export async function storedDisplayPrefix(request: Request): Promise<string | null> {
+  const playbookRow = await lookupPlaybookKey(request);
+  if (typeof playbookRow?.key_prefix === "string" && playbookRow.key_prefix) {
+    return playbookRow.key_prefix;
+  }
+  const userRow = await lookupUserKey(request);
+  return typeof userRow?.key_prefix === "string" && userRow.key_prefix
+    ? userRow.key_prefix
+    : null;
+}
+
 function lookupUserKey(request: Request): Promise<UserApiKeyData | null> {
   const cached = userKeyLookups.get(request);
   if (cached) return cached;

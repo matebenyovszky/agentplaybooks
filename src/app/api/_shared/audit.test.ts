@@ -27,14 +27,14 @@ const context = { playbookId: "playbook1", actor: { type: "owner" as const, id: 
 
 describe("auditActor", () => {
   it("prefers the owner session over an API key, matching the handlers' own order", () => {
-    expect(auditActor({ id: "user1" }, { key_prefix: "apb_live_abc" })).toEqual({
+    expect(auditActor({ id: "user1" }, "apb_live_abc")).toEqual({
       type: "owner",
       id: "user1",
     });
   });
 
-  it("identifies an API key by its prefix", () => {
-    expect(auditActor(null, { key_prefix: "apb_live_abc" })).toEqual({
+  it("identifies an API key by its stored display prefix", () => {
+    expect(auditActor(null, "apb_live_abc")).toEqual({
       type: "api_key",
       id: "apb_live_abc",
     });
@@ -48,14 +48,14 @@ describe("auditActor", () => {
 describe("sanitizeAuditInsert", () => {
   const RAW_KEY = "apb_live_LEAKCHECKRAWAPIKEY0000000000000000";
 
-  it("replaces a full API key used as actor_id with the display prefix", () => {
+  it("replaces a full API key used as actor_id with a constant, not a slice of the raw key", () => {
     const row = sanitizeAuditInsert({
       playbook_id: "pb",
       operation: "secret.use",
       status: "success",
       actor_id: RAW_KEY,
     });
-    expect(row.actor_id).toBe("apb_live_LEA...");
+    expect(row.actor_id).toBe("[redacted-key]");
     expect(row.actor_id).not.toContain(RAW_KEY);
   });
 

@@ -6,6 +6,7 @@ const { db, apiKey, playbook, user, tls, decrypt } = vi.hoisted(() => ({
 vi.mock("@/app/api/_shared/supabase", () => ({ getServiceSupabase: db }));
 vi.mock("@/app/api/_shared/auth", () => ({
   validateApiKey: apiKey, getAuthenticatedUser: user,
+  storedDisplayPrefix: async () => "apb_live_abc",
   presentedApiKey: (request: Request) => request.headers.get("Authorization") || request.headers.get("X-API-Key"),
 }));
 vi.mock("@/app/api/_shared/guards", () => ({ getPlaybookByGuid: playbook }));

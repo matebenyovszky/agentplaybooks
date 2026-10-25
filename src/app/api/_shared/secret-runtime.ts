@@ -1,4 +1,4 @@
-import { presentedApiKey, validateApiKey } from "./auth";
+import { presentedApiKey, storedDisplayPrefix, validateApiKey } from "./auth";
 import { getPlaybookByGuid } from "./guards";
 import { getServiceSupabase } from "./supabase";
 import { verifiedClientFingerprint } from "@/lib/mtls";
@@ -33,9 +33,10 @@ export async function authorizeSecretRuntime(
     if (!key) return null;
     const playbook = await getPlaybookByGuid(guid, null, key.playbooks.id);
     if (!playbook || playbook.id !== key.playbooks.id) return null;
+    const displayPrefix = await storedDisplayPrefix(request);
     return {
       playbookId: playbook.id, ownerId: playbook.user_id, allowedNames: null, clientId: null,
-      audit: { playbookId: playbook.id, actor: { type: "api_key", id: key.key_prefix }, requestId },
+      audit: { playbookId: playbook.id, actor: { type: "api_key", id: displayPrefix }, requestId },
     };
   }
 
