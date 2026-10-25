@@ -54,7 +54,7 @@ Every legal column in the table is **jogi ellenőrzés szükséges**.
 Evidence from the supplier-assessment requirement table, aligned to **today’s** code:
 
 1. Unit/integration in CI: crypto, expiry, `allowed_hosts`, RBAC — **present**. Hash-chain, SIEM export, auditor role — **absent on `main`** (**Folyamatban / In progress:** [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202)).
-2. E2E on an isolated network, zero egress — **not on `main`**. Fonts no longer fetch at build. **Done on `main`:** [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200). Isolated CI: **Folyamatban / In progress:** [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204).
+2. E2E on an isolated network, zero egress at runtime — **on `main`**. Fonts no longer fetch at build. **Done on `main`:** fonts [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200); isolated CI [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204) (`.github/workflows/no-egress.yml`).
 3. Restore drill — customer exercise; no product backup/DR runbook on `main`. **Folyamatban / In progress:** a separate PR is being opened; no link yet.
 4. Incident tabletop — customer; `SECURITY.md` + incident runbook are on `main`. **Done on `main`:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205).
 5. CVE process: Dependabot → patch → CLI provenance + CodeQL + signed CycloneDX SBOM on `cli-v*` tags. **Done on `main`:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205). Signed container registry publish is still absent.
@@ -73,4 +73,6 @@ Evidence from the supplier-assessment requirement table, aligned to **today’s*
 - [`docs/security/incident-runbook.md`](./incident-runbook.md)
 - [`docs/security/supply-chain.md`](./supply-chain.md)
 - [`public/docs/self-hosted-mtls.md`](../../public/docs/self-hosted-mtls.md)
+- [`.github/workflows/no-egress.yml`](../../.github/workflows/no-egress.yml)
+- [`deploy/airgap/`](../../deploy/airgap/)
 - [`scripts/list-self-host-stack.mjs`](../../scripts/list-self-host-stack.mjs)

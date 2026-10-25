@@ -1,6 +1,6 @@
 # AgentPlaybooks security whitepaper
 
-**Version:** 2026-10-25 · **Source:** the `main` branch as of that date (includes merged [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200), [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201), [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205)). Remaining parallel PRs are **Folyamatban / In progress** and do not count as shipped until they merge.  
+**Version:** 2026-10-25 · **Source:** the `main` branch as of that date (includes merged [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200), [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201), [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204), [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205)). Remaining parallel PRs are **Folyamatban / In progress** and do not count as shipped until they merge.  
 **Language of record for the assessment:** Hungarian ([whitepaper.hu.md](./whitepaper.hu.md)).
 
 > **jogi ellenőrzés szükséges.** Notes below on legal scope, NIS2, the MK decree, GDPR, and manufacturer status are not legal advice. The customer's counsel and IBF must approve them before production use.
@@ -147,18 +147,18 @@ Tests: [`tests/api/secrets-expiry.test.ts`](../../tests/api/secrets-expiry.test.
 
 ## 9. Self-host and no-egress
 
-**What we can claim.** The [`Dockerfile`](../../Dockerfile) is multi-stage, non-root, `NEXT_TELEMETRY_DISABLED=1`, healthcheck on `:3000`. [`docker-compose.yml`](../../docker-compose.yml) starts one `app` service (`${APP_PORT:-3000}:3000`). Legal copy states no analytics/advertising/tracking cookies ([`src/lib/legal-copy.ts`](../../src/lib/legal-copy.ts)).
+**What we can claim.** The [`Dockerfile`](../../Dockerfile) is multi-stage, non-root, `NEXT_TELEMETRY_DISABLED=1`, healthcheck on `:3000`. [`docker-compose.yml`](../../docker-compose.yml) starts one `app` service (`${APP_PORT:-3000}:3000`). Legal copy states no analytics/advertising/tracking cookies ([`src/lib/legal-copy.ts`](../../src/lib/legal-copy.ts)). Isolated no-egress CI runs the secrets flow on an `internal: true` Docker network with a DNS sink and fails on any outbound packet — [`.github/workflows/no-egress.yml`](../../.github/workflows/no-egress.yml), [`deploy/airgap/`](../../deploy/airgap/). **Done on `main`:** [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204). `NO_EGRESS=true` disables optional MCP-registry search unless `MCP_REGISTRY_URL` is an internal mirror.
 
-**What we cannot claim as an “air-gapped / no-egress” product.**
+**What we cannot claim as a default “air-gapped / no-egress” product.**
 
-1. Compose does not include the Supabase stack.
-2. Build fonts: `next/font/local` Geist / Geist Mono woff2 — [`src/app/layout.tsx`](../../src/app/layout.tsx), [`src/app/fonts/Geist-Variable.woff2`](../../src/app/fonts/Geist-Variable.woff2). **Done on `main`:** [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200). The build no longer fetches Google Fonts.
-3. There is no isolated-network E2E test on `main` proving zero outbound packets. **Folyamatban / In progress:** [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204).
+1. Production [`docker-compose.yml`](../../docker-compose.yml) still does not include the Supabase stack. The no-egress proof uses a separate [`deploy/airgap/docker-compose.yml`](../../deploy/airgap/docker-compose.yml).
+2. Build fonts: `next/font/local` Geist / Geist Mono woff2 — [`src/app/layout.tsx`](../../src/app/layout.tsx), [`src/app/fonts/Geist-Variable.woff2`](../../src/app/fonts/Geist-Variable.woff2). **Done on `main`:** [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200). The build no longer fetches Google Fonts. `npm ci` and base-image pulls still happen **before** the no-egress job isolates the network.
+3. Isolated-network E2E proving zero outbound packets at **runtime** is on `main`. **Done on `main`:** [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204).
 4. CSP Report-Only `connect-src` includes `https://*.supabase.co` ([`src/lib/security-headers.ts`](../../src/lib/security-headers.ts)); that does not cover a custom Auth host and is not enforcing.
-5. `use_secret` / federation **intentionally** make outbound HTTP to customer-chosen destinations.
+5. `use_secret` / federation **intentionally** make outbound HTTP to customer-chosen destinations unless `allowed_hosts` / `SECRETS_REQUIRE_ALLOWED_HOSTS=true` pin them (the air-gap job uses an in-network echo host).
 6. mTLS on plain Docker/Node without a terminator stays fail-closed. Trusted-proxy mode (`MTLS_MODE=proxy`) is on `main`. **Done on `main`:** [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201).
 
-A customer no-egress goal is their network isolation, font cache, `SECRETS_REQUIRE_ALLOWED_HOSTS=true`, and disabling the outbound proxy if the vault is unused. The product does not measure this.
+A customer production no-egress goal is still their network isolation plus `NO_EGRESS=true` and `SECRETS_REQUIRE_ALLOWED_HOSTS=true`. The **No egress** workflow measures the air-gap fixture, not every operator compose.
 
 HTTP headers (HSTS, `X-Frame-Options: DENY`, nosniff, Permissions-Policy): [`src/lib/security-headers.ts`](../../src/lib/security-headers.ts), [`next.config.ts`](../../next.config.ts). CSP is currently Report-Only.
 
@@ -169,6 +169,7 @@ HTTP headers (HSTS, `X-Frame-Options: DENY`, nosniff, Permissions-Policy): [`src
 | Dependabot (npm root + CLI, weekly, Europe/Budapest; Actions monthly) | Yes | [`.github/dependabot.yml`](../../.github/dependabot.yml) |
 | `npm audit --omit=dev --audit-level=high` in CI | Yes | [`scripts/audit-production.mjs`](../../scripts/audit-production.mjs), [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) |
 | CI: lint, tests, `tsc`, worker build, wrangler dry-run | Yes | same workflow |
+| Isolated no-egress secrets-flow CI | Yes on `main` | [`.github/workflows/no-egress.yml`](../../.github/workflows/no-egress.yml), [`deploy/airgap/`](../../deploy/airgap/). **Done on `main`:** [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204) |
 | CLI npm trusted publishing / OIDC provenance | Yes | [`.github/workflows/publish-cli.yml`](../../.github/workflows/publish-cli.yml) (`id-token: write`; `--provenance` is intentionally omitted, npm attests automatically) |
 | SAST (CodeQL) | Yes on `main` | [`.github/workflows/codeql.yml`](../../.github/workflows/codeql.yml). **Done on `main`:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205). No Semgrep |
 | CycloneDX SBOM | Yes on `main` | [`.github/workflows/sbom.yml`](../../.github/workflows/sbom.yml), [`docs/security/supply-chain.md`](./supply-chain.md). **Done on `main`:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205) |
@@ -192,7 +193,7 @@ Honest list for the supplier assessment. Status follows `main` as of 2026-10-25.
 8. **No backup and DR runbook.** `supabase db dump`; playbook snapshots do not include secret values. **Folyamatban / In progress:** a separate PR is being opened; no link yet.
 9. **CodeQL, CycloneDX SBOMs, and cosign of SBOM blobs are on `main`.** **Done on `main`:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205) — [`.github/workflows/codeql.yml`](../../.github/workflows/codeql.yml), [`.github/workflows/sbom.yml`](../../.github/workflows/sbom.yml), [`docs/security/supply-chain.md`](./supply-chain.md). Dependabot + production npm audit + CLI provenance remain. There is still no signed container **registry** publish.
 10. **Self-host mTLS via trusted proxy is on `main`.** **Done on `main`:** [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201) — `MTLS_MODE=proxy`, [`public/docs/self-hosted-mtls.md`](../../public/docs/self-hosted-mtls.md), [`deploy/self-host/docker-compose.mtls.yml`](../../deploy/self-host/docker-compose.mtls.yml). Node still does not terminate TLS; without a terminator the default stays fail-closed.
-11. **No no-egress evidence on `main`.** Build-time Google Fonts are closed. **Done on `main`:** fonts [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200) (`next/font/local`). Compose is still not self-contained. Isolated CI: **Folyamatban / In progress:** [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204).
+11. **Isolated no-egress CI evidence is on `main`.** **Done on `main`:** fonts [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200) (`next/font/local`); secrets-flow CI [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204) — [`.github/workflows/no-egress.yml`](../../.github/workflows/no-egress.yml), [`deploy/airgap/`](../../deploy/airgap/). Production compose is still app-only. `npm ci` and base-image pulls happen before isolation. `use_secret` still leaves the network unless destinations are pinned.
 12. **No rate limiting** (ROADMAP).
 13. **No external pentest** in this pack.
 14. **CSP Report-Only**, `connect-src` hardcoded to `*.supabase.co`.
@@ -220,6 +221,6 @@ Detailed mapping: [risk-assessment.md](./risk-assessment.md).
 | Authz | `src/app/api/_shared/guards.ts`, `src/app/api/_shared/permissions.ts`, `src/app/api/_shared/auth.ts`, `permissions.md` |
 | Audit | `src/app/api/_shared/audit.ts`, `src/app/api/playbooks/[guid]/audit/app.ts`, `supabase/migrations/20260819_audit_logs_secrets.sql` |
 | Expiry / SSRF | `src/lib/secret-expiry.ts`, `src/lib/secret-destinations.ts`, `src/lib/mcp/federation.ts` |
-| Self-host | `docker-compose.yml`, `Dockerfile`, `public/docs/self-hosting.md`, `src/app/fonts/Geist-Variable.woff2` |
-| SDLC | `.github/dependabot.yml`, `.github/workflows/ci.yml`, `.github/workflows/publish-cli.yml`, `.github/workflows/codeql.yml`, `.github/workflows/sbom.yml`, `scripts/audit-production.mjs`, `SECURITY.md`, `docs/security/incident-runbook.md`, `docs/security/supply-chain.md` |
+| Self-host | `docker-compose.yml`, `Dockerfile`, `public/docs/self-hosting.md`, `src/app/fonts/Geist-Variable.woff2`, `deploy/airgap/`, `.github/workflows/no-egress.yml` |
+| SDLC | `.github/dependabot.yml`, `.github/workflows/ci.yml`, `.github/workflows/publish-cli.yml`, `.github/workflows/codeql.yml`, `.github/workflows/sbom.yml`, `.github/workflows/no-egress.yml`, `scripts/audit-production.mjs`, `SECURITY.md`, `docs/security/incident-runbook.md`, `docs/security/supply-chain.md` |
 | Live inventory | `scripts/list-self-host-stack.mjs` |

@@ -54,7 +54,7 @@ A táblázat minden jogi oszlopa **jogi ellenőrzés szükséges**.
 A beszállítói értékelés requirement-táblája szerinti bizonyítékok, a **mai** kódhoz igazítva:
 
 1. Unit/integráció a CI-ban: kripto, lejárat, `allowed_hosts`, RBAC — **van**. Hash-lánc, SIEM-export, auditor szerep — **nincs a `main`-en** (**Folyamatban / In progress:** [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202)).
-2. E2E izolált hálózaton, 0 kimenő forgalom — **nincs a `main`-en**. A fontok buildkor már nem töltődnek le. **Kész a `main`-en:** [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200). Izolált CI: **Folyamatban / In progress:** [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204).
+2. E2E izolált hálózaton, 0 kimenő forgalom runtime-ban — **van a `main`-en**. A fontok buildkor már nem töltődnek le. **Kész a `main`-en:** fontok [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200); izolált CI [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204) (`.github/workflows/no-egress.yml`).
 3. Restore drill — ügyféli gyakorlat; termék mentés/DR-runbook nincs a `main`-en. **Folyamatban / In progress:** külön PR nyitás alatt; link még nincs.
 4. Incidens tabletop — ügyféli; `SECURITY.md` + incidens-runbook a `main`-en van. **Kész a `main`-en:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205).
 5. CVE-folyamat: Dependabot → javítás → CLI provenance + CodeQL + aláírt CycloneDX SBOM `cli-v*` tageken. **Kész a `main`-en:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205). Aláírt konténer-registry publikálás továbbra sincs.
@@ -73,4 +73,6 @@ A beszállítói értékelés requirement-táblája szerinti bizonyítékok, a *
 - [`docs/security/incident-runbook.md`](./incident-runbook.md)
 - [`docs/security/supply-chain.md`](./supply-chain.md)
 - [`public/docs/self-hosted-mtls.md`](../../public/docs/self-hosted-mtls.md)
+- [`.github/workflows/no-egress.yml`](../../.github/workflows/no-egress.yml)
+- [`deploy/airgap/`](../../deploy/airgap/)
 - [`scripts/list-self-host-stack.mjs`](../../scripts/list-self-host-stack.mjs)

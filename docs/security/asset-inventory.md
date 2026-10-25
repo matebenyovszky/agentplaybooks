@@ -58,6 +58,8 @@ Schema: [`supabase/schema.sql`](../../supabase/schema.sql) (new project), [`supa
 | `NEXT_PUBLIC_APP_URL` | Build + runtime | Own origin; unset falls back to the hosted domain | Rebuild |
 | `ALLOWED_ORIGINS` | Runtime, optional | Replaces the CORS allow-list | Restart |
 | `SECRETS_REQUIRE_ALLOWED_HOSTS` | Runtime, optional | `true` = mandatory `allowed_hosts` | Restart |
+| `NO_EGRESS` | Runtime, optional | `true` disables optional outbound calls (MCP registry search) unless `MCP_REGISTRY_URL` is an internal mirror. **Done on `main`:** [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204) | Restart |
+| `MCP_REGISTRY_URL` | Runtime, optional | Override / disable official MCP registry search | Restart |
 | `MTLS_MODE` | Runtime, optional | `cloudflare` (default), `proxy`, or `off`. Unknown values fail closed. **Done on `main`:** [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201) | Restart |
 | `MTLS_PROXY_FINGERPRINT_HEADER` | Runtime, with `proxy` | Header the terminator sets after verifying the client cert | Restart |
 | `MTLS_TRUSTED_PROXIES` | Runtime, with `proxy` | IPs/CIDRs of the TLS terminator | Restart |
@@ -101,7 +103,7 @@ There is no root `.env.example`; the canonical list is compose plus the self-hos
 
 Production npm audit: [`scripts/audit-production.mjs`](../../scripts/audit-production.mjs). Lockfiles: [`package-lock.json`](../../package-lock.json), [`packages/cli/package-lock.json`](../../packages/cli/package-lock.json).
 
-CycloneDX SBOMs and cosign of SBOM blobs on `cli-v*` tags are on `main`. **Done on `main`:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205) — [`docs/security/supply-chain.md`](./supply-chain.md), [`.github/workflows/sbom.yml`](../../.github/workflows/sbom.yml). Lockfiles remain the reproducible-install input. There is still no signed container registry publish. Isolated no-egress CI is not on `main` (**Folyamatban / In progress:** [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204)).
+CycloneDX SBOMs and cosign of SBOM blobs on `cli-v*` tags are on `main`. **Done on `main`:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205) — [`docs/security/supply-chain.md`](./supply-chain.md), [`.github/workflows/sbom.yml`](../../.github/workflows/sbom.yml). Lockfiles remain the reproducible-install input. There is still no signed container registry publish. Isolated no-egress CI for the secrets flow is on `main` (**Done on `main`:** [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204) — [`.github/workflows/no-egress.yml`](../../.github/workflows/no-egress.yml), [`deploy/airgap/`](../../deploy/airgap/)). `npm ci` and base-image pulls still happen before that job isolates the network.
 
 ## 6. Data stores (logical assets)
 

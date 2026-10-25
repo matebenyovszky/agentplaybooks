@@ -58,6 +58,8 @@ Séma: [`supabase/schema.sql`](../../supabase/schema.sql) (új projekt), [`supab
 | `NEXT_PUBLIC_APP_URL` | Build + runtime | Saját origin; üresen a hosted domainre esik | Újraépítés |
 | `ALLOWED_ORIGINS` | Runtime, opcionális | CORS allow-list csere | Restart |
 | `SECRETS_REQUIRE_ALLOWED_HOSTS` | Runtime, opcionális | `true` = kötelező `allowed_hosts` | Restart |
+| `NO_EGRESS` | Runtime, opcionális | `true` kikapcsolja az opcionális kimenő hívásokat (MCP-registry keresés), hacsak a `MCP_REGISTRY_URL` belső tükör. **Kész a `main`-en:** [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204) | Restart |
+| `MCP_REGISTRY_URL` | Runtime, opcionális | Hivatalos MCP-registry keresés felülírása / tiltása | Restart |
 | `MTLS_MODE` | Runtime, opcionális | `cloudflare` (alapértelmezés), `proxy` vagy `off`. Ismeretlen érték fail-closed. **Kész a `main`-en:** [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201) | Restart |
 | `MTLS_PROXY_FINGERPRINT_HEADER` | Runtime, `proxy` módban | A terminátor által, a kliens tanúsítvány ellenőrzése után beállított fejléc | Restart |
 | `MTLS_TRUSTED_PROXIES` | Runtime, `proxy` módban | A TLS-terminátor IP-i/CIDR-jei | Restart |
@@ -101,7 +103,7 @@ Nincs `.env.example` a gyökérben; a kanonikus lista a compose és a self-hosti
 
 Produkciós npm audit: [`scripts/audit-production.mjs`](../../scripts/audit-production.mjs). Lockfile: [`package-lock.json`](../../package-lock.json), [`packages/cli/package-lock.json`](../../packages/cli/package-lock.json).
 
-CycloneDX SBOM és SBOM-blob cosign `cli-v*` tageken a `main`-en van. **Kész a `main`-en:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205) — [`docs/security/supply-chain.md`](./supply-chain.md), [`.github/workflows/sbom.yml`](../../.github/workflows/sbom.yml). A lockfile továbbra is a reprodukálható telepítés bemenete. Aláírt konténer-registry publikálás továbbra sincs. Izolált no-egress CI nincs a `main`-en (**Folyamatban / In progress:** [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204)).
+CycloneDX SBOM és SBOM-blob cosign `cli-v*` tageken a `main`-en van. **Kész a `main`-en:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205) — [`docs/security/supply-chain.md`](./supply-chain.md), [`.github/workflows/sbom.yml`](../../.github/workflows/sbom.yml). A lockfile továbbra is a reprodukálható telepítés bemenete. Aláírt konténer-registry publikálás továbbra sincs. A secrets-flow izolált no-egress CI a `main`-en van (**Kész a `main`-en:** [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204) — [`.github/workflows/no-egress.yml`](../../.github/workflows/no-egress.yml), [`deploy/airgap/`](../../deploy/airgap/)). Az `npm ci` és az alapimage-húzás a job izolálása előtt történik.
 
 ## 6. Adattárolók (logikai eszközök)
 

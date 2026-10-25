@@ -4,7 +4,7 @@
 
 **Közönség:** ügyfél információbiztonságért felelős személye (IBF), kockázatkezelés, jog, üzemeltetés. Készült magyar állami / önkormányzati beszállítói értékeléshez és EIR biztonsági osztályba soroláshoz.
 
-**Ellenőrzés dátuma:** 2026-10-25. A kódbeli állítások a `main` ág akkor aktuális forrására vonatkoznak (benne a merge-elt [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200), [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201), [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205)). Párhuzamos, még nem merge-elt PR-ek a gap listában **Folyamatban / In progress** jelöléssel szerepelnek.
+**Ellenőrzés dátuma:** 2026-10-25. A kódbeli állítások a `main` ág akkor aktuális forrására vonatkoznak (benne a merge-elt [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200), [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201), [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204), [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205)). Párhuzamos, még nem merge-elt PR-ek a gap listában **Folyamatban / In progress** jelöléssel szerepelnek.
 
 > **Jogi ellenőrzés szükséges.** Ez a csomag nem jogi tanács, nem tanúsítvány, és nem helyettesíti az ügyfél saját kockázatelemzését vagy a 7/2024. (VI. 24.) MK rendelet szerinti védelmi intézkedés-kiválasztást. Minden hatály-, osztályba sorolási, felelősségmegosztási és jogértelmezési megjegyzést az ügyfél jogászának és IBF-jének jóvá kell hagynia éles bevezetés előtt.
 
@@ -56,6 +56,7 @@ Ezek a gapek a `main`-en záródtak. A fehérkönyv sorai a merge-elt PR-ekre hi
 |-----|------------------|
 | 10 self-host mTLS trusted proxy-n (`MTLS_MODE=proxy`) | [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201) |
 | 11 build-kori Google Fonts (`next/font/local`) | [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200) |
+| 11 izolált no-egress CI (`deploy/airgap/`) | [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204) |
 | 7 `SECURITY.md` / incidens-runbook; 9 CodeQL, CycloneDX SBOM, SBOM-blob cosign | [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205) |
 
 ## Párhuzamos PR-ek (nincsenek a `main`-en)
@@ -65,7 +66,6 @@ A kódállítás a `main`. Az alábbi gapek még nyitottak; merge után a fehér
 | Gap | Folyamatban / In progress |
 |-----|---------------------------|
 | 4 auditor szerep; 6 audit export / syslog / SIEM / megőrzés / hash-lánc | [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202) |
-| 11 no-egress CI bizonyíték | [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204) |
 | 8 mentés/DR-runbook | külön PR nyitás alatt; link még nincs |
 
 ## Amit ez a csomag nem állít

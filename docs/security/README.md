@@ -4,7 +4,7 @@
 
 **Audience:** the customer's information-security officer (IBF), risk, legal, and operations teams. Written for a Hungarian public-sector supplier assessment and EIR security classification.
 
-**Verified against source:** 2026-10-25, on the `main` branch as of that date (includes merged [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200), [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201), [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205)). Parallel open PRs that are not on `main` yet are marked **Folyamatban / In progress** on the gap list.
+**Verified against source:** 2026-10-25, on the `main` branch as of that date (includes merged [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200), [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201), [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204), [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205)). Parallel open PRs that are not on `main` yet are marked **Folyamatban / In progress** on the gap list.
 
 > **jogi ellenőrzés szükséges.** This pack is not legal advice, not a certification, and not a substitute for the customer's own risk analysis or control selection under 7/2024. (VI. 24.) MK rendelet. Every note on scope, classification, responsibility split, or legal interpretation must be approved by the customer's counsel and IBF before production use.
 
@@ -56,6 +56,7 @@ These gaps closed on `main`. Whitepaper rows keep the merged PR links.
 |-----|----------------|
 | 10 self-host mTLS via trusted proxy (`MTLS_MODE=proxy`) | [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201) |
 | 11 build-time Google Fonts (`next/font/local`) | [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200) |
+| 11 isolated no-egress CI (`deploy/airgap/`) | [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204) |
 | 7 `SECURITY.md` / incident runbook; 9 CodeQL, CycloneDX SBOM, cosign of SBOM blobs | [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205) |
 
 ## Parallel PRs (not on `main`)
@@ -65,7 +66,6 @@ Code claims follow `main`. These gaps are still open; after they merge, flip the
 | Gap | Folyamatban / In progress |
 |-----|---------------------------|
 | 4 auditor role; 6 audit export / syslog / SIEM / retention / hash chain | [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202) |
-| 11 no-egress CI evidence | [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204) |
 | 8 backup/DR runbook | a separate PR is being opened; no link yet |
 
 ## What this pack does not claim

@@ -1,6 +1,6 @@
 # AgentPlaybooks biztonsági fehérkönyv
 
-**Verzió:** 2026-10-25 · **Forrás:** a repó `main` ágának akkor aktuális kódja (benne a merge-elt [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200), [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201), [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205)). A maradék párhuzamos PR-ek: **Folyamatban / In progress**, merge előtt nem számítanak késznek.  
+**Verzió:** 2026-10-25 · **Forrás:** a repó `main` ágának akkor aktuális kódja (benne a merge-elt [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200), [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201), [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204), [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205)). A maradék párhuzamos PR-ek: **Folyamatban / In progress**, merge előtt nem számítanak késznek.  
 **Elsődleges nyelv:** magyar. Angol: [whitepaper.md](./whitepaper.md).
 
 > **Jogi ellenőrzés szükséges.** Az alábbi hatály-, NIS2-, MK rendeleti, GDPR- és gyártói-státusz értelmezések nem minősülnek jogi tanácsnak. Éles bevezetés előtt az ügyfél jogászának és IBF-jének kell jóváhagynia.
@@ -147,18 +147,18 @@ Tesztek: [`tests/api/secrets-expiry.test.ts`](../../tests/api/secrets-expiry.tes
 
 ## 9. Önálló üzemeltetés és no-egress
 
-**Amit állíthatunk.** A [`Dockerfile`](../../Dockerfile) multi-stage, non-root, `NEXT_TELEMETRY_DISABLED=1`, healthcheck a `:3000`-on. A [`docker-compose.yml`](../../docker-compose.yml) egy `app` szolgáltatást indít (`${APP_PORT:-3000}:3000`). A jogi szöveg szerint nincs analitika-/reklám-/tracking-süti ([`src/lib/legal-copy.ts`](../../src/lib/legal-copy.ts)).
+**Amit állíthatunk.** A [`Dockerfile`](../../Dockerfile) multi-stage, non-root, `NEXT_TELEMETRY_DISABLED=1`, healthcheck a `:3000`-on. A [`docker-compose.yml`](../../docker-compose.yml) egy `app` szolgáltatást indít (`${APP_PORT:-3000}:3000`). A jogi szöveg szerint nincs analitika-/reklám-/tracking-süti ([`src/lib/legal-copy.ts`](../../src/lib/legal-copy.ts)). Izolált no-egress CI a secrets flow-t `internal: true` Docker-hálózaton, DNS-sinkkel futtatja, és bármely kimenő csomagra elbukik — [`.github/workflows/no-egress.yml`](../../.github/workflows/no-egress.yml), [`deploy/airgap/`](../../deploy/airgap/). **Kész a `main`-en:** [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204). A `NO_EGRESS=true` kikapcsolja az opcionális MCP-registry keresést, hacsak a `MCP_REGISTRY_URL` belső tükör.
 
-**Amit nem állíthatunk „air-gapped / no-egress” termékként.**
+**Amit nem állíthatunk alapértelmezett „air-gapped / no-egress” termékként.**
 
-1. A compose nem tartalmazza a Supabase stacket.
-2. Build-fontok: `next/font/local` Geist / Geist Mono woff2 — [`src/app/layout.tsx`](../../src/app/layout.tsx), [`src/app/fonts/Geist-Variable.woff2`](../../src/app/fonts/Geist-Variable.woff2). **Kész a `main`-en:** [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200). A build már nem tölt le Google Fonts-ot.
-3. Nincs izolált-hálózati E2E teszt a `main`-en, amely 0 kimenő csomagot bizonyítana. **Folyamatban / In progress:** [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204).
+1. A produkciós [`docker-compose.yml`](../../docker-compose.yml) továbbra sem tartalmazza a Supabase stacket. A no-egress bizonyíték külön [`deploy/airgap/docker-compose.yml`](../../deploy/airgap/docker-compose.yml).
+2. Build-fontok: `next/font/local` Geist / Geist Mono woff2 — [`src/app/layout.tsx`](../../src/app/layout.tsx), [`src/app/fonts/Geist-Variable.woff2`](../../src/app/fonts/Geist-Variable.woff2). **Kész a `main`-en:** [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200). A build már nem tölt le Google Fonts-ot. Az `npm ci` és az alapimage-húzás a no-egress job **izolálása előtt** történik.
+3. A **runtime** izolált-hálózati E2E (0 kimenő csomag) a `main`-en van. **Kész a `main`-en:** [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204).
 4. A CSP Report-Only `connect-src` `https://*.supabase.co`-t tartalmaz ([`src/lib/security-headers.ts`](../../src/lib/security-headers.ts)); saját Auth-hostnál ez nem fedi a self-hostot, és nem enforcing.
-5. A `use_secret` / federáció **szándékosan** kimenő HTTP-t indít az ügyfél által választott célokra.
+5. A `use_secret` / federáció **szándékosan** kimenő HTTP-t indít az ügyfél által választott célokra, hacsak `allowed_hosts` / `SECRETS_REQUIRE_ALLOWED_HOSTS=true` nem pineli (az air-gap job hálózaton belüli echo hostot használ).
 6. mTLS sima Docker/Node-on, terminátor nélkül fail-closed marad. A trusted-proxy mód (`MTLS_MODE=proxy`) a `main`-en van. **Kész a `main`-en:** [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201).
 
-Az ügyfél no-egress célja: saját hálózati izoláció, saját font-cache, `SECRETS_REQUIRE_ALLOWED_HOSTS=true`, kimenő proxy tiltása, ha a széf nem kell. A termék ezt nem méri.
+Az ügyfél produkciós no-egress célja továbbra is a saját hálózati izoláció plusz `NO_EGRESS=true` és `SECRETS_REQUIRE_ALLOWED_HOSTS=true`. A **No egress** workflow az air-gap fixture-t méri, nem minden üzemeltetői compose-t.
 
 HTTP-fejlécek (HSTS, `X-Frame-Options: DENY`, nosniff, Permissions-Policy): [`src/lib/security-headers.ts`](../../src/lib/security-headers.ts), [`next.config.ts`](../../next.config.ts). A CSP jelenleg Report-Only.
 
@@ -169,6 +169,7 @@ HTTP-fejlécek (HSTS, `X-Frame-Options: DENY`, nosniff, Permissions-Policy): [`s
 | Dependabot (npm gyökér + CLI, heti, Europe/Budapest; Actions havi) | Igen | [`.github/dependabot.yml`](../../.github/dependabot.yml) |
 | `npm audit --omit=dev --audit-level=high` a CI-ban | Igen | [`scripts/audit-production.mjs`](../../scripts/audit-production.mjs), [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) |
 | CI: lint, teszt, `tsc`, worker build, wrangler dry-run | Igen | ugyanaz a workflow |
+| Izolált no-egress secrets-flow CI | Igen, a `main`-en | [`.github/workflows/no-egress.yml`](../../.github/workflows/no-egress.yml), [`deploy/airgap/`](../../deploy/airgap/). **Kész a `main`-en:** [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204) |
 | CLI npm trusted publishing / OIDC provenance | Igen | [`.github/workflows/publish-cli.yml`](../../.github/workflows/publish-cli.yml) (`id-token: write`; a `--provenance` flag szándékosan nincs, az npm automatikusan tanúsít) |
 | SAST (CodeQL) | Igen, a `main`-en | [`.github/workflows/codeql.yml`](../../.github/workflows/codeql.yml). **Kész a `main`-en:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205). Semgrep nincs |
 | CycloneDX SBOM | Igen, a `main`-en | [`.github/workflows/sbom.yml`](../../.github/workflows/sbom.yml), [`docs/security/supply-chain.md`](./supply-chain.md). **Kész a `main`-en:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205) |
@@ -192,7 +193,7 @@ A lockfile (`package-lock.json`, `packages/cli/package-lock.json`) a reprodukál
 8. **Nincs mentés- és DR-runbook.** `supabase db dump`; playbook snapshotok nem tartalmazzák a titokértékeket. **Folyamatban / In progress:** külön PR nyitás alatt; link még nincs.
 9. **A CodeQL, a CycloneDX SBOM és az SBOM-blob cosign a `main`-en van.** **Kész a `main`-en:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205) — [`.github/workflows/codeql.yml`](../../.github/workflows/codeql.yml), [`.github/workflows/sbom.yml`](../../.github/workflows/sbom.yml), [`docs/security/supply-chain.md`](./supply-chain.md). Dependabot + production npm audit + CLI provenance megmarad. Aláírt konténer-**registry** publikálás továbbra sincs.
 10. **A self-host mTLS trusted proxy-n a `main`-en van.** **Kész a `main`-en:** [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201) — `MTLS_MODE=proxy`, [`public/docs/self-hosted-mtls.md`](../../public/docs/self-hosted-mtls.md), [`deploy/self-host/docker-compose.mtls.yml`](../../deploy/self-host/docker-compose.mtls.yml). A Node továbbra sem terminál TLS-t; terminátor nélkül az alapértelmezés fail-closed.
-11. **Nincs no-egress bizonyíték a `main`-en.** A build-kori Google Fonts zárva. **Kész a `main`-en:** fontok [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200) (`next/font/local`). A compose továbbra sem self-contained. Izolált CI: **Folyamatban / In progress:** [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204).
+11. **Az izolált no-egress CI bizonyíték a `main`-en van.** **Kész a `main`-en:** fontok [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200) (`next/font/local`); secrets-flow CI [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204) — [`.github/workflows/no-egress.yml`](../../.github/workflows/no-egress.yml), [`deploy/airgap/`](../../deploy/airgap/). A produkciós compose továbbra is csak az `app`. Az `npm ci` és az alapimage-húzás az izolálás előtt történik. A `use_secret` pinelés nélkül kilép a hálózatról.
 12. **Rate limiting nincs** (ROADMAP).
 13. **Nincs külső pentest** ebben a csomagban.
 14. **CSP Report-Only**, `connect-src` hardcoded `*.supabase.co`.
@@ -220,6 +221,6 @@ Részletes leképezés: [risk-assessment.hu.md](./risk-assessment.hu.md).
 | Authz | `src/app/api/_shared/guards.ts`, `src/app/api/_shared/permissions.ts`, `src/app/api/_shared/auth.ts`, `permissions.md` |
 | Audit | `src/app/api/_shared/audit.ts`, `src/app/api/playbooks/[guid]/audit/app.ts`, `supabase/migrations/20260819_audit_logs_secrets.sql` |
 | Lejárat / SSRF | `src/lib/secret-expiry.ts`, `src/lib/secret-destinations.ts`, `src/lib/mcp/federation.ts` |
-| Self-host | `docker-compose.yml`, `Dockerfile`, `public/docs/self-hosting.md`, `src/app/fonts/Geist-Variable.woff2` |
-| SDLC | `.github/dependabot.yml`, `.github/workflows/ci.yml`, `.github/workflows/publish-cli.yml`, `.github/workflows/codeql.yml`, `.github/workflows/sbom.yml`, `scripts/audit-production.mjs`, `SECURITY.md`, `docs/security/incident-runbook.md`, `docs/security/supply-chain.md` |
+| Self-host | `docker-compose.yml`, `Dockerfile`, `public/docs/self-hosting.md`, `src/app/fonts/Geist-Variable.woff2`, `deploy/airgap/`, `.github/workflows/no-egress.yml` |
+| SDLC | `.github/dependabot.yml`, `.github/workflows/ci.yml`, `.github/workflows/publish-cli.yml`, `.github/workflows/codeql.yml`, `.github/workflows/sbom.yml`, `.github/workflows/no-egress.yml`, `scripts/audit-production.mjs`, `SECURITY.md`, `docs/security/incident-runbook.md`, `docs/security/supply-chain.md` |
 | Élő leltár | `scripts/list-self-host-stack.mjs` |
