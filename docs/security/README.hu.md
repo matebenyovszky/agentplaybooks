@@ -4,7 +4,7 @@
 
 **Közönség:** ügyfél információbiztonságért felelős személye (IBF), kockázatkezelés, jog, üzemeltetés. Készült magyar állami / önkormányzati beszállítói értékeléshez és EIR biztonsági osztályba soroláshoz.
 
-**Ellenőrzés dátuma:** 2026-10-24. A kódbeli állítások a `main` ág akkor aktuális forrására vonatkoznak.
+**Ellenőrzés dátuma:** 2026-10-25. A kódbeli állítások a `main` ág akkor aktuális forrására vonatkoznak. Párhuzamos, még nem merge-elt PR-ek a gap listában **Folyamatban / In progress** jelöléssel szerepelnek.
 
 > **Jogi ellenőrzés szükséges.** Ez a csomag nem jogi tanács, nem tanúsítvány, és nem helyettesíti az ügyfél saját kockázatelemzését vagy a 7/2024. (VI. 24.) MK rendelet szerinti védelmi intézkedés-kiválasztást. Minden hatály-, osztályba sorolási, felelősségmegosztási és jogértelmezési megjegyzést az ügyfél jogászának és IBF-jének jóvá kell hagynia éles bevezetés előtt.
 
@@ -45,6 +45,18 @@ A csomag **nem idéz és nem talál ki** 7/2024. MK rendeleti tétel-azonosító
 | EiR útmutatók (NBSZ NKI) | Gyakorlati segítség a 7/2024. MK rendelethez — [nki.gov.hu](https://nki.gov.hu/it-biztonsag/kiadvanyok/segedletek/eir-utmutato/) |
 
 Kapcsolódó üzemeltetési útmutató: [`public/docs/self-hosting.md`](../../public/docs/self-hosting.md). Webes rövid összefoglaló: [`public/docs/security.md`](../../public/docs/security.md) / [`public/docs/security.hu.md`](../../public/docs/security.hu.md).
+
+## Párhuzamos PR-ek (nincsenek a `main`-en)
+
+A kódállítás a `main`. Az alábbi gapek zárása nyitott PR-ekben folyik; merge után a fehérkönyv gap-sorát kell átbillenteni.
+
+| Gap | Folyamatban / In progress |
+|-----|---------------------------|
+| 4 auditor szerep; 6 audit export / syslog / SIEM / megőrzés / hash-lánc | [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202) |
+| 10 self-host mTLS trusted proxy-n | [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201) |
+| 11 build-kori Google Fonts | [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200) |
+| 11 no-egress CI bizonyíték | [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204) |
+| 7 `SECURITY.md` / incidens-runbook; 8 mentés/DR; 9 SAST / SBOM / image-aláírás | külön PR nyitás alatt; link még nincs |
 
 ## Amit ez a csomag nem állít
 

@@ -20,12 +20,12 @@ Forrásból ellenőrizve; a részletek és a fájlhivatkozások a fehérkönyvbe
 | Terület | Van | Nincs |
 |---------|-----|-------|
 | Kripto | AES-256-GCM, HKDF-SHA-256 felhasználónkénti kulcs, AAD-kötött v2 ciphertext | KMS/HSM, újratitkosítós rotáció |
-| TLS / mTLS | Platform TLS a hosted Cloudflare-en; mTLS csak `cf.tlsClientAuth` | mTLS self-hosted Node/Next-en (fail-closed) |
-| AuthN / AuthZ | Supabase Auth; Entra/Google/GitHub/LinkedIn OIDC ha be van kapcsolva; owner\|editor; API-kulcs szerepek (proposer is) | App-szintű MFA; SAML; **auditor szerep** |
-| Audit | `audit_logs` federációra és `secret.*`-ra; tulajdonosi olvasó API | SIEM/syslog export, megőrzés, hash-lánc, skill/memória/vászon írások |
+| TLS / mTLS | Platform TLS a hosted Cloudflare-en; mTLS csak `cf.tlsClientAuth` | mTLS self-hosted Node/Next-en (fail-closed a `main`-en). **Folyamatban / In progress:** [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201) |
+| AuthN / AuthZ | Supabase Auth; Entra/Google/GitHub/LinkedIn OIDC ha be van kapcsolva; owner\|editor; API-kulcs szerepek (proposer is) | App-szintű MFA; SAML; **auditor szerep** a `main`-en. **Folyamatban / In progress:** [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202) |
+| Audit | `audit_logs` federációra és `secret.*`-ra; tulajdonosi olvasó API | SIEM/syslog export, megőrzés, hash-lánc, skill/memória/vászon írások. **Folyamatban / In progress:** [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202) |
 | Lejárat | Kikényszerített titok-`expires_at`; API-kulcs lejárat; mTLS kliens revoke | Háttér-törlő job |
-| Self-host | Docker `app` a 3000-es porton; külön Supabase stack kell | Air-gapped / no-egress bizonyíték; offline font; a compose nem tartalmaz Postgres-t |
-| SDLC | Dependabot, `npm audit:production` a CI-ban, CLI npm provenance | SAST, SBOM, image-aláírás, `SECURITY.md`, incidens-runbook |
+| Self-host | Docker `app` a 3000-es porton; külön Supabase stack kell | Air-gapped / no-egress bizonyíték és offline font nincs a `main`-en. **Folyamatban / In progress:** fontok [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200); CI [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204) |
+| SDLC | Dependabot, `npm audit:production` a CI-ban, CLI npm provenance | SAST, SBOM, image-aláírás, `SECURITY.md`, incidens-runbook, mentés/DR — nincs a `main`-en. **Folyamatban / In progress:** külön PR nyitás alatt; link még nincs |
 
 Üzemeltetési checklist: [Self-Hosting](./self-hosting.md). Architektúra: [Architecture](./architecture.md).
 

@@ -1,6 +1,6 @@
 # AgentPlaybooks security whitepaper
 
-**Version:** 2026-10-24 · **Source:** the `main` branch as of that date.  
+**Version:** 2026-10-25 · **Source:** the `main` branch as of that date. Parallel PRs are **Folyamatban / In progress** and do not count as shipped until they merge.  
 **Language of record for the assessment:** Hungarian ([whitepaper.hu.md](./whitepaper.hu.md)).
 
 > **jogi ellenőrzés szükséges.** Notes below on legal scope, NIS2, the MK decree, GDPR, and manufacturer status are not legal advice. The customer's counsel and IBF must approve them before production use.
@@ -92,7 +92,7 @@ The service role bypasses RLS. Authorization lives in application code: [`src/ap
 | mTLS (hosted) | `cf.tlsClientAuth` only; HTTP cert headers are **not** trusted; `certRevoked !== "0"` rejected | [`src/lib/mtls.ts`](../../src/lib/mtls.ts) |
 | mTLS registry | `secret_clients.certificate_sha256`, `is_active`, `expires_at`, named secrets | [`supabase/migrations/20261010081252_secret_clients.sql`](../../supabase/migrations/20261010081252_secret_clients.sql) |
 
-The Docker image **does not** terminate mTLS. The Python loader fails closed on self-hosted Node/Next until a separate TLS-termination adapter exists: [`packages/python-secrets/README.md`](../../packages/python-secrets/README.md).
+The Docker image on `main` **does not** terminate mTLS. The Python loader fails closed on self-hosted Node/Next. **Folyamatban / In progress** (trusted proxy adapter): [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201). Current behaviour: [`packages/python-secrets/README.md`](../../packages/python-secrets/README.md).
 
 **We do not claim:** KMS, HSM, key wrapping, or master-key rotation with re-encryption. The compose comment: rotating `SECRETS_ENCRYPTION_KEY` makes existing secrets undecryptable.
 
@@ -113,7 +113,7 @@ There is **no** app-level MFA (TOTP/WebAuthn). MFA can be enforced at the IdP (E
 
 **Human RBAC.** `PlaybookAccessRole = "owner" | "editor"` — [`src/app/api/_shared/guards.ts`](../../src/app/api/_shared/guards.ts). Editors cannot access secrets, API keys, visibility, or deletion ([`permissions.md`](../../permissions.md)).
 
-**Auditor role: not in the codebase.** The supplier-assessment backlog treats it as work on another stream. Until it lands, audit-log read is owner (or a user API key with `playbooks:read`) — no editor and no distinct auditor role. This pack **does not** claim the auditor role already exists.
+**Auditor role: not in the codebase.** Until it lands on `main`, audit-log read is owner (or a user API key with `playbooks:read`) — no editor and no distinct auditor role. This pack **does not** claim the auditor role already exists. **Folyamatban / In progress:** [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202).
 
 **API-key roles.** `viewer`, `coworker`, `proposer`, `admin` ([`src/app/api/[[...route]]/route.ts`](../../src/app/api/[[...route]]/route.ts) `API_KEY_ROLES`, [`src/components/playbook/ApiKeyManager.tsx`](../../src/components/playbook/ApiKeyManager.tsx)). Permission strings: [`src/app/api/_shared/permissions.ts`](../../src/app/api/_shared/permissions.ts) `grantsPermission`.
 
@@ -129,7 +129,7 @@ Rule: no secret value, no full URL, no API key in the row. A write failure does 
 
 Read: `GET /api/playbooks/:guid/audit` (legacy `GET /api/mcp/audit/:guid`), limit ≤ 500, filters `operation`, `secret.` prefix, `secret=` name — [`src/app/api/playbooks/[guid]/audit/app.ts`](../../src/app/api/playbooks/[guid]/audit/app.ts). Deliberately not readable with a playbook API key.
 
-**Missing:** SIEM / syslog export, retention job, hash chain, audit of skills/memory/canvas writes. ROADMAP keeps these open.
+**Missing on `main`:** SIEM / syslog export, retention job, hash chain. Skills / memory / canvas writes are not logged. **Folyamatban / In progress** (export, syslog/SIEM, retention, hash chain, auditor read): [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202).
 
 ## 8. Secret expiry and revocation
 
@@ -151,11 +151,11 @@ Tests: [`tests/api/secrets-expiry.test.ts`](../../tests/api/secrets-expiry.test.
 **What we cannot claim as an “air-gapped / no-egress” product.**
 
 1. Compose does not include the Supabase stack.
-2. Build: `next/font/google` Geist / Geist Mono — [`src/app/layout.tsx`](../../src/app/layout.tsx). Next self-hosts the font after the build, but **the build needs egress** unless the font is pre-cached. There is no offline font pack in the repo.
-3. There is no isolated-network E2E test proving zero outbound packets.
+2. Build: `next/font/google` Geist / Geist Mono — [`src/app/layout.tsx`](../../src/app/layout.tsx). Next self-hosts the font after the build, but **the build needs egress** unless the font is pre-cached. There is no offline font pack on `main`. **Folyamatban / In progress:** [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200) (`next/font/local`).
+3. There is no isolated-network E2E test on `main` proving zero outbound packets. **Folyamatban / In progress:** [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204).
 4. CSP Report-Only `connect-src` includes `https://*.supabase.co` ([`src/lib/security-headers.ts`](../../src/lib/security-headers.ts)); that does not cover a custom Auth host and is not enforcing.
 5. `use_secret` / federation **intentionally** make outbound HTTP to customer-chosen destinations.
-6. mTLS does not work on plain Docker/Node self-host.
+6. mTLS fails closed on plain Docker/Node self-host. **Folyamatban / In progress** (trusted proxy, `MTLS_MODE=proxy`): [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201).
 
 A customer no-egress goal is their network isolation, font cache, `SECRETS_REQUIRE_ALLOWED_HOSTS=true`, and disabling the outbound proxy if the vault is unused. The product does not measure this.
 
@@ -169,29 +169,29 @@ HTTP headers (HSTS, `X-Frame-Options: DENY`, nosniff, Permissions-Policy): [`src
 | `npm audit --omit=dev --audit-level=high` in CI | Yes | [`scripts/audit-production.mjs`](../../scripts/audit-production.mjs), [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) |
 | CI: lint, tests, `tsc`, worker build, wrangler dry-run | Yes | same workflow |
 | CLI npm trusted publishing / OIDC provenance | Yes | [`.github/workflows/publish-cli.yml`](../../.github/workflows/publish-cli.yml) (`id-token: write`; `--provenance` is intentionally omitted, npm attests automatically) |
-| SAST (CodeQL / Semgrep) | No | — |
-| CycloneDX / SPDX SBOM | No | — |
-| Container signing (cosign) | No | — |
-| `SECURITY.md`, PSIRT, incident runbook | No | — |
-| Automated encrypted DB backup | No | one-liner `supabase db dump` in the self-hosting guide |
+| SAST (CodeQL / Semgrep) | Not on `main` | **Folyamatban / In progress** (separate PR being opened; no link yet) |
+| CycloneDX / SPDX SBOM | Not on `main` | **Folyamatban / In progress** (separate PR being opened; no link yet) |
+| Container signing (cosign) | Not on `main` | **Folyamatban / In progress** (separate PR being opened; no link yet) |
+| `SECURITY.md`, PSIRT, incident runbook | Not on `main` | **Folyamatban / In progress** (separate PR being opened; no link yet) |
+| Automated encrypted DB backup / DR runbook | Not on `main` (one-liner `supabase db dump`) | **Folyamatban / In progress** (separate PR being opened; no link yet)
 
 Lockfiles (`package-lock.json`, `packages/cli/package-lock.json`) are the reproducible-install input.
 
 ## 11. Known gaps
 
-Honest list for the supplier assessment. Status as of the 2026-10-24 code.
+Honest list for the supplier assessment. Status follows `main` as of 2026-10-25. **Folyamatban / In progress** rows are open PRs; flip them after merge.
 
 1. **No KMS / HSM.** The master key is a process environment variable.
 2. **No key rotation with re-encryption.** Changing the master key is vault data loss.
 3. **No application-level MFA.** MFA is IdP-only (e.g. Entra conditional access).
-4. **No auditor role in code.** Human RBAC: owner \| editor. Audit read is owner-level. (The role is planned on another stream.)
+4. **No auditor role in code.** Human RBAC: owner \| editor. Audit read is owner-level. **Folyamatban / In progress:** [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202).
 5. **No SAML SSO.** OIDC/OAuth via GoTrue if the customer enables it.
-6. **Audit: no export, retention, or hash chain.** Skills / memory / canvas writes are not logged.
-7. **No `SECURITY.md`, PSIRT, 24/72h / 1-month incident runbook.** NKI notification (418/2024. § 77) is the customer's process — **jogi ellenőrzés szükséges**.
-8. **No backup and DR runbook.** `supabase db dump`; playbook snapshots do not include secret values.
-9. **No SAST, SBOM, or image signing.** Dependabot + production npm audit + CLI provenance exist.
-10. **mTLS only on Cloudflare.** Self-host Node/Next: fail-closed.
-11. **No no-egress evidence.** Build-time Google Fonts; compose is not self-contained.
+6. **Audit: no export, retention, or hash chain on `main`.** Skills / memory / canvas writes are not logged. **Folyamatban / In progress** (export, syslog/SIEM, retention, hash chain): [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202).
+7. **No `SECURITY.md`, PSIRT, 24/72h / 1-month incident runbook.** NKI notification (418/2024. § 77) is the customer's process — **jogi ellenőrzés szükséges**. **Folyamatban / In progress:** a separate PR is being opened; no link yet.
+8. **No backup and DR runbook.** `supabase db dump`; playbook snapshots do not include secret values. **Folyamatban / In progress:** a separate PR is being opened; no link yet.
+9. **No SAST, SBOM, or image signing.** Dependabot + production npm audit + CLI provenance exist. **Folyamatban / In progress:** a separate PR is being opened; no link yet.
+10. **mTLS only on Cloudflare on `main`.** Self-host Node/Next: fail-closed. **Folyamatban / In progress** (trusted proxy): [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201).
+11. **No no-egress evidence on `main`.** Build-time Google Fonts; compose is not self-contained. **Folyamatban / In progress:** fonts [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200); isolated CI [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204).
 12. **No rate limiting** (ROADMAP).
 13. **No external pentest** in this pack.
 14. **CSP Report-Only**, `connect-src` hardcoded to `*.supabase.co`.

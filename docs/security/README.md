@@ -4,7 +4,7 @@
 
 **Audience:** the customer's information-security officer (IBF), risk, legal, and operations teams. Written for a Hungarian public-sector supplier assessment and EIR security classification.
 
-**Verified against source:** 2026-10-24, on the `main` branch as of that date.
+**Verified against source:** 2026-10-25, on the `main` branch as of that date. Parallel open PRs that are not on `main` yet are marked **Folyamatban / In progress** on the gap list.
 
 > **jogi ellenőrzés szükséges.** This pack is not legal advice, not a certification, and not a substitute for the customer's own risk analysis or control selection under 7/2024. (VI. 24.) MK rendelet. Every note on scope, classification, responsibility split, or legal interpretation must be approved by the customer's counsel and IBF before production use.
 
@@ -45,6 +45,18 @@ This pack **does not quote or invent** 7/2024 MK rendelet control IDs. Controls 
 | EiR guides (NBSZ NKI) | Practical help for the MK decree — [nki.gov.hu](https://nki.gov.hu/it-biztonsag/kiadvanyok/segedletek/eir-utmutato/) |
 
 Related operations guide: [`public/docs/self-hosting.md`](../../public/docs/self-hosting.md). Short website summary: [`public/docs/security.md`](../../public/docs/security.md) / [`public/docs/security.hu.md`](../../public/docs/security.hu.md).
+
+## Parallel PRs (not on `main`)
+
+Code claims follow `main`. These gaps are being closed on open PRs; after they merge, flip the whitepaper gap rows.
+
+| Gap | Folyamatban / In progress |
+|-----|---------------------------|
+| 4 auditor role; 6 audit export / syslog / SIEM / retention / hash chain | [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202) |
+| 10 self-host mTLS via trusted proxy | [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201) |
+| 11 build-time Google Fonts | [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200) |
+| 11 no-egress CI evidence | [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204) |
+| 7 `SECURITY.md` / incident runbook; 8 backup/DR; 9 SAST / SBOM / image signing | separate PRs being opened; no link yet |
 
 ## What this pack does not claim
 

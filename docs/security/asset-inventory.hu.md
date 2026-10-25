@@ -72,7 +72,7 @@ Nincs `.env.example` a gyökérben; a kanonikus lista a compose és a self-hosti
 |---------|----------------|---------------|
 | Alkalmazás HTTP | 3000 | `docker-compose.yml` |
 | Alkalmazás HTTPS | nincs a compose-ban | Ügyfél reverse proxy / TLS |
-| mTLS | nincs self-host Node-on | Cloudflare (hosted) vagy ügyfél proxy (nincs adapter a kódban) |
+| mTLS | nincs self-host Node-on (`main`) | Cloudflare (hosted). **Folyamatban / In progress:** trusted proxy [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201) |
 | Supabase Kong | 8000 / 8443 | Ügyfél Supabase compose |
 | Postgres | 5432 — **ne legyen internetre nyitva** | Ügyfél |
 
@@ -83,7 +83,7 @@ Nincs `.env.example` a gyökérben; a kanonikus lista a compose és a self-hosti
 | Függőség | Miért | Egress? |
 |----------|-------|---------|
 | npm registry | `npm ci` | Igen, buildkor |
-| `next/font/google` Geist / Geist Mono | [`src/app/layout.tsx`](../../src/app/layout.tsx) | Igen, **buildkor**, hacsak nincs cache |
+| `next/font/google` Geist / Geist Mono | [`src/app/layout.tsx`](../../src/app/layout.tsx) | Igen, **buildkor** a `main`-en. **Folyamatban / In progress:** [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200) |
 | GitHub Actions | CI, Dependabot, CLI publish | SaaS CI, nem az on-prem instance |
 | npm trusted publishing | `@agentplaybooks/cli` provenance | Kiadáskor, nem az instance |
 
@@ -98,7 +98,7 @@ Nincs `.env.example` a gyökérben; a kanonikus lista a compose és a self-hosti
 
 Produkciós npm audit: [`scripts/audit-production.mjs`](../../scripts/audit-production.mjs). Lockfile: [`package-lock.json`](../../package-lock.json), [`packages/cli/package-lock.json`](../../packages/cli/package-lock.json).
 
-**Nincs** a kiadáshoz csatolt SBOM; a lockfile a helyettesítő bizonyíték, amíg CycloneDX nincs.
+**Nincs** a kiadáshoz csatolt SBOM a `main`-en; a lockfile a helyettesítő bizonyíték. **Folyamatban / In progress:** külön PR nyitás alatt; link még nincs. Izolált no-egress CI sincs a `main`-en (**Folyamatban / In progress:** [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204)).
 
 ## 6. Adattárolók (logikai eszközök)
 

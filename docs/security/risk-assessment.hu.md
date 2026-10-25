@@ -26,18 +26,18 @@ Minden CSV-sor `legal_flag` mezője: `jogi ellenőrzés szükséges`.
 
 | NIST | Család | NIS2 (tájékoztató) | Terméktámogatás | Ügyfél | Bizonyíték / teszt | Státusz |
 |------|--------|--------------------|-----------------|--------|--------------------|---------|
-| AC | Hozzáférés-vezérlés | 21(2)(i), (j) | owner\|editor; titkok tulajdonos-only; API-kulcs szerepek (viewer/coworker/proposer/admin). **Auditor nincs a kódban.** | Tulajdonosok, OAuth szűkítés, auditor-igény eldöntése | `guards.test.ts`; nem-tulajdonos secrets 403 | partial |
-| AU | Naplózás | 21(2)(b),(f) | `audit_logs` + `secret.*` + federáció; elutasítás is esemény; nincs SIEM/megőrzés/hash-lánc | SIEM, megőrzés, AI Act 12/26 ha hatályos | `audit.test.ts`; `/audit?operation=secret.` | partial |
+| AC | Hozzáférés-vezérlés | 21(2)(i), (j) | owner\|editor; titkok tulajdonos-only; API-kulcs szerepek (viewer/coworker/proposer/admin). **Auditor nincs a `main`-en.** **Folyamatban / In progress:** [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202) | Tulajdonosok, OAuth szűkítés, auditor-igény eldöntése | `guards.test.ts`; nem-tulajdonos secrets 403 | partial |
+| AU | Naplózás | 21(2)(b),(f) | `audit_logs` + `secret.*` + federáció; elutasítás is esemény; nincs SIEM/megőrzés/hash-lánc a `main`-en. **Folyamatban / In progress:** [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202) | SIEM, megőrzés, AI Act 12/26 ha hatályos | `audit.test.ts`; `/audit?operation=secret.` | partial |
 | CM | Konfigurációkezelés | 21(2)(i) | Statikus leltár + `scripts/list-self-host-stack.mjs` | Script futtatása, image változáskezelés | `npm run inventory:self-host`; `docs:check` | partial |
-| IA | Azonosítás / hitelesítés | 21(2)(i),(j) | Supabase Auth, Entra OIDC; **nincs app-MFA, nincs SAML**; hosted mTLS | Entra MFA, e-mail login tiltása, on-prem TLS | SSO E2E; `mtls.test.ts` (hosted) | partial |
-| IR | Incidenskezelés | 23. cikk; 418/2024. 77. § | Audit API kivonathoz. **Nincs SECURITY.md / runbook / PSIRT** | NKI 24/72 óra / 1 hónap rend | Tabletop: kulcsvisszavonás + kivonat | missing |
+| IA | Azonosítás / hitelesítés | 21(2)(i),(j) | Supabase Auth, Entra OIDC; **nincs app-MFA, nincs SAML**; hosted mTLS. Self-host mTLS: fail-closed. **Folyamatban / In progress:** [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201) | Entra MFA, e-mail login tiltása, on-prem TLS | SSO E2E; `mtls.test.ts` (hosted) | partial |
+| IR | Incidenskezelés | 23. cikk; 418/2024. 77. § | Audit API kivonathoz. **Nincs SECURITY.md / runbook / PSIRT a `main`-en.** **Folyamatban / In progress:** külön PR nyitás alatt; link még nincs | NKI 24/72 óra / 1 hónap rend | Tabletop: kulcsvisszavonás + kivonat | missing |
 | PL | Tervezés | 21(2)(a),(g) | Ez a dokumentumcsomag | Instance-terv, EIR osztály | IBF/jogi review | partial |
 | RA | Kockázatelemzés | 21(2)(a) | Sablon + őszinte gap lista; nincs automatikus motor | 3. melléklet, intézkedésválasztás | Kitöltött CSV + IBF aláírás | partial |
-| SC | Kommunikációvédelem | 21(2)(h) | AES-256-GCM, HKDF, SSRF, `allowed_hosts`. **Nincs KMS/HSM, nincs re-encryption, mTLS csak Cloudflare** | HTTPS proxy, izoláció, KMS döntés | `crypto.test.ts`; proxy a link-localra 400 | partial |
-| SI | Integritás | 21(2)(e) | Dependabot, `npm audit:production`, CI teszt. **Nincs SAST/SBOM/cosign** | Javítási ritmus, extra scanner | CI verify; audit:production | partial |
-| CP | Üzletmenet-folytonosság | 21(2)(c) | `supabase db dump`; snapshot **nem** vault-érték. **Nincs DR-runbook** | Mentés, restore drill, RPO/RTO, mesterkulcs | Restore üres gépre | partial |
-| SA | Beszerzés | 21(2)(d),(e); CRA? | MIT forrás, CI, CLI provenance. Nincs SBOM | Licenc, CRA gyártói státusz | `publish-cli.yml`; ez a csomag | partial |
-| SR | Ellátási lánc | 21(2)(d), 21(3) | Lockfile, Dependabot, CLI provenance. Nincs CycloneDX | Image pin, CVE, SBOM később | `npm ci`; inventory images | partial |
+| SC | Kommunikációvédelem | 21(2)(h) | AES-256-GCM, HKDF, SSRF, `allowed_hosts`. **Nincs KMS/HSM, nincs re-encryption, mTLS a `main`-en csak Cloudflare.** **Folyamatban / In progress** (self-host proxy): [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201) | HTTPS proxy, izoláció, KMS döntés | `crypto.test.ts`; proxy a link-localra 400 | partial |
+| SI | Integritás | 21(2)(e) | Dependabot, `npm audit:production`, CI teszt. **Nincs SAST/SBOM/cosign a `main`-en.** **Folyamatban / In progress:** külön PR nyitás alatt; link még nincs | Javítási ritmus, extra scanner | CI verify; audit:production | partial |
+| CP | Üzletmenet-folytonosság | 21(2)(c) | `supabase db dump`; snapshot **nem** vault-érték. **Nincs DR-runbook a `main`-en.** **Folyamatban / In progress:** külön PR nyitás alatt; link még nincs | Mentés, restore drill, RPO/RTO, mesterkulcs | Restore üres gépre | partial |
+| SA | Beszerzés | 21(2)(d),(e); CRA? | MIT forrás, CI, CLI provenance. Nincs SBOM a `main`-en. **Folyamatban / In progress:** külön PR nyitás alatt; link még nincs | Licenc, CRA gyártói státusz | `publish-cli.yml`; ez a csomag | partial |
+| SR | Ellátási lánc | 21(2)(d), 21(3) | Lockfile, Dependabot, CLI provenance. Nincs CycloneDX a `main`-en. **Folyamatban / In progress:** külön PR nyitás alatt; link még nincs | Image pin, CVE, SBOM később | `npm ci`; inventory images | partial |
 | AT | Képzés | 21(2)(g) | Üzemeltetői doksik. Nincs in-app képzés | Szerepkörös képzés, igazolás | Ügyféli napló | customer |
 | CA | Értékelés / monitoring | 21(2)(f) | CI. Nincs APM; nincs pentest-jelentés | Engedélyezés, pentest, monitoring | CI; `HEALTHCHECK` | partial |
 | PE | Fizikai védelem | 21. cikk all-hazards | Szoftver; nincs DC-kontroll | Terem / hosting | Ügyféli létesítmény | customer |
@@ -53,11 +53,11 @@ A táblázat minden jogi oszlopa **jogi ellenőrzés szükséges**.
 
 A beszállítói értékelés requirement-táblája szerinti bizonyítékok, a **mai** kódhoz igazítva:
 
-1. Unit/integráció a CI-ban: kripto, lejárat, `allowed_hosts`, RBAC — **van**. Hash-lánc, SIEM-export, auditor szerep — **nincs**, ne várjuk zöldre.
-2. E2E izolált hálózaton, 0 kimenő forgalom — **nincs automatizált teszt**; az ügyfél mérheti. A build ma fontot tölt le.
-3. Restore drill — ügyféli gyakorlat; termékrunbook nincs.
-4. Incidens tabletop — ügyféli; a termék audit API-t ad, SECURITY.md-t nem.
-5. CVE-folyamat: Dependabot → javítás → CLI provenance. SBOM + aláírt image — hiány.
+1. Unit/integráció a CI-ban: kripto, lejárat, `allowed_hosts`, RBAC — **van**. Hash-lánc, SIEM-export, auditor szerep — **nincs a `main`-en** (**Folyamatban / In progress:** [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202)).
+2. E2E izolált hálózaton, 0 kimenő forgalom — **nincs a `main`-en**. **Folyamatban / In progress:** fontok [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200); CI [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204). A `main` build ma fontot tölt le.
+3. Restore drill — ügyféli gyakorlat; termékrunbook nincs a `main`-en. **Folyamatban / In progress:** külön PR nyitás alatt; link még nincs.
+4. Incidens tabletop — ügyféli; a termék audit API-t ad, SECURITY.md-t a `main` nem. **Folyamatban / In progress:** külön PR nyitás alatt; link még nincs.
+5. CVE-folyamat: Dependabot → javítás → CLI provenance. SBOM + aláírt image — hiány a `main`-en. **Folyamatban / In progress:** külön PR nyitás alatt; link még nincs.
 6. Pentest — nincs benne ebben a csomagban.
 7. IBF / jogi review — **jogi ellenőrzés szükséges**.
 

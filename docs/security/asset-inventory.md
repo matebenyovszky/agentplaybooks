@@ -72,7 +72,7 @@ There is no root `.env.example`; the canonical list is compose plus the self-hos
 |-----------|---------|------------------|
 | App HTTP | 3000 | `docker-compose.yml` |
 | App HTTPS | not in compose | Customer reverse proxy / TLS |
-| mTLS | not on self-host Node | Cloudflare (hosted) or customer proxy (no adapter in code) |
+| mTLS | not on self-host Node (`main`) | Cloudflare (hosted). **Folyamatban / In progress:** trusted proxy [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201) |
 | Supabase Kong | 8000 / 8443 | Customer Supabase compose |
 | Postgres | 5432 — **must not be on the internet** | Customer |
 
@@ -83,7 +83,7 @@ There is no root `.env.example`; the canonical list is compose plus the self-hos
 | Dependency | Why | Egress? |
 |------------|-----|---------|
 | npm registry | `npm ci` | Yes, at build |
-| `next/font/google` Geist / Geist Mono | [`src/app/layout.tsx`](../../src/app/layout.tsx) | Yes, **at build**, unless cached |
+| `next/font/google` Geist / Geist Mono | [`src/app/layout.tsx`](../../src/app/layout.tsx) | Yes, **at build** on `main`. **Folyamatban / In progress:** [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200) |
 | GitHub Actions | CI, Dependabot, CLI publish | SaaS CI, not the on-prem instance |
 | npm trusted publishing | `@agentplaybooks/cli` provenance | At release, not on the instance |
 
@@ -98,7 +98,7 @@ There is no root `.env.example`; the canonical list is compose plus the self-hos
 
 Production npm audit: [`scripts/audit-production.mjs`](../../scripts/audit-production.mjs). Lockfiles: [`package-lock.json`](../../package-lock.json), [`packages/cli/package-lock.json`](../../packages/cli/package-lock.json).
 
-There is **no** SBOM attached to a release; the lockfile is the substitute evidence until CycloneDX exists.
+There is **no** SBOM attached to a release on `main`; the lockfile is the substitute evidence. **Folyamatban / In progress:** a separate PR is being opened; no link yet. Isolated no-egress CI is also not on `main` (**Folyamatban / In progress:** [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204)).
 
 ## 6. Data stores (logical assets)
 
