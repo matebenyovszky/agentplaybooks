@@ -25,7 +25,7 @@ export function roleMayReadAudit(role: PlaybookAccessRole | null | undefined): b
 }
 
 export function roleMayReadSecrets(role: PlaybookAccessRole | null | undefined): boolean {
-  return role === "owner";
+  return role === "owner" || role === "editor";
 }
 
 export function roleMayPerform(
@@ -35,7 +35,8 @@ export function roleMayPerform(
   if (!role) return false;
   if (role === "owner") return true;
   if (role === "auditor") return AUDITOR_ALLOWED_PERMISSIONS.has(permission);
-  return !permission.startsWith("secrets:");
+  if (permission.startsWith("secrets:")) return roleMayReadSecrets(role);
+  return true;
 }
 
 export const AUDITOR_PLAYBOOK_METADATA_FIELDS = [

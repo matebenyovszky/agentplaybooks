@@ -65,7 +65,7 @@ export default function CollaborationInvitePage({ params }: { params: Promise<{ 
             <p className="text-sm text-neutral-600 dark:text-slate-400 mb-6">
               {inviteRole === "auditor"
                 ? "You will be able to read and export the audit trail and playbook metadata. You will not see secret values or be able to change the playbook."
-                : "You will be able to edit its content. The owner keeps control of secrets, API keys, visibility, sharing, and deletion."}
+                : "You will be able to edit content, manage secrets and view API-key metadata. The owner keeps control of key creation, rotation and revocation, visibility, sharing and deletion."}
             </p>
             {signedIn ? (
               <button onClick={accept} disabled={accepting} className="w-full py-3 bg-amber-500 text-slate-950 rounded-lg font-semibold flex items-center justify-center gap-2 disabled:opacity-50">

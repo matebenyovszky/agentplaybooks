@@ -64,7 +64,7 @@ See [Management API & MCP](./management-api.md) for details.
 
 ### Human editor authorization
 
-Signed-in editors use the same Supabase JWT/session authentication as owners. Their accepted membership authorizes content edits only. Visibility, collaborators, playbook API keys, secrets, ownership, and deletion are always owner-only. Playbook API keys cannot manage human collaborators.
+Signed-in editors use the same Supabase JWT/session authentication as owners. Accepted editors may edit content, manage secrets and inspect API-key metadata. Creating, rotating or revoking API keys, visibility, collaborators, ownership and deletion remain owner-only. Playbook API keys cannot manage human collaborators or change an existing secret's raw-value/proxy-destination policy.
 
 ---
 
@@ -692,7 +692,7 @@ See [Team Collaboration](./team-collaboration.md) for the permission matrix and 
 
 ## API Keys Management (Authenticated)
 
-Manage API keys for your playbooks. Only the playbook owner can access these endpoints.
+Owners may create, rotate and revoke playbook API keys. Accepted editors may list metadata only; raw keys and stored hashes are not returned by the list endpoint.
 
 ### List API Keys
 
@@ -1071,6 +1071,7 @@ For programmatic playbook management by AI agents. See [Management API Documenta
 |----------|-------------|
 | `GET /api/manage/playbooks` | List all playbooks |
 | `POST /api/manage/playbooks` | Create playbook |
+| `POST /api/manage/playbooks/:id/fork` | Atomically copy a readable playbook, its skills, attachments and MCP records into a private playbook owned by the caller |
 | `GET /api/manage/playbooks/:id` | Get playbook with contents |
 | `PUT /api/manage/playbooks/:id` | Update playbook (incl. persona fields) |
 | `DELETE /api/manage/playbooks/:id` | Delete playbook |
@@ -1083,6 +1084,10 @@ For programmatic playbook management by AI agents. See [Management API Documenta
 | `GET /api/manage/openapi.json` | OpenAPI specification |
 
 **MCP Server:** `/api/mcp/manage`
+
+Auditors cannot fork playbook content.
+
+Forking preserves publisher attribution and gives every copied record a new ID. The new playbook is an independent copy: later source edits do not synchronize. Vault secrets, API keys, memberships, runtime memory and history are not copied. MCP connection configuration and secret references are retained; configure referenced secrets in the new playbook before using those integrations.
 
 ---
 

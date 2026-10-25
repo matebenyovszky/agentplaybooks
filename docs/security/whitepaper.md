@@ -112,9 +112,9 @@ Self-host Entra: `GOTRUE_EXTERNAL_AZURE_*` on the GoTrue container, documented i
 
 There is **no** app-level MFA (TOTP/WebAuthn). MFA can be enforced at the IdP (Entra) — a customer control. There is **no** SAML; ROADMAP lists it in Phase 4.
 
-**Human RBAC.** `PlaybookAccessRole = "owner" | "editor"` — [`src/app/api/_shared/guards.ts`](../../src/app/api/_shared/guards.ts). Editors cannot access secrets, API keys, visibility, or deletion ([`permissions.md`](../../permissions.md)).
+**Human RBAC.** The central role model is `owner | editor | auditor` ([`audit-access.ts`](../../src/lib/audit-access.ts)). Editors can edit content, manage secrets and inspect API-key metadata. Key mutation, visibility, sharing and deletion remain owner-only. Auditors read audit evidence and playbook metadata without accessing secrets or copying content ([`permissions.md`](../../permissions.md)).
 
-**Auditor role: not in the codebase.** Until it lands on `main`, audit-log read is owner (or a user API key with `playbooks:read`) — no editor and no distinct auditor role. This pack **does not** claim the auditor role already exists. **Folyamatban / In progress:** [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202).
+**Auditor role.** Present in the current code: auditors may read audit evidence and playbook metadata, but cannot read secrets or copy content. The policy is centralized in `audit-access.ts`.
 
 **API-key roles.** `viewer`, `coworker`, `proposer`, `admin` ([`src/app/api/[[...route]]/route.ts`](../../src/app/api/[[...route]]/route.ts) `API_KEY_ROLES`, [`src/components/playbook/ApiKeyManager.tsx`](../../src/components/playbook/ApiKeyManager.tsx)). Permission strings: [`src/app/api/_shared/permissions.ts`](../../src/app/api/_shared/permissions.ts) `grantsPermission`.
 
@@ -186,7 +186,7 @@ Honest list for the supplier assessment. Status follows `main` as of 2026-10-25.
 1. **No KMS / HSM.** The master key is a process environment variable.
 2. **No key rotation with re-encryption.** Changing the master key is vault data loss.
 3. **No application-level MFA.** MFA is IdP-only (e.g. Entra conditional access).
-4. **No auditor role in code.** Human RBAC: owner \| editor. Audit read is owner-level. **Folyamatban / In progress:** [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202).
+4. **Audit access is not content access.** Auditors cannot read secrets or fork content. Independently issued agent credentials must be revoked separately.
 5. **No SAML SSO.** OIDC/OAuth via GoTrue if the customer enables it.
 6. **Audit: no export, retention, or hash chain on `main`.** Skills / memory / canvas writes are not logged. **Folyamatban / In progress** (export, syslog/SIEM, retention, hash chain): [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202).
 7. **`SECURITY.md` and 24/72h / 1-month incident runbook are on `main`.** **Done on `main`:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205) — [`SECURITY.md`](../../SECURITY.md), [`docs/security/incident-runbook.md`](./incident-runbook.md). GitHub private vulnerability reporting is the only security contact (**Done on `main`:** [#207](https://github.com/matebenyovszky/agentplaybooks/pull/207)); there is no security email. Maintainer review is best-effort. The 24/72h / 1-month clocks remain operator duties under 418/2024. § 77, not a reporter SLA. NKI notification remains the customer's process — **jogi ellenőrzés szükséges**.

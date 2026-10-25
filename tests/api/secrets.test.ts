@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { app } from '@/app/api/playbooks/[guid]/secrets/app';
 import { getAuthenticatedUser, storedDisplayPrefix, validateApiKey } from '@/app/api/_shared/auth';
-import { getPlaybookByGuid } from '@/app/api/_shared/guards';
+import { getPlaybookAccessRole, getPlaybookByGuid } from '@/app/api/_shared/guards';
 import { getServiceSupabase } from '@/app/api/_shared/supabase';
 
 // Mock dependencies
@@ -13,6 +13,7 @@ vi.mock('@/app/api/_shared/auth', () => ({
 
 vi.mock('@/app/api/_shared/guards', () => ({
   getPlaybookByGuid: vi.fn(),
+  getPlaybookAccessRole: vi.fn().mockResolvedValue(null),
 }));
 
 vi.mock('@/app/api/_shared/supabase', () => ({
@@ -28,6 +29,7 @@ describe('Secrets API - Security Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(storedDisplayPrefix).mockResolvedValue("apb_live_abc");
+    vi.mocked(getPlaybookAccessRole).mockResolvedValue(null);
   });
 
   describe('GET /reveal/:name', () => {
@@ -185,7 +187,7 @@ describe('Secrets API - Security Tests', () => {
       const data = await res.json();
 
       expect(res.status).toBe(403);
-      expect(data.error).toContain('only the owner or playbook API key can reveal secrets');
+      expect(data.error).toContain('only the owner, an editor, or a playbook API key can reveal secrets');
     });
   });
 });
@@ -194,6 +196,7 @@ describe('Secrets API - audit trail', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(storedDisplayPrefix).mockResolvedValue("apb_live_abc");
+    vi.mocked(getPlaybookAccessRole).mockResolvedValue(null);
   });
 
   /**
@@ -321,5 +324,106 @@ describe('Secrets API - audit trail', () => {
 
     expect(res.status).toBe(200);
     consoleError.mockRestore();
+  });
+});
+
+
+describe("Secrets API - editor access and reveal policy", () => {
+  let update: ReturnType<typeof vi.fn>;
+  let from: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(getAuthenticatedUser).mockResolvedValue({ id: "editor" });
+    vi.mocked(getPlaybookAccessRole).mockResolvedValue("editor");
+    vi.mocked(getPlaybookByGuid).mockResolvedValue({
+      id: "playbook1", user_id: "owner", guid: "guid1", visibility: "private",
+    });
+    const row = { id: "secret1", name: "token", allow_api_key_reveal: false };
+    const chain = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn(async () => ({ data: row, error: null })),
+      order: vi.fn(async () => ({ data: [row], error: null })),
+      update: vi.fn().mockReturnThis(),
+    };
+    update = chain.update;
+    from = vi.fn((table: string) => table === "audit_logs"
+      ? { insert: vi.fn(async () => ({ error: null })) }
+      : chain);
+    vi.mocked(getServiceSupabase).mockReturnValue({ from } as unknown as ReturnType<typeof getServiceSupabase>);
+  });
+
+  it.each([true, false])("lets an editor set allow_api_key_reveal to %s without rotating the secret", async (enabled) => {
+    const res = await app.request("/api/playbooks/guid1/secrets/token", {
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ allow_api_key_reveal: enabled }),
+    });
+    expect(res.status).toBe(200);
+    expect(getPlaybookAccessRole).toHaveBeenCalledWith("editor", "playbook1");
+    expect(update).toHaveBeenCalledWith({ updated_by: "editor", allow_api_key_reveal: enabled });
+    const metadata = await res.json();
+    expect(metadata).not.toHaveProperty("encrypted_value");
+  });
+
+  it("rejects string booleans rather than accidentally enabling reveal", async () => {
+    const res = await app.request("/api/playbooks/guid1/secrets/token", {
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ allow_api_key_reveal: "false" }),
+    });
+    expect(res.status).toBe(400);
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("denies a scoped API key changing its own raw-value policy", async () => {
+    vi.mocked(getAuthenticatedUser).mockResolvedValue(null);
+    vi.mocked(validateApiKey).mockResolvedValue({
+      playbooks: { id: "playbook1" }, key_prefix: "apb_live_writer",
+    } as Awaited<ReturnType<typeof validateApiKey>>);
+    const res = await app.request("/api/playbooks/guid1/secrets/token", {
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ allow_api_key_reveal: true }),
+    });
+    expect(res.status).toBe(403);
+    expect(validateApiKey).toHaveBeenCalledWith(expect.any(Request), "secrets:write");
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("denies a key belonging to a different playbook", async () => {
+    vi.mocked(getAuthenticatedUser).mockResolvedValue(null);
+    vi.mocked(validateApiKey).mockResolvedValue({
+      playbooks: { id: "other-playbook" }, key_prefix: "apb_live_other",
+    } as Awaited<ReturnType<typeof validateApiKey>>);
+    const res = await app.request("/api/playbooks/guid1/secrets/token", {
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ allow_api_key_reveal: true }),
+    });
+    expect(res.status).toBe(403);
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("lets an editor list secret metadata", async () => {
+    const res = await app.request("/api/playbooks/guid1/secrets");
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual([expect.objectContaining({ name: "token" })]);
+  });
+
+  it("lets an editor reveal a proxy-only secret in their human session", async () => {
+    const res = await app.request("/api/playbooks/guid1/secrets/reveal/token");
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toMatchObject({ value: "decrypted_value" });
+  });
+
+  it.each(["GET", "PUT"])("denies a user without accepted editor access for %s", async (method) => {
+    vi.mocked(getPlaybookAccessRole).mockResolvedValue(null);
+    const res = await app.request("/api/playbooks/guid1/secrets" + (method === "PUT" ? "/token" : ""), {
+      method, ...(method === "PUT" ? {
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ allow_api_key_reveal: true }),
+      } : {}),
+    });
+    expect(res.status).toBe(403);
+    expect(from).not.toHaveBeenCalledWith("secrets");
+    expect(update).not.toHaveBeenCalled();
   });
 });

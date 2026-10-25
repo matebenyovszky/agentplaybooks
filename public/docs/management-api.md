@@ -28,7 +28,7 @@ Unlike Playbook API Keys (which only work for a single playbook), **User API Key
 - Apply a newly created playbook immediately through the same control-plane connection
 - List owned and shared playbooks, including `current_user_role`
 
-For a shared playbook, the User API Key inherits the account's editor boundaries: it may change content but cannot change visibility, manage collaborators or playbook API keys, access secrets, or delete the playbook. Human invitation endpoints themselves require an interactive JWT session and are not exposed through this API.
+For a shared playbook, the User API Key inherits the account's editor boundaries: it may change content and use secret operations permitted by the central role policy, but cannot change visibility, manage collaborators, create/rotate/revoke playbook API keys, or delete the playbook. Changes to a secret's raw-value/proxy-destination policy require an interactive owner or editor session. Human invitation endpoints themselves require an interactive JWT session and are not exposed through this API.
 
 > **Architecture Note:** AgentPlaybooks uses a **1 Playbook = 1 Persona** model. Each playbook has exactly one persona embedded directly in the playbook record. There's no separate personas table.
 

@@ -69,7 +69,7 @@ export function CollaborationManager({ playbookId }: { playbookId: string }) {
       <div className="p-5 rounded-xl bg-white dark:bg-slate-900/80 border border-neutral-200 dark:border-slate-700/50">
         <h3 className="font-semibold text-neutral-900 dark:text-white mb-2">Invite a collaborator</h3>
         <p className="text-sm text-neutral-600 dark:text-slate-400 mb-4">
-          The link can be accepted once and expires after 72 hours. Editors can change playbook content. Auditors can read and export the audit trail and playbook metadata, but cannot read secret values or change anything.
+          The link can be accepted once and expires after 72 hours. Editors can edit content, manage secrets and view API-key metadata. Key creation, rotation and revocation, visibility, sharing and deletion remain with the owner. Auditors can read and export the audit trail and playbook metadata, but cannot read secret values or change anything.
         </p>
         <div className="flex flex-wrap gap-3 mb-4">
           <label className="text-sm flex items-center gap-2">

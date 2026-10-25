@@ -74,7 +74,7 @@ Skills define specific capabilities or tasks your AI can perform.
 
 ### Optional: Invite a human editor
 
-Open **Sharing**, create a one-time invite link, and send it privately to the teammate who should edit the playbook. The link expires after 72 hours and can be accepted once. Editors can change content but cannot access secrets, API keys, visibility, sharing, or deletion. See [Team Collaboration](./team-collaboration.md).
+Open **Sharing**, create a one-time invite link, and send it privately to the teammate who should edit the playbook. The link expires after 72 hours and can be accepted once. Editors can edit content, manage secrets and inspect API-key metadata. API-key creation, rotation and revocation, visibility, sharing and deletion remain owner-only. See [Team Collaboration](./team-collaboration.md).
 
 ### For ChatGPT (Custom GPT)
 

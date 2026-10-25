@@ -68,6 +68,7 @@ export function SecretManager({ storage, secrets, onUpdate, readOnly = false }: 
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCategory, setFilterCategory] = useState<SecretCategory | "all">("all");
+  const [updatingPolicy, setUpdatingPolicy] = useState<string | null>(null);
 
   // Create form state
   const [newName, setNewName] = useState("");
@@ -218,6 +219,22 @@ export function SecretManager({ storage, secrets, onUpdate, readOnly = false }: 
       setActionError(`Rotate failed: ${message}`);
     }
     setRotating(false);
+  };
+
+  const handleToggleReveal = async (secret: SecretMetadata) => {
+    setActionError("");
+    setUpdatingPolicy(secret.name);
+    try {
+      const result = await storage.updateSecret(secret.name, {
+        allow_api_key_reveal: !secret.allow_api_key_reveal,
+      });
+      if (!result) throw new Error("Failed to update secret access");
+      onUpdate(secrets.map((item) => item.name === secret.name ? result : item));
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Failed to update secret access");
+    } finally {
+      setUpdatingPolicy(null);
+    }
   };
 
   const handleDelete = async (name: string) => {
@@ -443,6 +460,24 @@ export function SecretManager({ storage, secrets, onUpdate, readOnly = false }: 
                   )}
 
                   {/* Metadata row */}
+                  {!readOnly && (
+                    <label className="ml-7 mt-3 flex items-start gap-2 text-sm text-neutral-600 dark:text-slate-400">
+                      <input
+                        type="checkbox"
+                        aria-label={`Allow API keys to reveal ${secret.name}`}
+                        checked={secret.allow_api_key_reveal}
+                        disabled={updatingPolicy !== null}
+                        onChange={() => void handleToggleReveal(secret)}
+                        className="mt-1 accent-amber-500"
+                      />
+                      <span>
+                        Allow API keys to reveal the raw value
+                        <span className="block text-xs text-neutral-500 dark:text-slate-500">
+                          {updatingPolicy === secret.name ? "Saving..." : "When disabled, agents can only use this secret through the secure proxy."}
+                        </span>
+                      </span>
+                    </label>
+                  )}
                   <div className="flex items-center gap-4 ml-7 mt-2 text-xs text-neutral-400 dark:text-slate-500">
                     {secret.use_count > 0 && <span>Used {secret.use_count}x</span>}
                     {secret.last_used_at && (
