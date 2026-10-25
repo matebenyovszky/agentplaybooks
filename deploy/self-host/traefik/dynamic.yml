@@ -1,0 +1,39 @@
+http:
+  routers:
+    app:
+      rule: "PathPrefix(`/`)"
+      entryPoints:
+        - websecure
+      service: app
+      middlewares:
+        - pass-client-cert
+        - mtls-verify
+      tls:
+        options: mtls
+
+  middlewares:
+    pass-client-cert:
+      passTLSClientCert:
+        pem: true
+    mtls-verify:
+      headers:
+        customRequestHeaders:
+          X-SSL-Client-Verify: "SUCCESS"
+
+  services:
+    app:
+      loadBalancer:
+        servers:
+          - url: "http://app:3000"
+
+tls:
+  certificates:
+    - certFile: /certs/server.crt
+      keyFile: /certs/server.key
+  options:
+    mtls:
+      minVersion: VersionTLS12
+      clientAuth:
+        caFiles:
+          - /certs/ca.crt
+        clientAuthType: VerifyClientCertIfGiven
