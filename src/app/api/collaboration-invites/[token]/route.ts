@@ -1,5 +1,6 @@
 // Native Request/Response handler: shared by Next.js and the Worker dispatcher.
 // @worker-native
+import { runWithAuditRequest } from "@/lib/audit-context";
 import { getAuthenticatedUser } from "@/app/api/_shared/auth";
 import { getServiceSupabase } from "@/app/api/_shared/supabase";
 import { hashToken } from "@/lib/utils";
@@ -33,7 +34,7 @@ export async function GET(
   });
 }
 
-export async function POST(
+async function handlePOST(
   request: Request,
   { params }: { params: Promise<{ token: string }> }
 ) {
@@ -78,4 +79,8 @@ export async function POST(
     return Response.json({ error: "Invite was already used" }, { status: 409 });
   }
   return Response.json({ playbook_id: data.playbook_id });
+}
+
+export async function POST(request: Request, { params }: { params: Promise<{ token: string }> }) {
+  return runWithAuditRequest(request, () => handlePOST(request, { params }));
 }

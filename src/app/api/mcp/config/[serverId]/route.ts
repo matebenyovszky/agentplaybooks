@@ -3,7 +3,7 @@ import { createApiApp } from "@/app/api/_shared/hono";
 import { getUserFromAuthOrApiKey } from "@/app/api/_shared/auth";
 import { getServiceSupabase } from "@/app/api/_shared/supabase";
 import { FederationError, knownProtocolEra, listFederatedResources, listFederatedTools } from "@/lib/mcp/federation";
-import { loadFederationSecrets } from "@/app/api/_shared/federation-secrets";
+import { configReferencesSecrets, loadFederationSecrets, SECRET_ROUTING_DENIED, userMayRouteSecrets } from "@/app/api/_shared/federation-secrets";
 import type { MCPServer } from "@/lib/supabase/types";
 
 const app = createApiApp("/api/mcp/config/:serverId");
@@ -42,6 +42,12 @@ app.put("/", async (c) => {
     transport_type?: "http" | "sse" | "openapi";
     transport_config?: Record<string, unknown>;
   }>();
+  if (configReferencesSecrets(body.transport_config)) {
+    const user = await getUserFromAuthOrApiKey(c.req.raw, "playbooks:write");
+    if (!user || !(await userMayRouteSecrets(c.req.raw, user.id, server.playbook_id))) {
+      return c.json({ error: SECRET_ROUTING_DENIED }, 403);
+    }
+  }
   const supabase = getServiceSupabase();
   if (body.transport_type || body.transport_config) {
     const { error } = await supabase.from("mcp_servers").update({
