@@ -41,7 +41,7 @@ if [ -f "$DNS_LOG" ]; then
   done < "$DNS_LOG"
 fi
 
-if [ -s "$PCAP_LOG" ]; then
+if grep -q '[^[:space:]]' "$PCAP_LOG"; then
   echo "outbound packets outside 172.30.0.0/24:" >&2
   cat "$PCAP_LOG" >&2
   violations=$((violations + 1))
