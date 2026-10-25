@@ -1,0 +1,44 @@
+name: mtls-test
+networks:
+  private:
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24
+services:
+  app:
+    image: node:24
+    working_dir: /workspace
+    command: [node, --import, tsx, scripts/self-host/mtls-probe.ts]
+    volumes:
+      - ../..:/workspace:ro
+    ports:
+      - "127.0.0.1:3000:3000"
+    networks:
+      private:
+        ipv4_address: 172.28.0.20
+    environment:
+      MTLS_MODE: proxy
+      MTLS_PROXY_SHARED_SECRET: ${MTLS_PROXY_SHARED_SECRET:?required}
+      MTLS_PROXY_VERIFY_HEADER: X-SSL-Client-Verify
+      MTLS_PROXY_FINGERPRINT_HEADER: ${MTLS_TEST_FINGERPRINT_HEADER:-X-SSL-Client-Fingerprint}
+      MTLS_TRUSTED_PROXIES: 172.28.0.10/32
+      TEST_CLIENT_FINGERPRINT: ${TEST_CLIENT_FINGERPRINT:?required}
+  proxy:
+    image: ${MTLS_TEST_PROXY_IMAGE:-nginx:1.27-alpine}
+    depends_on: [app]
+    ports:
+      - "127.0.0.1:8443:443"
+    networks:
+      private:
+        ipv4_address: 172.28.0.10
+    environment:
+      MTLS_PROXY_SHARED_SECRET: ${MTLS_PROXY_SHARED_SECRET:?required}
+      NGINX_ENVSUBST_OUTPUT_DIR: /etc/nginx
+      NGINX_ENVSUBST_FILTER: ^MTLS_PROXY_SHARED_SECRET$$
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/templates/nginx.conf.template:ro
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./traefik/dynamic.test.yml:/etc/traefik/dynamic.yml:ro
+      - ./certs:/certs:ro
+      - ./certs:/etc/nginx/certs:ro

@@ -1,0 +1,70 @@
+name: Self-host mTLS
+on:
+  pull_request:
+    paths: ["src/lib/mtls*", "deploy/self-host/**", "scripts/self-host/mtls-probe.ts", ".github/workflows/self-host-mtls.yml"]
+  push:
+    branches: [main]
+    paths: ["src/lib/mtls*", "deploy/self-host/**", "scripts/self-host/mtls-probe.ts", ".github/workflows/self-host-mtls.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  proxy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: nginx:1.27-alpine
+            header: X-SSL-Client-Fingerprint
+          - image: caddy:2-alpine
+            header: X-SSL-Client-Fingerprint
+          - image: traefik:v3
+            header: X-Forwarded-Tls-Client-Cert
+    env:
+      MTLS_TEST_PROXY_IMAGE: ${{ matrix.image }}
+      MTLS_TEST_FINGERPRINT_HEADER: ${{ matrix.header }}
+      COMPOSE: docker compose -f deploy/self-host/mtls-test.compose.yml
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Create isolated test credentials
+        run: |
+          sh deploy/self-host/generate-test-certs.sh
+          token="$(openssl rand -hex 32)"
+          echo "::add-mask::$token"
+          echo "MTLS_PROXY_SHARED_SECRET=$token" >> "$GITHUB_ENV"
+          echo "TEST_CLIENT_FINGERPRINT=$(openssl x509 -in deploy/self-host/certs/client.crt -noout -fingerprint -sha256 | cut -d= -f2 | tr -d ':' | tr 'A-F' 'a-f')" >> "$GITHUB_ENV"
+          openssl req -x509 -newkey rsa:2048 -nodes -keyout /tmp/untrusted.key -out /tmp/untrusted.crt -days 1 -subj /CN=untrusted
+      - name: Start TLS terminator and real application verifier
+        run: |
+          envsubst '${MTLS_PROXY_SHARED_SECRET}' < deploy/self-host/traefik/dynamic.yml > deploy/self-host/traefik/dynamic.test.yml
+          $COMPOSE up -d
+          for i in $(seq 1 60); do
+            curl -s --cacert deploy/self-host/certs/ca.crt https://localhost:8443/ -o /dev/null && break
+            sleep 1
+          done
+      - name: Verify valid, absent, forged and untrusted client identities
+        run: |
+          set -eu
+          status() { curl -s --cacert deploy/self-host/certs/ca.crt -o /dev/null -w '%{http_code}' "$@" https://localhost:8443/; }
+          actual="$(status --cert deploy/self-host/certs/client.crt --key deploy/self-host/certs/client.key)"
+          echo "Valid certificate: HTTP $actual"
+          test "$actual" = 200
+          test "$(status)" = 401
+          test "$(status -H "X-SSL-Client-Fingerprint: $TEST_CLIENT_FINGERPRINT" -H "X-Forwarded-Tls-Client-Cert: $TEST_CLIENT_FINGERPRINT" -H 'X-SSL-Client-Verify: SUCCESS')" = 401
+          # A certificate outside the CA must fail TLS or be denied, never 200.
+          invalid="$(status --cert /tmp/untrusted.crt --key /tmp/untrusted.key || true)"
+          test "$invalid" != 200
+          test "$(curl -s -o /dev/null -w '%{http_code}' -H "X-SSL-Client-Fingerprint: $TEST_CLIENT_FINGERPRINT" -H 'X-SSL-Client-Verify: SUCCESS' -H 'X-Forwarded-For: 172.28.0.10' -H 'X-APB-Proxy-Address: 172.28.0.10' http://127.0.0.1:3000/)" = 401
+      - name: Logs
+        if: failure()
+        run: $COMPOSE logs --no-color
+      - name: Cleanup
+        if: always()
+        run: $COMPOSE down -v

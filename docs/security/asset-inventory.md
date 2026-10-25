@@ -118,3 +118,5 @@ Main tables: `playbooks`, `secrets`, `audit_logs`, `api_keys`, `user_api_keys`, 
 3. `docs:check` verifies relative links and cited source paths, not running containers.
 
 The customer half of CM (Configuration Management): version that output and diff it against the static tables above — see [risk-assessment.md](./risk-assessment.md).
+
+`MTLS_PROXY_SHARED_SECRET`: private proxy channel token, required in proxy mode; same random value in app and terminator. Rotate both together. Forwarded IP headers alone are not trusted.

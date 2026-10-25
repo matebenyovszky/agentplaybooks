@@ -15,8 +15,7 @@ BACKUP_DIR="${BACKUP_DIR:-${REPO_ROOT}/backups}"
 BACKUP_RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-90}"
 BACKUP_KEEP_COUNT="${BACKUP_KEEP_COUNT:-14}"
 
-# Env keys that must never appear in a backup archive.
-REDACT_ENV_KEYS_REGEX='^(SECRETS_ENCRYPTION_KEY|SUPABASE_SERVICE_ROLE_KEY|POSTGRES_PASSWORD|BACKUP_ENCRYPTION_PASSPHRASE|JWT_SECRET|ANON_KEY|SERVICE_ROLE_KEY|GOTRUE_JWT_SECRET|VAULT_ENC_KEY|AWS_SECRET_ACCESS_KEY|MINIO_ROOT_PASSWORD)='
+# SECRETS_ENCRYPTION_KEY and every other environment value stay outside config inventories.
 
 log() { printf '%s\n' "$*"; }
 err() { printf 'error: %s\n' "$*" >&2; }
@@ -71,12 +70,7 @@ redact_env_file() {
     return 0
   fi
   umask 077
-  awk -v re="${REDACT_ENV_KEYS_REGEX}" '
-    $0 ~ re {
-      sub(/=.*/, "=<redacted>")
-    }
-    { print }
-  ' "$src" > "$dest"
+  python3 "${SELF_HOST_LIB_DIR}/archive.py" inventory "$src" "$dest"
 }
 
 git_commit_short() {
@@ -87,13 +81,19 @@ git_commit_short() {
 # catalog (initdb stubs live in the old database and would collide).
 recreate_database() {
   wait_for_db
+  [ "${POSTGRES_DB}" != template0 ] && [ "${POSTGRES_DB}" != template1 ] || die "Cannot replace a template database"
   db_exec psql -U "${POSTGRES_USER}" -d template1 -v ON_ERROR_STOP=1 \
-    -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '${POSTGRES_DB}' AND pid <> pg_backend_pid();" \
-    >/dev/null
-  db_exec psql -U "${POSTGRES_USER}" -d template1 -v ON_ERROR_STOP=1 \
-    -c "DROP DATABASE IF EXISTS ${POSTGRES_DB};"
-  db_exec psql -U "${POSTGRES_USER}" -d template1 -v ON_ERROR_STOP=1 \
-    -c "CREATE DATABASE ${POSTGRES_DB} OWNER ${POSTGRES_USER};"
+    -v db="${POSTGRES_DB}" -v owner="${POSTGRES_USER}" <<'SQL'
+SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = :'db' AND pid <> pg_backend_pid();
+DROP DATABASE IF EXISTS :"db";
+CREATE DATABASE :"db" OWNER :"owner";
+SQL
+}
+
+validate_storage_path() {
+  [[ "${STORAGE_PATH}" =~ ^/[a-zA-Z0-9_./-]+$ ]] || die "Unsafe STORAGE_PATH"
+  [[ ! "${STORAGE_PATH}" =~ (^|/)\.\.(/|$) ]] || die "Unsafe STORAGE_PATH"
+  [ "${STORAGE_PATH//\//}" != "" ] && [ "${STORAGE_PATH//\//}" != . ] || die "Storage path cannot be root"
 }
 
 # Locate an audit hash-chain verifier if a parallel change has landed it.

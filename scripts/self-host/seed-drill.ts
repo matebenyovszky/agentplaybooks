@@ -75,6 +75,8 @@ INSERT INTO public.audit_logs (playbook_id, operation, target, status, actor_typ
 VALUES (${sqlLiteral(PLAYBOOK_ID)}, 'secret.reveal', NULL, 'denied', 'anonymous', NULL, ${sqlLiteral(SECRET_NAME)});
 
 CREATE SCHEMA IF NOT EXISTS storage;
+GRANT USAGE ON SCHEMA public TO service_role;
+GRANT SELECT ON public.playbooks, public.secrets, public.audit_logs TO service_role;
 CREATE TABLE IF NOT EXISTS storage.objects (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   bucket_id text NOT NULL,

@@ -6,23 +6,20 @@ set -eu
 
 DNS_LOG="${1:-/var/log/airgap/dnsmasq.log}"
 PCAP_LOG="${2:-/var/log/airgap/tcpdump.log}"
+[ -f "$DNS_LOG" ] && [ -f "$PCAP_LOG" ] || { echo "Missing observer logs" >&2; exit 1; }
 
 allow_name() {
   name=$(printf '%s' "$1" | tr 'A-Z' 'a-z' | sed 's/\.$//')
   [ -z "$name" ] && return 0
   case "$name" in
-    localhost|localhost.*) return 0 ;;
-    observer|observer.airgap|observer.airgap.*) return 0 ;;
-    db|db.airgap|db.airgap.*) return 0 ;;
-    rest|rest.airgap|rest.airgap.*) return 0 ;;
-    auth|auth.airgap|auth.airgap.*) return 0 ;;
-    kong|kong.airgap|kong.airgap.*) return 0 ;;
-    app|app.airgap|app.airgap.*) return 0 ;;
-    echo|echo.airgap|echo.airgap.*) return 0 ;;
-    tester|tester.airgap|tester.airgap.*) return 0 ;;
-    *.0.30.172.in-addr.arpa|0.30.172.in-addr.arpa) return 0 ;;
-    *.30.172.in-addr.arpa) return 0 ;;
+    localhost) return 0 ;;
+    observer|observer.airgap|db|db.airgap|rest|rest.airgap|auth|auth.airgap|kong|kong.airgap|app|app.airgap|echo|echo.airgap|tester|tester.airgap|db-init|db-init.airgap) return 0 ;;
   esac
+  # Only a single IPv4 octet in this /24, not arbitrary subdomains.
+  if printf '%s' "$name" | grep -Eq '^[0-9]{1,3}\.0\.30\.172\.in-addr\.arpa$'; then
+    octet=${name%%.*}
+    [ "$octet" -le 255 ] && return 0
+  fi
   return 1
 }
 
@@ -55,4 +52,4 @@ if [ "$violations" -ne 0 ]; then
   exit 1
 fi
 
-echo "no-egress check passed (0 external DNS lookups, 0 outbound packets)"
+echo "observer check passed (0 external DNS lookups, 0 locally observed outbound packets); CI host capture covers the entire bridge"

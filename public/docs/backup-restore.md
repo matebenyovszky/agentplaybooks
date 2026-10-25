@@ -6,7 +6,7 @@ This is an operational guide, **not legal advice**. Confirm retention, classific
 
 The restore drill required by the test plan — restore from backup onto an empty machine, confirm secrets are readable, confirm the audit trail, record RTO — is automated as `scripts/self-host/restore-drill.sh` and `.github/workflows/self-host-restore-drill.yml`.
 
-Related: [Self-Hosting](./self-hosting.md) (deployment), [Cross-platform Agent Backups](./portable-agent-backups.md) (`apb push` / `apb pull` of playbook files — **not** a vault or database backup). The same runbook lives at `docs/self-host/backup-restore.md` in the repository.
+Related: [Self-Hosting](./self-hosting.md) (deployment), [Cross-platform Agent Backups](./portable-agent-backups.md) (`apb push` / `apb pull` of playbook files — **not** a vault or database backup).
 
 ## What to back up
 
@@ -17,7 +17,7 @@ A self-hosted instance has a stateless application container (`docker-compose.ym
 | **Postgres / Supabase database** | Playbooks, vault ciphertext (`public.secrets`), `public.audit_logs`, auth users, memory, snapshots | `pg_dump` custom format of the whole database (all non-catalog schemas) |
 | **Vault tables** | AES-256-GCM ciphertext, IV, auth tag. Useless without the master key | Included in the database dump |
 | **Object storage** | Supabase Storage buckets / uploaded files | tar of the storage volume |
-| **Config** | Compose files, `supabase/config.toml` | Copied into the archive |
+| **Config** | Compose files, `supabase/config.toml` | Repository revision only; live deployment files must be stored separately |
 | **Environment / secrets** | Connection URLs, JWT, service-role key | **Redacted** copy only (values replaced with `<redacted>`) |
 | **Encryption master key** (`SECRETS_ENCRYPTION_KEY`) | HKDF input for every vault secret | **Never in the archive.** Store separately (HSM, sealed envelope, password manager) with its own offsite copy |
 
@@ -180,3 +180,25 @@ The drill:
 9. Prints `RTO_SECONDS`
 
 CI: `.github/workflows/self-host-restore-drill.yml` (pull request and `main` when these files change, plus a weekly schedule).
+
+
+## Audited restore safeguards (2026-10-25)
+
+Requires Python 3.12+ on the backup/restore host. Before any database replacement,
+restore validates the manifest, component checksums and archive member paths.
+Checksums detect corruption; they do not authenticate an archive from an untrusted
+source. Keep encrypted archives in access-controlled storage.
+
+Database grants are restored (no `--no-acl`). Provision all referenced PostgreSQL
+roles on the destination cluster first; cluster role definitions are not part of
+pg_dump. The drill verifies a private playbook as service_role after restore.
+
+Unavailable object storage fails backup/restore. `backup.sh --skip-storage` is an
+explicit database-only backup and records storage as excluded. It cannot recover
+objects. Pause application and storage writes during a full backup to obtain a
+consistent database/object snapshot; the two components are not atomically captured.
+
+Config inventories contain environment variable names only; every value, comment
+and continuation is omitted. Live Compose/TOML files may contain inline credentials
+and are never copied. Preserve deployment configuration, cluster roles, the master
+key and other credentials separately in the operator's protected configuration store.

@@ -6,12 +6,18 @@ http:
         - websecure
       service: app
       middlewares:
+        - strip-client-cert
         - pass-client-cert
         - mtls-verify
       tls:
-        options: mtls
+        options: default
 
   middlewares:
+    strip-client-cert:
+      headers:
+        customRequestHeaders:
+          X-Forwarded-Tls-Client-Cert: ""
+          X-Forwarded-Tls-Client-Cert-Info: ""
     pass-client-cert:
       passTLSClientCert:
         pem: true
@@ -19,6 +25,9 @@ http:
       headers:
         customRequestHeaders:
           X-SSL-Client-Verify: "SUCCESS"
+          # Render this template from the private proxy environment before use.
+          X-APB-Proxy-Token: "${MTLS_PROXY_SHARED_SECRET}"
+          X-APB-Proxy-Address: "172.28.0.10"
 
   services:
     app:
@@ -31,7 +40,7 @@ tls:
     - certFile: /certs/server.crt
       keyFile: /certs/server.key
   options:
-    mtls:
+    default:
       minVersion: VersionTLS12
       clientAuth:
         caFiles:

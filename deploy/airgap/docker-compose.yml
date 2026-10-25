@@ -35,7 +35,7 @@ services:
       airgap:
         ipv4_address: 172.30.0.53
     healthcheck:
-      test: ["CMD", "nc", "-z", "127.0.0.1", "53"]
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 53 && kill -0 $$(cat /var/log/airgap/dns.pid) && kill -0 $$(cat /var/log/airgap/pcap.pid)"]
       interval: 2s
       timeout: 2s
       retries: 15
