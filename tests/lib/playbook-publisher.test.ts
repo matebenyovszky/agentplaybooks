@@ -15,6 +15,7 @@ const PROFILE_ID = "publisher-profile-id";
 
 function configureSupabase(profile: { id: string } | null) {
   const profileQuery = {
+    upsert: vi.fn().mockResolvedValue({ error: null }),
     select: vi.fn(),
     eq: vi.fn(),
     maybeSingle: vi.fn().mockResolvedValue({ data: profile, error: null }),
@@ -61,12 +62,19 @@ describe("createPlaybook publisher association", () => {
     }));
   });
 
-  it("refuses to create a playbook when the user's publisher profile is missing", async () => {
-    const { playbookQuery } = configureSupabase(null);
+  it("creates a missing profile without overwriting existing publisher details", async () => {
+    const { profileQuery, playbookQuery } = configureSupabase(null);
+    profileQuery.maybeSingle
+      .mockResolvedValueOnce({ data: null, error: null })
+      .mockResolvedValueOnce({ data: { id: USER_ID }, error: null });
 
-    await expect(createPlaybook(USER_ID, { name: "New playbook" }))
-      .rejects.toThrow("Publisher profile not found for authenticated user.");
-    expect(playbookQuery.insert).not.toHaveBeenCalled();
+    await createPlaybook(USER_ID, { name: "New playbook" });
+    expect(profileQuery.upsert).toHaveBeenCalledWith({
+      id: USER_ID, auth_user_id: USER_ID, display_name: "User",
+    }, { onConflict: "auth_user_id", ignoreDuplicates: true });
+    expect(playbookQuery.insert).toHaveBeenCalledWith(expect.objectContaining({
+      publisher_id: USER_ID,
+    }));
   });
 
   it("keeps the source publisher on a fork while assigning ownership to the new user", async () => {

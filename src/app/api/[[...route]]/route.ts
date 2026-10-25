@@ -373,7 +373,7 @@ app.get("/playbooks/:id/skills", async (c) => {
   // Find playbook by ID or GUID
   let query = supabase
     .from("playbooks")
-    .select("id, user_id, visibility");
+    .select("id, user_id, publisher_id, visibility");
 
   if (isUuid) {
     query = query.eq("id", idOrGuid);
@@ -1124,6 +1124,7 @@ app.post("/manage/playbooks/:id/fork", async (c) => {
   }
 
   try {
+    if (!source.publisher_id) await getPublisherIdForAuthUser(source.user_id);
     const fork = await forkPlaybook(user.id, source.id);
     return c.json(fork, 201);
   } catch (error) {

@@ -27,10 +27,22 @@ export async function getPublisherIdForAuthUser(userId: string): Promise<string>
     .maybeSingle();
 
   if (error) throw new Error(`Failed to resolve publisher profile: ${error.message}`);
-  if (!data?.id) {
-    throw new Error("Publisher profile not found for authenticated user.");
-  }
-  return data.id;
+  if (data?.id) return data.id;
+
+  // API-first/self-hosted signups may not have visited the profile screen yet.
+  // Ignore a concurrent insert: never replace an existing publisher's details.
+  const supabase = getServiceSupabase();
+  const { error: creationError } = await supabase.from("profiles").upsert({
+    id: userId,
+    auth_user_id: userId,
+    display_name: "User",
+  }, { onConflict: "auth_user_id", ignoreDuplicates: true });
+  if (creationError) throw new Error(`Failed to create publisher profile: ${creationError.message}`);
+  const { data: profile, error: lookupError } = await supabase.from("profiles")
+    .select("id").eq("auth_user_id", userId).maybeSingle();
+  if (lookupError) throw new Error(`Failed to resolve publisher profile: ${lookupError.message}`);
+  if (!profile?.id) throw new Error("Publisher profile could not be resolved.");
+  return profile.id;
 }
 
 function withCounts(
