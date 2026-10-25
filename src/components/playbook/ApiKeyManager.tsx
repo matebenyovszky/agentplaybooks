@@ -22,6 +22,7 @@ interface ApiKeyManagerProps {
   playbook_id: string;
   apiKeys: ApiKey[];
   onUpdate: (apiKeys: ApiKey[]) => void;
+  readOnly?: boolean;
 }
 
 // Available permissions
@@ -42,7 +43,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
   admin: ["full"],
 };
 
-export function ApiKeyManager({ playbook_id, apiKeys, onUpdate }: ApiKeyManagerProps) {
+export function ApiKeyManager({ playbook_id, apiKeys, onUpdate, readOnly = false }: ApiKeyManagerProps) {
   const [newApiKey, setNewApiKey] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -145,10 +146,10 @@ export function ApiKeyManager({ playbook_id, apiKeys, onUpdate }: ApiKeyManagerP
             API Keys
           </h2>
           <p className="text-sm text-slate-400 mt-1">
-            Generate keys to let AI agents write back to this playbook
+            {readOnly ? "View API keys and their access to this playbook" : "Generate keys to let AI agents write back to this playbook"}
           </p>
         </div>
-        <button
+        {!readOnly && <button
           onClick={() => setShowCreateModal(true)}
           className={cn(
             "px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium",
@@ -158,7 +159,7 @@ export function ApiKeyManager({ playbook_id, apiKeys, onUpdate }: ApiKeyManagerP
         >
           <Plus className="h-4 w-4" />
           Generate New Key
-        </button>
+        </button>}
       </div>
 
       {/* New Key Alert */}
@@ -209,9 +210,9 @@ export function ApiKeyManager({ playbook_id, apiKeys, onUpdate }: ApiKeyManagerP
           <Key className="h-12 w-12 text-slate-700 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-slate-400 mb-2">No API keys yet</h3>
           <p className="text-sm text-slate-500 mb-4">
-            Generate an API key to allow AI agents to write data back to this playbook.
+            {readOnly ? "The owner has not generated any API keys for this playbook." : "Generate an API key to allow AI agents to write data back to this playbook."}
           </p>
-          <button
+          {!readOnly && <button
             onClick={() => setShowCreateModal(true)}
             className={cn(
               "px-4 py-2 rounded-lg inline-flex items-center gap-2 text-sm font-medium",
@@ -221,7 +222,7 @@ export function ApiKeyManager({ playbook_id, apiKeys, onUpdate }: ApiKeyManagerP
           >
             <Plus className="h-4 w-4" />
             Generate First Key
-          </button>
+          </button>}
         </motion.div>
       )}
 
@@ -283,7 +284,16 @@ export function ApiKeyManager({ playbook_id, apiKeys, onUpdate }: ApiKeyManagerP
                         )}>
                           {apiKey.role ? apiKey.role.charAt(0).toUpperCase() + apiKey.role.slice(1) : 'Viewer'}
                         </span>
-                        {/* Legacy permissions display if needed, but role is better */}
+                        {apiKey.permissions.map((permission) => (
+                          <span key={permission} className="px-2 py-0.5 rounded text-xs bg-neutral-100 dark:bg-slate-700/40 text-neutral-600 dark:text-slate-400">
+                            {permission}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="mt-2 text-xs text-neutral-500 dark:text-slate-500 space-y-1">
+                        <p>Created {new Date(apiKey.created_at).toLocaleDateString()} · {apiKey.is_active ? "Active" : "Inactive"}</p>
+                        {apiKey.expires_at && <p>Expires {new Date(apiKey.expires_at).toLocaleDateString()}</p>}
+                        <p>The full key is only available when created or rotated.</p>
                       </div>
                     </div>
                   </div>
@@ -301,7 +311,7 @@ export function ApiKeyManager({ playbook_id, apiKeys, onUpdate }: ApiKeyManagerP
                         Rotated {new Date(apiKey.rotated_at).toLocaleDateString()}
                       </span>
                     )}
-                    <button
+                    {!readOnly && <button
                       onClick={() => handleRotateKey(apiKey.id)}
                       disabled={rotatingKeyId === apiKey.id}
                       className={cn(
@@ -313,8 +323,8 @@ export function ApiKeyManager({ playbook_id, apiKeys, onUpdate }: ApiKeyManagerP
                     >
                       <RotateCw className={cn("h-4 w-4", rotatingKeyId === apiKey.id && "animate-spin")} />
                       {rotatingKeyId === apiKey.id ? "Rotating..." : "Rotate"}
-                    </button>
-                    <button
+                    </button>}
+                    {!readOnly && <button
                       onClick={() => handleRevokeKey(apiKey.id)}
                       className={cn(
                         "px-3 py-1.5 rounded-lg text-sm flex items-center gap-1.5",
@@ -324,7 +334,7 @@ export function ApiKeyManager({ playbook_id, apiKeys, onUpdate }: ApiKeyManagerP
                     >
                       <Trash2 className="h-4 w-4" />
                       Revoke
-                    </button>
+                    </button>}
                   </div>
                 </div>
               </motion.div>

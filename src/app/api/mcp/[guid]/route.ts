@@ -73,6 +73,7 @@ import { proposeMemory, proposeSkill } from "@/app/api/_shared/proposals";
 import { memoryTimestamp, memoryWriteFields } from "@/lib/memory";
 import { findPlaybookSkill } from "@/lib/repositories/skills";
 import { serveSkill, skillResourceUri, type ServedSkill } from "@/lib/mcp/skill-extension";
+import { getPublisherIdForAuthUser } from "@/lib/repositories/playbooks";
 import { cachedSingleFlight, type SingleFlightEntry } from "@/lib/cache/single-flight";
 import {
   assertValidDemonstrations,
@@ -816,7 +817,7 @@ Supply optional \`memory_at\` (ISO timestamp with timezone), or omit it on value
 | \`consolidate_memories\` | Combine related memories into a parent summary |
 | \`promote_memory\` | Move a memory to a higher tier or boost priority |
 | \`get_memory_context\` | Get an optimized view of memories across tiers |
-| \`archive_memories\` | Move completed memories to longterm tier |
+| \`archive_memories\` | Hide obsolete memories from normal search/context while retaining history |
 | \`get_memory_tree\` | Visualize parent-child hierarchy |
 
 ### Task Graph Workflow (for Agent Swarms)
@@ -826,11 +827,14 @@ Supply optional \`memory_at\` (ISO timestamp with timezone), or omit it on value
 4. Parent auto-completes when all children finish
 
 ### Memory Best Practices
-- Use \`tier: "working"\` for active tasks, \`"longterm"\` for archived results
+- Use \`tier: "working"\` for active tasks and \`"longterm"\` for durable knowledge; archive status controls visibility
 - Set \`parent_key\` to group related memories hierarchically
 - Use tags for cross-cutting categorization
 - Use \`summary\` for compact context views
 - Consolidate memories when context gets too large
+- Keep entries concise and actionable: store durable facts, decisions, and useful next steps, with a short summary. Link to detailed sources instead of copying transcripts or repeating information.
+- When normal work reveals an outdated fact, verify the current information and update the existing key with \`write_memory\` rather than creating a contradictory duplicate. Refresh its summary too.
+- Archive confirmed obsolete or superseded entries by specific key with \`archive_memories\`, preserving history. Age alone is not evidence of obsolescence; retain still-valid knowledge and mark uncertainty when a fact cannot be verified.
 
 ## Canvas System
 
@@ -2357,6 +2361,9 @@ use_secret_write({
                 throw new Error("A playbook API key cannot make a playbook public or unlisted; the owner can, from a signed-in session");
               }
               updates.visibility = args.visibility;
+              if ((args.visibility === "public" || args.visibility === "unlisted") && !(playbook as Playbook).publisher_id) {
+                updates.publisher_id = await getPublisherIdForAuthUser(playbook.user_id);
+              }
             }
             if (args.tags !== undefined) {
               if (!Array.isArray(args.tags)) throw new Error("tags must be an array");

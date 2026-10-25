@@ -1,7 +1,8 @@
 import { createApiApp } from "@/app/api/_shared/hono";
 import { getServiceSupabase } from "@/app/api/_shared/supabase";
 import { getAuthenticatedUser, storedDisplayPrefix, validateApiKey } from "@/app/api/_shared/auth";
-import { getPlaybookByGuid } from "@/app/api/_shared/guards";
+import { getPlaybookAccessRole, getPlaybookByGuid } from "@/app/api/_shared/guards";
+import { roleMayReadSecrets } from "@/lib/audit-access";
 import { encryptSecret, decryptSecret } from "@/lib/crypto";
 import { expiredSecretMessage, expiresAtInput, isSecretExpired } from "@/lib/secret-expiry";
 import { checkSecretDestination, narrowsAllowedHosts, normalizeAllowedHosts } from "@/lib/secret-destinations";
@@ -93,13 +94,13 @@ app.get("/", async (c) => {
   const playbook = await getPlaybookByGuid(guid, user?.id ?? null, apiKey?.playbooks.id ?? null);
   if (!playbook) return c.json({ error: "Playbook not found" }, 404);
 
-  // Only owner or API key holder for this playbook can access secrets
-  const isOwner = user && playbook.user_id === user.id;
+  // Only owners, accepted editors, or API key holders for this playbook can access secrets
+  const canManageSecrets = !!user && roleMayReadSecrets(playbook.user_id === user.id ? "owner" : await getPlaybookAccessRole(user.id, playbook.id));
   const isApiKeyForPlaybook = apiKey && apiKey.playbooks.id === playbook.id;
   const audit = await auditContextFor(c, playbook.id, user, Boolean(apiKey));
-  if (!isOwner && !isApiKeyForPlaybook) {
+  if (!canManageSecrets && !isApiKeyForPlaybook) {
     await recordSecretAudit(audit, { operation: "secret.list", status: "denied", reason: "not_authorized" });
-    return c.json({ error: "Forbidden: secrets are only accessible to the playbook owner" }, 403);
+    return c.json({ error: "Forbidden: secrets require owner or editor access" }, 403);
   }
 
   const supabase = getServiceSupabase();
@@ -138,10 +139,10 @@ app.post("/", async (c) => {
   const playbook = await getPlaybookByGuid(guid, user?.id ?? null, apiKey?.playbooks.id ?? null);
   if (!playbook) return c.json({ error: "Playbook not found" }, 404);
 
-  const isOwner = user && playbook.user_id === user.id;
+  const canManageSecrets = !!user && roleMayReadSecrets(playbook.user_id === user.id ? "owner" : await getPlaybookAccessRole(user.id, playbook.id));
   const isApiKeyForPlaybook = apiKey && apiKey.playbooks.id === playbook.id;
   const audit = await auditContextFor(c, playbook.id, user, Boolean(apiKey));
-  if (!isOwner && !isApiKeyForPlaybook) {
+  if (!canManageSecrets && !isApiKeyForPlaybook) {
     await recordSecretAudit(audit, { operation: "secret.create", status: "denied", reason: "not_authorized" });
     return c.json({ error: "Forbidden" }, 403);
   }
@@ -276,18 +277,18 @@ app.get("/reveal/:name", async (c) => {
   const playbook = await getPlaybookByGuid(guid, user?.id ?? null, apiKey?.playbooks.id ?? null);
   if (!playbook) return c.json({ error: "Playbook not found" }, 404);
 
-  const isOwner = user && playbook.user_id === user.id;
+  const canManageSecrets = !!user && roleMayReadSecrets(playbook.user_id === user.id ? "owner" : await getPlaybookAccessRole(user.id, playbook.id));
   const isApiKeyForPlaybook = apiKey && apiKey.playbooks.id === playbook.id;
   const audit = await auditContextFor(c, playbook.id, user, Boolean(apiKey));
 
-  if (!isOwner && !isApiKeyForPlaybook) {
+  if (!canManageSecrets && !isApiKeyForPlaybook) {
     await recordSecretAudit(audit, {
       operation: "secret.reveal",
       status: "denied",
       secretName: name,
       reason: "not_authorized",
     });
-    return c.json({ error: "Forbidden: only the owner or playbook API key can reveal secrets" }, 403);
+    return c.json({ error: "Forbidden: only the owner, an editor, or a playbook API key can reveal secrets" }, 403);
   }
 
   const supabase = getServiceSupabase();
@@ -308,7 +309,7 @@ app.get("/reveal/:name", async (c) => {
     return c.json({ error: "Secret not found" }, 404);
   }
 
-  if (!isOwner && apiKey) {
+  if (!canManageSecrets && apiKey) {
     if (!secret.allow_api_key_reveal) {
       await recordSecretAudit(audit, {
         operation: "secret.reveal",
@@ -384,18 +385,27 @@ app.put("/:name", async (c) => {
   const playbook = await getPlaybookByGuid(guid, user?.id ?? null, apiKey?.playbooks.id ?? null);
   if (!playbook) return c.json({ error: "Playbook not found" }, 404);
 
-  const isOwner = user && playbook.user_id === user.id;
+  const canManageSecrets = !!user && roleMayReadSecrets(playbook.user_id === user.id ? "owner" : await getPlaybookAccessRole(user.id, playbook.id));
   const isApiKeyForPlaybook = apiKey && apiKey.playbooks.id === playbook.id;
   const audit = await auditContextFor(c, playbook.id, user, Boolean(apiKey));
 
   const body = await c.req.json().catch(() => ({}));
   const { value, description, category, expires_at, allow_api_key_reveal, allowed_hosts } = body;
 
+  // A credential must not grant itself raw-value access or widen its proxy destinations.
+  if (!canManageSecrets && (allow_api_key_reveal !== undefined || allowed_hosts !== undefined)) {
+    return c.json({ error: "Secret access policy requires an owner or editor session" }, 403);
+  }
+
+  if (allow_api_key_reveal !== undefined && typeof allow_api_key_reveal !== "boolean") {
+    return c.json({ error: "allow_api_key_reveal must be a boolean" }, 400);
+  }
+
   // A new value makes this a rotation; anything else only edits metadata, and
   // the two are worth telling apart when reading the trail back.
   const operation = value && typeof value === "string" ? "secret.rotate" : "secret.update";
 
-  if (!isOwner && !isApiKeyForPlaybook) {
+  if (!canManageSecrets && !isApiKeyForPlaybook) {
     await recordSecretAudit(audit, {
       operation,
       status: "denied",
@@ -483,7 +493,7 @@ app.put("/:name", async (c) => {
   if (description !== undefined) updateData.description = description;
   if (category !== undefined) updateData.category = category;
   if (expiresAt !== undefined) updateData.expires_at = expiresAt;
-  if (allow_api_key_reveal !== undefined) updateData.allow_api_key_reveal = !!allow_api_key_reveal;
+  if (allow_api_key_reveal !== undefined) updateData.allow_api_key_reveal = allow_api_key_reveal;
   if (allowed_hosts !== undefined) {
     updateData.allowed_hosts = allowed_hosts === null ? null : normalizeAllowedHosts(allowed_hosts);
   }
@@ -526,14 +536,14 @@ app.delete("/:name", async (c) => {
   if (!playbook) return c.json({ error: "Playbook not found" }, 404);
 
   const audit = auditContext(c, playbook.id, user, null);
-  if (playbook.user_id !== user.id) {
+  if (!roleMayReadSecrets(playbook.user_id === user.id ? "owner" : await getPlaybookAccessRole(user.id, playbook.id))) {
     await recordSecretAudit(audit, {
       operation: "secret.delete",
       status: "denied",
       secretName: name,
       reason: "not_authorized",
     });
-    return c.json({ error: "Forbidden: only the owner can delete secrets" }, 403);
+    return c.json({ error: "Forbidden: only the owner or an editor can delete secrets" }, 403);
   }
 
   const supabase = getServiceSupabase();
@@ -571,10 +581,10 @@ app.post("/proxy", async (c) => {
   const playbook = await getPlaybookByGuid(guid, user?.id ?? null, apiKey?.playbooks.id ?? null);
   if (!playbook) return c.json({ error: "Playbook not found" }, 404);
 
-  const isOwner = user && playbook.user_id === user.id;
+  const canManageSecrets = !!user && roleMayReadSecrets(playbook.user_id === user.id ? "owner" : await getPlaybookAccessRole(user.id, playbook.id));
   const isApiKeyForPlaybook = apiKey && apiKey.playbooks.id === playbook.id;
   const audit = await auditContextFor(c, playbook.id, user, Boolean(apiKey));
-  if (!isOwner && !isApiKeyForPlaybook) {
+  if (!canManageSecrets && !isApiKeyForPlaybook) {
     await recordSecretAudit(audit, { operation: "secret.use", status: "denied", reason: "not_authorized" });
     return c.json({ error: "Forbidden" }, 403);
   }
@@ -828,11 +838,11 @@ app.post("/oauth-exchange", async (c) => {
   const playbook = await getPlaybookByGuid(guid, user?.id ?? null, apiKey?.playbooks.id ?? null);
   if (!playbook) return c.json({ error: "Playbook not found" }, 404);
 
-  const isOwner = user && playbook.user_id === user.id;
+  const canManageSecrets = !!user && roleMayReadSecrets(playbook.user_id === user.id ? "owner" : await getPlaybookAccessRole(user.id, playbook.id));
   const isApiKeyForPlaybook = apiKey && apiKey.playbooks.id === playbook.id;
   const audit = await auditContextFor(c, playbook.id, user, Boolean(apiKey));
   const operation = "secret.oauth_exchange";
-  if (!isOwner && !isApiKeyForPlaybook) {
+  if (!canManageSecrets && !isApiKeyForPlaybook) {
     await recordSecretAudit(audit, { operation, status: "denied", reason: "not_authorized" });
     return c.json({ error: "Forbidden" }, 403);
   }
@@ -1048,9 +1058,9 @@ app.get("/oauth-exchange", async (c) => {
   const playbook = await getPlaybookByGuid(guid, user?.id ?? null, apiKey?.playbooks.id ?? null);
   if (!playbook) return c.json({ error: "Playbook not found" }, 404);
 
-  const isOwner = user && playbook.user_id === user.id;
+  const canManageSecrets = !!user && roleMayReadSecrets(playbook.user_id === user.id ? "owner" : await getPlaybookAccessRole(user.id, playbook.id));
   const isApiKeyForPlaybook = apiKey && apiKey.playbooks.id === playbook.id;
-  if (!isOwner && !isApiKeyForPlaybook) return c.json({ error: "Forbidden" }, 403);
+  if (!canManageSecrets && !isApiKeyForPlaybook) return c.json({ error: "Forbidden" }, 403);
 
   const plan = planExchange(c.req.query("template_id"));
   if (isPlanFailure(plan)) return c.json({ error: plan.error }, plan.status as 400);

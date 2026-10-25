@@ -64,7 +64,7 @@ See [Management API & MCP](./management-api.md) for details.
 
 ### Human editor authorization
 
-Signed-in editors use the same Supabase JWT/session authentication as owners. Their accepted membership authorizes content edits only. Visibility, collaborators, playbook API keys, secrets, ownership, and deletion are always owner-only. Playbook API keys cannot manage human collaborators.
+Signed-in editors use the same Supabase JWT/session authentication as owners. Accepted editors may edit content, manage secrets and inspect API-key metadata. Creating, rotating or revoking API keys, visibility, collaborators, ownership and deletion remain owner-only. Playbook API keys cannot manage human collaborators or change an existing secret's raw-value/proxy-destination policy.
 
 ---
 
@@ -692,7 +692,7 @@ See [Team Collaboration](./team-collaboration.md) for the permission matrix and 
 
 ## API Keys Management (Authenticated)
 
-Manage API keys for your playbooks. Only the playbook owner can access these endpoints.
+Owners may create, rotate and revoke playbook API keys. Accepted editors may list metadata only; raw keys and stored hashes are not returned by the list endpoint.
 
 ### List API Keys
 
@@ -802,7 +802,7 @@ Content-Type: application/json
 
 The `value` is encrypted immediately and never stored in plaintext.
 
-`expires_at` is optional and must carry a timezone (`Z` or `+02:00`); a time without one is refused with `400`, because the server would otherwise have to guess which instant it means. Once it passes, the secret can no longer be used: the proxy, `use_secret`, federated servers, and reveal by API key all refuse it with `403`, and the refusal is recorded in the audit log. The owner can still reveal it in the dashboard, in order to replace it.
+`expires_at` is optional and must carry a timezone (`Z` or `+02:00`); a time without one is refused with `400`, because the server would otherwise have to guess which instant it means. Once it passes, the secret can no longer be used: the proxy, `use_secret`, federated servers, and reveal by API key all refuse it with `403`, and the refusal is recorded in the audit log. Owners and accepted editors can still reveal it through their dashboard session in order to replace it.
 
 ### Reveal Secret
 
@@ -842,7 +842,7 @@ Content-Type: application/json
 }
 ```
 
-Makes an HTTP request with the secret injected server-side into the request to the provider. The caller authenticates with the owner's session JWT or a playbook API key with `secrets:read` / `full` permission. The provider key is not included in the proxy response. Set `allowed_hosts` on the secret to trusted provider hosts; the provider controls its response body.
+Makes an HTTP request with the secret injected server-side into the request to the provider. The caller authenticates with an owner/editor session JWT or a playbook API key with `secrets:read` / `full` permission. The provider key is not included in the proxy response. Set `allowed_hosts` on the secret to trusted provider hosts; the provider controls its response body.
 
 By default (`response_mode: "json"`), the response is buffered and returned as `{ "status": 200, "status_text": "OK", "body": ... }`. Existing callers keep this format.
 
@@ -928,7 +928,9 @@ Content-Type: application/json
 }
 ```
 
-Rotating keeps the expiry: it is the owner's rule, not part of the value. To bring an expired secret back, send a later `expires_at`, or `null` to remove it.
+An owner/editor session may also update `allow_api_key_reveal` (boolean) and `allowed_hosts`. A playbook API key cannot change these access-policy fields.
+
+Rotating keeps the expiry: it is the playbook policy, not part of the value. To bring an expired secret back, send a later `expires_at`, or `null` to remove it.
 
 ### Delete Secret
 
@@ -937,7 +939,7 @@ DELETE /api/playbooks/:guid/secrets/:name
 Authorization: Bearer <jwt>
 ```
 
-Owner only. Permanently deletes the secret.
+Owner or accepted editor session only. Permanently deletes the secret.
 
 ### Audit Trail
 
@@ -1071,6 +1073,7 @@ For programmatic playbook management by AI agents. See [Management API Documenta
 |----------|-------------|
 | `GET /api/manage/playbooks` | List all playbooks |
 | `POST /api/manage/playbooks` | Create playbook |
+| `POST /api/manage/playbooks/:id/fork` | Atomically copy a readable playbook, its skills, attachments and MCP records into a private playbook owned by the caller |
 | `GET /api/manage/playbooks/:id` | Get playbook with contents |
 | `PUT /api/manage/playbooks/:id` | Update playbook (incl. persona fields) |
 | `DELETE /api/manage/playbooks/:id` | Delete playbook |
@@ -1083,6 +1086,10 @@ For programmatic playbook management by AI agents. See [Management API Documenta
 | `GET /api/manage/openapi.json` | OpenAPI specification |
 
 **MCP Server:** `/api/mcp/manage`
+
+Auditors cannot fork playbook content.
+
+Forking preserves publisher attribution and gives every copied record a new ID. The new playbook is an independent copy: later source edits do not synchronize. Vault secrets, API keys, memberships, runtime memory and history are not copied. MCP connection configuration and secret references are retained; configure referenced secrets in the new playbook before using those integrations.
 
 ---
 

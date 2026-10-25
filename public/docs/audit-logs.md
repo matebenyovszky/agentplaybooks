@@ -16,7 +16,8 @@ the read-only **auditor** role.
 | Owner (session or user API key with `playbooks:read` or `audit:read`) | Yes | Yes (existing vault rules) | Yes |
 | Auditor collaborator | Yes | No | No |
 | Playbook API key with role `auditor` | Yes | No | No |
-| Editor, viewer/coworker/admin playbook keys | No | Per existing rules | Per existing rules |
+| Editor collaborator (session) | No | Yes | Content and secrets; key metadata only |
+| Viewer/coworker/admin playbook keys | No | Per existing permissions and reveal policy | Per existing permissions |
 
 A playbook API key that performs vault operations still cannot read the record
 of them. Invite an auditor from **Sharing**, or mint a playbook key with the
