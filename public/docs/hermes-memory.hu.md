@@ -150,6 +150,14 @@ használja. Hiányzó vagy többértelmű egyezésnél nem módosít távoli eml
 ilyenkor kézi egyeztetés kell. A `memory setup --profile=work` ugyanúgy választ
 profilt, mint a `connect` és az új `hermes setup`. A CLI kiadása 0.7.0.
 
+A 0.3.1-es memóriaplugin egy hitelesített `private_check=1` API-kéréssel
+ellenőrzi a privát állapotot és a memória-hozzáférést, így az új szerveren
+nem generál szándékos névtelen 404-et. A kliensazonosítója
+`AgentPlaybooks-Hermes-Memory/0.3.1`. Minden írás előtt friss ellenőrzés
+történik; régi szerveren megmarad a korábbi ellenőrzés. A már telepített
+pluginokat és a korábbi verzióra rögzített katalógus-/npm-csomagokat frissíteni
+kell ehhez: a szerver telepítése önmagában nem frissíti a klienseket.
+
 A plugin nem tölti fel a teljes beszélgetéseket, nem nyer ki automatikusan
 tényeket, nem importálja tömegesen a helyi memóriát, és nem ad gyorsítótárat,
 offline várólistát, újrapróbálkozást vagy circuit breakert. A sikertelen API-

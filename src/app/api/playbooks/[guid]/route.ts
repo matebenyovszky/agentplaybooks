@@ -69,6 +69,11 @@ export async function GET(
         query = query.eq("guid", idOrGuid);
     }
 
+    // Legacy memory clients deliberately probe anonymously for an expected
+    // 404. Filter before loading the row so a private persona/instructions
+    // payload never travels from the database just to be discarded below.
+    if (!user) query = query.in("visibility", ["public", "unlisted"]);
+
     const { data: playbook, error } = await query.single();
 
     if (error || !playbook) {

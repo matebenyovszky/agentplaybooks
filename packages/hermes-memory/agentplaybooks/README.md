@@ -96,9 +96,15 @@ For a private shared playbook, supply a read-only key using
 secret environment. Public sources need no key. Personal credentials are never
 sent to shared sources. Tags and metadata organize data; they are not access controls.
 
-Personal writes are refused if the playbook is public or unlisted. The plugin
-checks anonymous visibility and authenticated access before writing using existing
-AgentPlaybooks APIs. Keep this playbook private: changing its visibility later
+Personal writes are refused if the playbook is public or unlisted. Version 0.3.1
+checks current private visibility and authenticated memory access in one small
+request (`GET /api/playbooks/:guid/memory?private_check=1&limit=1`) before each
+write and on initialization. It does not fetch memory contents for this check or
+cache a privacy proof. Older servers that return an ordinary memory list retain
+the anonymous metadata check: its expected 404 conceals a private playbook and is
+not a failed memory read. The client identifies its requests with
+`AgentPlaybooks-Hermes-Memory/0.3.1` rather than Python's generic user agent.
+Keep this playbook private: changing its visibility later
 publishes existing contents according to the service's access model. Visibility
 checks and writes are separate requests, not a transaction locking visibility.
 
