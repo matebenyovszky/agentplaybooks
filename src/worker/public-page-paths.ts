@@ -46,6 +46,7 @@ export const publicPagePaths = new Set<string>([
   "/docs/readme",
   "/docs/release-distribution",
   "/docs/secrets-python-examples",
+  "/docs/security",
   "/docs/self-hosted-mtls",
   "/docs/self-hosting",
   "/docs/skills",

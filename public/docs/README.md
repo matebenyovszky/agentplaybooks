@@ -31,6 +31,7 @@ Welcome to the AgentPlaybooks documentation.
 - [On-prem backup and restore](./backup-restore.md) - NIS2 21(2)(c) backup, restore drill, RPO/RTO
 - [Self-hosted mTLS](./self-hosted-mtls.md) - Client-certificate secret loading on Docker/local (nginx, Caddy, Traefik)
 - [Architecture](./architecture.md) - System design and components
+- [Security documentation pack](./security.md) - Supplier assessment, asset inventory, MK r. / NIST risk template (Hungarian original in `docs/security/`)
 
 ## What is AgentPlaybooks?
 

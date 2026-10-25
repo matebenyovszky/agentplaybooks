@@ -147,6 +147,12 @@ export const docsEntries: DocEntry[] = [
     section: "reference",
   },
   {
+    slug: "security",
+    title: "Security documentation pack",
+    description: "Supplier assessment and EIR classification: whitepaper, asset inventory, MK r. / NIST risk template",
+    section: "reference",
+  },
+  {
     slug: "backup-restore",
     title: "On-prem Backup and Restore",
     description: "NIS2 21(2)(c) backup, empty-machine restore drill, RPO/RTO",

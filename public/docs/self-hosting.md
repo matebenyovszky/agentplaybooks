@@ -368,3 +368,5 @@ archive in the runbook, and it does not include `SECRETS_ENCRYPTION_KEY`.
 - [ ] Empty-machine restore drill has been run and RTO recorded
 - [ ] Vulnerability reports follow [SECURITY.md](https://github.com/matebenyovszky/agentplaybooks/blob/main/SECURITY.md); incident filing uses the [incident runbook](https://github.com/matebenyovszky/agentplaybooks/blob/main/docs/security/incident-runbook.md) (the operator is the reporting entity)
 - [ ] Release SBOMs are verified with [`cosign verify-blob`](https://github.com/matebenyovszky/agentplaybooks/blob/main/docs/security/supply-chain.md) before production deploy
+
+The supplier-assessment pack (architecture, crypto claims, asset inventory, 7/2024 MK r. / NIST risk template, known gaps) is in [`docs/security/`](../../docs/security/README.md). Hungarian is the language of record (`*.hu.md`). After a compose change, refresh the live inventory with `npm run inventory:self-host`. Short website summary: [Security documentation pack](./security.md).
