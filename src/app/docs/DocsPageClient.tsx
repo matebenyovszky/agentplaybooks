@@ -32,6 +32,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   "api-reference": Code,
   "developer-guide": Code,
   "self-hosting": HardDrive,
+  "backup-restore": HardDrive,
   "environment-setup": Settings,
   roadmap: Rocket,
 };

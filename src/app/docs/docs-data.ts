@@ -147,6 +147,12 @@ export const docsEntries: DocEntry[] = [
     section: "reference",
   },
   {
+    slug: "backup-restore",
+    title: "On-prem Backup and Restore",
+    description: "NIS2 21(2)(c) backup, empty-machine restore drill, RPO/RTO",
+    section: "reference",
+  },
+  {
     slug: "self-hosted-mtls",
     title: "Self-hosted mTLS",
     description: "Client-certificate secret loading on Docker and local installs",
