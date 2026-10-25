@@ -147,6 +147,12 @@ export const docsEntries: DocEntry[] = [
     section: "reference",
   },
   {
+    slug: "security",
+    title: "Security documentation pack",
+    description: "Supplier assessment and EIR classification: whitepaper, asset inventory, MK r. / NIST risk template",
+    section: "reference",
+  },
+  {
     slug: "environment-setup",
     title: "Environment Setup",
     description: "OAuth & environment configuration",

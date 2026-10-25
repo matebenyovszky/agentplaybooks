@@ -311,3 +311,5 @@ supabase db dump > backup.sql
 - [ ] RLS is enabled on all tables
 - [ ] Auth providers configured with correct redirect URLs
 - [ ] Custom domain uses HTTPS
+
+The supplier-assessment pack (architecture, crypto claims, asset inventory, 7/2024 MK r. / NIST risk template, known gaps) is in [`docs/security/`](../../docs/security/README.md). Hungarian is the language of record (`*.hu.md`). After a compose change, refresh the live inventory with `npm run inventory:self-host`. Short website summary: [Security documentation pack](./security.md).

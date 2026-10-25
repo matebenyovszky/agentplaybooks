@@ -497,6 +497,7 @@ agentplaybooks/
     agentplaybooks/        # Claude plugin (claude.ai, Cowork, Claude Code)
   .claude-plugin/          # Plugin marketplace manifest
   docs/                    # Contributor-facing notes
+    security/              # Supplier-assessment pack (HU + EN)
   examples/                # Starter playbooks (fork/clone/sync)
   public/
     blog/  docs/           # Markdown served to the client

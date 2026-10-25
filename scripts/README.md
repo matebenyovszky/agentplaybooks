@@ -19,6 +19,8 @@ psql $DATABASE_URL -f scripts/reset-and-seed.sql
 
 | Script | Description |
 |--------|-------------|
+| `list-self-host-stack.mjs` | List declared and running Docker Compose services, images, and ports (`npm run inventory:self-host`) |
+| `check-security-docs.mjs` | Link and cited-path check for `docs/security/` (`npm run docs:check`) |
 | `seed-data.ts` | TypeScript seed script (fetches from GitHub) |
 | `seed-full.sql` | Complete SQL seed (standalone, no GitHub) |
 | `reset-and-seed.sql` | Delete all data and reseed |

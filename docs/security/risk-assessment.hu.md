@@ -1,0 +1,70 @@
+# Kockázatelemzés-sablon (7/2024. MK r. / NIST 800-53)
+
+**Táblázatkezelő:** [risk-assessment.csv](./risk-assessment.csv) (UTF-8 BOM, vessző, minden mező idézőjelben; magyar Excel: Adatok → Szövegből/CSV → UTF-8).
+
+Angol: [risk-assessment.md](./risk-assessment.md). Fehérkönyv: [whitepaper.hu.md](./whitepaper.hu.md).
+
+> **Jogi ellenőrzés szükséges.** A 7/2024. (VI. 24.) MK rendelet NIST SP 800-53 rev. 5 alapú védelmi intézkedéskatalógust ír elő. Ez a sablon a **NIST családneveken** (AC, AU, CM, …) hivatkozik. **Nem** találunk ki és **nem** idézünk rendeletbeli tétel-azonosítókat. A pontos MK számozás, a 3. melléklet fenyegetéseinek alkalmazása, az EIR (alap / jelentős / magas) osztály és a NIS2 21. cikk betűinek hatálya az ügyfél IBF-jének és jogászának feladata.
+
+A NIS2 21. cikk (2) (a), (d), (g) a csomag elsődleges fókusza (politika / ellátási lánc / kiberhigiénia és képzés). A többi betű azért szerepel, mert a családok átfednek — ez nem megfelelőségi állítás.
+
+## Hogyan töltsd ki
+
+Másold a CSV-t. Adj ügyféli oszlopokat: `customer_status`, `residual_risk`, `owner`, `due_date`, `decision`. A `status` oszlop a **termék** 2026-10-24-i állapota:
+
+| Érték | Jelentés |
+|-------|----------|
+| `implemented` | A kód fedi a család termékre eső részét |
+| `partial` | Van termékfunkció, de gap vagy ügyféli fél kell |
+| `missing` | A termék nem adja a család elvárt termékfelét |
+| `customer` | Teljes egészében ügyféli (üzemeltetés / HR / fizikai) |
+| `n/a` | Nem értelmezhető erre a szoftverre |
+
+Minden CSV-sor `legal_flag` mezője: `jogi ellenőrzés szükséges`.
+
+## Kontrollcsaládok
+
+| NIST | Család | NIS2 (tájékoztató) | Terméktámogatás | Ügyfél | Bizonyíték / teszt | Státusz |
+|------|--------|--------------------|-----------------|--------|--------------------|---------|
+| AC | Hozzáférés-vezérlés | 21(2)(i), (j) | owner\|editor; titkok tulajdonos-only; API-kulcs szerepek (viewer/coworker/proposer/admin). **Auditor nincs a kódban.** | Tulajdonosok, OAuth szűkítés, auditor-igény eldöntése | `guards.test.ts`; nem-tulajdonos secrets 403 | partial |
+| AU | Naplózás | 21(2)(b),(f) | `audit_logs` + `secret.*` + federáció; elutasítás is esemény; nincs SIEM/megőrzés/hash-lánc | SIEM, megőrzés, AI Act 12/26 ha hatályos | `audit.test.ts`; `/audit?operation=secret.` | partial |
+| CM | Konfigurációkezelés | 21(2)(i) | Statikus leltár + `scripts/list-self-host-stack.mjs` | Script futtatása, image változáskezelés | `npm run inventory:self-host`; `docs:check` | partial |
+| IA | Azonosítás / hitelesítés | 21(2)(i),(j) | Supabase Auth, Entra OIDC; **nincs app-MFA, nincs SAML**; hosted mTLS | Entra MFA, e-mail login tiltása, on-prem TLS | SSO E2E; `mtls.test.ts` (hosted) | partial |
+| IR | Incidenskezelés | 23. cikk; 418/2024. 77. § | Audit API kivonathoz. **Nincs SECURITY.md / runbook / PSIRT** | NKI 24/72 óra / 1 hónap rend | Tabletop: kulcsvisszavonás + kivonat | missing |
+| PL | Tervezés | 21(2)(a),(g) | Ez a dokumentumcsomag | Instance-terv, EIR osztály | IBF/jogi review | partial |
+| RA | Kockázatelemzés | 21(2)(a) | Sablon + őszinte gap lista; nincs automatikus motor | 3. melléklet, intézkedésválasztás | Kitöltött CSV + IBF aláírás | partial |
+| SC | Kommunikációvédelem | 21(2)(h) | AES-256-GCM, HKDF, SSRF, `allowed_hosts`. **Nincs KMS/HSM, nincs re-encryption, mTLS csak Cloudflare** | HTTPS proxy, izoláció, KMS döntés | `crypto.test.ts`; proxy a link-localra 400 | partial |
+| SI | Integritás | 21(2)(e) | Dependabot, `npm audit:production`, CI teszt. **Nincs SAST/SBOM/cosign** | Javítási ritmus, extra scanner | CI verify; audit:production | partial |
+| CP | Üzletmenet-folytonosság | 21(2)(c) | `supabase db dump`; snapshot **nem** vault-érték. **Nincs DR-runbook** | Mentés, restore drill, RPO/RTO, mesterkulcs | Restore üres gépre | partial |
+| SA | Beszerzés | 21(2)(d),(e); CRA? | MIT forrás, CI, CLI provenance. Nincs SBOM | Licenc, CRA gyártói státusz | `publish-cli.yml`; ez a csomag | partial |
+| SR | Ellátási lánc | 21(2)(d), 21(3) | Lockfile, Dependabot, CLI provenance. Nincs CycloneDX | Image pin, CVE, SBOM később | `npm ci`; inventory images | partial |
+| AT | Képzés | 21(2)(g) | Üzemeltetői doksik. Nincs in-app képzés | Szerepkörös képzés, igazolás | Ügyféli napló | customer |
+| CA | Értékelés / monitoring | 21(2)(f) | CI. Nincs APM; nincs pentest-jelentés | Engedélyezés, pentest, monitoring | CI; `HEALTHCHECK` | partial |
+| PE | Fizikai védelem | 21. cikk all-hazards | Szoftver; nincs DC-kontroll | Terem / hosting | Ügyféli létesítmény | customer |
+| MP | Adathordozó | 21(2)(h),(c) | Ciphertext at rest | Mentési média, kötetmásolás | secrets tábla inspect | partial |
+| PS | Személyzet | 21(2)(i) | RBAC, hashed invite | Joiner/leaver, Entra csoportok | Auth tiltás, kulcsvisszavonás | customer |
+| MA | Karbantartás | 21(2)(e) | Dokumentált image-újraépítés; Dependabot | Változási ablak | self-hosting Updating | partial |
+| PM | Programirányítás | 21(1) governance | Roadmap + csomag; nincs GRC | IBF, budget a gapekre | Ügyféli program | customer |
+| PT | Személyes adatok | GDPR 32, 33 | Self-host az ügyfél gépén; Auth PII. Feldolgozói státusz **nincs eldöntve** | DPIA, rezidencia, DPA ha hosted | `legal-copy.ts`; DPIA | partial |
+
+A táblázat minden jogi oszlopa **jogi ellenőrzés szükséges**.
+
+## Ajánlott ügyféli teszt (összefoglaló)
+
+A beszállítói értékelés requirement-táblája szerinti bizonyítékok, a **mai** kódhoz igazítva:
+
+1. Unit/integráció a CI-ban: kripto, lejárat, `allowed_hosts`, RBAC — **van**. Hash-lánc, SIEM-export, auditor szerep — **nincs**, ne várjuk zöldre.
+2. E2E izolált hálózaton, 0 kimenő forgalom — **nincs automatizált teszt**; az ügyfél mérheti. A build ma fontot tölt le.
+3. Restore drill — ügyféli gyakorlat; termékrunbook nincs.
+4. Incidens tabletop — ügyféli; a termék audit API-t ad, SECURITY.md-t nem.
+5. CVE-folyamat: Dependabot → javítás → CLI provenance. SBOM + aláírt image — hiány.
+6. Pentest — nincs benne ebben a csomagban.
+7. IBF / jogi review — **jogi ellenőrzés szükséges**.
+
+## Kapcsolódó fájlok
+
+- [`src/lib/crypto.ts`](../../src/lib/crypto.ts)
+- [`src/app/api/_shared/guards.ts`](../../src/app/api/_shared/guards.ts)
+- [`src/app/api/_shared/audit.ts`](../../src/app/api/_shared/audit.ts)
+- [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml)
+- [`scripts/list-self-host-stack.mjs`](../../scripts/list-self-host-stack.mjs)

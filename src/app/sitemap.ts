@@ -46,6 +46,7 @@ const docSlugs = [
   "python-secrets",
   "release-distribution",
   "secrets-python-examples",
+  "security",
   "self-hosting",
   "skills",
   "team-collaboration",

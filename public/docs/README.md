@@ -29,6 +29,7 @@ Welcome to the AgentPlaybooks documentation.
 - [Developer Guide](./developer-guide.md) - Contributing and development
 - [Self-Hosting](./self-hosting.md) - Deploy your own instance
 - [Architecture](./architecture.md) - System design and components
+- [Security documentation pack](./security.md) - Supplier assessment, asset inventory, MK r. / NIST risk template (Hungarian original in `docs/security/`)
 
 ## What is AgentPlaybooks?
 
