@@ -19,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        hermes: ["v0.22.4", "main"]
+        hermes: ["v0.22.4", "v0.22.5", "main"]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -32,7 +32,15 @@ jobs:
           repository: NousResearch/hermes-agent
           ref: ${{ matrix.hermes }}
           path: .tmp/hermes-upstream
-      - run: pip install -e .tmp/hermes-upstream
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          version: "0.13.5"
+          enable-cache: false
+      - name: Install Hermes from its committed lockfile
+        run: |
+          # Respect upstream security overrides and use the exact release lock.
+          uv sync --project .tmp/hermes-upstream --frozen --no-dev --python "$(command -v python)"
+          echo "$GITHUB_WORKSPACE/.tmp/hermes-upstream/.venv/bin" >> "$GITHUB_PATH"
       - name: Validate package and discover bundled Hermes skill
         env:
           HERMES_HOME: ${{ runner.temp }}/hermes-tools-validation

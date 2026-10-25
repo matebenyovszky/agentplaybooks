@@ -3,10 +3,28 @@ import assert from "node:assert/strict";
 import { mkdtemp, mkdir, readFile, writeFile, symlink } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { applyHermesSetup, checkHermesTools, planHermesSetup, publicHermesSetup } from "../src/hermes-setup.js";
+import { applyHermesSetup, checkHermesTools, inspectHermes, planHermesSetup, publicHermesSetup } from "../src/hermes-setup.js";
 
 const guid = "0123456789abcdef";
 const id = "11111111-1111-1111-1111-111111111111";
+
+test("profile key detection matches exact assignment names and rejects regex input", async () => {
+  const { root, options } = await fixture();
+  const profile = path.join(options.hermesHome, "profiles/work");
+  await mkdir(profile, { recursive: true });
+  for (const [line, expected] of [
+    ["  export APBKS_KEY_AGENTPLAYBOOKS = private-value", true],
+    ["APBKS_KEY_AGENTPLAYBOOKS_EXTRA=private-value", false],
+    ["# APBKS_KEY_AGENTPLAYBOOKS=private-value", false],
+    ["OTHER=APBKS_KEY_AGENTPLAYBOOKS=private-value", false],
+  ]) {
+    await writeFile(path.join(profile, ".env"), line);
+    const result = await inspectHermes(root, options);
+    assert.equal(result.keyDeclaredInProfile, expected);
+    assert.ok(!JSON.stringify(result).includes("private-value"));
+  }
+  await assert.rejects(inspectHermes(root, { ...options, keyEnvVar: "(A+)+$" }), /Invalid key/);
+});
 async function fixture() {
   const base = await mkdtemp(path.join(os.tmpdir(), "apb-setup-"));
   const root = path.join(base, "project");

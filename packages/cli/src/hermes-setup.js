@@ -60,7 +60,8 @@ export async function inspectHermes(root, options = {}) {
   if (!/^[A-Z_][A-Z0-9_]*$/.test(keyEnvVar)) throw new Error("Invalid key environment variable name.");
   // Names only: a value in this file is not proof that a running gateway loaded it.
   const profileEnv = (await readOptional(path.join(profile.directory, ".env")))?.toString() ?? "";
-  const declared = profileEnv.split(/\r?\n/).some(line => new RegExp(`^\\s*(?:export\\s+)?${keyEnvVar}\\s*=`).test(line));
+  const declared = profileEnv.split(/\r?\n/).some(line =>
+    /^\s*(?:export\s+)?([A-Z_][A-Z0-9_]*)\s*=/.exec(line)?.[1] === keyEnvVar);
   return {
     host: os.hostname(), profile: profile.directory, nodeSupported: Number(process.versions.node.split(".")[0]) >= 20,
     hermesInstalled, profileWritable: await (options.writable ?? writableDestination)(path.join(profile.directory, "config.yaml")),

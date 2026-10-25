@@ -1,5 +1,6 @@
 import { readFile, readdir } from "node:fs/promises";
 import { resolve } from "node:path";
+import { parse } from "yaml";
 
 const root = resolve(import.meta.dirname, "..");
 const read = async path => readFile(resolve(root, path), "utf8");
@@ -90,7 +91,8 @@ for (const file of ["packages/cli/src/hermes-memory.js", "packages/cli/scripts/b
 for (const name of ["hermes-memory", "hermes-tools"]) {
   const workflow = await read(`.github/workflows/${name}.yml`);
   check(workflow.includes(`.github/workflows/${name}.yml`), `${name} workflow must trigger on its own changes.`);
-  check(workflow.includes('"v0.22.4", "main"'), `${name} workflow must check supported stable and current upstream.`);
+  const hermesRefs = parse(workflow).jobs.compatibility.strategy.matrix.hermes;
+  check(["v0.22.4", "v0.22.5", "main"].every(ref => hermesRefs.includes(ref)), `${name} workflow must check the minimum supported version, current stable and upstream main.`);
 }
 
 const skillNames = await readdir(resolve(root, "packages/cli/skills"));

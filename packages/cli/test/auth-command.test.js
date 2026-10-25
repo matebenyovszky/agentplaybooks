@@ -126,7 +126,10 @@ test("the code goes to our server, never to the provider's token endpoint", asyn
   assert.equal(requests.length, 1, "exactly one request, and it is to us");
   assert.equal(requests[0].url, "https://apb.test/api/playbooks/guid-1/secrets/oauth-exchange");
   // Nothing was sent to Google.
-  assert.ok(!requests.some((r) => String(r.url).includes("googleapis.com")));
+  assert.ok(!requests.some((r) => {
+    const host = new URL(r.url).hostname;
+    return host === "googleapis.com" || host.endsWith(".googleapis.com");
+  }));
 
   const body = JSON.parse(requests[0].init.body);
   assert.equal(body.template_id, "gmail");

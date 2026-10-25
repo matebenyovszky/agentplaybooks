@@ -7,6 +7,7 @@ import { createManifest, comparableManifest } from "./manifest.js";
 import { canonicalJson } from "./adapters.js";
 import { assertSafeDestination, buildPortableSnapshot, planSnapshotRestore, snapshotDigest } from "./snapshot.js";
 import { isMap, parseDocument, stringify } from "yaml";
+import { trimEndCharacters } from "./text.js";
 
 export const DEFAULT_BASE_URL = "https://agentplaybooks.ai";
 const LINK_FILE = [".agentplaybooks", "remote.json"];
@@ -37,7 +38,7 @@ export function isSafeSkillFile(filename) {
 
 export function resolveBaseUrl(flagUrl, env = process.env) {
   const url = flagUrl || env.AGENTPLAYBOOKS_URL || DEFAULT_BASE_URL;
-  return url.replace(/\/+$/, "");
+  return trimEndCharacters(url, "/");
 }
 
 function credentialsPath(homedir = os.homedir()) {
