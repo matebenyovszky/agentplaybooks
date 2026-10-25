@@ -41,7 +41,7 @@ API Keys are now assigned a **Role**, which determines their permissions.
 - Human access is stored separately in `playbook_collaborators`; an API key is never converted into a user session.
 - Collaborator roles: `editor` (default) and `auditor`.
 - Editors can update playbook content, personas, skills, MCP servers, attachments, canvas, and memory.
-- Editors cannot access secrets, manage API keys or collaborators, change visibility, or delete the playbook.
+- Editors may manage secrets and inspect API-key metadata through authorized application endpoints. API-key creation, rotation and revocation, collaborator management, visibility and deletion remain owner-only.
 - Auditors can read/export/verify audit logs and playbook metadata. They cannot read secret values or mutate anything.
 - Invitations use a one-time random token, stored only as a SHA-256 hash, and expire after 72 hours.
 

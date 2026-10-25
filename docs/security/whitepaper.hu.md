@@ -112,9 +112,9 @@ Self-host Entra: `GOTRUE_EXTERNAL_AZURE_*` a GoTrue konténeren, leírva: [`publ
 
 **Nincs** alkalmazásszintű MFA (TOTP/WebAuthn). Az MFA az IdP-n (Entra) kényszeríthető — ügyféli kontroll. **Nincs** SAML; a ROADMAP Phase 4-ben szerepel.
 
-**Emberi RBAC.** `PlaybookAccessRole = "owner" | "editor"` — [`src/app/api/_shared/guards.ts`](../../src/app/api/_shared/guards.ts). Az editor nem fér a titkokhoz, API-kulcsokhoz, láthatósághoz, törléshez ([`permissions.md`](../../permissions.md)).
+**Emberi RBAC.** A központi szerepkörmodell `owner | editor | auditor` ([`audit-access.ts`](../../src/lib/audit-access.ts)). Az editor szerkeszthet tartalmat, kezelhet titkokat és láthatja az API-kulcsok metaadatait. A kulcsok módosítása, a láthatóság, megosztás és törlés tulajdonosi jog. Az auditor auditbizonyítékot és playbook-metaadatot olvashat; titkot és tartalommásolási jogot nem kap ([`permissions.md`](../../permissions.md)).
 
-**Auditor szerepkör: a kódban nincs.** Amíg a `main`-en nincs, az auditnapló olvasása tulajdonos (vagy `playbooks:read` user API-kulcs) — szerkesztő és külön auditor szerep nélkül. Ez a csomag **nem** állítja, hogy az auditor szerep már létezik. **Folyamatban / In progress:** [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202).
+**Auditor szerepkör.** A mai kódban létezik: auditnaplót és playbook-metaadatot olvashat, titkot és tartalommásolási jogot nem kap. A policy forrása az `audit-access.ts`.
 
 **API-kulcs szerepek.** `viewer`, `coworker`, `proposer`, `admin` ([`src/app/api/[[...route]]/route.ts`](../../src/app/api/[[...route]]/route.ts) `API_KEY_ROLES`, [`src/components/playbook/ApiKeyManager.tsx`](../../src/components/playbook/ApiKeyManager.tsx)). Jogosultság-sztringek: [`src/app/api/_shared/permissions.ts`](../../src/app/api/_shared/permissions.ts) `grantsPermission`.
 
@@ -186,7 +186,7 @@ A lockfile (`package-lock.json`, `packages/cli/package-lock.json`) a reprodukál
 1. **Nincs KMS / HSM.** A mesterkulcs folyamat-környezeti változó.
 2. **Nincs kulcsrotáció újratitkosítással.** A mesterkulcs cseréje adatvesztés a széfben.
 3. **Nincs alkalmazásszintű MFA.** Az MFA csak az IdP-n (pl. Entra feltételes hozzáférés).
-4. **Nincs auditor szerepkör a kódban.** Human RBAC: owner \| editor. Az audit olvasása tulajdonos-szintű. **Folyamatban / In progress:** [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202).
+4. **Az auditjog nem tartalomhozzáférés.** Az auditor titok- és tartalommásolási hozzáférése tiltott; külön átadott ügynökkulcsokat külön kell visszavonni.
 5. **Nincs SAML SSO.** OIDC/OAuth a GoTrue-n keresztül, ha az ügyfél bekapcsolja.
 6. **Audit: nincs export, megőrzés, hash-lánc a `main`-en.** Skills / memória / vászon írások nincsenek naplózva. **Folyamatban / In progress** (export, syslog/SIEM, megőrzés, hash-lánc): [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202).
 7. **A `SECURITY.md` és a 24/72 óra / 1 hónap incidens-runbook a `main`-en van.** **Kész a `main`-en:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205) — [`SECURITY.md`](../../SECURITY.md), [`docs/security/incident-runbook.md`](./incident-runbook.md). A biztonsági kapcsolat kizárólag a GitHub privát sérülékenység-jelentés (**Kész a `main`-en:** [#207](https://github.com/matebenyovszky/agentplaybooks/pull/207)); nincs security e-mail. A maintainer-review best-effort. A 24/72 óra / 1 hónap órák a 418/2024. 77. § szerinti üzemeltetői kötelezettségek, nem bejelentői SLA. Az ügyfél NKI-bejelentése saját rend — **jogi ellenőrzés szükséges**.

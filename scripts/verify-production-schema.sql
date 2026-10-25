@@ -108,3 +108,26 @@ BEGIN
   END IF;
 END
 $verify_secret_clients$;
+
+
+DO $verify_playbook_fork$
+DECLARE
+  fork_oid oid := to_regprocedure('public.fork_playbook_with_content(uuid,uuid,text)');
+  client_role text;
+BEGIN
+  IF fork_oid IS NULL THEN
+    RAISE EXCEPTION 'fork_playbook_with_content is missing';
+  END IF;
+  IF (SELECT prosecdef FROM pg_proc WHERE oid = fork_oid) THEN
+    RAISE EXCEPTION 'fork_playbook_with_content must remain SECURITY INVOKER';
+  END IF;
+  FOREACH client_role IN ARRAY ARRAY['anon', 'authenticated'] LOOP
+    IF has_function_privilege(client_role, fork_oid, 'EXECUTE') THEN
+      RAISE EXCEPTION 'fork_playbook_with_content unexpectedly executable by %', client_role;
+    END IF;
+  END LOOP;
+  IF NOT has_function_privilege('service_role', fork_oid, 'EXECUTE') THEN
+    RAISE EXCEPTION 'fork_playbook_with_content service_role grant is missing';
+  END IF;
+END
+$verify_playbook_fork$;

@@ -1,3 +1,12 @@
+BEGIN;
+CREATE OR REPLACE FUNCTION pg_temp.seed_skill_content(skill_name text, description text, definition jsonb, examples jsonb)
+RETURNS text LANGUAGE sql AS $$
+  SELECT E'---\nname: ' || replace(skill_name, '_', '-') || E'\ndescription: '
+    || to_json(COALESCE(description, 'Seed skill'))::text || E'\n---\n\n'
+    || COALESCE(definition->>'system_prompt', description, '')
+    || E'\n\n## Original definition\n```json\n' || COALESCE(definition, '{}'::jsonb)::text
+    || E'\n```\n\n## Examples\n```json\n' || COALESCE(examples, '[]'::jsonb)::text || E'\n```\n';
+$$;
 -- Meta Playbook: AgentPlaybooks Assistant
 -- This playbook teaches AI how to use the AgentPlaybooks Management API
 -- It should be inserted as a public playbook accessible to all users
@@ -8,7 +17,8 @@
 DO $$
 DECLARE
     v_playbook_id UUID;
-    v_persona_id UUID;
+    v_user_id UUID;
+    v_publisher_id UUID;
     v_skill_id UUID;
 BEGIN
     -- Check if meta playbook already exists
@@ -17,30 +27,37 @@ BEGIN
     WHERE guid = 'agentplaybooks-assistant';
     
     IF v_playbook_id IS NULL THEN
+        SELECT id INTO v_user_id FROM auth.users ORDER BY created_at LIMIT 1;
+        SELECT id INTO v_publisher_id FROM profiles WHERE auth_user_id = v_user_id LIMIT 1;
+        IF v_user_id IS NULL OR v_publisher_id IS NULL THEN
+            RAISE EXCEPTION 'A user and matching publisher profile are required to seed a playbook';
+        END IF;
+
         -- Create the playbook
         INSERT INTO playbooks (
-            user_id, 
+            user_id,
+            publisher_id,
             guid, 
             name, 
             description, 
-            is_public, 
+            visibility,
             config,
             tags
         ) VALUES (
-            (SELECT id FROM auth.users LIMIT 1), -- Use first user, or create a system user
+            v_user_id,
+            v_publisher_id,
             'agentplaybooks-assistant',
             'AgentPlaybooks Assistant',
             'This playbook teaches AI agents how to use the AgentPlaybooks platform. It provides skills and guidance for creating, managing, and using playbooks programmatically via the Management API and MCP Server.',
-            true,
+            'public',
             '{"category": "meta", "featured": true}'::jsonb,
             ARRAY['meta', 'management', 'api', 'mcp', 'assistant']
         )
         RETURNING id INTO v_playbook_id;
         
         -- Create the main persona
-        INSERT INTO personas (playbook_id, name, system_prompt, metadata)
-        VALUES (
-            v_playbook_id,
+        UPDATE playbooks SET (persona_name, persona_system_prompt, persona_metadata) = (
+
             'Playbook Manager',
             E'You are an expert assistant for the AgentPlaybooks platform. You help users create and manage playbooks programmatically using the Management API or MCP Server.
 
@@ -146,16 +163,15 @@ User API Keys can have these permissions:
 - full - All permissions
 
 Ask the user to confirm before creating or deleting playbooks.',
-            '{"type": "primary", "icon": "🎭"}'::jsonb
-        )
-        RETURNING id INTO v_persona_id;
+            '{"type": "primary", "icon": "🎭"}'::jsonb) WHERE id = v_playbook_id;
 
         -- Create skills for the meta playbook
         
         -- Skill: Explain Playbook Concepts
-        INSERT INTO skills (playbook_id, name, description, definition, examples)
-        VALUES (
-            v_playbook_id,
+        INSERT INTO skills (playbook_id, publisher_id, name, description, content)
+        SELECT v_playbook_id, v_publisher_id, replace(seed.name, '_', '-'), seed.description,
+          pg_temp.seed_skill_content(seed.name, seed.description, seed.definition, seed.examples)
+        FROM (VALUES (
             'explain_concept',
             'Explain a specific AgentPlaybooks concept to the user',
             '{
@@ -179,13 +195,13 @@ Ask the user to confirm before creating or deleting playbooks.',
             '[
                 {"input": {"concept": "playbook", "detail_level": "brief"}, "output": "A playbook is a container for AI configurations..."},
                 {"input": {"concept": "skill", "detail_level": "with_examples"}, "output": "A skill is a capability definition..."}
-            ]'::jsonb
-        );
+            ]'::jsonb)) AS seed(name, description, definition, examples);
 
         -- Skill: Generate Playbook Template
-        INSERT INTO skills (playbook_id, name, description, definition, examples)
-        VALUES (
-            v_playbook_id,
+        INSERT INTO skills (playbook_id, publisher_id, name, description, content)
+        SELECT v_playbook_id, v_publisher_id, replace(seed.name, '_', '-'), seed.description,
+          pg_temp.seed_skill_content(seed.name, seed.description, seed.definition, seed.examples)
+        FROM (VALUES (
             'generate_playbook_template',
             'Generate a playbook template for a specific use case',
             '{
@@ -216,13 +232,13 @@ Ask the user to confirm before creating or deleting playbooks.',
             }'::jsonb,
             '[
                 {"input": {"use_case": "Code review assistant", "num_skills": 3}, "output": {"name": "Code Review Assistant", "persona": {...}, "skills": [...]}}
-            ]'::jsonb
-        );
+            ]'::jsonb)) AS seed(name, description, definition, examples);
 
         -- Skill: Suggest Skill Definition
-        INSERT INTO skills (playbook_id, name, description, definition, examples)
-        VALUES (
-            v_playbook_id,
+        INSERT INTO skills (playbook_id, publisher_id, name, description, content)
+        SELECT v_playbook_id, v_publisher_id, replace(seed.name, '_', '-'), seed.description,
+          pg_temp.seed_skill_content(seed.name, seed.description, seed.definition, seed.examples)
+        FROM (VALUES (
             'suggest_skill_definition',
             'Suggest a skill definition based on a description',
             '{
@@ -244,13 +260,13 @@ Ask the user to confirm before creating or deleting playbooks.',
             }'::jsonb,
             '[
                 {"input": {"skill_description": "Summarize a document"}, "output": {"name": "summarize_document", "definition": {...}}}
-            ]'::jsonb
-        );
+            ]'::jsonb)) AS seed(name, description, definition, examples);
 
         -- Skill: Troubleshoot API Issues
-        INSERT INTO skills (playbook_id, name, description, definition, examples)
-        VALUES (
-            v_playbook_id,
+        INSERT INTO skills (playbook_id, publisher_id, name, description, content)
+        SELECT v_playbook_id, v_publisher_id, replace(seed.name, '_', '-'), seed.description,
+          pg_temp.seed_skill_content(seed.name, seed.description, seed.definition, seed.examples)
+        FROM (VALUES (
             'troubleshoot_api',
             'Help troubleshoot AgentPlaybooks API issues',
             '{
@@ -273,13 +289,13 @@ Ask the user to confirm before creating or deleting playbooks.',
                     "required": ["error_message"]
                 }
             }'::jsonb,
-            '[]'::jsonb
-        );
+            '[]'::jsonb)) AS seed(name, description, definition, examples);
 
         -- Skill: Create Playbook via API
-        INSERT INTO skills (playbook_id, name, description, definition, examples)
-        VALUES (
-            v_playbook_id,
+        INSERT INTO skills (playbook_id, publisher_id, name, description, content)
+        SELECT v_playbook_id, v_publisher_id, replace(seed.name, '_', '-'), seed.description,
+          pg_temp.seed_skill_content(seed.name, seed.description, seed.definition, seed.examples)
+        FROM (VALUES (
             'create_playbook_api_call',
             'Generate the API call to create a new playbook',
             '{
@@ -309,8 +325,7 @@ Ask the user to confirm before creating or deleting playbooks.',
             }'::jsonb,
             '[
                 {"input": {"name": "My Assistant", "format": "curl"}, "output": "curl -X POST https://apbks.com/api/manage/playbooks -H \"Authorization: Bearer $API_KEY\" -H \"Content-Type: application/json\" -d ''{\"name\": \"My Assistant\"}''"}
-            ]'::jsonb
-        );
+            ]'::jsonb)) AS seed(name, description, definition, examples);
 
         RAISE NOTICE 'Meta playbook created with ID: %', v_playbook_id;
     ELSE
@@ -343,3 +358,5 @@ FROM playbooks
 WHERE guid = 'agentplaybooks-assistant'
 ON CONFLICT (playbook_id, key) DO NOTHING;
 
+
+COMMIT;

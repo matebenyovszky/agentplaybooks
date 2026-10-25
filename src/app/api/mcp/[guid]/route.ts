@@ -72,6 +72,7 @@ import { proposeMemory, proposeSkill } from "@/app/api/_shared/proposals";
 import { memoryTimestamp, memoryWriteFields } from "@/lib/memory";
 import { findPlaybookSkill } from "@/lib/repositories/skills";
 import { serveSkill, skillResourceUri, type ServedSkill } from "@/lib/mcp/skill-extension";
+import { getPublisherIdForAuthUser } from "@/lib/repositories/playbooks";
 import { cachedSingleFlight, type SingleFlightEntry } from "@/lib/cache/single-flight";
 import {
   assertValidDemonstrations,
@@ -2351,6 +2352,9 @@ use_secret_write({
             if (args.visibility !== undefined) {
               if (!["public", "private", "unlisted"].includes(args.visibility as string)) throw new Error("Invalid visibility");
               updates.visibility = args.visibility;
+              if ((args.visibility === "public" || args.visibility === "unlisted") && !(playbook as Playbook).publisher_id) {
+                updates.publisher_id = await getPublisherIdForAuthUser(playbook.user_id);
+              }
             }
             if (args.tags !== undefined) {
               if (!Array.isArray(args.tags)) throw new Error("tags must be an array");
