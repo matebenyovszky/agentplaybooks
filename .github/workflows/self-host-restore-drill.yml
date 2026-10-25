@@ -53,5 +53,11 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - name: Rehearse migration, postflight and lossless rollback on local Postgres
+        if: hashFiles('scripts/ops/audit-migration/test-local.sh') != ''
+        run: |
+          sudo systemctl start postgresql
+          sudo -u postgres createuser --superuser "$(whoami)"
+          PGUSER="$(whoami)" bash scripts/ops/audit-migration/test-local.sh
       - name: Restore from backup onto empty volumes
         run: bash scripts/self-host/restore-drill.sh
