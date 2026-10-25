@@ -63,3 +63,84 @@ export async function openFixture(page: Page, file: string, viewport: ViewportCa
 export function eachOrientation(viewports: ViewportCase[]): ViewportCase[] {
   return viewports.flatMap(orientationsOf);
 }
+
+export function isIgnorableCspMessage(text: string): boolean {
+  return /cloudflareinsights|static\.cloudflareinsights|cdn-cgi\/beacon/i.test(text);
+}
+
+export async function assertNoCspViolations(page: Page, collected: string[]) {
+  const fromPage = await page.evaluate(() => (window as { __cspViolations?: string[] }).__cspViolations ?? []);
+  const violations = [...collected, ...fromPage].filter((text) => !isIgnorableCspMessage(text));
+  expect(violations, violations.join("\n")).toEqual([]);
+}
+
+export async function attachCspListeners(page: Page): Promise<string[]> {
+  const collected: string[] = [];
+  await page.addInitScript(() => {
+    window.addEventListener("securitypolicyviolation", (event) => {
+      const store = ((window as { __cspViolations?: string[] }).__cspViolations ??= []);
+      store.push(`${event.violatedDirective} ${event.blockedURI}`);
+    });
+  });
+  page.on("console", (msg) => {
+    if (msg.type() !== "error") return;
+    const text = msg.text();
+    if (/content security policy|refused to/i.test(text)) collected.push(text);
+  });
+  page.on("pageerror", (error) => {
+    if (/content security policy/i.test(error.message)) collected.push(error.message);
+  });
+  return collected;
+}
+
+export async function assertNoVisibleElementPastRightEdge(page: Page) {
+  const overflowing = await page.evaluate(() => {
+    const innerWidth = window.innerWidth;
+    const hits: Array<{ tag: string; className: string; right: number; text: string }> = [];
+    const elements = document.body ? document.body.querySelectorAll("*") : [];
+    for (const node of elements) {
+      const el = node as HTMLElement;
+      const style = getComputedStyle(el);
+      if (style.display === "none" || style.visibility === "hidden" || Number(style.opacity) === 0) continue;
+      const box = el.getBoundingClientRect();
+      if (box.width < 1 || box.height < 1) continue;
+      if (box.right <= innerWidth + 1 && box.left >= -1) continue;
+      let ancestor = el.parentElement;
+      let clipped = false;
+      while (ancestor) {
+        const overflowX = getComputedStyle(ancestor).overflowX;
+        if (overflowX === "auto" || overflowX === "scroll" || overflowX === "hidden" || overflowX === "clip") {
+          const parentBox = ancestor.getBoundingClientRect();
+          if (parentBox.right <= innerWidth + 1 && parentBox.left >= -1) {
+            clipped = true;
+            break;
+          }
+        }
+        ancestor = ancestor.parentElement;
+      }
+      if (!clipped) {
+        hits.push({
+          tag: el.tagName,
+          className: typeof el.className === "string" ? el.className.slice(0, 80) : "",
+          right: Math.round(box.right),
+          text: (el.textContent || "").replace(/\s+/g, " ").trim().slice(0, 48),
+        });
+      }
+    }
+    return hits;
+  });
+  expect(overflowing, JSON.stringify(overflowing, null, 2)).toEqual([]);
+}
+
+export async function assertTableCellsWideEnough(page: Page) {
+  const cells = page.locator("table th, table td");
+  const count = await cells.count();
+  for (let index = 0; index < count; index += 1) {
+    const box = await cells.nth(index).boundingBox();
+    if (!box || box.width < 1) continue;
+    expect(
+      box.width,
+      `table cell ${index} width ${box.width}px`,
+    ).toBeGreaterThanOrEqual(80);
+  }
+}

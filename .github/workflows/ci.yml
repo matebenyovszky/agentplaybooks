@@ -40,12 +40,21 @@ jobs:
 
   playbook-mobile-layout:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-anon-key
+      SUPABASE_SERVICE_ROLE_KEY: ci-service-role-key
+      SECRETS_ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
         with:
           node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run prebuild
+      - run: npm run build
       - run: npm install --no-package-lock --no-save @playwright/test@1.56.1
       - run: npx playwright install --with-deps chromium webkit
       - run: npx playwright test

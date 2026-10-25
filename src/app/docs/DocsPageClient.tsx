@@ -132,12 +132,12 @@ export default function DocsPageClient({ initialSlug = "readme", initialContent 
 
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen min-w-0 w-full overflow-x-clip bg-background text-foreground">
       <FloatingNav />
 
-      <div className="flex pt-20">
-        {/* Sidebar */}
-        <aside className="w-64 fixed left-0 top-20 bottom-0 border-r border-neutral-200 dark:border-neutral-800 p-6 overflow-y-auto hidden lg:block">
+      <div className="flex min-w-0 w-full pt-20">
+        {/* Sidebar is fixed and hidden below lg so it never participates in the flex width. */}
+        <aside className="fixed bottom-0 left-0 top-20 z-20 hidden w-64 overflow-y-auto border-r border-neutral-200 p-6 dark:border-neutral-800 lg:block">
           <div className="mb-8">
             <Link href="/docs" className="flex items-center gap-2 text-lg font-semibold text-neutral-900 dark:text-white">
               <BookOpen className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
@@ -233,7 +233,7 @@ export default function DocsPageClient({ initialSlug = "readme", initialContent 
         </aside>
 
         {/* Main content */}
-        <main className="flex-1 lg:ml-64 px-6 lg:px-12 py-8 max-w-4xl">
+        <main className="min-w-0 w-full max-w-4xl flex-1 overflow-x-auto px-6 py-8 lg:ml-64 lg:px-12">
           {/* Breadcrumb */}
           <div className="flex items-center gap-2 text-sm text-neutral-500 mb-8">
             <Link href="/docs" className="hover:text-neutral-900 dark:hover:text-white transition-colors">
@@ -257,7 +257,7 @@ export default function DocsPageClient({ initialSlug = "readme", initialContent 
             <motion.article
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="prose dark:prose-invert max-w-none"
+              className="prose dark:prose-invert max-w-none min-w-0 [&_a]:break-words [&_code]:wrap-anywhere [&_li]:wrap-anywhere [&_p]:wrap-anywhere [&_pre]:max-w-full [&_table]:wrap-normal [&_td]:min-w-20 [&_td]:wrap-normal [&_th]:min-w-20 [&_th]:wrap-normal"
             >
               <MarkdownRenderer content={content} />
             </motion.article>
@@ -296,7 +296,7 @@ function MarkdownRenderer({ content }: { content: string }) {
 
   return (
     <div
-      className="markdown-content"
+      className="markdown-content min-w-0"
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );
@@ -339,7 +339,7 @@ function parseMarkdown(md: string): string {
   const codeBlockPlaceholder = '___CODE_BLOCK_PLACEHOLDER___';
 
   let textWithPlaceholders = md.replace(/```(\w+)?\n([\s\S]*?)```/g, (_, lang, code) => {
-    const codeHtml = `<pre class="bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg p-4 overflow-x-auto mb-6 text-sm text-neutral-800 dark:text-neutral-200"><code class="language-${lang || 'text'}">${escapeHtml(code.trim())}</code></pre>`;
+    const codeHtml = `<pre class="max-w-full bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg p-4 overflow-x-auto mb-6 text-sm text-neutral-800 dark:text-neutral-200"><code class="language-${lang || 'text'}">${escapeHtml(code.trim())}</code></pre>`;
     codeBlocks.push(codeHtml);
     return `${codeBlockPlaceholder}${codeBlocks.length - 1}${codeBlockPlaceholder}`;
   });
@@ -386,8 +386,8 @@ function parseMarkdown(md: string): string {
       const isHeader = cells.some(c => c.includes('---'));
       const tag = isHeader ? 'th' : 'td';
       const cellClass = isHeader
-        ? 'px-4 py-3 text-left text-sm font-semibold text-neutral-800 dark:text-neutral-200 bg-neutral-100 dark:bg-neutral-900'
-        : 'px-4 py-3 text-sm text-neutral-700 dark:text-neutral-300';
+        ? 'min-w-20 wrap-normal px-4 py-3 text-left text-sm font-semibold text-neutral-800 dark:text-neutral-200 bg-neutral-100 dark:bg-neutral-900'
+        : 'min-w-20 wrap-normal px-4 py-3 text-sm text-neutral-700 dark:text-neutral-300';
       return `<tr>${cells.map(c => `<${tag} class="${cellClass}">${c.trim()}</${tag}>`).join('')}</tr>`;
     })
     // Horizontal rules
@@ -413,7 +413,7 @@ function parseMarkdown(md: string): string {
 
   // Wrap tables
   html = html.replace(/(<tr>.*?<\/tr>\n?)+/g, (match) => {
-    return `<div class="overflow-x-auto mb-6"><table class="w-full border-collapse">${match}</table></div>`;
+    return `<div class="overflow-x-auto mb-6"><table class="w-max min-w-full border-collapse wrap-normal">${match}</table></div>`;
   });
 
   // Step 4: Restore inline code blocks

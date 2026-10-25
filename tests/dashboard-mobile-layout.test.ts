@@ -43,7 +43,29 @@ describe("public playbook mobile layout", () => {
     const blog = read("src/app/blog/BlogPostClient.tsx");
     expect(blog).toContain("min-w-0 overflow-x-clip bg-background");
     expect(blog).toContain("min-w-0 max-w-5xl overflow-x-clip");
-    expect(blog).toContain("min-w-0 max-w-3xl wrap-anywhere");
+    expect(blog).toContain("min-w-0 max-w-3xl");
+    expect(blog).not.toMatch(/<article className="[^"]*wrap-anywhere/);
+    expect(blog).toContain("[&_p]:wrap-anywhere");
+    expect(blog).toContain("[&_th]:min-w-20");
+    expect(blog).toContain("[&_td]:min-w-20");
+  });
+
+  it("keeps docs main shrinking below lg and hides the fixed sidebar", () => {
+    const docs = read("src/app/docs/DocsPageClient.tsx");
+    expect(docs).toContain("min-h-screen min-w-0 w-full overflow-x-clip");
+    expect(docs).toContain("flex min-w-0 w-full pt-20");
+    expect(docs).toContain("hidden w-64 overflow-y-auto");
+    expect(docs).toContain("lg:block");
+    expect(docs).toContain("min-w-0 w-full max-w-4xl flex-1 overflow-x-auto");
+    expect(docs).not.toContain("flex-1 lg:ml-64 px-6 lg:px-12 py-8 max-w-4xl");
+  });
+
+  it("clips login decorative blurs and wraps privacy GitHub URLs", () => {
+    const login = read("src/app/login/page.tsx");
+    expect(login).toContain("relative flex min-h-screen");
+    expect(login).toContain("overflow-hidden");
+    const privacy = read("src/components/legal-document.tsx");
+    expect(privacy).toContain("break-words wrap-anywhere");
   });
 
   it("lets explore tabs scroll instead of stretching the page, and wraps dashboard headers", () => {
