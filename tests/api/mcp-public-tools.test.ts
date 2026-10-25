@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GET, POST } from "@/app/api/mcp/[guid]/route";
 import { POST as callRestTool } from "@/app/api/mcp/[guid]/tools/[tool]/route";
 import { getSupabase, getServiceSupabase } from "@/app/api/_shared/supabase";
-import { resolvePrivatePlaybookActor } from "@/app/api/_shared/auth";
+import { resolvePrivatePlaybookActor, validateUserApiKey } from "@/app/api/_shared/auth";
+import { getPlaybookAccessRole } from "@/app/api/_shared/guards";
 import { listFederatedTools, callFederatedTool } from "@/lib/mcp/federation";
 import { loadFederationSecrets } from "@/app/api/_shared/federation-secrets";
 import type { McpTool, MCPServer } from "@/lib/supabase/types";
@@ -11,7 +12,9 @@ vi.mock("@/app/api/_shared/supabase", () => ({ getSupabase: vi.fn(), getServiceS
 vi.mock("@/app/api/_shared/auth", async original => ({
   ...await original<typeof import("@/app/api/_shared/auth")>(),
   resolvePrivatePlaybookActor: vi.fn(),
+  validateUserApiKey: vi.fn().mockResolvedValue(null),
 }));
+vi.mock("@/app/api/_shared/guards", () => ({ getPlaybookAccessRole: vi.fn().mockResolvedValue(null) }));
 vi.mock("@/app/api/_shared/federation-secrets", () => ({ loadFederationSecrets: vi.fn().mockResolvedValue({}) }));
 vi.mock("@/lib/mcp/federation", async original => ({
   ...await original<typeof import("@/lib/mcp/federation")>(),
@@ -63,6 +66,8 @@ beforeEach(() => {
   vi.mocked(getServiceSupabase).mockReturnValue(database() as never);
   vi.mocked(resolvePrivatePlaybookActor).mockImplementation(async request => request.headers.get("Authorization") === "Bearer valid"
     ? { kind: "playbook_key", role: "admin", permissions: ["full"] } : null);
+  vi.mocked(validateUserApiKey).mockResolvedValue(null);
+  vi.mocked(getPlaybookAccessRole).mockResolvedValue(null);
   vi.mocked(listFederatedTools).mockImplementation(async servers => servers.flatMap(server => server.tools.map(t => ({
     ...t, name: `${server.name.toLowerCase()}__${t.name}`,
     _meta: { serverId: server.id, serverName: server.name, originalName: t.name, transport: "http" },
@@ -77,7 +82,7 @@ describe("anonymous public MCP tools", () => {
     expect(listed).toContain("list_skills");
     expect(listed).toContain("search_memory");
     expect(listed).toContain("publicreader__search");
-    for (const hidden of ["read_memory", "write_memory", "list_secrets", "use_secret", "publicreader__delete", "publicreader__unknown", "protected__read"]) {
+    for (const hidden of ["read_memory", "write_memory", "list_secrets", "use_secret", "list_mcp_servers", "publicreader__delete", "publicreader__unknown", "protected__read"]) {
       expect(listed).not.toContain(hidden);
     }
     expect(manifest.tools.every((t: McpTool) => t.annotations?.readOnlyHint === true)).toBe(true);
@@ -107,6 +112,14 @@ describe("anonymous public MCP tools", () => {
     }
     const found = await (await request("tools/call", { name: "find_tools", arguments: { query: "publicreader" } })).json();
     expect(found.result.structuredContent.matches.map((t: McpTool) => t.name)).toEqual(["publicreader__search"]);
+  });
+
+  it("recognizes a scoped account writer only when that account can access this playbook", async () => {
+    vi.mocked(validateUserApiKey).mockResolvedValue({ user_id: "writer", permissions: ["memory:write"] } as never);
+    vi.mocked(getPlaybookAccessRole).mockResolvedValue("editor");
+    expect(await names("Bearer scoped-account")).toContain("write_memory");
+    vi.mocked(getPlaybookAccessRole).mockResolvedValue(null);
+    expect(await names("Bearer scoped-account")).not.toContain("write_memory");
   });
 
   it("refuses direct calls to hidden builtins before reading secrets or mutating data", async () => {

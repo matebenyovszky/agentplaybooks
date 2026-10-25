@@ -19,10 +19,12 @@ export function isReadOnlyTool(tool: McpTool) {
 }
 
 /** Permission checks exclude credential-backed reads such as use_secret.
+ * Connection configuration is control-plane data, even on a public playbook.
  * read_memory is excluded too: it updates access counters on every call.
  */
 export function isPublicBuiltinTool(tool: McpTool) {
-  return (Object.hasOwn(READ_TOOL_PERMISSIONS, tool.name) || NO_DATA_TOOLS.has(tool.name)) && isReadOnlyTool(tool);
+  return tool.name !== "list_mcp_servers"
+    && (Object.hasOwn(READ_TOOL_PERMISSIONS, tool.name) || NO_DATA_TOOLS.has(tool.name)) && isReadOnlyTool(tool);
 }
 
 /** The owner must explicitly publish a connection before any upstream discovery. */

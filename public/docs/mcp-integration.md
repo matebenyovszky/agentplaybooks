@@ -465,7 +465,8 @@ Authorization: Bearer apb_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 Anonymous public connections advertise only callable read-only tools in the JSON
 manifest, `tools/list`, and `find_tools`. Credential-backed tools such as
-`list_secrets` and `use_secret`, write tools, and `read_memory` (which updates
+`list_secrets` and `use_secret`, connection configuration (`list_mcp_servers`),
+write tools, and `read_memory` (which updates
 access counters) require authentication and are omitted from that public catalog.
 Use `search_memory` to read public memory without updating access counters.
 The same restriction applies to direct calls by name, including federated REST
