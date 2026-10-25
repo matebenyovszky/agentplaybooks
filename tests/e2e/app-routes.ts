@@ -133,6 +133,23 @@ export async function assertPageFits(page: Page, label: string, viewport: Viewpo
   }
 }
 
+async function gotoWithWebKitRetry(page: Page, path: string) {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      return await page.goto(path, { waitUntil: "domcontentloaded" });
+    } catch (error) {
+      lastError = error;
+      const message = error instanceof Error ? error.message : String(error);
+      if (!/webkit encountered an internal error/i.test(message) || attempt === 2) {
+        throw error;
+      }
+      await page.waitForTimeout(250 * (attempt + 1));
+    }
+  }
+  throw lastError;
+}
+
 export async function visitAndAssert(
   page: Page,
   route: (typeof APP_ROUTES)[number],
@@ -142,7 +159,7 @@ export async function visitAndAssert(
   await page.context().addCookies([
     { name: "NEXT_LOCALE", value: route.locale ?? "en", url: E2E_ORIGIN },
   ]);
-  const response = await page.goto(route.path, { waitUntil: "domcontentloaded" });
+  const response = await gotoWithWebKitRetry(page, route.path);
   expect(response, `${route.name} should respond`).toBeTruthy();
   expect(response!.status(), `${route.name} status ${response!.status()}`).toBeLessThan(400);
   if (route.waitFor) {
