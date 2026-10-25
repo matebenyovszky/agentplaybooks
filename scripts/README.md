@@ -38,7 +38,9 @@ export BACKUP_ENCRYPTION_PASSPHRASE='…'   # not the vault master key
 
 | Script | Description |
 |--------|-------------|
-| `ops/audit-migration/` | Prod runbook for `20261024120000_audit_logs_compliance.sql` (preflight, backup, postflight, rollback). See `ops/audit-migration/RUNBOOK.md`. |
+| `ops/audit-migration/` | Prod runbook for `20261024120000_audit_logs_compliance.sql` on heap project `zcphxfospbvqplonkvco` (preflight, backup, postflight, rollback). See `ops/audit-migration/RUNBOOK.md`. |
+| `list-self-host-stack.mjs` | List declared and running Docker Compose services, images, and ports (`npm run inventory:self-host`) |
+| `check-security-docs.mjs` | Link and cited-path check for `docs/security/` (`npm run docs:check`) |
 | `seed-data.ts` | TypeScript seed script (fetches from GitHub) |
 | `seed-full.sql` | Complete SQL seed (standalone, no GitHub) |
 | `reset-and-seed.sql` | Delete all data and reseed |

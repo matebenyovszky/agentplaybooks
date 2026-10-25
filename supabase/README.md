@@ -62,7 +62,7 @@ The [Deploy Supabase workflow](../.github/workflows/deploy-supabase.yml) runs on
 merges to `main` that change migrations, or manually. It runs the test suite,
 previews and applies pending migrations, then checks the live schema and access
 grants. Set the `SUPABASE_DB_URL` GitHub Actions secret to a percent-encoded
-Postgres connection string for project `bydcjwxfiiolmnddzbpy` (prefer the
+Postgres connection string for the heap project `zcphxfospbvqplonkvco` (prefer the
 session pooler if the runner cannot reach the direct IPv6 host). Do not commit
 the connection string.
 
@@ -72,3 +72,10 @@ audited, already-applied versions as no-op placeholders and copies only newer
 migration files into a temporary CLI workdir. The real SQL is always taken from
 `supabase/migrations`. If production history changes outside this workflow,
 review and update `deploy-baseline-versions.txt` before another deployment.
+
+The `review_proposals` SQL in `20261002120000_review_proposals.sql` is recorded
+in production as `20261009220418`. Its normalized SQL was compared with the
+recorded statement on 2026-10-25 and matched. The preparation script copies this
+file under that recorded version in the temporary workdir, preserving migration
+history and avoiding a second execution. This alias does not skip later SQL.
+
