@@ -165,7 +165,7 @@ async function systemLookup(hostname: string): Promise<LookupResult[]> {
  * the test suite turns it off (it has no network), and OUTBOUND_DNS_CHECK=false
  * does the same for an operator who enforces egress at the network layer.
  */
-export function resolvesBeforeConnecting(configured = process.env.OUTBOUND_DNS_CHECK): boolean {
+export function resolvesBeforeConnecting(configured = process.env["OUTBOUND_DNS_CHECK"]): boolean {
   if (runsOnWorkers()) return false;
   return configured?.trim().toLowerCase() !== "false";
 }

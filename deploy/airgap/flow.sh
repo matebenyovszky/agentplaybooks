@@ -87,7 +87,7 @@ echo "== store secret"
 http "$tmp/secret.json" POST "$APP/api/playbooks/$GUID/secrets" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"name":"ECHO_TOKEN","value":"airgap-secret-value","category":"token","allowed_hosts":["echo"],"allow_api_key_reveal":true}'
+  -d '{"name":"ECHO_TOKEN","value":"airgap-secret-value","category":"token","allowed_hosts":["echo.airgap"],"allow_api_key_reveal":true}'
 json "$tmp/secret.json" '.name == "ECHO_TOKEN"'
 
 echo "== reveal secret"
@@ -96,10 +96,13 @@ http "$tmp/reveal.json" GET "$APP/api/playbooks/$GUID/secrets/reveal/ECHO_TOKEN"
 json "$tmp/reveal.json" '.value == "airgap-secret-value"'
 
 echo "== use_secret via proxy to echo"
+# echo.airgap is the dnsmasq FQDN for the in-network echo service. A single-label
+# name is refused as an internal destination; the airgap network is the egress
+# control (OUTBOUND_DNS_CHECK=false), so the dotted name is allowed.
 http "$tmp/proxy.json" POST "$APP/api/playbooks/$GUID/secrets/proxy" \
   -H "Authorization: Bearer $APB_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"secret_name":"ECHO_TOKEN","url":"http://echo/","method":"GET"}'
+  -d '{"secret_name":"ECHO_TOKEN","url":"http://echo.airgap/","method":"GET"}'
 json "$tmp/proxy.json" '.status == 200 and .body.ok == true and .body.service == "echo"'
 
 echo "== audit log"
@@ -108,6 +111,6 @@ http "$tmp/audit.json" GET "$APP/api/playbooks/$GUID/audit?operation=secret.&lim
 json "$tmp/audit.json" '[.logs[].operation] | index("secret.create") != null'
 json "$tmp/audit.json" '[.logs[].operation] | index("secret.reveal") != null'
 json "$tmp/audit.json" '[.logs[].operation] | index("secret.use") != null'
-json "$tmp/audit.json" '[.logs[] | select(.operation == "secret.use")] | any(.target == "echo" and .status == "success")'
+json "$tmp/audit.json" '[.logs[] | select(.operation == "secret.use")] | any(.target == "echo.airgap" and .status == "success")'
 
 echo "no-egress secrets flow passed (playbook $GUID)"

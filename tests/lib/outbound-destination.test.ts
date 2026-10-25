@@ -39,7 +39,7 @@ describe("outbound destinations", () => {
     expect(blockedDestinationReason(url)).not.toBeNull();
   });
 
-  it.each(["https://api.example.org/v1", "http://93.184.216.34/", "https://[2606:4700::1111]/"])("allows %s", (url) => {
+  it.each(["https://api.example.org/v1", "http://93.184.216.34/", "https://[2606:4700::1111]/", "http://echo.airgap/"])("allows %s", (url) => {
     expect(blockedDestinationReason(url)).toBeNull();
   });
 
