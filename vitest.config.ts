@@ -8,6 +8,7 @@ export default defineConfig({
         environment: 'node',
         globals: true,
         include: ['tests/**/*.{test,spec}.{js,ts,tsx}', 'src/**/*.{test,spec}.{js,ts,tsx}'],
+        exclude: ['tests/e2e/**', 'node_modules/**'],
         setupFiles: ['./tests/setup.ts'],
         alias: {
             '@': path.resolve(process.cwd(), './src'),

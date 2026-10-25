@@ -70,6 +70,8 @@ const eslintConfig = [
       ".wrangler/**",
       "node_modules/**",
       "next-env.d.ts",
+      "playwright.config.ts",
+      "tests/e2e/**",
     ],
   },
   ...warnPendingRules(coreWebVitals),

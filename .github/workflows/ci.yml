@@ -37,3 +37,14 @@ jobs:
       - run: npm run audit:production
       - run: npm run build:worker
       - run: npx wrangler deploy --dry-run
+
+  playbook-mobile-layout:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - run: npx --yes playwright@1.56.1 install --with-deps chromium webkit
+      - run: npx --yes playwright@1.56.1 test

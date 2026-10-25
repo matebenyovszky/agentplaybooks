@@ -266,7 +266,7 @@ export default function ExplorePage() {
   ];
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen min-w-0 overflow-x-clip bg-background text-foreground">
       <FloatingNav />
 
       {/* Hero */}
@@ -293,13 +293,13 @@ export default function ExplorePage() {
       {/* Tabs */}
       <section className="px-4 pb-4">
         <div className="max-w-5xl mx-auto">
-          <div className="flex gap-2 border-b border-neutral-200 dark:border-blue-900/30">
+          <div className="flex min-w-0 gap-2 overflow-x-auto border-b border-neutral-200 dark:border-blue-900/30">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
-                  "px-4 py-3 flex items-center gap-2 text-sm font-medium border-b-2 transition-all",
+                  "flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition-all",
                   activeTab === tab.id
                     ? "border-amber-500 text-neutral-900 dark:text-white"
                     : "border-transparent text-neutral-500 dark:text-slate-400 hover:text-neutral-900 dark:hover:text-white hover:border-neutral-300 dark:hover:border-slate-700"
@@ -786,7 +786,7 @@ function SkillCard({ skill, index }: { skill: SkillWithPublisher; index: number 
         <div className="flex items-start justify-between mb-2">
           <div className="flex items-center gap-2">
             <Zap className={cn("h-4 w-4", isMarkdownSkill ? "text-emerald-600 dark:text-emerald-400" : "text-purple-600 dark:text-purple-400")} />
-            <h4 className="font-medium text-neutral-900 dark:text-white">{skill.name}</h4>
+            <h4 className="min-w-0 wrap-anywhere font-medium text-neutral-900 dark:text-white">{skill.name}</h4>
             {isMarkdownSkill && (
               <span className="px-1.5 py-0.5 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-[10px] rounded font-medium">
                 SKILL

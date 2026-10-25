@@ -26,6 +26,7 @@
     "test": "vitest",
     "test:cli": "npm --prefix packages/cli test",
     "test:all": "vitest run && npm run test:cli",
+    "test:e2e:layout": "npx --yes playwright@1.56.1 test",
     "release:check": "node scripts/check-release-distribution.mjs",
     "test:watch": "vitest",
     "audit:production": "node scripts/audit-production.mjs",
