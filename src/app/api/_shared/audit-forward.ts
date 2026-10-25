@@ -11,20 +11,41 @@ import { auditLogToExportRow } from "@/lib/audit-chain";
 const MAX_ATTEMPTS = 3;
 const BACKOFF_MS = [200, 800, 3200];
 
+/** HMAC-SHA256 key size. A human password is not enough; generate with `openssl rand -base64 32`. */
+export const SIEM_HMAC_KEY_MIN_BYTES = 32;
+
 export type AuditForwardConfig = {
   syslogUrl?: string;
   syslogHostname?: string;
   webhookUrl?: string;
-  webhookSecret?: string;
+  webhookHmacKey?: string;
   hmacHeader?: string;
 };
 
+function hmacKeyBytes(hmacKey: string): Buffer {
+  const key = Buffer.from(hmacKey, "utf8");
+  if (key.byteLength < SIEM_HMAC_KEY_MIN_BYTES) {
+    throw new Error(
+      `AUDIT_SIEM_WEBHOOK_SECRET must be a high-entropy random secret of at least ${SIEM_HMAC_KEY_MIN_BYTES} bytes, not a human password`,
+    );
+  }
+  return key;
+}
+
 export function readAuditForwardConfig(env: Record<string, string | undefined> = process.env): AuditForwardConfig {
+  const webhookUrl = env.AUDIT_SIEM_WEBHOOK_URL?.trim() || undefined;
+  const webhookHmacKey = env.AUDIT_SIEM_WEBHOOK_SECRET || undefined;
+  if (webhookHmacKey !== undefined) hmacKeyBytes(webhookHmacKey);
+  if (webhookUrl && webhookHmacKey === undefined) {
+    throw new Error(
+      `AUDIT_SIEM_WEBHOOK_URL requires AUDIT_SIEM_WEBHOOK_SECRET (>=${SIEM_HMAC_KEY_MIN_BYTES} random bytes)`,
+    );
+  }
   return {
     syslogUrl: env.AUDIT_SYSLOG_URL?.trim() || undefined,
     syslogHostname: env.AUDIT_SYSLOG_HOSTNAME?.trim() || undefined,
-    webhookUrl: env.AUDIT_SIEM_WEBHOOK_URL?.trim() || undefined,
-    webhookSecret: env.AUDIT_SIEM_WEBHOOK_SECRET || undefined,
+    webhookUrl,
+    webhookHmacKey,
     hmacHeader: env.AUDIT_SIEM_HMAC_HEADER?.trim() || "X-Audit-Signature",
   };
 }
@@ -52,10 +73,10 @@ export function rfc5424Syslog(
   return `<${pri}>1 ${ts} ${hostname} agentplaybooks - audit_log - ${payload}`;
 }
 
-/** HMAC-SHA256 over the SIEM webhook body. This is a request MAC, not a password KDF. */
+/** HMAC-SHA256 of the SIEM webhook body using a random >=32-byte key. */
 export function siemSignature(body: string, hmacKey: string): string {
-  // codeql[js/insufficient-password-hash] SIEM webhook MAC (HMAC-SHA256 of the body), not password hashing
-  return `sha256=${createHmac("sha256", hmacKey).update(body, "utf8").digest("hex")}`;
+  const key = hmacKeyBytes(hmacKey);
+  return `sha256=${createHmac("sha256", key).update(body, "utf8").digest("hex")}`;
 }
 
 async function sendWebhook(
@@ -67,9 +88,12 @@ async function sendWebhook(
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
-  if (config.webhookSecret) {
-    headers[config.hmacHeader || "X-Audit-Signature"] = siemSignature(body, config.webhookSecret);
+  if (!config.webhookHmacKey) {
+    throw new Error(
+      `AUDIT_SIEM_WEBHOOK_URL requires AUDIT_SIEM_WEBHOOK_SECRET (>=${SIEM_HMAC_KEY_MIN_BYTES} random bytes)`,
+    );
   }
+  headers[config.hmacHeader || "X-Audit-Signature"] = siemSignature(body, config.webhookHmacKey);
   const response = await fetchImpl(url, { method: "POST", headers, body });
   if (!response.ok) {
     throw new Error(`SIEM webhook HTTP ${response.status}`);
@@ -164,7 +188,19 @@ export async function forwardAuditLog(
 }
 
 export function scheduleAuditForward(entry: AuditChainEntry | Record<string, unknown>): void {
-  const config = readAuditForwardConfig();
+  let config: AuditForwardConfig;
+  try {
+    config = readAuditForwardConfig();
+  } catch (error) {
+    console.error("Audit SIEM forwarding not started", error);
+    return;
+  }
   if (!config.syslogUrl && !config.webhookUrl) return;
   scheduleBackground(() => forwardAuditLog(entry, config));
+}
+
+// Fail closed as soon as this isolate loads if the HMAC key is present but too
+// short, or the webhook URL is set without a key. Unset stays off.
+if (process.env.AUDIT_SIEM_WEBHOOK_SECRET || process.env.AUDIT_SIEM_WEBHOOK_URL) {
+  readAuditForwardConfig();
 }

@@ -90,7 +90,7 @@ not fail the vault or federated call.
 | `AUDIT_SYSLOG_URL` | unset (off) | `udp://host:514`, `tcp://host:514`, or `tls://host:6514` (RFC 5424) |
 | `AUDIT_SYSLOG_HOSTNAME` | `agentplaybooks` | RFC 5424 HOSTNAME |
 | `AUDIT_SIEM_WEBHOOK_URL` | unset (off) | HTTPS POST of the export JSON object |
-| `AUDIT_SIEM_WEBHOOK_SECRET` | unset | HMAC-SHA256 of the body |
+| `AUDIT_SIEM_WEBHOOK_SECRET` | unset | HMAC-SHA256 key for the body. High-entropy random, **≥32 bytes** (`openssl rand -base64 32`), not a human password. Required when the webhook URL is set; a shorter value fails closed. |
 | `AUDIT_SIEM_HMAC_HEADER` | `X-Audit-Signature` | Header carrying `sha256=<hex>` |
 | `AUDIT_RETENTION_DAYS` | unset (keep forever) | Positive integer for scheduled purge |
 | `AUDIT_CRON_SECRET` | unset (endpoint hidden) | Bearer token for `POST /api/cron/audit-purge` (`CRON_SECRET` is also accepted) |

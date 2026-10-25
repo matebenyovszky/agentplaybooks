@@ -17,7 +17,8 @@ NEXT_PUBLIC_APP_URL=https://apbks.com
 # AUDIT_CRON_SECRET=replace-me
 # AUDIT_SYSLOG_URL=udp://loghost:514
 # AUDIT_SIEM_WEBHOOK_URL=https://siem.example/hooks/audit
-# AUDIT_SIEM_WEBHOOK_SECRET=replace-me
+# High-entropy HMAC key, >=32 bytes — not a human password:
+# AUDIT_SIEM_WEBHOOK_SECRET=$(openssl rand -base64 32)
 
 # Self-hosted secret-client mTLS only. Leave unset (cloudflare) in hosted production.
 # MTLS_MODE=proxy

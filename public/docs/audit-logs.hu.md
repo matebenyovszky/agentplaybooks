@@ -90,7 +90,7 @@ viszi magával a trezort vagy a federált hívást.
 | `AUDIT_SYSLOG_URL` | nincs (ki) | `udp://host:514`, `tcp://host:514` vagy `tls://host:6514` (RFC 5424) |
 | `AUDIT_SYSLOG_HOSTNAME` | `agentplaybooks` | RFC 5424 HOSTNAME |
 | `AUDIT_SIEM_WEBHOOK_URL` | nincs (ki) | a export JSON objektum HTTPS POST-ja |
-| `AUDIT_SIEM_WEBHOOK_SECRET` | nincs | a törzs HMAC-SHA256 aláírása |
+| `AUDIT_SIEM_WEBHOOK_SECRET` | nincs | a törzs HMAC-SHA256 kulcsa. Nagy entrópiájú véletlen, **legalább 32 bájt** (`openssl rand -base64 32`), nem emberi jelszó. A webhook URL beállításakor kötelező; rövidebb érték fail-closed. |
 | `AUDIT_SIEM_HMAC_HEADER` | `X-Audit-Signature` | `sha256=<hex>` fejléc |
 | `AUDIT_RETENTION_DAYS` | nincs (örökre) | pozitív egész az ütemezett törléshez |
 | `AUDIT_CRON_SECRET` | nincs (a végpont rejtett) | Bearer token a `POST /api/cron/audit-purge`-hoz (`CRON_SECRET` is elfogadott) |
