@@ -4,7 +4,7 @@
 
 **Audience:** the customer's information-security officer (IBF), risk, legal, and operations teams. Written for a Hungarian public-sector supplier assessment and EIR security classification.
 
-**Verified against source:** 2026-10-25, on the `main` branch as of that date (includes merged [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200), [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201), [#203](https://github.com/matebenyovszky/agentplaybooks/pull/203), [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204), [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205), [#207](https://github.com/matebenyovszky/agentplaybooks/pull/207)). Parallel open PRs that are not on `main` yet are marked **Folyamatban / In progress** on the gap list.
+**Verified against source:** 2026-10-25, on the `main` branch as of that date (includes merged [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200), [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201), [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202), [#203](https://github.com/matebenyovszky/agentplaybooks/pull/203), [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204), [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205), [#207](https://github.com/matebenyovszky/agentplaybooks/pull/207), [#216](https://github.com/matebenyovszky/agentplaybooks/pull/216)). Parallel open PRs that are not on `main` yet are marked **Folyamatban / In progress** on the gap list.
 
 > **jogi ellenőrzés szükséges.** This pack is not legal advice, not a certification, and not a substitute for the customer's own risk analysis or control selection under 7/2024. (VI. 24.) MK rendelet. Every note on scope, classification, responsibility split, or legal interpretation must be approved by the customer's counsel and IBF before production use.
 
@@ -13,6 +13,7 @@
 | Document | Hungarian (primary) | English |
 |----------|---------------------|---------|
 | Whitepaper (architecture, crypto, auth, audit, SDLC, gaps) | [whitepaper.hu.md](./whitepaper.hu.md) | [whitepaper.md](./whitepaper.md) |
+| Hungary / NIS2 control-by-control gap assessment (this audit) | — | [hu-nis2-gap-assessment.md](../compliance/hu-nis2-gap-assessment.md) |
 | Asset inventory (components, ports, keys, dependencies) | [asset-inventory.hu.md](./asset-inventory.hu.md) | [asset-inventory.md](./asset-inventory.md) |
 | Risk-assessment template (NIST 800-53 families ↔ MK r. / NIS2) | [risk-assessment.hu.md](./risk-assessment.hu.md) | [risk-assessment.md](./risk-assessment.md) |
 | Spreadsheet export | [risk-assessment.csv](./risk-assessment.csv) (bilingual) | same file |
