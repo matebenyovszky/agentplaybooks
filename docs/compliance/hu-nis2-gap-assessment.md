@@ -57,8 +57,8 @@ A row is **never** marked met because a whitepaper says so. Evidence is a reposi
 
 | ID | Item | Product vs operator | This audit |
 |----|------|---------------------|------------|
-| P0-1 | Playbook API-key create defaults omitted `permissions` to `memory:read` **and** `memory:write`, so a raw `role: "viewer"` (or omitted role) key can write memory. The dashboard sends the correct presets; the API does not. Contradicts `permissions.md` (“Viewer … Cannot modify data”). | Product | Fix PR in this audit |
-| P0-2 | CSP is `Content-Security-Policy-Report-Only` with `connect-src` hardcoded to `https://*.supabase.co`. XSS in the UI is not contained. | Product | Fix PR in this audit (enforce the existing policy; add the configured Auth origin) |
+| P0-1 | Playbook API-key create defaults omitted `permissions` to `memory:read` **and** `memory:write`, so a raw `role: "viewer"` (or omitted role) key can write memory. The dashboard sends the correct presets; the API does not. Contradicts `permissions.md` (“Viewer … Cannot modify data”). | Product | [#218](https://github.com/matebenyovszky/agentplaybooks/pull/218) |
+| P0-2 | CSP is `Content-Security-Policy-Report-Only` with `connect-src` hardcoded to `https://*.supabase.co`. XSS in the UI is not contained. | Product | [#219](https://github.com/matebenyovszky/agentplaybooks/pull/219) |
 | P0-3 | Audit trail erased on playbook/account delete (FK cascade); audit_logs writable by API roles | Product | **#216** (20261025120000_audit_logs_tamper_resistance.sql on that branch) — do not redo |
 | P0-4 | Secret exfiltration paths (redirects, public MCP credentials, API-key widening of allowed_hosts) | Product | **#216** (src/lib/outbound-destination.ts on that branch) — do not redo |
 | P0-5 | App-level MFA (NIST **IA-2(1)** / NIS2 Art. 21(2)(j)) | Product missing; operator can enforce at the IdP | **Design note only** — not a rushed PR |
@@ -68,9 +68,9 @@ A row is **never** marked met because a whitepaper says so. Evidence is a reposi
 
 | ID | Item | This audit |
 |----|------|------------|
-| P1-1 | Memory and canvas writes not in `audit_logs` (skill config writes land with #216) | Fix PR in this audit (DB trigger, metadata only, no bodies) |
-| P1-2 | Self-host CORS: unset `ALLOWED_ORIGINS` keeps the hosted product origins trusted even when `NEXT_PUBLIC_APP_URL` is a private origin | Fix PR in this audit |
-| P1-3 | Locale cookie `NEXT_LOCALE` lacks `SameSite` / conditional `Secure` | Fix PR in this audit |
+| P1-1 | Memory and canvas writes not in `audit_logs` (skill config writes land with #216) | [#222](https://github.com/matebenyovszky/agentplaybooks/pull/222) (DB trigger, metadata only, no bodies; **contains a migration**) |
+| P1-2 | Self-host CORS: unset `ALLOWED_ORIGINS` keeps the hosted product origins trusted even when `NEXT_PUBLIC_APP_URL` is a private origin | [#220](https://github.com/matebenyovszky/agentplaybooks/pull/220) |
+| P1-3 | Locale cookie `NEXT_LOCALE` lacks `SameSite` / conditional `Secure` | [#221](https://github.com/matebenyovszky/agentplaybooks/pull/221) |
 | P1-4 | No application rate limiting (auth, `secret.use`, API-key create) | Design note — needs a measured limiter, not a one-line cap |
 | P1-5 | Unsigned container image / no registry cosign (SBOM blobs are signed) | Design note — this repository does not publish a registry image; adding one is a release-process change. **No tags or publishing in this audit** |
 | P1-6 | Audit rows omit source IP / user agent (would change the hash-chain canonical form) | Design note — coordinate with #216 follow-ups |
@@ -89,6 +89,8 @@ A row is **never** marked met because a whitepaper says so. Evidence is a reposi
 | P2-7 | Independent WORM / external timestamp for the audit chain |
 
 Large items (KMS/HSM, SAML, MFA) stay design notes. See [Design notes](#design-notes-not-rushed-prs).
+
+This document: [#217](https://github.com/matebenyovszky/agentplaybooks/pull/217). Only [#222](https://github.com/matebenyovszky/agentplaybooks/pull/222) contains a Supabase migration. Rebase the code PRs onto `main` after #216 merges.
 
 ---
 
