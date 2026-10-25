@@ -12,9 +12,10 @@ function read(relativePath: string): string {
 describe("public playbook mobile layout", () => {
   it("stacks the dashboard shell below the md breakpoint instead of keeping a flex row", () => {
     const layout = read("src/app/dashboard/layout.tsx");
-    expect(layout).toContain("flex min-h-screen min-w-0 flex-col overflow-x-clip");
+    expect(layout).toContain("flex min-h-screen min-w-0 flex-col bg-background");
     expect(layout).toContain("md:flex-row");
-    expect(layout).toContain("min-w-0 w-full flex-1 overflow-x-clip overflow-y-auto p-4 md:p-8");
+    expect(layout).toContain("min-w-0 w-full flex-1 overflow-y-auto p-4 md:p-8");
+    expect(layout).not.toContain("overflow-x-clip");
     expect(layout).not.toMatch(/className="min-h-screen bg-background text-foreground flex"/);
     expect(layout).not.toMatch(/<main className="flex-1 p-8 overflow-auto">/);
   });
@@ -31,7 +32,11 @@ describe("public playbook mobile layout", () => {
     expect(page).toContain('data-testid="playbook-description"');
     expect(page).toContain("min-w-0 w-full wrap-anywhere");
     expect(page).toContain("min-h-screen min-w-0 w-full");
-    expect(page).toContain("flex max-w-7xl min-w-0 flex-wrap");
+    expect(page).toContain("flex max-w-7xl min-w-0 flex-col gap-3 md:flex-row md:items-center md:justify-between");
+    expect(page).toContain('data-testid="playbook-header"');
+    expect(page).toContain('data-testid="playbook-header-actions"');
+    expect(page).toContain('data-testid="playbook-tabs"');
+    expect(page).toContain("flex min-w-0 flex-wrap gap-1 -mb-px overflow-x-auto md:flex-nowrap");
   });
 
   it("gives the blog post article a shrinking flex/grid child and wrapping text", () => {

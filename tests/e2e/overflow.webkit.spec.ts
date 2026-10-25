@@ -3,6 +3,7 @@ import { test } from "@playwright/test";
 import {
   FIXTURES,
   assertNoHorizontalOverflow,
+  assertPlaybookHeaderControlsFit,
   assertPrimaryColumnWidth,
   eachOrientation,
   openFixture,
@@ -17,6 +18,9 @@ for (const viewport of cases) {
       await openFixture(page, FIXTURES.playbook, viewport);
       await assertNoHorizontalOverflow(page);
       await assertPrimaryColumnWidth(page, '[data-testid="playbook-description"]', viewport.width);
+      if (viewport.width < 768) {
+        await assertPlaybookHeaderControlsFit(page);
+      }
     });
 
     test("home, blog, explore, and dashboard shells do not overflow", async ({ page }) => {

@@ -13,7 +13,6 @@
       min-width: 0;
       display: flex;
       flex-direction: column;
-      overflow-x: clip;
       background: #0a0f1a;
       color: #f1f5f9;
     }
@@ -40,7 +39,6 @@
       min-width: 0;
       width: 100%;
       padding: 1rem;
-      overflow-x: clip;
       overflow-y: auto;
     }
     .inner {
@@ -48,6 +46,66 @@
       margin: 0 auto;
       min-width: 0;
       width: 100%;
+    }
+    header {
+      border-bottom: 1px solid rgba(30, 58, 138, 0.3);
+      padding-bottom: 1rem;
+      margin-bottom: 0.75rem;
+    }
+    .header-row {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      min-width: 0;
+    }
+    .title-row {
+      display: flex;
+      min-width: 0;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .title-row h1 { margin: 0; font-size: 1.25rem; overflow-wrap: anywhere; }
+    .actions {
+      display: flex;
+      width: 100%;
+      min-width: 0;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .actions a, .actions button, .actions .badge {
+      display: inline-flex;
+      width: 100%;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      text-decoration: none;
+      color: inherit;
+      border: 1px solid rgba(251, 191, 36, 0.3);
+      background: transparent;
+      font: inherit;
+      white-space: normal;
+      text-align: center;
+    }
+    .badge { border-color: rgba(148, 163, 184, 0.5); }
+    .tabs {
+      display: flex;
+      min-width: 0;
+      flex-wrap: wrap;
+      gap: 0.25rem;
+      margin: 0.75rem 0 1rem;
+      overflow-x: auto;
+    }
+    .tabs button {
+      flex-shrink: 0;
+      white-space: nowrap;
+      padding: 0.75rem 1rem;
+      border: 0;
+      border-bottom: 2px solid transparent;
+      background: transparent;
+      color: inherit;
+      font: inherit;
     }
     .description {
       min-width: 0;
@@ -63,6 +121,22 @@
       .desktop-sidebar { display: flex; }
       .mobile-bar { display: none; }
       .main { padding: 2rem; }
+      .header-row {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .actions {
+        width: auto;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .actions a, .actions button, .actions .badge { width: auto; }
+      .tabs {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+      }
     }
   </style>
 </head>
@@ -72,6 +146,25 @@
     <div class="mobile-bar" data-testid="mobile-bar">☰</div>
     <main class="main">
       <div class="inner">
+        <header data-testid="playbook-header">
+          <div class="header-row">
+            <div class="title-row">
+              <a href="#back" aria-label="Back">←</a>
+              <h1>Full-Stack Developer</h1>
+            </div>
+            <div class="actions" data-testid="playbook-header-actions">
+              <span class="badge">View Only</span>
+              <a href="#login">Sign in to copy this playbook</a>
+            </div>
+          </div>
+        </header>
+        <nav data-testid="playbook-tabs" class="tabs">
+          <button type="button">Details</button>
+          <button type="button">Skills</button>
+          <button type="button">MCP</button>
+          <button type="button">Canvas</button>
+          <button type="button">Memory</button>
+        </nav>
         <section data-testid="playbook-description" class="description">
           <div>Description</div>
           <p>

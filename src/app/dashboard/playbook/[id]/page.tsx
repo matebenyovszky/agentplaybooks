@@ -863,8 +863,11 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
   return (
     <div className="min-h-screen min-w-0 w-full bg-background text-foreground">
       {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-neutral-200 dark:border-blue-900/30 bg-white/90 dark:bg-[#0a0f1a]/90 backdrop-blur-md px-4 py-4 md:px-6">
-        <div className="mx-auto flex max-w-7xl min-w-0 flex-wrap items-center justify-between gap-3">
+      <header
+        data-testid="playbook-header"
+        className="sticky top-0 z-40 border-b border-neutral-200 dark:border-blue-900/30 bg-white/90 dark:bg-[#0a0f1a]/90 backdrop-blur-md px-4 py-4 md:px-6"
+      >
+        <div className="mx-auto flex max-w-7xl min-w-0 flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="flex min-w-0 items-center gap-4">
             <Link
               href="/dashboard"
@@ -904,17 +907,20 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
             </div>
           </div>
 
-          <div className="flex min-w-0 flex-wrap items-center gap-3">
+          <div
+            data-testid="playbook-header-actions"
+            className="flex w-full min-w-0 flex-col gap-2 md:w-auto md:flex-row md:flex-wrap md:items-center"
+          >
             {/* Access badge */}
             {!canEdit && (
-              <span className="px-3 py-1.5 bg-neutral-100 dark:bg-slate-700/50 text-neutral-600 dark:text-slate-400 text-sm rounded-lg border border-neutral-200 dark:border-slate-600/50 flex items-center gap-2">
+              <span className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-neutral-200 bg-neutral-100 px-3 py-1.5 text-sm text-neutral-600 dark:border-slate-600/50 dark:bg-slate-700/50 dark:text-slate-400 md:w-auto">
                 <Eye className="h-4 w-4" />
                 {t("editor.readOnly") || "Read Only"}
               </span>
             )}
 
             {canEdit && !isOwner && (
-              <span className="px-3 py-1.5 bg-blue-500/10 text-blue-500 text-sm rounded-lg border border-blue-500/20 flex items-center gap-2">
+              <span className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-blue-500/20 bg-blue-500/10 px-3 py-1.5 text-sm text-blue-500 md:w-auto">
                 <UsersRound className="h-4 w-4" />
                 Shared editor
               </span>
@@ -926,7 +932,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                 onClick={handleForkPlaybook}
                 disabled={forking || forkSuccess}
                 className={cn(
-                  "px-4 py-2 rounded-lg font-semibold flex items-center gap-2 transition-all text-sm",
+                  "inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all md:w-auto",
                   forkSuccess
                     ? "bg-green-600/20 text-green-400 border border-green-500/30"
                     : "bg-gradient-to-r from-amber-600 to-orange-500 text-white shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40"
@@ -955,9 +961,9 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
             {!canEdit && playbook.visibility === 'public' && !currentUserId && (
               <Link
                 href="/login"
-                className="px-4 py-2 rounded-lg text-sm text-amber-400 border border-amber-500/30 hover:bg-amber-500/10 transition-colors flex items-center gap-2"
+                className="inline-flex w-full min-w-0 items-center justify-center gap-2 whitespace-normal rounded-lg border border-amber-500/30 px-4 py-2 text-center text-sm text-amber-400 transition-colors hover:bg-amber-500/10 md:w-auto"
               >
-                <Copy className="h-4 w-4" />
+                <Copy className="h-4 w-4 shrink-0" />
                 {t("editor.signInToFork")}
               </Link>
             )}
@@ -978,7 +984,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
               <button
                 onClick={() => updatePlaybook({ visibility: playbook.visibility === 'public' ? 'private' : 'public' })}
                 className={cn(
-                  "px-3 py-2 rounded-lg flex items-center gap-2 text-sm transition-colors",
+                  "inline-flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors md:w-auto",
                   playbook.visibility === 'public'
                     ? "bg-green-500/10 text-green-400 border border-green-500/20 hover:bg-green-500/20"
                     : "bg-neutral-100 dark:bg-slate-800/50 text-neutral-700 dark:text-slate-400 border border-neutral-300 dark:border-slate-700/50 hover:border-neutral-400 dark:hover:border-slate-600"
@@ -989,7 +995,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
               </button>
             ) : (
               <span className={cn(
-                "px-3 py-2 rounded-lg flex items-center gap-2 text-sm",
+                "inline-flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm md:w-auto",
                 playbook.visibility === 'public'
                   ? "bg-green-500/10 text-green-400 border border-green-500/20"
                   : "bg-neutral-100 dark:bg-slate-800/50 text-neutral-700 dark:text-slate-400 border border-neutral-300 dark:border-slate-700/50"
@@ -1004,7 +1010,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                 onClick={handleManualSave}
                 disabled={saving || !hasChanges}
                 className={cn(
-                  "px-4 py-2 rounded-lg font-semibold flex items-center gap-2 transition-all",
+                  "inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2 font-semibold transition-all md:w-auto",
                   hasChanges
                     ? "bg-gradient-to-r from-amber-600 to-amber-400 text-slate-900 shadow-lg shadow-amber-500/25"
                     : "bg-slate-800 text-slate-400"
@@ -1021,13 +1027,16 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
       {/* Tabs */}
       <div className="border-b border-neutral-200 dark:border-blue-900/30 bg-neutral-50 dark:bg-[#0a0f1a]/50">
         <div className="mx-auto max-w-7xl min-w-0 px-4 md:px-6">
-          <nav className="flex gap-1 -mb-px overflow-x-auto">
+          <nav
+            data-testid="playbook-tabs"
+            className="flex min-w-0 flex-wrap gap-1 -mb-px overflow-x-auto md:flex-nowrap"
+          >
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
-                  "px-4 py-3 flex items-center gap-2 text-sm font-medium border-b-2 transition-all whitespace-nowrap",
+                  "flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition-all",
                   activeTab === tab.id
                     ? `border-${tab.color}-500 text-neutral-900 dark:text-white`
                     : "border-transparent text-neutral-500 dark:text-slate-400 hover:text-neutral-900 dark:hover:text-white hover:border-neutral-300 dark:hover:border-slate-700"
