@@ -2,7 +2,7 @@ import { appendFileSync, copyFileSync, mkdtempSync, mkdirSync, readFileSync, rea
 import { tmpdir } from "node:os";
 import { basename, join, resolve } from "node:path";
 
-const projectRef = "bydcjwxfiiolmnddzbpy";
+const projectRef = "zcphxfospbvqplonkvco";
 const root = resolve(import.meta.dirname, "..");
 const versions = readFileSync(join(root, "supabase", "deploy-baseline-versions.txt"), "utf8")
   .split(/\r?\n/)
@@ -61,3 +61,4 @@ if (process.env.GITHUB_OUTPUT) {
 }
 console.log(`Prepared ${versions.length} historical versions and ${forwardFiles.length} forward migrations in ${workdir}.`);
 console.log(`Forward migrations: ${forwardFiles.map(({ file }) => file).join(", ") || "none"}`);
+
