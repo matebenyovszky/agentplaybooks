@@ -234,7 +234,7 @@ an empty database: the incremental history cannot create the core tables.
 | `MTLS_PROXY_VERIFY_HEADER` | No | Optional. When set, that header must equal `SUCCESS` or mTLS is rejected. |
 | `MTLS_TRUSTED_PROXIES` | No | Required when `MTLS_MODE=proxy`. Comma-separated IPs/CIDRs of the terminator. Headers from any other source are ignored. |
 
-Existing databases need `20261024120000_audit_logs_compliance.sql` (hash chain backfill, auditor role, retention checkpoints). That migration rewrites every `audit_logs` row and **must not be applied to production without approval and a backup**. See [Audit Logs](./audit-logs.md).
+Existing databases need `20261024120000_audit_logs_compliance.sql` (hash chain backfill, auditor role, retention checkpoints). That migration rewrites every `audit_logs` row and **must not be applied to production without approval and a backup**. Follow [`scripts/ops/audit-migration/RUNBOOK.md`](https://github.com/matebenyovszky/agentplaybooks/blob/cursor/audit-logs-compliance-adfd/scripts/ops/audit-migration/RUNBOOK.md). Apply it **before** merging/deploying the app change; the previously deployed app tolerates the additive schema. See [Audit Logs](./audit-logs.md).
 
 ### Air-gapped / no-egress
 

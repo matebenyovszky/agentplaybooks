@@ -51,7 +51,11 @@ the chain in order and report the first broken link (`prev_hash` or `hash`).
 
 A production database needs migration `20261024120000_audit_logs_compliance.sql`
 to add the columns and backfill existing rows. Do not apply it without approval
-and a backup.
+and a backup. Operator steps (preflight, `pg_dump`, in-DB copy, postflight
+hash-chain check, rollback) are in
+[`scripts/ops/audit-migration/RUNBOOK.md`](https://github.com/matebenyovszky/agentplaybooks/blob/cursor/audit-logs-compliance-adfd/scripts/ops/audit-migration/RUNBOOK.md).
+Apply that migration **before** merging the app change; the previously deployed
+app tolerates the additive schema.
 
 ## Retention
 

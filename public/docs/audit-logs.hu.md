@@ -52,7 +52,11 @@ sorrendben újraszámolja a láncot, és az első törött láncszemet jelenti
 
 Éles adatbázison a `20261024120000_audit_logs_compliance.sql` migráció
 kell a oszlopokhoz és a meglévő sorok feltöltéséhez. Jóváhagyás és mentés
-nélkül ne futtassa.
+nélkül ne futtassa. Az üzemeltetői lépések (preflight, `pg_dump`, adatbázison
+belüli másolat, hash-lánc ellenőrzés, rollback):
+[`scripts/ops/audit-migration/RUNBOOK.md`](https://github.com/matebenyovszky/agentplaybooks/blob/cursor/audit-logs-compliance-adfd/scripts/ops/audit-migration/RUNBOOK.md).
+A migrációt a app-változás merge-e **előtt** kell futtatni; a korábban
+telepített app az additive sémát elviseli.
 
 ## Megőrzés
 

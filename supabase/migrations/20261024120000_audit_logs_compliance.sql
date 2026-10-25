@@ -2,8 +2,11 @@
 --
 -- PRODUCTION: this migration rewrites every existing audit_logs row to backfill
 -- prev_hash/hash. Apply only with operator approval, during a maintenance
--- window, after a backup. It is backwards compatible (new columns are additive;
--- existing readers ignore them) but it must not be run unattended against prod.
+-- window, after a backup. Follow scripts/ops/audit-migration/RUNBOOK.md
+-- (preflight, in-DB copy, pg_dump, postflight, rollback). It is backwards
+-- compatible (new columns are additive; existing readers ignore them) but it
+-- must not be run unattended against prod. Apply before merging/deploying the
+-- app change; the previously deployed app tolerates the additive schema.
 --
 -- Fresh installs that already applied an updated supabase/schema.sql are a
 -- no-op on the ADD COLUMN / CREATE TABLE IF NOT EXISTS statements.
