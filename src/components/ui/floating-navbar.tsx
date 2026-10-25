@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { Home, ChevronDown, BookOpen, LogOut, Globe, Server, Star, Settings, LayoutDashboard, Rss, Sun, Moon, Laptop, UserCircle } from "lucide-react";
 import { locales, localeNames, localeFlags, type Locale } from "@/i18n/config";
+import { localeCookie } from "@/lib/locale-cookie";
 import { useLocale, useTranslations } from "next-intl";
 import { createBrowserClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
@@ -139,7 +140,7 @@ export const FloatingNav = ({
     // Set cookie and reload to apply new locale. The reload is the point: the
     // server re-resolves the locale from the cookie and re-renders with the new
     // messages, so there is no local copy of the choice to keep in step.
-    document.cookie = `NEXT_LOCALE=${newLocale};path=/;max-age=31536000`;
+    document.cookie = localeCookie(newLocale, window.location.protocol === "https:");
     window.location.reload();
   };
 
