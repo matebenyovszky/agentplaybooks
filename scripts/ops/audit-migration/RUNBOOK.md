@@ -204,6 +204,11 @@ Keep the file off the app servers (operator laptop or the backup bucket).
 
 ## 4. GO / NO-GO before applying the migration
 
+The postflight joins the computed reachable chain once to the audit table. A
+correlated scan of the recursive result for every row becomes quadratic on a
+large production chain. The recursive `UNION` also stops revisiting a corrupt
+cycle; hash recomputation and unreachable-row checks remain mandatory.
+
 All of the following must be true. **Any miss is NO-GO — do not migrate.**
 
 | Check | Pass |

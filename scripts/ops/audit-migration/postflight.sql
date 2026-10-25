@@ -96,7 +96,7 @@ walk AS (
   SELECT l.id, l.playbook_id, l.hash
   FROM public.audit_logs l
   JOIN anchors a ON a.playbook_id = l.playbook_id AND l.prev_hash = a.start_hash
-  UNION ALL
+  UNION
   SELECT c.id, c.playbook_id, c.hash
   FROM public.audit_logs c
   JOIN walk w ON c.playbook_id = w.playbook_id AND c.prev_hash = w.hash
@@ -123,9 +123,10 @@ SELECT
   (
     l.hash IS NULL
     OR l.prev_hash IS NULL
-    OR NOT EXISTS (SELECT 1 FROM walk w WHERE w.id = l.id)
+    OR w.id IS NULL
   ) AS chain_mismatch
-FROM public.audit_logs l;
+FROM public.audit_logs l
+LEFT JOIN walk w ON w.id = l.id;
 
 SELECT
   count(*) FILTER (WHERE hash_mismatch) AS hash_mismatches,
