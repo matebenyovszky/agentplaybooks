@@ -4,7 +4,7 @@
 
 **Audience:** the customer's information-security officer (IBF), risk, legal, and operations teams. Written for a Hungarian public-sector supplier assessment and EIR security classification.
 
-**Verified against source:** 2026-10-25, on the `main` branch as of that date (includes merged [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200), [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201), [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202), [#203](https://github.com/matebenyovszky/agentplaybooks/pull/203), [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204), [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205), [#207](https://github.com/matebenyovszky/agentplaybooks/pull/207), [#216](https://github.com/matebenyovszky/agentplaybooks/pull/216)). Parallel open PRs that are not on `main` yet are marked **Folyamatban / In progress** on the gap list.
+**Verified against source:** 2026-10-25, on the `main` branch as of that date (includes merged [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200), [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201), [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202), [#203](https://github.com/matebenyovszky/agentplaybooks/pull/203), [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204), [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205), [#207](https://github.com/matebenyovszky/agentplaybooks/pull/207), [#216](https://github.com/matebenyovszky/agentplaybooks/pull/216), [#220](https://github.com/matebenyovszky/agentplaybooks/pull/220)). Parallel open PRs that are not on `main` yet are marked **Folyamatban / In progress** on the gap list; none is open at this date.
 
 > **jogi ellenőrzés szükséges.** This pack is not legal advice, not a certification, and not a substitute for the customer's own risk analysis or control selection under 7/2024. (VI. 24.) MK rendelet. Every note on scope, classification, responsibility split, or legal interpretation must be approved by the customer's counsel and IBF before production use.
 
@@ -62,14 +62,17 @@ These gaps closed on `main`. Whitepaper rows keep the merged PR links.
 | 8 on-prem backup / restore runbook + empty-machine drill | [#203](https://github.com/matebenyovszky/agentplaybooks/pull/203) |
 | 7 `SECURITY.md` / incident runbook; 9 CodeQL, CycloneDX SBOM, cosign of SBOM blobs | [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205) |
 | 7 GitHub private vulnerability reporting as the only contact (no security email; best-effort review) | [#207](https://github.com/matebenyovszky/agentplaybooks/pull/207) |
+| 4 auditor role (collaborator and `auditor` API key); 6 per-playbook SHA-256 hash chain, export (json/jsonl/csv), `/audit/verify`, syslog / SIEM-webhook forwarding, retention purge | [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202) |
+| 6 the audit trail survives deleting a playbook / MCP server / account; DELETE only from the retention purge, TRUNCATE refused, checkpoints immutable | [#216](https://github.com/matebenyovszky/agentplaybooks/pull/216) |
+| 6 configuration changes recorded by DB triggers (playbook, skill, MCP server, API key, collaborator), with the caller attributed | [#216](https://github.com/matebenyovszky/agentplaybooks/pull/216) |
+| 16 SSRF: one shared destination check (`use_secret`, secrets proxy, federation) with DNS resolution; federation does not follow redirects | [#216](https://github.com/matebenyovszky/agentplaybooks/pull/216) |
+| 25 Secret routing: an API key cannot enable reveal or widen `allowed_hosts`; writing an MCP config that references secrets needs the owner or `secrets:read` | [#216](https://github.com/matebenyovszky/agentplaybooks/pull/216) |
+| 25 Private-instance switch (`agentplaybooks.private_instance`; on the official self-hosted Supabase image run it as `supabase_admin`, then restart PostgREST); compose defaults to `SECRETS_REQUIRE_ALLOWED_HOSTS=true` | [#216](https://github.com/matebenyovszky/agentplaybooks/pull/216) |
+| 20 CORS: a self-hosted `NEXT_PUBLIC_APP_URL` no longer trusts the hosted origins | [#220](https://github.com/matebenyovszky/agentplaybooks/pull/220) |
 
 ## Parallel PRs (not on `main`)
 
-Code claims follow `main`. These gaps are still open; after they merge, flip the whitepaper gap rows.
-
-| Gap | Folyamatban / In progress |
-|-----|---------------------------|
-| 4 auditor role; 6 audit export / syslog / SIEM / retention / hash chain | [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202) |
+Code claims follow `main`. Open PRs would be listed here as **Folyamatban / In progress** and flipped to the table above after merge. None is open at 2026-10-25.
 
 ## What this pack does not claim
 
