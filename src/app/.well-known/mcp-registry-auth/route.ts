@@ -2,7 +2,7 @@
 // public half of the local Ed25519 key. It is intentionally public.
 // @worker-native
 const MCP_REGISTRY_AUTH_PROOF =
-  "v=MCPv1; k=ed25519; p=VOnxyYKlEMg9AMyyVk2OY/SQrNhPoY5Z5xsW5LW1WbU=";
+  "v=MCPv1; k=ed25519; p=bIW8P6AQkteqFRcZS9bo7ZRsFpXSRVe2CbbTyk0AiiM=";
 
 export function GET() {
   return new Response(MCP_REGISTRY_AUTH_PROOF, {
