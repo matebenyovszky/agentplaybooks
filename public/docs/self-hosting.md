@@ -316,14 +316,24 @@ Monitor database usage, auth events, and API calls.
 
 ## Backup
 
-### Database
+On-prem backup of the database (including vault tables), object storage, and
+config — with the encryption master key stored separately — is documented in
+[On-prem backup and restore](./backup-restore.md). That runbook covers
+scheduling, archive encryption, retention, offsite copy, RPO/RTO, the empty-machine
+restore procedure, and the automated restore drill (`scripts/self-host/backup.sh`,
+`restore.sh`, `restore-drill.sh`).
+
+Hosted Supabase projects can still use the dashboard or CLI as a complement:
 
 ```bash
-# Using Supabase CLI
+# Using Supabase CLI (hosted project)
 supabase db dump > backup.sql
 
 # Or use Supabase Dashboard > Database > Backups
 ```
+
+A `supabase db dump` of SQL is not a substitute for the encrypted, offsite
+archive in the runbook, and it does not include `SECRETS_ENCRYPTION_KEY`.
 
 ## Troubleshooting
 
@@ -353,6 +363,9 @@ supabase db dump > backup.sql
 - [ ] RLS is enabled on all tables
 - [ ] Auth providers configured with correct redirect URLs
 - [ ] Custom domain uses HTTPS
+- [ ] Encrypted database and storage backups run on a schedule, with an offsite copy
+- [ ] `SECRETS_ENCRYPTION_KEY` is stored separately from the backup archive
+- [ ] Empty-machine restore drill has been run and RTO recorded
 - [ ] Vulnerability reports follow [SECURITY.md](https://github.com/matebenyovszky/agentplaybooks/blob/main/SECURITY.md); incident filing uses the [incident runbook](https://github.com/matebenyovszky/agentplaybooks/blob/main/docs/security/incident-runbook.md) (the operator is the reporting entity)
 - [ ] Release SBOMs are verified with [`cosign verify-blob`](https://github.com/matebenyovszky/agentplaybooks/blob/main/docs/security/supply-chain.md) before production deploy
 
