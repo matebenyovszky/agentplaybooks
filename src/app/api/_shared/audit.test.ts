@@ -5,6 +5,9 @@ import {
   flushSecretAudit,
   recordSecretAudit,
   auditActor,
+  redactAuditSecrets,
+  sanitizeAuditInsert,
+  sanitizeAuditTarget,
 } from "./audit";
 import { getServiceSupabase } from "./supabase";
 
@@ -39,6 +42,35 @@ describe("auditActor", () => {
 
   it("falls back to anonymous when neither credential was accepted", () => {
     expect(auditActor(null, null)).toEqual({ type: "anonymous", id: null });
+  });
+});
+
+describe("sanitizeAuditInsert", () => {
+  const RAW_KEY = "apb_live_LEAKCHECKRAWAPIKEY0000000000000000";
+
+  it("replaces a full API key used as actor_id with the display prefix", () => {
+    const row = sanitizeAuditInsert({
+      playbook_id: "pb",
+      operation: "secret.use",
+      status: "success",
+      actor_id: RAW_KEY,
+    });
+    expect(row.actor_id).toBe("apb_live_LEA...");
+    expect(row.actor_id).not.toContain(RAW_KEY);
+  });
+
+  it("keeps the stored key prefix and user ids", () => {
+    expect(sanitizeAuditInsert({
+      playbook_id: "pb", operation: "secret.reveal", status: "success", actor_id: "apb_live_abc",
+    }).actor_id).toBe("apb_live_abc");
+    expect(sanitizeAuditInsert({
+      playbook_id: "pb", operation: "secret.reveal", status: "success", actor_id: "user-1",
+    }).actor_id).toBe("user-1");
+  });
+
+  it("drops URL userinfo, query and path from http(s) targets", () => {
+    expect(sanitizeAuditTarget("https://user:s3cret@api.example.com/v1?token=abc")).toBe("api.example.com");
+    expect(redactAuditSecrets(`Bearer ${RAW_KEY}`)).toBe("Bearer [redacted]");
   });
 });
 

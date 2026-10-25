@@ -23,9 +23,55 @@
 import { getServiceSupabase } from "./supabase";
 import type { FederationAuditEvent } from "@/lib/mcp/federation";
 import type { AuditActorType, AuditLogRow, SecretAuditOperation } from "@/lib/supabase/types";
+import { getKeyPrefix } from "@/lib/utils";
 import { scheduleAuditForward } from "./audit-forward";
 
 type AuditLogInsert = Partial<AuditLogRow> & Pick<AuditLogRow, "playbook_id" | "operation" | "status">;
+
+/** Full issued playbook/user API keys (`apb_live_` / `apb_test_` + 16+ secret chars). Prefixes end in `...`. */
+const FULL_APB_KEY = /\bapb_(?:live|test)_[A-Za-z0-9]{16,}\b/g;
+const FULL_APB_KEY_EXACT = /^apb_(?:live|test)_[A-Za-z0-9]{16,}$/;
+
+export function redactAuditSecrets(value: string): string {
+  return value
+    .replace(/Bearer\s+\S+/gi, "Bearer [redacted]")
+    .replace(FULL_APB_KEY, (match) => getKeyPrefix(match));
+}
+
+/** Host only for http(s); other URLs drop userinfo, query, and fragment. */
+export function sanitizeAuditTarget(target: string | null | undefined): string | null {
+  if (target == null || target === "") return target ?? null;
+  try {
+    const url = new URL(target);
+    if (url.protocol === "http:" || url.protocol === "https:") {
+      return url.hostname.toLowerCase() || null;
+    }
+    url.username = "";
+    url.password = "";
+    url.search = "";
+    url.hash = "";
+    return redactAuditSecrets(url.toString());
+  } catch {
+    return redactAuditSecrets(target);
+  }
+}
+
+export function sanitizeAuditInsert<T extends AuditLogInsert>(row: T): T {
+  const actor = row.actor_id;
+  return {
+    ...row,
+    actor_id:
+      actor == null
+        ? actor
+        : FULL_APB_KEY_EXACT.test(actor)
+          ? getKeyPrefix(actor)
+          : redactAuditSecrets(actor),
+    target: sanitizeAuditTarget(row.target),
+    error_code: row.error_code == null ? row.error_code : redactAuditSecrets(row.error_code),
+    secret_name: row.secret_name == null ? row.secret_name : redactAuditSecrets(row.secret_name),
+    request_id: row.request_id == null ? row.request_id : redactAuditSecrets(row.request_id),
+  };
+}
 
 export type AuditActor = {
   type: AuditActorType;
@@ -102,16 +148,17 @@ export function destinationHostOf(url: string | null | undefined): string | null
  * copy of the insert.
  */
 async function insertAuditLog(row: AuditLogInsert): Promise<void> {
+  const safe = sanitizeAuditInsert(row);
   const { data, error } = await getServiceSupabase()
     .from("audit_logs")
-    .insert(row)
+    .insert(safe)
     .select()
     .single();
   if (error) {
     console.error("Failed to write audit log", error.message);
     return;
   }
-  scheduleAuditForward(data ?? row);
+  scheduleAuditForward(data ?? safe);
 }
 
 export function federationAuditWriter(playbookId: string, requestId?: string | null) {
