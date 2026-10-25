@@ -2,8 +2,9 @@
 -- 1. Same row count + original-column checksum as preflight (must match).
 -- 2. Recompute every row hash from stored prev_hash + canonical fields using
 --    public.audit_log_canonical + extensions.digest, exactly as the migration
---    and src/lib/audit-chain.ts do. Report mismatch_count and first_broken_id
---    (chain order: created_at, id). Expect mismatch_count = 0.
+--    and src/lib/audit-chain.ts do. Report mismatch_count and first_broken_id.
+--    Chain membership follows prev_hash pointers from genesis/checkpoint, not
+--    created_at,id (those tie when now() is transaction-stable). Expect 0.
 --
 -- Production target: heap project zcphxfospbvqplonkvco. Retired project
 -- bydcjwxfiiolmnddzbpy is forbidden. Run check-project.sh on PROD_DB_URL first.
@@ -76,49 +77,55 @@ $$;
 
 DROP TABLE IF EXISTS audit_postflight_chain;
 CREATE TEMP TABLE audit_postflight_chain AS
-WITH ordered AS (
+WITH RECURSIVE anchors AS (
   SELECT
-    id,
-    playbook_id,
-    created_at,
-    prev_hash,
-    hash,
-    public.audit_log_canonical(
-      id, playbook_id, mcp_server_id, operation, target, status,
-      latency_ms, error_code, actor_type, actor_id, secret_name,
-      request_id, created_at, prev_hash
-    ) AS canonical,
-    lag(hash) OVER (
-      PARTITION BY playbook_id
-      ORDER BY created_at ASC, id ASC
-    ) AS prev_row_hash
-  FROM public.audit_logs
-),
-checked AS (
-  SELECT
-    ordered.*,
-    encode(
-      extensions.digest(convert_to(ordered.canonical, 'UTF8'), 'sha256'),
-      'hex'
-    ) AS computed_hash,
+    p.playbook_id,
     coalesce(
       (
         SELECT c.anchor_hash
         FROM public.audit_chain_checkpoints c
-        WHERE c.playbook_id = ordered.playbook_id
+        WHERE c.playbook_id = p.playbook_id
         ORDER BY c.created_at DESC, c.id DESC
         LIMIT 1
       ),
       repeat('0', 64)
     ) AS start_hash
-  FROM ordered
+  FROM (SELECT DISTINCT playbook_id FROM public.audit_logs) p
+),
+walk AS (
+  SELECT l.id, l.playbook_id, l.hash
+  FROM public.audit_logs l
+  JOIN anchors a ON a.playbook_id = l.playbook_id AND l.prev_hash = a.start_hash
+  UNION ALL
+  SELECT c.id, c.playbook_id, c.hash
+  FROM public.audit_logs c
+  JOIN walk w ON c.playbook_id = w.playbook_id AND c.prev_hash = w.hash
 )
 SELECT
-  id,
-  created_at,
-  (hash IS DISTINCT FROM computed_hash) AS hash_mismatch,
-  (prev_hash IS DISTINCT FROM coalesce(prev_row_hash, start_hash)) AS chain_mismatch
-FROM checked;
+  l.id,
+  l.created_at,
+  (
+    l.hash IS DISTINCT FROM encode(
+      extensions.digest(
+        convert_to(
+          public.audit_log_canonical(
+            l.id, l.playbook_id, l.mcp_server_id, l.operation, l.target, l.status,
+            l.latency_ms, l.error_code, l.actor_type, l.actor_id, l.secret_name,
+            l.request_id, l.created_at, l.prev_hash
+          ),
+          'UTF8'
+        ),
+        'sha256'
+      ),
+      'hex'
+    )
+  ) AS hash_mismatch,
+  (
+    l.hash IS NULL
+    OR l.prev_hash IS NULL
+    OR NOT EXISTS (SELECT 1 FROM walk w WHERE w.id = l.id)
+  ) AS chain_mismatch
+FROM public.audit_logs l;
 
 SELECT
   count(*) FILTER (WHERE hash_mismatch) AS hash_mismatches,

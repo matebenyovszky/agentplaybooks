@@ -192,6 +192,36 @@ export function verifyAuditChain(
   };
 }
 
+/**
+ * Follow `prev_hash` pointers from genesis/checkpoint. `created_at, id` is not
+ * insertion order when several rows share a transaction `now()`.
+ */
+export function orderByChainLinks<T extends AuditChainEntry>(
+  entries: T[],
+  startHash = GENESIS_HASH,
+): T[] {
+  const byPrev = new Map<string, T>();
+  for (const entry of entries) {
+    const key = entry.prev_hash ?? startHash;
+    if (!byPrev.has(key)) byPrev.set(key, entry);
+  }
+  const ordered: T[] = [];
+  const seen = new Set<string>();
+  let key = startHash || GENESIS_HASH;
+  while (byPrev.has(key)) {
+    const entry = byPrev.get(key)!;
+    if (seen.has(entry.id)) break;
+    ordered.push(entry);
+    seen.add(entry.id);
+    key = entry.hash ?? "";
+    if (!key) break;
+  }
+  for (const entry of entries) {
+    if (!seen.has(entry.id)) ordered.push(entry);
+  }
+  return ordered;
+}
+
 export const AUDIT_CSV_COLUMNS = [
   "id",
   "playbook_id",

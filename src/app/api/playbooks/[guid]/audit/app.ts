@@ -18,6 +18,7 @@ import { playbookIdentifierColumn } from "@/lib/playbook-identifier";
 import {
   GENESIS_HASH,
   formatAuditExport,
+  orderByChainLinks,
   parseAuditExportFormat,
   verifyAuditChain,
   type AuditChainEntry,
@@ -200,7 +201,7 @@ async function verifyAuditLogs(c: Context) {
   if (error) return c.json({ error }, 500);
 
   const startHash = checkpoint?.anchor_hash || GENESIS_HASH;
-  const report = verifyAuditChain(logs, startHash);
+  const report = verifyAuditChain(orderByChainLinks(logs, startHash), startHash);
   return c.json({
     ...report,
     playbook_id: auth.playbook.id,

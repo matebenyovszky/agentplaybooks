@@ -8,6 +8,7 @@ import {
   formatAuditJsonl,
   hashAuditEntry,
   parseAuditExportFormat,
+  orderByChainLinks,
   verifyAuditChain,
 } from "./audit-chain";
 import { auditRetentionDays, roleMayPerform, roleMayReadAudit, roleMayReadSecrets, roleMayWrite } from "./audit-access";
@@ -66,6 +67,17 @@ describe("hash chain build and verify", () => {
     expect(chained[0].hash).toBe(hashAuditEntry(chained[0], GENESIS_HASH));
     expect(verifyAuditChain(chained).ok).toBe(true);
     expect(verifyAuditChain(chained).checked).toBe(2);
+  });
+
+  it("orders by prev_hash links when created_at ties would shuffle UUID ids", () => {
+    const chained = buildAuditChain([
+      { ...base, id: "f0000000-0000-4000-8000-000000000002", created_at: "2026-08-19T09:12:44.000Z" },
+      { ...base, id: "f0000000-0000-4000-8000-000000000001", created_at: "2026-08-19T09:12:44.000Z", operation: "secret.reveal" },
+    ]);
+    const shuffled = [chained[1], chained[0]];
+    expect(orderByChainLinks(shuffled).map((row) => row.id)).toEqual([chained[0].id, chained[1].id]);
+    expect(verifyAuditChain(orderByChainLinks(shuffled)).ok).toBe(true);
+    expect(verifyAuditChain(shuffled).ok).toBe(false);
   });
 
   it("reports the first broken prev_hash link", () => {

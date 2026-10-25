@@ -10,33 +10,49 @@ import { execFileSync } from "node:child_process";
 const CHAIN_SQL = `
 SELECT count(*)::text
 FROM (
-  WITH ordered AS (
+  WITH RECURSIVE anchors AS (
     SELECT
-      id,
-      playbook_id,
-      created_at,
-      prev_hash,
-      hash,
-      public.audit_log_canonical(
-        id, playbook_id, mcp_server_id, operation, target, status,
-        latency_ms, error_code, actor_type, actor_id, secret_name,
-        request_id, created_at, prev_hash
-      ) AS canonical,
-      lag(hash) OVER (
-        PARTITION BY playbook_id
-        ORDER BY created_at ASC, id ASC
-      ) AS prev_row_hash
-    FROM public.audit_logs
+      p.playbook_id,
+      coalesce(
+        (
+          SELECT c.anchor_hash
+          FROM public.audit_chain_checkpoints c
+          WHERE c.playbook_id = p.playbook_id
+          ORDER BY c.created_at DESC, c.id DESC
+          LIMIT 1
+        ),
+        repeat('0', 64)
+      ) AS start_hash
+    FROM (SELECT DISTINCT playbook_id FROM public.audit_logs) p
+  ),
+  walk AS (
+    SELECT l.id, l.playbook_id, l.hash
+    FROM public.audit_logs l
+    JOIN anchors a ON a.playbook_id = l.playbook_id AND l.prev_hash = a.start_hash
+    UNION ALL
+    SELECT c.id, c.playbook_id, c.hash
+    FROM public.audit_logs c
+    JOIN walk w ON c.playbook_id = w.playbook_id AND c.prev_hash = w.hash
   )
   SELECT 1
-  FROM ordered
-  WHERE hash IS DISTINCT FROM encode(
-          extensions.digest(convert_to(canonical, 'UTF8'), 'sha256'),
+  FROM public.audit_logs l
+  WHERE l.hash IS NULL
+     OR l.prev_hash IS NULL
+     OR NOT EXISTS (SELECT 1 FROM walk w WHERE w.id = l.id)
+     OR l.hash IS DISTINCT FROM encode(
+          extensions.digest(
+            convert_to(
+              public.audit_log_canonical(
+                l.id, l.playbook_id, l.mcp_server_id, l.operation, l.target, l.status,
+                l.latency_ms, l.error_code, l.actor_type, l.actor_id, l.secret_name,
+                l.request_id, l.created_at, l.prev_hash
+              ),
+              'UTF8'
+            ),
+            'sha256'
+          ),
           'hex'
         )
-     OR prev_hash IS DISTINCT FROM coalesce(prev_row_hash, repeat('0', 64))
-     OR hash IS NULL
-     OR prev_hash IS NULL
 ) broken;
 `;
 

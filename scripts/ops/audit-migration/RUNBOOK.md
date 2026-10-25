@@ -36,17 +36,26 @@ normal forward file. Changing the timestamp would either hide it from
 
 ## 0. Prerequisites
 
-From the **repo root on this branch** (`cursor/audit-logs-compliance-adfd`):
+From the **repo root**, check out **one git SHA** and use only the files at
+that SHA. Do not mix with another checkout. Older pins **`4b1f34f`**,
+**`d54be78`**, and **`c20b1da`** are stale: they do not contain the chain-tip
+trigger in `20261024120000_audit_logs_compliance.sql`.
 
 ```bash
 cd "$(git rev-parse --show-toplevel)"
 git fetch origin
-git checkout cursor/audit-logs-compliance-adfd
-git pull origin cursor/audit-logs-compliance-adfd
+# SHA from the pinned blob URL on PR #202 (not 4b1f34f, d54be78, or c20b1da)
+PINNED_SHA=   # paste
+git checkout --detach "$PINNED_SHA"
+test "$(git rev-parse HEAD)" = "$PINNED_SHA"
 ls scripts/ops/audit-migration/preflight.sql \
    scripts/ops/audit-migration/check-project.sh \
    supabase/migrations/20261024120000_audit_logs_compliance.sql
 ```
+
+Copy `PINNED_SHA` onto the record sheet. The runbook at that commit is:
+
+`https://github.com/matebenyovszky/agentplaybooks/blob/<PINNED_SHA>/scripts/ops/audit-migration/RUNBOOK.md`
 
 **psql / pg_dump** major version must be **≥ the server's Postgres major**.
 Optional: Supabase CLI (`supabase --version`) — not required; this runbook uses
@@ -273,8 +282,12 @@ broken.
 The chain check recomputes `encode(extensions.digest(convert_to(
 audit_log_canonical(...), 'UTF8'), 'sha256'), 'hex')` from stored `prev_hash`
 plus the canonical fields, matching the migration and `src/lib/audit-chain.ts`.
-It also checks that each row's `prev_hash` equals the previous row's `hash`
-(or genesis / latest checkpoint).
+It walks **`prev_hash` pointers** from genesis / latest checkpoint (not
+`ORDER BY created_at, id`). Several inserts in one transaction share `now()`,
+and UUID `id` is not insertion order; timestamp order would report false
+breaks. Backfill of existing rows still uses `created_at, id` (those rows
+already have distinct timestamps). Rollback is unchanged: it restores original
+columns from the backup table and drops hash objects.
 
 ---
 
@@ -369,26 +382,29 @@ back again:
 ## 9. Duration
 
 Local rehearsal (PostgreSQL 16 on this VM, fixture in
-`fixture-pre-migration.sql`):
+`fixture-pre-migration.sql`), including three sequential INSERTs in one
+transaction after migrate (postflight still 0 mismatches; rollback discards
+them):
 
 | Step | N = 1,000 |
 | --- | ---: |
-| Preflight | 0.033 s |
-| In-DB backup table | 0.039 s |
-| `pg_dump` | 0.069 s |
-| Apply migration (backfill) | 0.072 s |
-| Postflight | 0.065 s |
-| Rollback | 0.051 s |
-| **Total (no operator think-time)** | **0.329 s** |
+| Preflight | 0.035 s |
+| In-DB backup table | 0.037 s |
+| `pg_dump` | 0.065 s |
+| Apply migration (backfill) | 0.079 s |
+| Postflight | 0.110 s |
+| Rollback | 0.055 s |
+| **Total (no operator think-time)** | **0.381 s** |
 
 The backfill is one server-side `DO` loop (not one round-trip per row).
+Postflight walks `prev_hash` pointers (recursive CTE), not `created_at, id`.
 
 **Formula** (local), with `N` = `count(*)` from `audit_logs`:
 
 ```
-T_migrate  ≈ 0.05s + 0.028s × (N / 1000)
-T_post     ≈ 0.04s + 0.019s × (N / 1000)
-T_total    ≈ 0.20s + 0.060s × (N / 1000)
+T_migrate  ≈ 0.05s + 0.029s × (N / 1000)
+T_post     ≈ 0.04s + 0.070s × (N / 1000)
+T_total    ≈ 0.22s + 0.160s × (N / 1000)
 ```
 
 Hosted I/O / WAL: multiply by **3–5×**, then add a couple of minutes of
@@ -396,10 +412,10 @@ operator copy-paste.
 
 | N | Local total | Prod estimate |
 | ---: | ---: | --- |
-| 1,000 | 0.3 s | ~1 min elapsed (operator) |
-| 10,000 | 0.9 s | ~1–2 min |
-| 100,000 | ~6 s | ~2–5 min |
-| 1,000,000 | ~1 min | ~5–10 min |
+| 1,000 | 0.4 s | ~1 min elapsed (operator) |
+| 10,000 | ~2 s | ~1–2 min |
+| 100,000 | ~16 s | ~2–5 min |
+| 1,000,000 | ~3 min | ~8–15 min |
 
 Writes to `audit_logs` during the window should be paused or are negligible
 at night.
@@ -414,7 +430,7 @@ Fill this in as you go. Do not paste `PROD_DB_URL`.
 | --- | --- |
 | Operator | |
 | Date (UTC) | |
-| Git SHA of this branch | |
+| Git SHA of this runbook (must match `git rev-parse HEAD`) | |
 | Production project | `zcphxfospbvqplonkvco` (heap) |
 | `check-project.sh` | GO / NO-GO |
 | Connection kind (direct / session pooler) | |
@@ -519,7 +535,10 @@ That runs:
   (`mismatch_count = 0`, counts/checksums equal)
 - record `schema_migrations` version `20261024120000`
 - re-apply the migration SQL (idempotent; backfill skips hashed rows)
-- rollback (unrecords the version) → preflight matching the original checksum
+- three sequential INSERTs in one transaction (shared `now()`); postflight
+  still `mismatch_count = 0`
+- rollback (unrecords the version; extra rows discarded with the restore)
+  → preflight matching the original checksum
 - second rollback (idempotent)
 
 Expected: `PASS: local rehearsal complete` with

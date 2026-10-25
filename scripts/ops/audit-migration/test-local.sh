@@ -176,6 +176,30 @@ psql -d "$DB" -v ON_ERROR_STOP=1 -f "$DIR/record-version.sql" >/dev/null
 echo "PASS: re-apply left count=$IDEM_COUNT checksum_original=$IDEM_CHECKSUM mismatches=0; record-version idempotent"
 
 echo
+echo "=== 7b. sequential inserts in one transaction (shared now()) ==="
+# now() is transaction-stable; UUID id is not insertion order. The trigger
+# must append to the unreferenced tip so these rows chain. A single multi-row
+# INSERT still collides (BEFORE INSERT cannot see sibling rows).
+psql -d "$DB" -v ON_ERROR_STOP=1 <<'SQL'
+BEGIN;
+INSERT INTO public.audit_logs (playbook_id, operation, status)
+VALUES ('00000000-0000-4000-8000-000000000001', 'secret.create', 'success');
+INSERT INTO public.audit_logs (playbook_id, operation, status)
+VALUES ('00000000-0000-4000-8000-000000000001', 'secret.use', 'success');
+INSERT INTO public.audit_logs (playbook_id, operation, status)
+VALUES ('00000000-0000-4000-8000-000000000001', 'secret.reveal', 'denied');
+COMMIT;
+SQL
+psql -d "$DB" -v ON_ERROR_STOP=1 -f "$DIR/postflight.sql"
+SAME_TXN_COUNT="$(psql -d "$DB" -A -t -v ON_ERROR_STOP=1 -c 'SELECT count(*) FROM public.audit_logs;' | tr -d '[:space:]')"
+if [[ "$SAME_TXN_COUNT" != "$((ORIG_COUNT + 3))" ]]; then
+  echo "FAIL: expected $((ORIG_COUNT + 3)) rows after same-txn inserts, got $SAME_TXN_COUNT"
+  exit 1
+fi
+echo "PASS: same-txn inserts chained; postflight mismatches=0; count=$SAME_TXN_COUNT"
+echo "(rollback restores the backup table, so the extra rows do not affect checksums)"
+
+echo
 echo "=== 8. rollback ==="
 t=$(date +%s.%N)
 psql -d "$DB" -v ON_ERROR_STOP=1 -f "$DIR/rollback.sql"

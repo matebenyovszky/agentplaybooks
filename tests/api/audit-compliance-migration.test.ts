@@ -162,12 +162,21 @@ describe("audit compliance migration", () => {
     );
     await db.exec("COMMIT");
     const rows = await db.query<{ operation: string; prev_hash: string; hash: string }>(
-      `SELECT operation, prev_hash, hash FROM audit_logs WHERE playbook_id = '${pb}' ORDER BY created_at, id`,
+      `SELECT operation, prev_hash, hash FROM audit_logs WHERE playbook_id = '${pb}'`,
     );
     expect(rows.rows).toHaveLength(3);
-    expect(rows.rows[0].prev_hash).toBe(GENESIS_HASH);
-    expect(rows.rows[1].prev_hash).toBe(rows.rows[0].hash);
-    expect(rows.rows[2].prev_hash).toBe(rows.rows[1].hash);
+    const byPrev = new Map(rows.rows.map((row) => [row.prev_hash, row]));
+    const first = byPrev.get(GENESIS_HASH);
+    expect(first).toBeDefined();
+    const second = byPrev.get(first!.hash);
+    const third = byPrev.get(second!.hash);
+    expect(second).toBeDefined();
+    expect(third).toBeDefined();
     expect(new Set(rows.rows.map((row) => row.hash)).size).toBe(3);
+    expect([first!.operation, second!.operation, third!.operation]).toEqual([
+      "secret.create",
+      "secret.use",
+      "secret.reveal",
+    ]);
   });
 });

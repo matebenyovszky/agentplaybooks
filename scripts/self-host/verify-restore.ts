@@ -84,29 +84,39 @@ async function main() {
   }
 
   const chainMismatches = Number(psql(`
-    WITH ordered AS (
-      SELECT
-        prev_hash,
-        hash,
-        public.audit_log_canonical(
-          id, playbook_id, mcp_server_id, operation, target, status,
-          latency_ms, error_code, actor_type, actor_id, secret_name,
-          request_id, created_at, prev_hash
-        ) AS canonical,
-        lag(hash) OVER (
-          PARTITION BY playbook_id
-          ORDER BY created_at ASC, id ASC
-        ) AS prev_row_hash
+    WITH RECURSIVE walk AS (
+      SELECT id, hash
       FROM public.audit_logs
       WHERE playbook_id = '${PLAYBOOK_ID}'
+        AND prev_hash = repeat('0', 64)
+      UNION ALL
+      SELECT c.id, c.hash
+      FROM public.audit_logs c
+      JOIN walk w ON c.prev_hash = w.hash
+      WHERE c.playbook_id = '${PLAYBOOK_ID}'
     )
     SELECT count(*)::text
-    FROM ordered
-    WHERE hash IS DISTINCT FROM encode(
-            extensions.digest(convert_to(canonical, 'UTF8'), 'sha256'),
-            'hex'
-          )
-       OR prev_hash IS DISTINCT FROM coalesce(prev_row_hash, repeat('0', 64))
+    FROM public.audit_logs l
+    WHERE l.playbook_id = '${PLAYBOOK_ID}'
+      AND (
+        l.hash IS NULL
+        OR l.prev_hash IS NULL
+        OR NOT EXISTS (SELECT 1 FROM walk w WHERE w.id = l.id)
+        OR l.hash IS DISTINCT FROM encode(
+              extensions.digest(
+                convert_to(
+                  public.audit_log_canonical(
+                    l.id, l.playbook_id, l.mcp_server_id, l.operation, l.target, l.status,
+                    l.latency_ms, l.error_code, l.actor_type, l.actor_id, l.secret_name,
+                    l.request_id, l.created_at, l.prev_hash
+                  ),
+                  'UTF8'
+                ),
+                'sha256'
+              ),
+              'hex'
+            )
+      )
   `));
   if (chainMismatches !== 0) {
     throw new Error(`audit hash-chain mismatches=${chainMismatches}`);
