@@ -1,3 +1,6 @@
+import { runWithAuditRequest } from "@/lib/audit-context";
+import { publicTransportConfig } from "@/lib/mcp/public-transport-config";
+import { configReferencesSecrets, SECRET_ROUTING_DENIED, userMayRouteSecrets } from "@/app/api/_shared/federation-secrets";
 import { Hono } from "hono";
 import type { Context } from "hono";
 import { handle } from "hono/vercel";
@@ -96,6 +99,10 @@ type MCPServerWithPlaybook = MCPServer & {
 type StarredPlaybookRow = { playbooks?: Playbook | null };
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>().basePath("/api");
+
+// Database writes made while handling this request are attributed to the
+// caller the handler authenticates (see src/lib/audit-context.ts).
+app.use("*", (c, next) => runWithAuditRequest(c.req.raw, next));
 
 // CORS middleware. Same allow-list as the other API apps, so a self-hosted
 // instance's ALLOWED_ORIGINS also governs this catch-all route.
@@ -1591,6 +1598,9 @@ app.post("/manage/playbooks/:id/mcp-servers", async (c) => {
   if (transport_config !== undefined && (typeof transport_config !== "object" || transport_config === null || Array.isArray(transport_config))) {
     return c.json({ error: "Transport configuration must be an object" }, 400);
   }
+  if (configReferencesSecrets(transport_config) && !(await userMayRouteSecrets(c.req.raw, user.id, playbookId))) {
+    return c.json({ error: SECRET_ROUTING_DENIED }, 403);
+  }
 
   const insertData = {
     playbook_id: playbookId,
@@ -1636,6 +1646,9 @@ app.put("/manage/playbooks/:id/mcp-servers/:mid", async (c) => {
   }
   if (body.transport_config !== undefined && (typeof body.transport_config !== "object" || body.transport_config === null || Array.isArray(body.transport_config))) {
     return c.json({ error: "Transport configuration must be an object" }, 400);
+  }
+  if (configReferencesSecrets(body.transport_config) && !(await userMayRouteSecrets(c.req.raw, user.id, playbookId))) {
+    return c.json({ error: SECRET_ROUTING_DENIED }, 403);
   }
 
   // Whitelist allowed fields to prevent mass-assignment
@@ -2885,6 +2898,7 @@ app.get("/public/mcp", async (c) => {
     const profile = server.publisher;
     return {
       ...server,
+      transport_config: publicTransportConfig(server.transport_config),
       playbook_guid: server.playbook?.guid,
       playbook_name: server.playbook?.name,
       publisher: profile ? {
@@ -2918,11 +2932,9 @@ app.get("/public/mcp/:id", async (c) => {
   // shared server arrives as a template: it states which credential it needs,
   // and the copier supplies their own.
   //
-  // `headers`, however, is free-form and nothing validates it against literals.
-  // A token typed directly into a header on a *public* playbook would be
-  // published by this endpoint. The editor steers people to vault references
-  // for exactly that reason; if that ever needs enforcing, it belongs here in
-  // the projection, not in a comment.
+  // `headers`, however, is free-form, and a URL can carry `?api_key=...`; both
+  // can hold a literal token. publicTransportConfig withholds header values and
+  // query strings in the response, keeping the names a copier needs.
   //
   // (This used to say credentials "live in `mcp_server_secrets`, which is
   // service-role only". That table was dropped — there is one vault now.)
@@ -2944,6 +2956,7 @@ app.get("/public/mcp/:id", async (c) => {
   const server = data as MCPServerWithPlaybook;
   return c.json({
     ...server,
+    transport_config: publicTransportConfig(server.transport_config),
     playbook_guid: server.playbook?.guid,
     playbook_name: server.playbook?.name,
     playbook: undefined,

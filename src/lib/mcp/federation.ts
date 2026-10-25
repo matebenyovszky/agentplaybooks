@@ -1,3 +1,4 @@
+import { assertPublicDestination, blockedDestinationReason, UnsafeDestinationError } from "@/lib/outbound-destination";
 import type { McpResource, McpTool, MCPServer } from "@/lib/supabase/types";
 
 export type FederatedTransportConfig = {
@@ -821,10 +822,23 @@ async function timedFetch(
   fetchImpl = globalThis.fetch,
 ) {
   const timeout = Math.min(Math.max(configuredTimeout || DEFAULT_TIMEOUT_MS, 100), MAX_TIMEOUT_MS);
+  // Every request this module makes carries the server's configured headers,
+  // which may hold vault credentials, so each destination is checked here —
+  // not only the configured URL — and redirects are not followed: a 3xx would
+  // otherwise forward those headers to a host nobody checked.
+  await assertPublicUpstream(url);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeout);
   try {
-    const response = await fetchImpl(url, { ...init, signal: controller.signal });
+    const response = await fetchImpl(url, { ...init, redirect: "manual", signal: controller.signal });
+    if (response.status >= 300 && response.status < 400) {
+      void response.body?.cancel().catch(() => {});
+      throw new FederationError(
+        `Upstream redirected (${response.status}); configure the final URL instead`,
+        "UPSTREAM_REDIRECT",
+        502,
+      );
+    }
     const envelope = typeof init.body === "string" ? parseMaybeJson(init.body) : null;
     const rpc = isRecord(envelope) && envelope.jsonrpc === "2.0" ? envelope : null;
     // Notification acknowledgements have no RPC result to read. Release their
@@ -922,35 +936,31 @@ async function parseJsonOrSse<T>(response: Response): Promise<T> {
   return JSON.parse(text) as T;
 }
 
+/** The URL alone: protocol, credentials, internal names and addresses. */
 export function assertSafeRemoteUrl(value: string, allowInsecureHttp = false) {
   const url = new URL(value);
   if (url.protocol !== "https:" && !(allowInsecureHttp && url.protocol === "http:")) {
     throw new FederationError("Only HTTPS upstreams are allowed", "UNSAFE_UPSTREAM", 400);
   }
-  const host = url.hostname.toLowerCase().replace(/^\[|\]$/g, "");
-  if (host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || host.endsWith(".internal") || host === "metadata.google.internal") {
-    throw new FederationError("Private upstream host is not allowed", "UNSAFE_UPSTREAM", 400);
-  }
-  const mappedIpv4 = host.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
-  const mappedIpv4Host = mappedIpv4
-    ? `${parseInt(mappedIpv4[1], 16) >> 8}.${parseInt(mappedIpv4[1], 16) & 255}.${parseInt(mappedIpv4[2], 16) >> 8}.${parseInt(mappedIpv4[2], 16) & 255}`
-    : null;
-  if (
-    isPrivateIpv4Host(host) ||
-    (mappedIpv4Host !== null && isPrivateIpv4Host(mappedIpv4Host)) ||
-    host === "::" || host === "::1" || host === "0000:0000:0000:0000:0000:0000:0000:0001" ||
-    /^(fc|fd|fe[89ab])/.test(host)
-  ) {
-    throw new FederationError("Private upstream address is not allowed", "UNSAFE_UPSTREAM", 400);
-  }
-  if (!/^[a-z0-9.:-]+$/i.test(host)) {
+  const reason = blockedDestinationReason(value, { allowInsecureHttp });
+  if (reason === "invalid_host") {
     throw new FederationError("Invalid upstream host", "UNSAFE_UPSTREAM", 400);
+  }
+  if (reason) {
+    throw new FederationError(`Private upstream address is not allowed (${reason})`, "UNSAFE_UPSTREAM", 400);
   }
 }
 
-function isPrivateIpv4Host(host: string) {
-  return /^(0\.|10\.|127\.|169\.254\.|192\.168\.)/.test(host) ||
-    /^172\.(1[6-9]|2\d|3[01])\./.test(host);
+/** The URL and, in a Node process, every address its name resolves to. */
+async function assertPublicUpstream(value: string) {
+  try {
+    await assertPublicDestination(value);
+  } catch (error) {
+    if (error instanceof UnsafeDestinationError) {
+      throw new FederationError(`Private upstream address is not allowed (${error.reason})`, "UNSAFE_UPSTREAM", 400);
+    }
+    throw error;
+  }
 }
 
 function namespaceTool(server: MCPServer, tool: McpTool, peers: MCPServer[] = []): FederatedTool {
