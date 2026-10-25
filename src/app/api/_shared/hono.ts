@@ -12,14 +12,14 @@ import { cors } from "hono/cors";
  * is unaffected.
  */
 
-const HOSTED_ORIGINS = [
+const HOSTED_ORIGINS: readonly string[] = [
   "https://agentplaybooks.ai",
   "https://www.agentplaybooks.ai",
   "https://apbks.com",
   "https://www.apbks.com",
   "https://apbks.online",
   "https://www.apbks.online",
-] as const;
+];
 
 function originOf(value: string | undefined): string | null {
   if (!value) return null;
