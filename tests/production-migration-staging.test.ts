@@ -54,6 +54,7 @@ it("stages the #216 migrations after the last version already on production", ()
       "20261025124500_audit_logs_tamper_resistance.sql",
       "20261025130000_audit_config_changes.sql",
       "20261025140000_private_instance.sql",
+      "20261025200000_audit_content_writes.sql",
     ]);
     expect(log).toContain("20261025124500_audit_logs_tamper_resistance.sql");
     expect(log).not.toContain("20261025120000_audit_logs_tamper_resistance.sql");

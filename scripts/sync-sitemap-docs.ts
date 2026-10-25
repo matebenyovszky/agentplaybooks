@@ -29,7 +29,7 @@ async function getDocSlugs(): Promise<string[]> {
     .map((entry) => entry.name.replace(/\.md$/i, ""))
     .filter((base) => !LOCALE_SUFFIX.test(base))
     // Slugs are lowercase in URLs, and `normalizeDocSlug` lowercases whatever
-    // arrives, so ROADMAP.md has to be listed as `roadmap`.
+    // arrives, so roadmap.md has to be listed as `roadmap`.
     .map((base) => base.toLowerCase())
     .sort((a, b) => {
       // Sort: readme first, then roadmap last, rest alphabetically

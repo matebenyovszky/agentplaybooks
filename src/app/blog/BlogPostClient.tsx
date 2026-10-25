@@ -29,10 +29,10 @@ function formatPostDate(value: string) {
 
 export default function BlogPostClient({ posts, currentPost }: BlogPostClientProps) {
     return (
-        <div className="min-h-screen bg-background text-foreground">
+        <div className="min-h-screen min-w-0 overflow-x-clip bg-background text-foreground">
             <FloatingNav />
 
-            <main className="pt-24 pb-16 px-6 lg:px-8 max-w-5xl mx-auto">
+            <main className="mx-auto w-full min-w-0 max-w-5xl overflow-x-clip px-6 pb-16 pt-24 lg:px-8">
                 {currentPost ? (
                     <SinglePostView post={currentPost} />
                 ) : (
@@ -124,7 +124,7 @@ function SinglePostView({ post }: { post: BlogPost }) {
     const shareText = `Check out this article: ${post.title}`;
 
     return (
-        <article className="max-w-3xl mx-auto">
+        <article className="mx-auto w-full min-w-0 max-w-3xl">
             <div className="mb-8">
                 <Link href="/blog" className="inline-flex items-center text-sm text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white transition-colors mb-6">
                     <ArrowLeft className="h-4 w-4 mr-1" />
@@ -144,12 +144,12 @@ function SinglePostView({ post }: { post: BlogPost }) {
                     )}
                 </div>
 
-                <h1 className="text-4xl md:text-5xl font-bold text-neutral-900 dark:text-white mb-6 leading-tight">
+                <h1 className="mb-6 min-w-0 wrap-anywhere text-4xl font-bold leading-tight text-neutral-900 dark:text-white md:text-5xl">
                     {post.title}
                 </h1>
 
                 {post.description && (
-                    <p className="text-xl text-neutral-600 dark:text-neutral-300 leading-relaxed border-l-4 border-indigo-500/50 pl-5">
+                    <p className="min-w-0 wrap-anywhere border-l-4 border-indigo-500/50 pl-5 text-xl leading-relaxed text-neutral-600 dark:text-neutral-300">
                         {post.description}
                     </p>
                 )}
@@ -157,7 +157,7 @@ function SinglePostView({ post }: { post: BlogPost }) {
 
             <div className="w-full h-px bg-neutral-200 dark:bg-neutral-800 mb-10" />
 
-            <div className="prose dark:prose-invert prose-lg max-w-none mb-12">
+            <div className="prose prose-lg dark:prose-invert mb-12 max-w-none min-w-0 [&_a]:break-words [&_code]:wrap-anywhere [&_li]:wrap-anywhere [&_p]:wrap-anywhere [&_pre]:max-w-full [&_table]:min-w-[40rem] [&_td]:min-w-20 [&_td]:max-w-[20rem] [&_td]:break-words [&_th]:min-w-20 [&_th]:max-w-[20rem] [&_th]:break-words">
                 <MarkdownRenderer content={post.content} />
             </div>
 
@@ -224,7 +224,7 @@ function parseMarkdown(md: string): string {
     const codeBlockPlaceholder = '___CODE_BLOCK_PLACEHOLDER___';
 
     let textWithPlaceholders = md.replace(/```(\w+)?\n([\s\S]*?)```/g, (_, lang, code) => {
-        const codeHtml = `<pre class="bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg p-4 overflow-x-auto mb-6 text-sm text-neutral-800 dark:text-neutral-200"><code class="language-${lang || 'text'}">${escapeHtml(code.trim())}</code></pre>`;
+        const codeHtml = `<pre class="max-w-full bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg p-4 overflow-x-auto mb-6 text-sm text-neutral-800 dark:text-neutral-200"><code class="language-${lang || 'text'}">${escapeHtml(code.trim())}</code></pre>`;
         codeBlocks.push(codeHtml);
         return `${codeBlockPlaceholder}${codeBlocks.length - 1}${codeBlockPlaceholder}`;
     });

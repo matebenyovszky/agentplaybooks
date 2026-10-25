@@ -6,7 +6,12 @@ it("renders one semantic table with headers and preserves empty columns", () => 
   expect(html.match(/<table /g)).toHaveLength(1);
   expect(html.match(/<th /g)).toHaveLength(3);
   expect(html.match(/<td /g)).toHaveLength(3);
-  expect(html).toContain('class="px-4 py-3"></td>');
+  expect(html).toContain('class="min-w-20 max-w-[20rem] break-words px-4 py-3"></td>');
+  expect(html).toContain('class="overflow-x-auto mb-6"');
+  expect(html).toContain("min-w-[40rem] border-collapse");
+  expect(html).not.toContain("w-max");
+  expect(html).not.toContain("w-full");
+  expect(html).not.toContain("wrap-normal");
   expect(html).toContain("<thead>");
 });
 it("leaves prose and pipes without a valid table separator unchanged", () => {
