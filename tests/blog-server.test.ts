@@ -47,9 +47,19 @@ describe("blog content loading", () => {
       expect(post?.title, locale).toBeTruthy();
       expect(post?.content, locale).toMatch(/NIS2/);
       expect(post?.content, locale).toMatch(/use_secret/);
+      expect(post?.content, locale).toMatch(/AUDIT_RETENTION_DAYS/);
+      expect(post?.content, locale).toMatch(/AUDIT_SYSLOG_URL/);
+      expect(post?.content, locale).toMatch(/AUDIT_SIEM_WEBHOOK_URL/);
       expect(post?.content, locale).not.toMatch(/\bcompliant\b/i);
       expect(post?.content, locale).not.toMatch(/\bcertified\b/i);
-      expect(post?.content, locale).not.toMatch(/Integritás Hatóság/i);
+      expect(post?.content, locale).not.toMatch(/konform/i);
+      expect(post?.content, locale).not.toMatch(/Integrit/i);
+      expect(post?.content, locale).not.toMatch(/#202\b/);
+      expect(post?.content, locale).not.toMatch(/54ea3c6/i);
+      expect(post?.content, locale).not.toMatch(/cursor\/audit-logs-compliance-adfd/);
+      expect(post?.content, locale).not.toMatch(/\bit\(\)/);
+      expect(post?.content, locale).not.toMatch(/not on [`']?main/i);
+      expect(post?.content, locale).not.toMatch(/Features that land/i);
       expect(post?.content, locale).not.toMatch(EMAIL_ADDRESS);
       expect(`${post?.title}\n${post?.description}\n${post?.content}`, locale)
         .not.toMatch(EMAIL_ADDRESS);
@@ -60,11 +70,19 @@ describe("blog content loading", () => {
     expect(hu?.content).toMatch(/418\/2024\. \(XII\. 23\.\) Korm\. rendelet/);
     expect(hu?.content).toMatch(/7\/2024\. \(VI\. 24\.\) MK rendelet/);
     expect(hu?.content).toMatch(/segít megfelelni/i);
+    expect(hu?.content).toMatch(/információbiztonsági felelős/);
+    expect(hu?.content).not.toMatch(/Ezek a bekezdések/);
+    expect(hu?.content).not.toMatch(/megfelel /);
 
     const en = await getBlogPost(EU_POST, "en");
     expect(en?.content).toMatch(/helps meet/i);
+    expect(en?.content).toMatch(/hash chain/i);
+    expect(en?.content).toMatch(/auditor role/i);
     expect(en?.content).not.toMatch(/2024\. évi LXIX/);
     expect(en?.content).not.toMatch(/418\/2024/);
+    expect(en?.content).not.toMatch(/no auditor role/);
+    expect(en?.content).not.toMatch(/no hash chain/);
+    expect(en?.content).not.toMatch(/no SIEM export/);
 
     expect(fetchSpy).not.toHaveBeenCalled();
   });

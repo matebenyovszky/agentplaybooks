@@ -9,7 +9,7 @@ author: Mate Benyovszky
 
 A local AgentPlaybooks instance is not a certification. It can **help meet** technical parts of several EU rules because **secrets, audit rows, and playbook data stay on infrastructure you operate**. The legal duties — risk analysis, incident filing, staff training, DPIA, hardening — stay with the operator.
 
-This is a first reading of public sources against the current `main` branch, not legal advice. Counsel and your information-security officer must decide what binds you.
+This is a first reading of public sources against the self-hosted product, not legal advice. Counsel and your information-security officer must decide what binds you.
 
 ## Secrets, logs and data stay on your infrastructure
 
@@ -23,8 +23,16 @@ What that split means in practice:
 - **`expires_at`** on a secret stops proxy, federation, and API-key reveal. The owner can still open the value in the dashboard in order to replace it.
 - Certificate clients (`secret_clients`) on self-host need a TLS terminator and **`MTLS_MODE=proxy`**, which trusts fingerprint headers only from `MTLS_TRUSTED_PROXIES`. Without a terminator, certificate auth fails closed.
 - Sign-in can be limited to your tenant with **Microsoft Entra ID** (`GOTRUE_EXTERNAL_AZURE_*` on GoTrue). There is no application-level MFA; MFA is an IdP control.
-- **`audit_logs`** records vault operations (`secret.*`) and federated MCP calls. A refusal is an event. Rows keep a hostname, not a full URL, and not the secret value. On `main`, read is owner-only (`GET /api/playbooks/:guid/audit`, limit 500). Skills, memory, and canvas writes are not logged.
 - Encrypted on-prem backup and an empty-machine restore drill are documented. The master key is **never** inside the archive.
+
+**Audit trail.** `audit_logs` records vault operations (`secret.*`) and federated MCP calls. A refusal is an event. Rows keep a hostname, not a full URL, and not the secret value. Skills, memory, and canvas writes are not logged.
+
+- **Hash chain / tamper evidence** — per-playbook SHA-256 chain (`hash = sha256(canonical JSON including prev_hash)`). The first row chains from 64 zero hex digits. An insert trigger assigns the link; updates are rejected, so rows stay immutable. `GET /api/playbooks/:guid/audit/verify` and `apb audit verify` return HTTP 409 when a link is broken.
+- **Export** — `format` json, jsonl, or csv on `GET /api/playbooks/:guid/audit`. `GET /api/playbooks/:guid/audit/export` defaults to JSONL. CLI: `apb audit export`.
+- **Retention** — unset / `0` / `forever` for `AUDIT_RETENTION_DAYS` keeps rows. A positive integer enables scheduled purge (`POST /api/cron/audit-purge` with `AUDIT_CRON_SECRET`). Purge writes a chain checkpoint and an `audit.retention_purge` event so the remaining chain still verifies. Owners can also `apb audit purge`.
+- **Auditor role** — collaborator `auditor` and playbook API-key role `auditor` (user-key scope `audit:read`). Read, export, and verify only. No secret values, no writes. Playbook metadata is visible; persona, skills, and vault contents are not.
+- **SIEM / syslog** — off by default. Optional `AUDIT_SYSLOG_URL` (`udp://`, `tcp://`, or `tls://`, RFC 5424) and `AUDIT_SIEM_WEBHOOK_URL` with `AUDIT_SIEM_WEBHOOK_SECRET` (HMAC-SHA256 key of at least 32 random bytes). Forwarding retries with backoff and must not block the vault; an unreachable SIEM does not fail the secret call. Syslog uses Node sockets on self-host; the HTTPS webhook also works on Cloudflare Workers.
+- An automated test suite checks that raw API keys and secret values never appear in stored audit rows, exports, syslog or the SIEM payload.
 
 National implementing rules (for example Hungary’s 2024 cybersecurity act and 24-hour / 72-hour / one-month reporting clocks) remain the operator’s duty.
 
@@ -34,28 +42,28 @@ National implementing rules (for example Hungary’s 2024 cybersecurity act and 
 
 | Instrument | What it asks (plain reading) | What a local instance helps with |
 | --- | --- | --- |
-| NIS2 Art. 21 — risk-management measures | Security of systems, cryptography, access control, supply chain, logging, backup, vulnerability handling | Data residency on your stack; AES-256-GCM vault; `use_secret` so the agent never sees the value; `allowed_hosts` + SSRF filters; Entra SSO hook; owner/editor RBAC |
+| NIS2 Art. 21 — risk-management measures | Security of systems, cryptography, access control, supply chain, logging, backup, vulnerability handling | Data residency on your stack; AES-256-GCM vault; `use_secret` so the agent never sees the value; `allowed_hosts` + SSRF filters; Entra SSO hook; owner/editor/auditor RBAC |
 | NIS2 Art. 21(2)(c) — backup and recovery | Backup management and disaster recovery | [On-prem backup and restore](/docs/backup-restore) runbook, encrypted archives, empty-machine drill in CI |
 | NIS2 Art. 21(2)(d) — supply chain | Provenance of ICT | CycloneDX SBOMs, cosign of SBOM blobs on `cli-v*` tags, CodeQL, Dependabot, npm provenance for the CLI. No signed container **registry** publish |
 | NIS2 Art. 21(2)(e) — vulnerability handling | Process to receive and fix issues | [SECURITY.md](https://github.com/matebenyovszky/agentplaybooks/blob/main/SECURITY.md) and [GitHub private vulnerability reporting](https://github.com/matebenyovszky/agentplaybooks/security/advisories/new). Maintainer review is best-effort; statutory clocks are yours |
-| NIS2 Art. 21(2)(f) and Art. 23 — logging and reporting | Detect, log, and notify significant incidents | `audit_logs` for vault and federated calls. The product does **not** file with an authority. Hash chain, export, retention, auditor role, and SIEM forwarding are in [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202) and are **not on `main` yet** |
+| NIS2 Art. 21(2)(f) and Art. 23 — logging and reporting | Detect, log, and notify significant incidents | `audit_logs` for vault and federated calls, with a per-playbook hash chain, JSON/JSONL/CSV export, optional retention, a read-only auditor role, and optional syslog/SIEM forwarding. The product does **not** file with an authority |
 | Commission IR (EU) 2024/2690 | Technical and methodological requirements for Art. 21 measures | The rows above are product inputs. Mapping them onto 2024/2690 control families is an operator document |
 | GDPR Art. 5, 25, 32 | Purpose limitation, data protection by design, security of processing | Secrets not in model context by default; ciphertext at rest; self-host so you choose the region and processors |
 | GDPR Art. 13 | Information to data subjects | On self-host you are generally the controller and must inform people yourself. The hosted privacy notice does not cover your instance |
 | CRA (EU) 2024/2847 | Products with digital elements placed on the market in a commercial activity | Free, non-monetised open source is currently treated as out of that commercial-activity test (Recital 18). SBOMs and vulnerability handling are already in the repo if that status later changes |
-| DORA (EU) 2022/2554 | ICT logging and incident reporting for in-scope financial entities | If DORA binds you, those duties stay yours. A local instance keeps the relevant logs on your systems |
-| AI Act (EU) 2024/1689 | Logging / record-keeping for high-risk systems (Art. 12) and deployers (Art. 26) | The product does not classify your AI system. Vault and federation audit rows can feed *your* record-keeping if you are in scope |
+| DORA (EU) 2022/2554 | ICT logging and incident reporting for in-scope financial entities | If DORA binds you, those duties stay yours. A local instance keeps the relevant logs on your systems, with export and optional SIEM/syslog forwarding |
+| AI Act (EU) 2024/1689 | Logging / record-keeping for high-risk systems (Art. 12) and deployers (Art. 26) | The product does not classify your AI system. Hash-chained vault and federation audit rows, plus export, can feed *your* record-keeping if you are in scope |
 
 ### Optional ISO/IEC 27001 and NIST SP 800-53 map
 
 This is a reading aid, not an ISO 27001 or NIST assessment.
 
-| Theme | Product side (today) |
+| Theme | Product side |
 | --- | --- |
 | Cryptography (ISO 27001 A.8.24 / NIST SC) | AES-256-GCM, HKDF per user, AAD-bound v2 ciphertext. No KMS |
-| Logging (A.8.15 / AU) | `audit_logs` as above; chain/export/SIEM wait for #202 |
+| Logging (A.8.15 / AU) | `audit_logs` with hash chain, export, optional retention, auditor role, SIEM/syslog. Skills, memory, and canvas writes are not audited |
 | Backup (A.8.13 / CP) | Encrypted dump + restore drill; you set RPO/RTO |
-| Access (A.5.15 / AC, IA) | owner / editor; Entra OIDC; self-host mTLS via trusted proxy |
+| Access (A.5.15 / AC, IA) | owner / editor / auditor; Entra OIDC; self-host mTLS via trusted proxy |
 | Supply chain (A.5.21 / SR, SI) | lockfiles, CodeQL, CycloneDX, cosign of SBOM blobs |
 
 A fuller family table lives in the [security documentation pack](/docs/security).
@@ -70,20 +78,7 @@ The software cannot do these for you:
 - **Infrastructure hardening** — TLS termination, network isolation, patch windows, physical rooms, IdP MFA. Compose starts the app on port 3000; it does not terminate TLS and does not start Supabase.
 - **DPIA and GDPR roles** — on self-host you generally decide purposes and means. A DPIA, records of processing, and Art. 13 notices are yours if personal data is in play.
 
-Honest gaps on `main`: no KMS/HSM, no re-encryption when the master key changes, no app MFA, no SAML, no auditor role, no hash chain, no SIEM export, no signed container registry image, CSP is Report-Only.
-
-## Features that land with pull request #202
-
-Do not treat the following as shipped. They are implemented on branch `cursor/audit-logs-compliance-adfd` (head `54ea3c6`) in [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202) and should merge before this post is treated as current:
-
-- **Hash chain / tamper evidence** — per-playbook SHA-256 chain (`hash = sha256(canonical JSON including prev_hash)`), genesis of 64 zero hex digits, insert trigger, immutable rows, `GET /api/playbooks/:guid/audit/verify` and `apb audit verify` (HTTP 409 when a link is broken).
-- **Export** — `format` json, jsonl, or csv on the audit API, `GET /api/playbooks/:guid/audit/export` (JSONL by default), `apb audit export`.
-- **Retention** — `AUDIT_RETENTION_DAYS` unset / `0` / `forever` keeps rows; purge writes a chain checkpoint and an `audit.retention_purge` event.
-- **Auditor role** — collaborator `auditor` and API-key role `auditor` (plus user-key scope `audit:read`). Read, export, and verify only. No secret values, no writes.
-- **SIEM / syslog** — optional `AUDIT_SYSLOG_URL` (RFC 5424) and `AUDIT_SIEM_WEBHOOK_URL` with an HMAC key of at least 32 random bytes. Forwarding is fire-and-forget and must not block the vault.
-- **No secrets in the trail** — `tests/api/audit-secrets-not-logged.test.ts` on that SHA is **one** end-to-end case: stored row, JSON/JSONL/CSV export, syslog, and SIEM body must contain neither the raw API key nor secret plaintext. Related audit tests on the same SHA add **21** further `it()` cases (export, chain, retention, auditor, forwarding).
-
-This blog post should be published only after #202 is on `main`.
+Honest gaps: no KMS/HSM, no re-encryption when the master key changes, no app MFA, no SAML, no signed container registry image, CSP is Report-Only, skills/memory/canvas writes are not audited.
 
 ## How to deploy locally
 
@@ -92,9 +87,10 @@ Follow the existing guides rather than this summary:
 1. [Self-Hosting](/docs/self-hosting) — `supabase/schema.sql` for a new database, self-hosted Supabase (not bare Postgres), Docker `app` on port 3000 or Cloudflare Pages. Set `NEXT_PUBLIC_APP_URL` and `SECRETS_ENCRYPTION_KEY` at **build** time.
 2. [Self-hosted mTLS](/docs/self-hosted-mtls) — terminator + `MTLS_MODE=proxy` if you use certificate clients.
 3. [On-prem backup and restore](/docs/backup-restore) — same text as `docs/self-host/backup-restore.md` in the repository; `scripts/self-host/backup.sh` and the empty-machine drill.
-4. Air-gap options on the self-hosting page: `NO_EGRESS=true`, `SECRETS_REQUIRE_ALLOWED_HOSTS=true`, local Geist fonts (`next/font/local`). Isolated no-egress CI lives in `.github/workflows/no-egress.yml` and `deploy/airgap/`. Production compose is still app-only; `npm ci` and base images still need a registry before isolation.
-5. Entra ID: `GOTRUE_EXTERNAL_AZURE_*` as documented in the self-hosting guide.
-6. Security pack: [Security documentation](/docs/security). Vulnerability reports: [GitHub private advisory form](https://github.com/matebenyovszky/agentplaybooks/security/advisories/new) — there is no security email.
+4. [Audit logs](/docs/audit-logs) — hash chain, export, retention, auditor role, and optional SIEM/syslog (`AUDIT_SYSLOG_URL`, `AUDIT_SIEM_WEBHOOK_URL`).
+5. Air-gap options on the self-hosting page: `NO_EGRESS=true`, `SECRETS_REQUIRE_ALLOWED_HOSTS=true`, local Geist fonts (`next/font/local`). Isolated no-egress CI lives in `.github/workflows/no-egress.yml` and `deploy/airgap/`. Production compose is still app-only; `npm ci` and base images still need a registry before isolation.
+6. Entra ID: `GOTRUE_EXTERNAL_AZURE_*` as documented in the self-hosting guide.
+7. Security pack: [Security documentation](/docs/security). Vulnerability reports: [GitHub private advisory form](https://github.com/matebenyovszky/agentplaybooks/security/advisories/new) — there is no security email.
 
 Related reading: [Secrets Vault](/blog/secrets-vault-secure-credential-management), [Python secrets](/docs/python-secrets).
 
