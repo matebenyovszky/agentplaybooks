@@ -4,6 +4,9 @@ import { vi } from 'vitest';
 process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://mock.supabase.co';
 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'mock-anon-key';
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'mock-service-role-key';
+// The suite has no network: outbound destinations are checked by their URL, and
+// DNS resolution is exercised with an injected resolver in its own tests.
+process.env.OUTBOUND_DNS_CHECK = 'false';
 
 // Mock Supabase client
 const mockSupabase = {

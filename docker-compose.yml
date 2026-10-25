@@ -48,9 +48,14 @@ services:
       # Optional. Setting this replaces the default CORS allow-list, which is
       # what a self-hosted instance wants.
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
-      # Optional. "true" refuses outbound use of any secret that has not
-      # declared allowed_hosts.
-      SECRETS_REQUIRE_ALLOWED_HOSTS: ${SECRETS_REQUIRE_ALLOWED_HOSTS:-}
+      # "true" (the self-hosted default) refuses outbound use of any secret
+      # that has not declared allowed_hosts. Set "false" to allow unpinned
+      # secrets to go to any public host.
+      SECRETS_REQUIRE_ALLOWED_HOSTS: ${SECRETS_REQUIRE_ALLOWED_HOSTS:-true}
+      # Resolve outbound hostnames and refuse internal addresses before
+      # sending a credential (default on). "false" only if egress is enforced
+      # at the network layer instead.
+      OUTBOUND_DNS_CHECK: ${OUTBOUND_DNS_CHECK:-}
       # Optional. "true" disables optional outbound calls (MCP registry search)
       # unless MCP_REGISTRY_URL points at an internal mirror. Unset keeps the
       # hosted default. See public/docs/self-hosting.md.
