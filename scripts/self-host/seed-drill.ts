@@ -17,17 +17,18 @@ function sqlLiteral(value: string): string {
   return `'${value.replaceAll("'", "''")}'`;
 }
 
-const key = process.env.SECRETS_ENCRYPTION_KEY;
-if (!key || !/^[0-9a-f]{64}$/i.test(key)) {
-  throw new Error("SECRETS_ENCRYPTION_KEY must be 64 hex characters for the drill");
-}
+async function main() {
+  const key = process.env.SECRETS_ENCRYPTION_KEY;
+  if (!key || !/^[0-9a-f]{64}$/i.test(key)) {
+    throw new Error("SECRETS_ENCRYPTION_KEY must be 64 hex characters for the drill");
+  }
 
-const encrypted = await encryptSecret(SECRET_VALUE, OWNER, {
-  playbookId: PLAYBOOK_ID,
-  secretName: SECRET_NAME,
-});
+  const encrypted = await encryptSecret(SECRET_VALUE, OWNER, {
+    playbookId: PLAYBOOK_ID,
+    secretName: SECRET_NAME,
+  });
 
-const sql = `
+  const sql = `
 BEGIN;
 
 INSERT INTO auth.users (id, email, raw_user_meta_data)
@@ -83,20 +84,27 @@ VALUES ('restore-drill', 'drill-object.txt', '{"source":"restore-drill"}'::jsonb
 COMMIT;
 `;
 
-process.stdout.write(sql);
-process.stderr.write(
-  JSON.stringify(
-    {
-      ownerId: OWNER,
-      playbookId: PLAYBOOK_ID,
-      guid: GUID,
-      playbookName: PLAYBOOK_NAME,
-      secretName: SECRET_NAME,
-      secretValue: SECRET_VALUE,
-      auditCount: AUDIT_COUNT,
-      storageObject: "drill-object.txt",
-    },
-    null,
-    2,
-  ) + "\n",
-);
+  process.stdout.write(sql);
+  process.stderr.write(
+    JSON.stringify(
+      {
+        ownerId: OWNER,
+        playbookId: PLAYBOOK_ID,
+        guid: GUID,
+        playbookName: PLAYBOOK_NAME,
+        secretName: SECRET_NAME,
+        secretValue: SECRET_VALUE,
+        auditCount: AUDIT_COUNT,
+        storageObject: "drill-object.txt",
+      },
+      null,
+      2,
+    ) + "\n",
+  );
+}
+
+main().catch((error: unknown) => {
+  const message = error instanceof Error ? error.message : String(error);
+  process.stderr.write(`${message}\n`);
+  process.exit(1);
+});
