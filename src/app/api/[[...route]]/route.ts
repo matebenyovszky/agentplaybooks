@@ -35,6 +35,10 @@ import { validateAgentSkillDescription, validateAgentSkillName } from "@/lib/age
 import { demonstrationsError, recordingError } from "@/lib/demonstrations";
 import { DEFAULT_USER_API_KEY_PERMISSIONS } from "@/lib/user-api-key-permissions";
 import {
+  PLAYBOOK_API_KEY_ROLES,
+  playbookApiKeyPermissionsForRole,
+} from "@/lib/playbook-api-key-roles";
+import {
   createPlaybook,
   forkPlaybook,
   getPublisherIdForAuthUser,
@@ -52,7 +56,7 @@ import { MEMORY_SEARCH_PARAMETERS, memoryWriteFields, parseMemorySearch } from "
  * constraint. Kept here so an unknown role is refused with a clear 400 rather
  * than reaching the database as a constraint violation.
  */
-const API_KEY_ROLES = ["viewer", "coworker", "proposer", "admin", "auditor"] as const;
+const API_KEY_ROLES = PLAYBOOK_API_KEY_ROLES;
 
 // Types
 type Bindings = {
@@ -608,7 +612,7 @@ app.post("/playbooks/:id/api-keys", async (c) => {
       key_prefix: keyPrefix,
       name: name || null,
       role: role || "viewer",
-      permissions: permissions || (role === "auditor" ? ["audit:read", "playbooks:read"] : ["memory:read", "memory:write"]),
+      permissions: permissions || playbookApiKeyPermissionsForRole(role || "viewer"),
       expires_at: expires_at || null,
       is_active: true,
     })
