@@ -73,3 +73,9 @@ migration files into a temporary CLI workdir. The real SQL is always taken from
 `supabase/migrations`. If production history changes outside this workflow,
 review and update `deploy-baseline-versions.txt` before another deployment.
 
+The `review_proposals` SQL in `20261002120000_review_proposals.sql` is recorded
+in production as `20261009220418`. Its normalized SQL was compared with the
+recorded statement on 2026-10-25 and matched. The preparation script copies this
+file under that recorded version in the temporary workdir, preserving migration
+history and avoiding a second execution. This alias does not skip later SQL.
+
