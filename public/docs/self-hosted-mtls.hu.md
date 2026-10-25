@@ -150,8 +150,6 @@ example.org {
 		}
 	}
 	reverse_proxy app:3000 {
-		header_up -X-SSL-Client-Fingerprint
-		header_up -X-SSL-Client-Verify
 		header_up X-SSL-Client-Fingerprint {http.request.tls.client.fingerprint}
 		header_up X-SSL-Client-Verify SUCCESS
 		header_up X-APB-Proxy-Token {$MTLS_PROXY_SHARED_SECRET}
