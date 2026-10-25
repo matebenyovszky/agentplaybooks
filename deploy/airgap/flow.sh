@@ -82,8 +82,10 @@ if [ -z "$APB_KEY" ]; then
 fi
 
 echo "== store secret"
+# Destination and reveal policy are owner/editor session fields. A playbook
+# API key must not grant itself raw-value access or pick where the secret goes.
 http "$tmp/secret.json" POST "$APP/api/playbooks/$GUID/secrets" \
-  -H "Authorization: Bearer $APB_KEY" \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"name":"ECHO_TOKEN","value":"airgap-secret-value","category":"token","allowed_hosts":["echo"],"allow_api_key_reveal":true}'
 json "$tmp/secret.json" '.name == "ECHO_TOKEN"'
