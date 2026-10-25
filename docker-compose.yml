@@ -9,6 +9,10 @@
 #
 # A bare PostgreSQL container is not enough and is deliberately not included
 # here -- see public/docs/self-hosting.md.
+#
+# Certificate (mTLS) secret loading needs a TLS terminator in front of this
+# service: deploy/self-host/docker-compose.mtls.yml and
+# public/docs/self-hosted-mtls.md.
 
 services:
   app:
