@@ -239,7 +239,7 @@ Existing databases need `20261024120000_audit_logs_compliance.sql` (hash chain b
 
 Three later migrations rewrite no rows and apply in the normal way:
 
-- `20261025120000_audit_logs_tamper_resistance.sql` — the trail no longer has foreign keys, so deleting a playbook, MCP server or account keeps its rows and its hash chain; DELETE and TRUNCATE are refused except by the retention function; checkpoints are immutable.
+- `20261025124500_audit_logs_tamper_resistance.sql` — the trail no longer has foreign keys, so deleting a playbook, MCP server or account keeps its rows and its hash chain; DELETE and TRUNCATE are refused except by the retention function; checkpoints are immutable.
 - `20261025130000_audit_config_changes.sql` — changes to playbooks (including visibility), skills, MCP servers, API keys and collaborators are recorded by triggers, whichever API path made them, with the actor the application authenticated.
 - `20261025140000_private_instance.sql` — the private-instance switch below.
 

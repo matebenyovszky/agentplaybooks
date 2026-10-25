@@ -1650,7 +1650,7 @@ CREATE TRIGGER audit_content_change
 COMMIT;
 
 -- --------------------------------------------------------------------
--- Folded in from 20261025120000_audit_logs_tamper_resistance.sql
+-- Folded in from 20261025124500_audit_logs_tamper_resistance.sql
 -- Keep this section identical to the migration.
 -- --------------------------------------------------------------------
 
