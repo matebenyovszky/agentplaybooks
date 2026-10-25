@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getBlogPost } from "@/lib/blog-server";
 
+const EU_POST = "self-hosted-eu-cybersecurity-requirements";
+const LOCALES = ["en", "hu", "de", "es"] as const;
+const EMAIL_ADDRESS = /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.[A-Za-z]{2,}/;
+
 describe("blog content loading", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -29,6 +33,57 @@ describe("blog content loading", () => {
       "en",
       "https://agentplaybooks.ai",
     )).resolves.toBeNull();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("ships the self-hosted EU requirements post in every blog locale", async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+
+    for (const locale of LOCALES) {
+      const post = await getBlogPost(EU_POST, locale, "https://agentplaybooks.ai");
+      expect(post, locale).toBeTruthy();
+      expect(post?.slug, locale).toBe(EU_POST);
+      expect(post?.title, locale).toBeTruthy();
+      expect(post?.content, locale).toMatch(/NIS2/);
+      expect(post?.content, locale).toMatch(/use_secret/);
+      expect(post?.content, locale).toMatch(/AUDIT_RETENTION_DAYS/);
+      expect(post?.content, locale).toMatch(/AUDIT_SYSLOG_URL/);
+      expect(post?.content, locale).toMatch(/AUDIT_SIEM_WEBHOOK_URL/);
+      expect(post?.content, locale).not.toMatch(/\bcompliant\b/i);
+      expect(post?.content, locale).not.toMatch(/\bcertified\b/i);
+      expect(post?.content, locale).not.toMatch(/konform/i);
+      expect(post?.content, locale).not.toMatch(/Integrit/i);
+      expect(post?.content, locale).not.toMatch(/#202\b/);
+      expect(post?.content, locale).not.toMatch(/54ea3c6/i);
+      expect(post?.content, locale).not.toMatch(/cursor\/audit-logs-compliance-adfd/);
+      expect(post?.content, locale).not.toMatch(/\bit\(\)/);
+      expect(post?.content, locale).not.toMatch(/not on [`']?main/i);
+      expect(post?.content, locale).not.toMatch(/Features that land/i);
+      expect(post?.content, locale).not.toMatch(EMAIL_ADDRESS);
+      expect(`${post?.title}\n${post?.description}\n${post?.content}`, locale)
+        .not.toMatch(EMAIL_ADDRESS);
+    }
+
+    const hu = await getBlogPost(EU_POST, "hu");
+    expect(hu?.content).toMatch(/2024\. évi LXIX\. törvény/);
+    expect(hu?.content).toMatch(/418\/2024\. \(XII\. 23\.\) Korm\. rendelet/);
+    expect(hu?.content).toMatch(/7\/2024\. \(VI\. 24\.\) MK rendelet/);
+    expect(hu?.content).toMatch(/segít megfelelni/i);
+    expect(hu?.content).toMatch(/információbiztonsági felelős/);
+    expect(hu?.content).not.toMatch(/Ezek a bekezdések/);
+    expect(hu?.content).not.toMatch(/megfelel /);
+
+    const en = await getBlogPost(EU_POST, "en");
+    expect(en?.content).toMatch(/helps meet/i);
+    expect(en?.content).toMatch(/hash chain/i);
+    expect(en?.content).toMatch(/auditor role/i);
+    expect(en?.content).not.toMatch(/2024\. évi LXIX/);
+    expect(en?.content).not.toMatch(/418\/2024/);
+    expect(en?.content).not.toMatch(/no auditor role/);
+    expect(en?.content).not.toMatch(/no hash chain/);
+    expect(en?.content).not.toMatch(/no SIEM export/);
+
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 });

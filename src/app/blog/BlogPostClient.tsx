@@ -7,6 +7,7 @@ import { ChevronRight, Calendar, ArrowLeft, User, Link as LinkIcon } from "lucid
 import { LinkedinIcon, TwitterIcon } from "@/components/ui/brand-icons";
 import type { BlogPost } from "@/lib/blog-server";
 import { useState, useEffect } from "react";
+import { renderMarkdownTables } from "@/lib/markdown-tables";
 
 type BlogPostClientProps = {
     posts: BlogPost[];
@@ -255,6 +256,8 @@ function parseMarkdown(md: string): string {
         .replace(/^(\d+)\. (.*$)/gm, '<li class="ml-4">$2</li>')
         // Blockquotes
         .replace(/^> (.*$)/gm, '<blockquote class="border-l-4 border-indigo-500 pl-4 my-4 text-neutral-600 dark:text-neutral-400 italic">$1</blockquote>')
+        // Recognize a complete table, including its required separator row.
+        .replace(/^\|[^\n]*\|(?:\r?\n\|[^\n]*\|)+/gm, renderMarkdownTables)
         // Horizontal rules
         .replace(/^---$/gm, '<hr class="border-neutral-200 dark:border-neutral-800 my-8" />')
         // Paragraphs
