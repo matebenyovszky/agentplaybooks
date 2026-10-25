@@ -42,6 +42,10 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
+# Self-host backup archives (vault ciphertext + database dumps)
+/backups/
+scripts/self-host/tmp/
+
 # env files
 .env
 .env.local

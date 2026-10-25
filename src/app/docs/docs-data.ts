@@ -147,6 +147,12 @@ export const docsEntries: DocEntry[] = [
     section: "reference",
   },
   {
+    slug: "backup-restore",
+    title: "On-prem Backup and Restore",
+    description: "NIS2 21(2)(c) backup, empty-machine restore drill, RPO/RTO",
+    section: "reference",
+  },
+  {
     slug: "environment-setup",
     title: "Environment Setup",
     description: "OAuth & environment configuration",
