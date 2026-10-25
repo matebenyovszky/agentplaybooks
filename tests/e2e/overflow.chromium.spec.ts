@@ -9,9 +9,9 @@ import {
   eachOrientation,
   openFixture,
 } from "./overflow-harness";
-import { ALL_VIEWPORTS } from "./viewports";
+import { ALL_VIEWPORTS, DESKTOP_VIEWPORTS } from "./viewports";
 
-const cases = eachOrientation(ALL_VIEWPORTS);
+const cases = [...eachOrientation(ALL_VIEWPORTS), ...DESKTOP_VIEWPORTS];
 
 for (const viewport of cases) {
   test.describe(`${viewport.name} ${viewport.width}x${viewport.height}`, () => {

@@ -5,7 +5,7 @@ import {
   assertNoHorizontalOverflow,
   assertNoVisibleElementPastRightEdge,
   assertPlaybookHeaderControlsFit,
-  assertTableCellsWideEnough,
+  assertTableLayout,
   attachCspListeners,
 } from "./overflow-harness";
 import type { ViewportCase } from "./viewports";
@@ -61,8 +61,12 @@ const DEMO_PLAYBOOK = {
   ],
 };
 
-export const APP_ROUTES: { path: string; name: string; waitFor?: string }[] = [
+const E2E_ORIGIN = process.env.PLAYWRIGHT_BASE_URL || "http://127.0.0.1:3000";
+
+export const APP_ROUTES: { path: string; name: string; waitFor?: string; locale?: string }[] = [
   { path: "/", name: "home", waitFor: "h1" },
+  // Locales are cookie-based (NEXT_LOCALE), not path prefixes like /hu.
+  { path: "/", name: "hu", waitFor: "h1", locale: "hu" },
   { path: "/explore", name: "explore", waitFor: "h1" },
   { path: `/dashboard/playbook/${DEMO_PLAYBOOK_ID}`, name: "playbook", waitFor: '[data-testid="playbook-header"]' },
   { path: "/login", name: "login", waitFor: "h1" },
@@ -123,7 +127,7 @@ export async function installPublicReadMocks(page: Page) {
 export async function assertPageFits(page: Page, label: string, viewport: ViewportCase) {
   await assertNoHorizontalOverflow(page);
   await assertNoVisibleElementPastRightEdge(page);
-  await assertTableCellsWideEnough(page);
+  await assertTableLayout(page);
   if (label === "playbook" && viewport.width < 768) {
     await assertPlaybookHeaderControlsFit(page);
   }
@@ -135,11 +139,17 @@ export async function visitAndAssert(
   viewport: ViewportCase,
   cspErrors: string[],
 ) {
+  await page.context().addCookies([
+    { name: "NEXT_LOCALE", value: route.locale ?? "en", url: E2E_ORIGIN },
+  ]);
   const response = await page.goto(route.path, { waitUntil: "domcontentloaded" });
   expect(response, `${route.name} should respond`).toBeTruthy();
   expect(response!.status(), `${route.name} status ${response!.status()}`).toBeLessThan(400);
   if (route.waitFor) {
     await expect(page.locator(route.waitFor).first()).toBeVisible();
+  }
+  if (route.locale === "hu") {
+    await expect(page.locator("h1").first()).toContainText("Egy playbook");
   }
   await assertPageFits(page, route.name, viewport);
   await assertNoCspViolations(page, cspErrors);

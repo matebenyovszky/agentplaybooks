@@ -45,9 +45,15 @@ describe("public playbook mobile layout", () => {
     expect(blog).toContain("min-w-0 max-w-5xl overflow-x-clip");
     expect(blog).toContain("min-w-0 max-w-3xl");
     expect(blog).not.toMatch(/<article className="[^"]*wrap-anywhere/);
+    expect(blog).toContain("prose prose-lg dark:prose-invert");
     expect(blog).toContain("[&_p]:wrap-anywhere");
     expect(blog).toContain("[&_th]:min-w-20");
     expect(blog).toContain("[&_td]:min-w-20");
+    expect(blog).toContain("[&_table]:min-w-[40rem]");
+    expect(blog).toContain("[&_td]:max-w-[20rem]");
+    expect(blog).toContain("[&_td]:break-words");
+    expect(blog).not.toContain("w-max");
+    expect(blog).not.toContain("wrap-normal");
   });
 
   it("keeps docs main shrinking below lg and hides the fixed sidebar", () => {

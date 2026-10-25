@@ -257,7 +257,7 @@ export default function DocsPageClient({ initialSlug = "readme", initialContent 
             <motion.article
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="prose dark:prose-invert max-w-none min-w-0 [&_a]:break-words [&_code]:wrap-anywhere [&_li]:wrap-anywhere [&_p]:wrap-anywhere [&_pre]:max-w-full [&_table]:wrap-normal [&_td]:min-w-20 [&_td]:wrap-normal [&_th]:min-w-20 [&_th]:wrap-normal"
+              className="prose dark:prose-invert max-w-none min-w-0 [&_a]:break-words [&_code]:wrap-anywhere [&_li]:wrap-anywhere [&_p]:wrap-anywhere [&_pre]:max-w-full [&_table]:min-w-[40rem] [&_td]:min-w-20 [&_td]:max-w-[20rem] [&_td]:break-words [&_th]:min-w-20 [&_th]:max-w-[20rem] [&_th]:break-words"
             >
               <MarkdownRenderer content={content} />
             </motion.article>
@@ -386,8 +386,8 @@ function parseMarkdown(md: string): string {
       const isHeader = cells.some(c => c.includes('---'));
       const tag = isHeader ? 'th' : 'td';
       const cellClass = isHeader
-        ? 'min-w-20 wrap-normal px-4 py-3 text-left text-sm font-semibold text-neutral-800 dark:text-neutral-200 bg-neutral-100 dark:bg-neutral-900'
-        : 'min-w-20 wrap-normal px-4 py-3 text-sm text-neutral-700 dark:text-neutral-300';
+        ? 'min-w-20 max-w-[20rem] break-words px-4 py-3 text-left text-sm font-semibold text-neutral-800 dark:text-neutral-200 bg-neutral-100 dark:bg-neutral-900'
+        : 'min-w-20 max-w-[20rem] break-words px-4 py-3 text-sm text-neutral-700 dark:text-neutral-300';
       return `<tr>${cells.map(c => `<${tag} class="${cellClass}">${c.trim()}</${tag}>`).join('')}</tr>`;
     })
     // Horizontal rules
@@ -413,7 +413,7 @@ function parseMarkdown(md: string): string {
 
   // Wrap tables
   html = html.replace(/(<tr>.*?<\/tr>\n?)+/g, (match) => {
-    return `<div class="overflow-x-auto mb-6"><table class="w-max min-w-full border-collapse wrap-normal">${match}</table></div>`;
+    return `<div class="overflow-x-auto mb-6"><table class="min-w-[40rem] border-collapse">${match}</table></div>`;
   });
 
   // Step 4: Restore inline code blocks

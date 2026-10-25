@@ -157,7 +157,7 @@ function SinglePostView({ post }: { post: BlogPost }) {
 
             <div className="w-full h-px bg-neutral-200 dark:bg-neutral-800 mb-10" />
 
-            <div className="prose prose-lg mb-12 max-w-none min-w-0 [&_a]:break-words [&_code]:wrap-anywhere [&_li]:wrap-anywhere [&_p]:wrap-anywhere [&_pre]:max-w-full [&_table]:wrap-normal [&_td]:min-w-20 [&_td]:wrap-normal [&_th]:min-w-20 [&_th]:wrap-normal">
+            <div className="prose prose-lg dark:prose-invert mb-12 max-w-none min-w-0 [&_a]:break-words [&_code]:wrap-anywhere [&_li]:wrap-anywhere [&_p]:wrap-anywhere [&_pre]:max-w-full [&_table]:min-w-[40rem] [&_td]:min-w-20 [&_td]:max-w-[20rem] [&_td]:break-words [&_th]:min-w-20 [&_th]:max-w-[20rem] [&_th]:break-words">
                 <MarkdownRenderer content={post.content} />
             </div>
 

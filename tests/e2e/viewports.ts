@@ -17,6 +17,10 @@ export const TABLET_VIEWPORTS: ViewportCase[] = [
   { name: "iPad Pro", width: 1024, height: 1366 },
 ];
 
+export const DESKTOP_VIEWPORTS: ViewportCase[] = [
+  { name: "Desktop", width: 1280, height: 800 },
+];
+
 export const ALL_VIEWPORTS: ViewportCase[] = [...PHONE_VIEWPORTS, ...TABLET_VIEWPORTS];
 
 export function orientationsOf(viewport: ViewportCase): ViewportCase[] {

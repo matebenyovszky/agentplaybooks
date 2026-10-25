@@ -132,15 +132,30 @@ export async function assertNoVisibleElementPastRightEdge(page: Page) {
   expect(overflowing, JSON.stringify(overflowing, null, 2)).toEqual([]);
 }
 
-export async function assertTableCellsWideEnough(page: Page) {
-  const cells = page.locator("table th, table td");
-  const count = await cells.count();
-  for (let index = 0; index < count; index += 1) {
-    const box = await cells.nth(index).boundingBox();
-    if (!box || box.width < 1) continue;
+export async function assertTableLayout(page: Page) {
+  const { innerWidth, tables, cells } = await page.evaluate(() => {
+    const tableWidths = [...document.querySelectorAll("table")].map((table, index) => ({
+      index,
+      width: table.getBoundingClientRect().width,
+    }));
+    const cellWidths = [...document.querySelectorAll("table th, table td")]
+      .map((cell, index) => ({
+        index,
+        width: (cell as HTMLElement).getBoundingClientRect().width,
+      }))
+      .filter((cell) => cell.width >= 1);
+    return { innerWidth: window.innerWidth, tables: tableWidths, cells: cellWidths };
+  });
+
+  const maxTableWidth = innerWidth * 3;
+  for (const table of tables) {
     expect(
-      box.width,
-      `table cell ${index} width ${box.width}px`,
-    ).toBeGreaterThanOrEqual(80);
+      table.width,
+      `table ${table.index} width ${table.width}px exceeds 3x viewport ${maxTableWidth}px`,
+    ).toBeLessThanOrEqual(maxTableWidth + 1);
+  }
+  for (const cell of cells) {
+    expect(cell.width, `table cell ${cell.index} width ${cell.width}px`).toBeGreaterThanOrEqual(80);
+    expect(cell.width, `table cell ${cell.index} width ${cell.width}px exceeds 400px`).toBeLessThanOrEqual(400);
   }
 }
