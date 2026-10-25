@@ -1,7 +1,17 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { auditQueryFromFlags, collectExportGuids, validateExportFormat } from "../src/audit.js";
 import { run } from "../src/cli.js";
+
+test("the packaged executable includes the audit commands", () => {
+  const executable = fileURLToPath(new URL("../bin/agentplaybooks.js", import.meta.url));
+  const result = spawnSync(process.execPath, [executable, "--help"], { encoding: "utf8", timeout: 10000 });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /agentplaybooks audit export/);
+  assert.match(result.stdout, /agentplaybooks audit verify/);
+});
 
 function fakeFetch(routes) {
   return async (url, init = {}) => {
