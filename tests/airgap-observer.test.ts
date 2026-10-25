@@ -17,7 +17,7 @@ it("fails without observation logs, and distinguishes service names from lookali
   const dns = join(root, "dns.log"); const pcap = join(root, "packets.log");
   const check = () => spawnSync(shell, ["deploy/airgap/check-egress.sh", dns, pcap], { encoding: "utf8" });
   expect(check().status).not.toBe(0);
-  writeFileSync(pcap, "");
+  writeFileSync(pcap, "\n"); // tcpdump emits a blank line when stopped with SIGINT
   writeFileSync(dns, "dnsmasq: query[A] app.airgap from 172.30.0.14\n");
   expect(check().status).toBe(0);
   writeFileSync(dns, "dnsmasq: query[A] app.airgap.attacker.example from 172.30.0.14\n");

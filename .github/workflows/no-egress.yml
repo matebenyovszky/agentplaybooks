@@ -119,10 +119,12 @@ jobs:
           sudo kill -INT "$(cat /tmp/airgap-host-capture.pid)"
           sleep 1
           test -f /tmp/airgap-host-packets.log
-          if test -s /tmp/airgap-host-packets.log; then
+          # tcpdump writes a blank line on SIGINT even when it captured 0 packets.
+          if grep -q '[^[:space:]]' /tmp/airgap-host-packets.log; then
             cat /tmp/airgap-host-packets.log
             exit 1
           fi
+          echo "Host capture passed: no emitted external IPv4 packets"
 
       - name: Collect logs on failure
         if: failure()
