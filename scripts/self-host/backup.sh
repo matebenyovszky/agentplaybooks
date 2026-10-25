@@ -9,15 +9,17 @@ source "${SCRIPT_DIR}/lib.sh"
 
 ENCRYPT=1
 OUTPUT_DIR=""
+SKIP_STORAGE=0
+umask 077
 
 usage() {
   cat <<'EOF'
-Usage: backup.sh [--output-dir DIR] [--no-encrypt] [--compose-file FILE]
+Usage: backup.sh [--output-dir DIR] [--no-encrypt] [--compose-file FILE] [--skip-storage]
 
 Creates an archive of:
   - Postgres (all schemas: public/secrets, public/audit_logs, auth, storage, …)
   - Object-storage volume
-  - Compose/config files with secrets redacted
+  - Environment variable names only (all values redacted); repository revision
 
 The vault master key (SECRETS_ENCRYPTION_KEY) is intentionally omitted.
 Store it separately. Encrypt the archive with BACKUP_ENCRYPTION_PASSPHRASE
@@ -29,6 +31,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --output-dir) OUTPUT_DIR="$2"; shift 2 ;;
     --no-encrypt) ENCRYPT=0; shift ;;
+    --skip-storage) SKIP_STORAGE=1; shift ;;
     --compose-file) SELF_HOST_COMPOSE_FILE="$2"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) die "Unknown option: $1" ;;
@@ -38,6 +41,11 @@ done
 require_cmd docker
 require_cmd tar
 require_cmd openssl
+require_cmd python3
+validate_storage_path
+if [ "${SKIP_STORAGE}" -eq 0 ]; then
+  compose ps --status running --services | grep -qx "${STORAGE_SERVICE}" || die "Storage is unavailable; use --skip-storage only for an intentional database-only backup"
+fi
 
 if [ "${ENCRYPT}" -eq 1 ]; then
   [ -n "${BACKUP_ENCRYPTION_PASSPHRASE:-}" ] || die "BACKUP_ENCRYPTION_PASSPHRASE is required (or pass --no-encrypt)"
@@ -49,6 +57,7 @@ chmod 700 "${OUTPUT_DIR}"
 
 STAMP="$(backup_stamp)"
 STAGE="$(mktemp -d "${OUTPUT_DIR}/.stage.${STAMP}.XXXXXX")"
+STAMP="${STAMP}-${STAGE##*.}"
 trap 'rm -rf "${STAGE}"' EXIT
 chmod 700 "${STAGE}"
 
@@ -64,27 +73,20 @@ db_exec pg_dump -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" \
 [ -s "${BUNDLE}/db/postgres.dump" ] || die "pg_dump produced an empty file"
 
 log "Archiving object storage from '${STORAGE_SERVICE}:${STORAGE_PATH}'…"
-if compose ps --status running --services 2>/dev/null | grep -qx "${STORAGE_SERVICE}"; then
-  storage_exec sh -c "mkdir -p '${STORAGE_PATH}' && tar -C '${STORAGE_PATH}' -cf - ." \
+if [ "${SKIP_STORAGE}" -eq 0 ]; then
+  storage_exec sh -c 'test -d "$1" && tar -C "$1" -cf - .' sh "${STORAGE_PATH}" \
     > "${BUNDLE}/storage/files.tar"
 else
-  log "Storage service '${STORAGE_SERVICE}' is not running; writing an empty archive."
-  tar -cf "${BUNDLE}/storage/files.tar" -T /dev/null
+  log "Database-only backup requested; storage is excluded."
 fi
 
 log "Copying redacted configuration…"
-if [ -f "${REPO_ROOT}/docker-compose.yml" ]; then
-  cp "${REPO_ROOT}/docker-compose.yml" "${BUNDLE}/config/docker-compose.yml"
-fi
-if [ -f "${SELF_HOST_COMPOSE_FILE}" ]; then
-  cp "${SELF_HOST_COMPOSE_FILE}" "${BUNDLE}/config/self-host-compose.yml"
-fi
-if [ -f "${REPO_ROOT}/supabase/config.toml" ]; then
-  cp "${REPO_ROOT}/supabase/config.toml" "${BUNDLE}/config/supabase-config.toml"
-fi
+# Live YAML/TOML can contain inline credentials. Preserve no raw configuration.
+# Operators must retain their deployment config and role definitions separately.
+printf '%s\n' "Repository revision: $(git_commit_short)" > "${BUNDLE}/config/README.txt"
 for envfile in "${REPO_ROOT}/.env" "${REPO_ROOT}/.env.local" "${SELF_HOST_LIB_DIR}/.env"; do
   if [ -f "$envfile" ]; then
-    redact_env_file "$envfile" "${BUNDLE}/config/$(basename "$envfile").redacted"
+    redact_env_file "$envfile" "${BUNDLE}/config/$(printf '%s' "$envfile" | sha256sum | cut -c1-12)-$(basename "$envfile").redacted"
   fi
 done
 
@@ -102,7 +104,12 @@ be distinct from the vault master key.
 EOF
 
 DB_SHA="$(sha256_file "${BUNDLE}/db/postgres.dump")"
-STORAGE_SHA="$(sha256_file "${BUNDLE}/storage/files.tar")"
+STORAGE_SHA=""
+COMPONENTS='"postgres", "config"'
+if [ "${SKIP_STORAGE}" -eq 0 ]; then
+  STORAGE_SHA="$(sha256_file "${BUNDLE}/storage/files.tar")"
+  COMPONENTS='"postgres", "storage", "config"'
+fi
 cat > "${BUNDLE}/manifest.json" <<EOF
 {
   "version": 1,
@@ -112,9 +119,10 @@ cat > "${BUNDLE}/manifest.json" <<EOF
   "postgres_dump_sha256": "${DB_SHA}",
   "storage_tar_sha256": "${STORAGE_SHA}",
   "encryption_master_key_included": false,
-  "components": ["postgres", "storage", "config"]
+  "components": [${COMPONENTS}]
 }
 EOF
+python3 "${SCRIPT_DIR}/archive.py" validate "${BUNDLE}"
 
 PLAIN_ARCHIVE="${OUTPUT_DIR}/agentplaybooks-backup-${STAMP}.tar.gz"
 tar -C "${BUNDLE}" -czf "${PLAIN_ARCHIVE}" .

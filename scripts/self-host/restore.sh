@@ -9,6 +9,7 @@ source "${SCRIPT_DIR}/lib.sh"
 
 ARCHIVE=""
 START_STACK=1
+umask 077
 
 usage() {
   cat <<'EOF'
@@ -42,14 +43,10 @@ done
 require_cmd docker
 require_cmd tar
 require_cmd openssl
+require_cmd python3
+validate_storage_path
 
 RESTORE_START_NS="$(date +%s%N)"
-
-if [ "${START_STACK}" -eq 1 ]; then
-  log "Starting data-plane stack…"
-  compose up -d
-fi
-wait_for_db
 
 WORK="$(mktemp -d)"
 trap 'rm -rf "${WORK}"' EXIT
@@ -65,10 +62,10 @@ case "${ARCHIVE}" in
       -in "${ARCHIVE}" \
       -out "${WORK}/bundle.tar.gz" \
       -pass env:BACKUP_ENCRYPTION_PASSPHRASE
-    tar -C "${EXTRACT}" -xzf "${WORK}/bundle.tar.gz"
+    python3 "${SCRIPT_DIR}/archive.py" extract "${WORK}/bundle.tar.gz" "${EXTRACT}"
     ;;
   *.tar.gz)
-    tar -C "${EXTRACT}" -xzf "${ARCHIVE}"
+    python3 "${SCRIPT_DIR}/archive.py" extract "${ARCHIVE}" "${EXTRACT}"
     ;;
   *)
     die "Unrecognized archive type (expected .tar.gz or .tar.gz.enc): ${ARCHIVE}"
@@ -78,26 +75,25 @@ esac
 [ -f "${EXTRACT}/db/postgres.dump" ] || die "Archive is missing db/postgres.dump"
 [ -f "${EXTRACT}/manifest.json" ] || die "Archive is missing manifest.json"
 
-if command -v python3 >/dev/null 2>&1; then
-  python3 - "${EXTRACT}" <<'PY'
-import json, sys, pathlib
-root = pathlib.Path(sys.argv[1])
-manifest = json.loads((root / "manifest.json").read_text())
-if manifest.get("encryption_master_key_included"):
-    sys.exit("Refusing archive that claims to contain the vault master key")
-print("manifest ok, created_at=", manifest.get("created_at"))
-PY
+python3 "${SCRIPT_DIR}/archive.py" validate "${EXTRACT}"
+if [ "${START_STACK}" -eq 1 ]; then
+  log "Starting data-plane stack…"
+  compose up -d
+fi
+wait_for_db
+if [ -f "${EXTRACT}/storage/files.tar" ]; then
+  compose ps --status running --services | grep -qx "${STORAGE_SERVICE}" || die "Storage is unavailable; refusing database replacement before a complete restore is possible"
 fi
 
 log "Recreating empty database '${POSTGRES_DB}'…"
 recreate_database
 
 log "Restoring Postgres dump…"
-# pg_restore exits 1 when it emits notices for objects the dump could not
-# recreate (e.g. comments). Fail on real errors via a log scan of "error:".
+# Preserve ACLs: BYPASSRLS alone does not grant service_role table privileges.
+# All roles referenced by the dump must already exist on the target cluster.
 set +e
 db_exec pg_restore -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" \
-  --clean --if-exists --no-owner --no-acl \
+  --clean --if-exists --no-owner \
   --exit-on-error \
   < "${EXTRACT}/db/postgres.dump"
 RESTORE_STATUS=$?
@@ -109,10 +105,10 @@ fi
 if [ -f "${EXTRACT}/storage/files.tar" ]; then
   log "Restoring object storage…"
   if compose ps --status running --services 2>/dev/null | grep -qx "${STORAGE_SERVICE}"; then
-    storage_exec sh -c "mkdir -p '${STORAGE_PATH}' && rm -rf '${STORAGE_PATH:?}/'* '${STORAGE_PATH}'/.[!.]* 2>/dev/null; tar -C '${STORAGE_PATH}' -xf -" \
+    storage_exec sh -c 'set -eu; mkdir -p "$1"; find "$1" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +; tar -C "$1" -xf -' sh "${STORAGE_PATH}" \
       < "${EXTRACT}/storage/files.tar"
   else
-    log "Storage service '${STORAGE_SERVICE}' is not running; skipped file restore."
+    die "Storage stopped during restore; restore is incomplete"
   fi
 fi
 

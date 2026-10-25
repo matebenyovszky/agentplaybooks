@@ -5,13 +5,13 @@ vi.mock("@opennextjs/cloudflare", () => ({ getCloudflareContext: context }));
 import {
   fingerprintFromCertificateHeader,
   normalizeCertificateFingerprint,
-  requestPeerAddress,
+  authenticatedProxyAddress,
   resolveMtlsMode,
   verifiedClientFingerprint,
 } from "./mtls";
 
 const ENV_KEYS = [
-  "MTLS_MODE", "MTLS_PROXY_FINGERPRINT_HEADER", "MTLS_PROXY_VERIFY_HEADER", "MTLS_TRUSTED_PROXIES",
+  "MTLS_PROXY_SHARED_SECRET", "MTLS_MODE", "MTLS_PROXY_FINGERPRINT_HEADER", "MTLS_PROXY_VERIFY_HEADER", "MTLS_TRUSTED_PROXIES",
 ] as const;
 const savedEnv = Object.fromEntries(ENV_KEYS.map(key => [key, process.env[key]]));
 
@@ -55,12 +55,13 @@ function proxyRequest(
   headers: Record<string, string>,
   ip?: string,
 ): Request & { ip?: string } {
-  const request = new Request("https://app.internal/api/playbooks/guid/secrets/resolve", { headers });
+  const request = new Request("https://app.internal/api/playbooks/guid/secrets/resolve", { headers: { "x-apb-proxy-token": "a".repeat(64), "x-apb-proxy-address": ip ?? trustedProxy, ...headers } });
   if (ip !== undefined) Object.defineProperty(request, "ip", { value: ip });
   return request as Request & { ip?: string };
 }
 
 function enableProxy(overrides: Record<string, string> = {}) {
+  process.env.MTLS_PROXY_SHARED_SECRET = "a".repeat(64);
   process.env.MTLS_MODE = "proxy";
   process.env.MTLS_PROXY_FINGERPRINT_HEADER = "X-SSL-Client-Fingerprint";
   process.env.MTLS_PROXY_VERIFY_HEADER = "X-SSL-Client-Verify";
@@ -129,6 +130,12 @@ describe("fingerprint normalization", () => {
     expect(fingerprintFromCertificateHeader(encodeURIComponent(TEST_CERT_PEM)))
       .toBe(TEST_CERT_SHA256);
   });
+  it("accepts Traefik's delimiter-free leaf and chain representation", () => {
+    const bare = TEST_CERT_PEM.replace(/-----[^-]+-----/g, "").replace(/\s/g, "");
+    expect(fingerprintFromCertificateHeader(bare)).toBe(TEST_CERT_SHA256);
+    expect(fingerprintFromCertificateHeader(`${bare},${bare}`)).toBe(TEST_CERT_SHA256);
+    expect(fingerprintFromCertificateHeader(Buffer.from("not a certificate").toString("base64"))).toBeNull();
+  });
 });
 
 describe("proxy mTLS mode", () => {
@@ -145,13 +152,13 @@ describe("proxy mTLS mode", () => {
     });
     expect(verifiedClientFingerprint(request)).toBe(fingerprint);
   });
-  it("accepts IPv6-mapped proxy addresses and optional verify header", () => {
-    delete process.env.MTLS_PROXY_VERIFY_HEADER;
+  it("accepts IPv6-mapped authenticated proxy addresses", () => {
     process.env.MTLS_TRUSTED_PROXIES = "10.0.0.0/8";
     const request = proxyRequest({
       "X-SSL-Client-Fingerprint": fingerprint,
+      "X-SSL-Client-Verify": "SUCCESS",
     }, "::ffff:10.1.2.3");
-    expect(requestPeerAddress(request)).toBe("10.1.2.3");
+    expect(authenticatedProxyAddress(request)).toBe("10.1.2.3");
     expect(verifiedClientFingerprint(request)).toBe(fingerprint);
   });
   it("rejects a missing or failed verify header", () => {
@@ -174,7 +181,8 @@ describe("proxy mTLS mode", () => {
     expect(verifiedClientFingerprint(proxyRequest({
       "X-SSL-Client-Fingerprint": fingerprint,
       "X-SSL-Client-Verify": "SUCCESS",
-      "x-forwarded-for": attacker,
+      "x-forwarded-for": trustedProxy,
+      "x-apb-proxy-address": attacker,
     }))).toBeNull();
   });
   it("rejects spoofed identity headers that did not come from the proxy", () => {
@@ -184,8 +192,14 @@ describe("proxy mTLS mode", () => {
       "x-forwarded-for": trustedProxy,
       "x-real-ip": trustedProxy,
     }, attacker);
-    expect(requestPeerAddress(spoofed)).toBe(attacker);
+    expect(authenticatedProxyAddress(spoofed)).toBe(attacker);
     expect(verifiedClientFingerprint(spoofed)).toBeNull();
+  });
+  it.each([undefined, "", "short", "b".repeat(64)])("rejects missing or forged proxy tokens: %s", token => {
+    const request = proxyRequest({ "X-SSL-Client-Fingerprint": fingerprint, "X-SSL-Client-Verify": "SUCCESS", "x-forwarded-for": trustedProxy });
+    if (token === undefined) request.headers.delete("x-apb-proxy-token");
+    else request.headers.set("x-apb-proxy-token", token);
+    expect(verifiedClientFingerprint(request)).toBeNull();
   });
   it("fails closed when proxy configuration is missing or invalid", () => {
     const request = proxyRequest({

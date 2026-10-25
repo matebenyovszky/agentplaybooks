@@ -10,8 +10,8 @@
 {$CADDY_SITE:localhost} {
 	tls /certs/server.crt /certs/server.key {
 		client_auth {
-			mode request
-			trusted_ca_cert_file /certs/ca.crt
+			mode verify_if_given
+			trust_pool file /certs/ca.crt
 		}
 	}
 
@@ -20,6 +20,8 @@
 		header_up -X-SSL-Client-Verify
 		header_up X-SSL-Client-Fingerprint {http.request.tls.client.fingerprint}
 		header_up X-SSL-Client-Verify SUCCESS
+		header_up X-APB-Proxy-Token {$MTLS_PROXY_SHARED_SECRET}
+		header_up X-APB-Proxy-Address 172.28.0.10
 		header_up X-Forwarded-Proto {scheme}
 	}
 }

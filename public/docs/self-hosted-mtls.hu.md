@@ -19,7 +19,7 @@ hordozó kulcsra.
 |---------|----------------|--------|
 | `MTLS_MODE` | `cloudflare` | `cloudflare` (éles alapértelmezés), `proxy` (megbízható lezáró), vagy `off`. Ismeretlen érték zárva marad. |
 | `MTLS_PROXY_FINGERPRINT_HEADER` | nincs | A proxy által ellenőrzés után beállított kérésfejléc. `proxy` módban kötelező. |
-| `MTLS_PROXY_VERIFY_HEADER` | nincs | Opcionális. Ha be van állítva, a fejlécnek pontosan `SUCCESS` kell lennie, különben a kérés elutasításra kerül. |
+| `MTLS_PROXY_VERIFY_HEADER` | nincs | Proxy módban kötelező. A fejlécnek pontosan `SUCCESS` kell lennie, különben a kérés elutasításra kerül. |
 | `MTLS_TRUSTED_PROXIES` | nincs | A TLS-lezáró IP-címei vagy CIDR-tartományai, vesszővel. `proxy` módban kötelező. Üres vagy hibás lista zárva marad. |
 
 A `MTLS_MODE=cloudflare` az éles alapértelmezés, a meglévő Cloudflare-telepítés
@@ -39,7 +39,7 @@ helyettesítőjét.
 
 A fingerprint nem titok, nyilvános metaadat. A bizonyíték az, hogy a **proxy
 ellenőrizte: a kliens a megfelelő magánkulcsot mutatta be**, majd **felülírta**
-az azonosító fejléceket, és a TCP-társ szerepel a `MTLS_TRUSTED_PROXIES`
+az azonosító fejléceket, és a proxy titkos csatornakulcsa hiteles, valamint a proxy által beállított cím szerepel a `MTLS_TRUSTED_PROXIES`
 listán.
 
 1. Az alkalmazás portját ne publikáljuk. Csak a proxy érje el.
@@ -52,7 +52,7 @@ listán.
 4. Ismeretlen `MTLS_MODE`, hiányzó allowlist, hiányzó fingerprint-fejlécnév,
    sikertelen verify-fejléc vagy ellenőrizetlen tanúsítvány mind zárva marad.
 
-Az `ssl_verify_client optional` (nginx), a Caddy `mode request` és a Traefik
+Az `ssl_verify_client optional` (nginx), a Caddy `mode verify_if_given` és a Traefik
 `VerifyClientCertIfGiven` ugyanazon a hoston hagyja működni a vezérlőpultot és
 az API-kulcsokat. Az `on` / `require_and_verify` / `RequireAndVerifyClientCert`
 csak külön runtime-hostnéven legyen kötelező.
@@ -87,6 +87,7 @@ openssl x509 -in client.crt -noout -fingerprint -sha256
 
 ```bash
 ./deploy/self-host/generate-test-certs.sh
+export MTLS_PROXY_SHARED_SECRET="$(openssl rand -hex 32)"
 docker compose -f deploy/self-host/docker-compose.mtls.yml up --build
 ```
 
@@ -98,6 +99,7 @@ MTLS_MODE=proxy
 MTLS_PROXY_FINGERPRINT_HEADER=X-SSL-Client-Fingerprint
 MTLS_PROXY_VERIFY_HEADER=X-SSL-Client-Verify
 MTLS_TRUSTED_PROXIES=172.28.0.10/32
+# MTLS_PROXY_SHARED_SECRET: same private random token in app and proxy (43–128 URL-safe characters)
 ```
 
 Konfigok: `deploy/self-host/nginx/nginx.conf`, `caddy/Caddyfile`,
@@ -129,6 +131,8 @@ location / {
     proxy_set_header X-Forwarded-Proto $scheme;
     proxy_set_header X-SSL-Client-Verify $ssl_client_verify;
     proxy_set_header X-SSL-Client-Fingerprint $ssl_client_escaped_cert;
+    proxy_set_header X-APB-Proxy-Token "${MTLS_PROXY_SHARED_SECRET}";
+    proxy_set_header X-APB-Proxy-Address $server_addr;
 }
 ```
 
@@ -141,8 +145,8 @@ A `proxy_set_header` felülírja a bejövő fejlécet. Ne használjuk a
 example.org {
 	tls /certs/server.crt /certs/server.key {
 		client_auth {
-			mode request
-			trusted_ca_cert_file /certs/ca.crt
+			mode verify_if_given
+			trust_pool file /certs/ca.crt
 		}
 	}
 	reverse_proxy app:3000 {
@@ -150,6 +154,8 @@ example.org {
 		header_up -X-SSL-Client-Verify
 		header_up X-SSL-Client-Fingerprint {http.request.tls.client.fingerprint}
 		header_up X-SSL-Client-Verify SUCCESS
+		header_up X-APB-Proxy-Token {$MTLS_PROXY_SHARED_SECRET}
+		header_up X-APB-Proxy-Address 172.28.0.10
 	}
 }
 ```
@@ -206,3 +212,19 @@ export AGENTPLAYBOOKS_CA_BUNDLE=/secure/ca.crt
 
 Lásd: [Python Secrets](./python-secrets.md) és a
 [csomag README](https://github.com/matebenyovszky/agentplaybooks/tree/main/packages/python-secrets).
+
+## A proxy csatornájának hitelesítése (2026-10-25)
+
+Az `MTLS_PROXY_SHARED_SECRET` az alkalmazásban és a TLS-lezáróban is kötelező.
+Egyszer generáljuk `openssl rand -hex 32` paranccsal, és külön titoktárban
+tartsuk. Ne adjuk át klienseknek, és ne kerüljön a hozzáférési naplóba.
+A proxy minden kérésnél írja felül az `X-APB-Proxy-Token` és
+`X-APB-Proxy-Address` fejléceket. Az alkalmazás portja maradjon privát;
+külön gépek között a proxy és az alkalmazás közötti szakaszon is kell TLS.
+
+Az nginx Compose-példa csak ezt a változót helyettesíti a sablonban.
+Traefiknél a `dynamic.yml` fájlt előbb `envsubst '${MTLS_PROXY_SHARED_SECRET}'`
+paranccsal rendereljük védett fájlba, és azt csatoljuk. A strip-client-cert
+middleware a pass-client-cert előtt fusson. Caddy 2.10+ esetén
+`verify_if_given` és `trust_pool file` szükséges. Egy továbbított IP-fejléc
+vagy egy IP-lista önmagában nem hitelesíti a proxyt a Next.js Requestben.

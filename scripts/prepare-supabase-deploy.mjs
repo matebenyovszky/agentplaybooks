@@ -46,6 +46,9 @@ if (databaseUrl) {
   if (!direct && !pooler) {
     throw new Error(`SUPABASE_DB_URL does not identify production project ${projectRef}.`);
   }
+  if (url.port && url.port !== "5432") {
+    throw new Error("Production migrations require a direct or session connection on port 5432.");
+  }
 }
 
 const workdir = mkdtempSync(join(tmpdir(), "agentplaybooks-supabase-deploy-"));

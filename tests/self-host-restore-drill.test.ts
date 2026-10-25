@@ -1,4 +1,5 @@
 import { readFileSync, statSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { afterEach, describe, expect, it } from "vitest";
 import { decryptSecret, encryptSecret } from "../src/lib/crypto";
 
@@ -34,7 +35,13 @@ describe("self-host restore drill fixtures", () => {
     ]) {
       const source = readFileSync(relative, "utf8");
       expect(source.startsWith("#!/usr/bin/env bash")).toBe(true);
-      expect(statSync(relative).mode & 0o111).toBeGreaterThan(0);
+      if (process.platform === "win32") {
+        // NTFS does not expose POSIX execute bits. Verify the mode actually
+        // shipped by Git, which is what the Linux restore operator receives.
+        expect(execFileSync("git", ["ls-files", "--stage", "--", relative], { encoding: "utf8" })).toMatch(/^100755 /);
+      } else {
+        expect(statSync(relative).mode & 0o111).toBeGreaterThan(0);
+      }
     }
   });
 

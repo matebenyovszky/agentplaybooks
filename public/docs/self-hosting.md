@@ -227,8 +227,8 @@ an empty database: the incremental history cannot create the core tables.
 | `MCP_REGISTRY_URL` | No | Override for `GET /api/mcp-registry/search`. Unset uses the official registry. Empty disables it. An internal URL is used even when `NO_EGRESS=true`. |
 | `MTLS_MODE` | No | Secret-client certificate auth. Default `cloudflare` (hosted production). Set `proxy` behind a TLS terminator that verifies client certs; `off` disables certificate auth. Unknown values fail closed. See [Self-hosted mTLS](./self-hosted-mtls.md). |
 | `MTLS_PROXY_FINGERPRINT_HEADER` | No | Required when `MTLS_MODE=proxy`. Header the terminator sets after verifying the client cert (hex SHA-256 or PEM). |
-| `MTLS_PROXY_VERIFY_HEADER` | No | Optional. When set, that header must equal `SUCCESS` or mTLS is rejected. |
-| `MTLS_TRUSTED_PROXIES` | No | Required when `MTLS_MODE=proxy`. Comma-separated IPs/CIDRs of the terminator. Headers from any other source are ignored. |
+| `MTLS_PROXY_VERIFY_HEADER` | No | Required in proxy mode. That header must equal `SUCCESS` or mTLS is rejected. |
+| `MTLS_TRUSTED_PROXIES` | No | Required when `MTLS_MODE=proxy`. Comma-separated IPs/CIDRs of the terminator. The authenticated X-APB-Proxy-Address must match; also requires MTLS_PROXY_SHARED_SECRET. |
 
 ### Air-gapped / no-egress
 
