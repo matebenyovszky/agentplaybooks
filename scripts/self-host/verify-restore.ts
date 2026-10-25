@@ -14,7 +14,8 @@ const GUID = "restore-drill-playbook";
 const PLAYBOOK_NAME = "Restore drill playbook";
 const SECRET_NAME = "DRILL_TOKEN";
 const SECRET_VALUE = "drill-secret-value-do-not-use-in-prod";
-const AUDIT_COUNT = 3;
+// Seeded secret.create/use/reveal rows plus playbook.create from the config trigger.
+const AUDIT_COUNT = 4;
 const STORAGE_OBJECT = "drill-object.txt";
 const STORAGE_CONTENTS = "restore-drill-object\n";
 

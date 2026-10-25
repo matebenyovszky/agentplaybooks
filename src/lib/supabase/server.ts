@@ -1,4 +1,5 @@
 import { createServerClient } from "./client";
+import { auditedFetch } from "@/lib/audit-context";
 
 type ServerClient = ReturnType<typeof createServerClient>;
 type CachedClient = { url: string; key: string; client: ServerClient };
@@ -13,7 +14,7 @@ export function getServerAnonSupabase(): ServerClient {
     throw new Error("NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are required");
   }
   if (!anonymousClient || anonymousClient.url !== url || anonymousClient.key !== key) {
-    anonymousClient = { url, key, client: createServerClient(url, key) };
+    anonymousClient = { url, key, client: createServerClient(url, key, auditedFetch) };
   }
   return anonymousClient.client;
 }
@@ -25,7 +26,7 @@ export function getServerServiceSupabase(): ServerClient {
     throw new Error("NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required for privileged database access");
   }
   if (!serviceClient || serviceClient.url !== url || serviceClient.key !== key) {
-    serviceClient = { url, key, client: createServerClient(url, key) };
+    serviceClient = { url, key, client: createServerClient(url, key, auditedFetch) };
   }
   return serviceClient.client;
 }

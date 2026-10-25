@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { runWithAuditRequest } from "@/lib/audit-context";
 
 /**
  * Origins allowed to make credentialed cross-origin API calls.
@@ -83,5 +84,8 @@ export function createApiApp(basePath?: string) {
     credentials: true,
     maxAge: 86400,
   }));
+  // Database writes made while handling this request are attributed to the
+  // caller the handler authenticates (see src/lib/audit-context.ts).
+  app.use("*", (c, next) => runWithAuditRequest(c.req.raw, next));
   return basePath ? app.basePath(basePath) : app;
 }
