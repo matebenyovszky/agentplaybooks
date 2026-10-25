@@ -10,6 +10,10 @@
 # A bare PostgreSQL container is not enough and is deliberately not included
 # here -- see public/docs/self-hosting.md.
 #
+# On-prem backup of the data plane (Postgres/Supabase including vault tables,
+# storage, redacted config; encryption master key stored separately):
+# scripts/self-host/backup.sh, restore.sh, and docs/self-host/backup-restore.md.
+#
 # The air-gapped no-egress proof (isolated network, DNS sink, secrets flow)
 # lives in deploy/airgap/ and .github/workflows/no-egress.yml.
 #
