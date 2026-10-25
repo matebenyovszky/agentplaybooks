@@ -149,3 +149,48 @@ describe("configuration changes in the audit trail", () => {
     expect(await last()).toMatchObject({ operation: "playbook.delete", target: "playbook:audited-pb", actor_id: OWNER });
   });
 });
+
+describe("private instance switch", () => {
+  let db: PGlite;
+
+  beforeAll(async () => {
+    db = new PGlite({ extensions: { pg_trgm, pgcrypto } });
+    await db.exec(`
+      create role anon;
+      create role authenticated;
+      create role service_role bypassrls;
+      create role supabase_auth_admin;
+      create schema auth;
+      create schema extensions;
+      create extension pgcrypto with schema extensions;
+      create function extensions.uuid_generate_v4() returns uuid language sql as 'select gen_random_uuid()';
+      create function auth.uid() returns uuid language sql as
+        'select nullif(current_setting(''request.jwt.claim.sub'', true), '''')::uuid';
+      create function auth.role() returns text language sql as 'select current_user::text';
+      create table auth.users(id uuid primary key, email text, raw_user_meta_data jsonb default '{}');
+    `);
+    await db.exec(readFileSync("supabase/schema.sql", "utf8").replace(/^CREATE EXTENSION .*;\r?$/gm, ""));
+    await db.exec(`insert into auth.users(id,email) values ('${OWNER}','owner@example.invalid')`);
+  });
+
+  afterAll(async () => {
+    await db.close();
+  });
+
+  it("changes nothing while it is off", async () => {
+    await db.exec(`insert into playbooks(user_id,guid,name,visibility) values ('${OWNER}','open-pb','Open','public')`);
+    await db.exec(`update playbooks set visibility = 'unlisted' where guid = 'open-pb'`);
+  });
+
+  it("refuses public and unlisted playbooks once it is on", async () => {
+    await db.exec(`select set_config('agentplaybooks.private_instance', 'on', false)`);
+    await expect(db.exec(`insert into playbooks(user_id,guid,name,visibility) values ('${OWNER}','new-pb','New','public')`))
+      .rejects.toThrow(/instance is private/);
+    await expect(db.exec(`update playbooks set visibility = 'public' where guid = 'open-pb'`))
+      .rejects.toThrow(/instance is private/);
+    await db.exec(`update playbooks set visibility = 'private' where guid = 'open-pb'`);
+    await db.exec(`insert into playbooks(user_id,guid,name) values ('${OWNER}','closed-pb','Closed')`);
+    const { rows } = await db.query<{ n: number }>(`select count(*)::int as n from playbooks where visibility <> 'private'`);
+    expect(rows[0].n).toBe(0);
+  });
+});

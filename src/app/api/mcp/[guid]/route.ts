@@ -2351,6 +2351,11 @@ use_secret_write({
             if (args.description !== undefined) updates.description = args.description;
             if (args.visibility !== undefined) {
               if (!["public", "private", "unlisted"].includes(args.visibility as string)) throw new Error("Invalid visibility");
+              // Publishing is a person's decision. A playbook-scoped key belongs
+              // to an agent, which may make a playbook private but not expose it.
+              if (args.visibility !== "private" && apiKeyData.kind === "playbook_key") {
+                throw new Error("A playbook API key cannot make a playbook public or unlisted; the owner can, from a signed-in session");
+              }
               updates.visibility = args.visibility;
             }
             if (args.tags !== undefined) {
