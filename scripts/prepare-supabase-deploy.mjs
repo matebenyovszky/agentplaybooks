@@ -60,7 +60,15 @@ for (const version of versions) {
     `-- Version ${version} is already in this production project's migration history.\n`);
 }
 for (const { file, version } of forwardFiles) {
-  copyFileSync(join(migrationDir, file), join(stagedMigrations, `${version}_${basename(file).slice(15)}`));
+  const source = join(migrationDir, file);
+  const destination = join(stagedMigrations, `${version}_${basename(file).slice(15)}`);
+  if (/^-- @manual-production-migration\s*$/m.test(readFileSync(source, "utf8"))) {
+    // Applied/recorded versions are skipped by db push. If an operator has not
+    // completed this migration, fail before running any of its production DDL.
+    writeFileSync(destination, `DO $$ BEGIN RAISE EXCEPTION 'Migration ${version} requires its verified operator runbook and recorded version before deployment'; END $$;\n`);
+  } else {
+    copyFileSync(source, destination);
+  }
 }
 
 if (process.env.GITHUB_OUTPUT) {

@@ -1,6 +1,6 @@
 import type { PlaybooksUpdate } from "@/lib/supabase/types";
 
-export type HumanPlaybookRole = "owner" | "editor";
+export type HumanPlaybookRole = "owner" | "editor" | "auditor";
 
 /**
  * Central field-level policy for human playbook edits.
@@ -10,6 +10,7 @@ export function buildPlaybookUpdate(
   body: Record<string, unknown>,
   role: HumanPlaybookRole
 ): PlaybooksUpdate {
+  if (role === "auditor") return {};
   const update: PlaybooksUpdate = {};
   if (body.name !== undefined) update.name = body.name as PlaybooksUpdate["name"];
   if (body.description !== undefined) update.description = body.description as PlaybooksUpdate["description"];

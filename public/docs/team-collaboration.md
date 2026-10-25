@@ -2,7 +2,11 @@
 
 Playbook owners can invite other signed-in users to edit a playbook without sharing an API key or transferring ownership.
 
-The permission model is intentionally small: one immutable owner and one collaborator role, **Editor**. This keeps everyday collaboration simple while reserving security-sensitive control-plane operations for the owner.
+The permission model is intentionally small: one immutable owner and two
+collaborator roles, **Editor** and **Auditor**. Editors change content.
+Auditors read and export the audit trail and enough playbook metadata to name
+it. Neither role can read secret values. Security-sensitive control-plane
+operations stay with the owner.
 
 ## Share a playbook
 
@@ -20,15 +24,16 @@ Each playbook can have at most 25 active editors and pending invitations in tota
 
 ## Access boundaries
 
-| Capability | Owner | Editor |
-| --- | --- | --- |
-| View and edit playbook content | Yes | Yes |
-| Edit skills, MCP servers, persona, attachments, canvas, and memory | Yes | Yes |
-| Change visibility | Yes | No |
-| Manage collaborators | Yes | No |
-| Manage playbook API keys | Yes | No |
-| View or manage secrets | Yes | No |
-| Delete the playbook | Yes | No |
+| Capability | Owner | Editor | Auditor |
+| --- | --- | --- | --- |
+| View and edit playbook content | Yes | Yes | Metadata only |
+| Edit skills, MCP servers, persona, attachments, canvas, and memory | Yes | Yes | No |
+| Read / export / verify audit logs | Yes | No | Yes |
+| Change visibility | Yes | No | No |
+| Manage collaborators | Yes | No | No |
+| Manage playbook API keys | Yes | No | No |
+| View or manage secrets | Yes | No | No |
+| Delete the playbook | Yes | No | No |
 
 Ownership always remains with the original owner.
 

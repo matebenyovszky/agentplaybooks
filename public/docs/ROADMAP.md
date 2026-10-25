@@ -89,9 +89,11 @@ This document outlines the development roadmap for AgentPlaybooks — the open s
   - Export logs for compliance
   - Done for the two surfaces that handle credentials: federated MCP calls and
     the secrets vault (`secret.*`), both in one `audit_logs` table read at
-    `GET /api/playbooks/:guid/audit`. Skills, memory and canvas writes are still
-    unrecorded — they add an `operation` namespace, not a table — and there is
-    no export or retention policy yet.
+    `GET /api/playbooks/:guid/audit`. JSONL/CSV export, optional syslog/SIEM
+    forwarding, configurable retention with chain checkpoints, a per-playbook
+    hash chain (`apb audit verify`), and a read-only auditor role are in
+    [Audit Logs](./audit-logs.md). Skills, memory and canvas writes are still
+    unrecorded — they add an `operation` namespace, not a table.
 
 - [ ] **Secrets for local stdio MCP servers** - The last gap in "pull and it works"
   - A locally spawned MCP server (`npx some-mcp` with `env.API_KEY`) runs on the

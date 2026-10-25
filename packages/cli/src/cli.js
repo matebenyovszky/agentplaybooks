@@ -60,6 +60,16 @@ import {
   savePlaybookKey,
 } from "./secrets.js";
 import { promptForKey, promptForLine } from "./prompt.js";
+import {
+  auditQueryFromFlags,
+  collectExportGuids,
+  fetchAuditExport,
+  fetchAuditPurge,
+  fetchAuditVerify,
+  requireUserKey,
+  resolveAuditGuids,
+  validateExportFormat,
+} from "./audit.js";
 
 const HELP = `AgentPlaybooks CLI
 
@@ -104,6 +114,10 @@ Usage:
   agentplaybooks secrets run [path] -- <command> [args...]
   agentplaybooks secrets adopt [path] [--global] [--apply] [--rewrite=<files>]
                               [--prefix=<P>] [--json] [--yes]
+  agentplaybooks audit export [guid] [--format=jsonl|csv] [--since=ISO] [--until=ISO]
+                              [--actor=<id>] [--action=<op>] [--playbook=<guid>] [--url=<base>]
+  agentplaybooks audit verify [guid] [--playbook=<guid>] [--json] [--url=<base>]
+  agentplaybooks audit purge <guid> [--days=N] [--yes] [--url=<base>]
 
 Commands:
   memory     Install and configure the native Hermes memory provider for a private
@@ -172,6 +186,9 @@ Commands:
              --global uploads this machine's own skills instead of one project's,
              as a workstation playbook. MCP configuration stays local: a
              home-scoped MCP config is where auth headers live.
+  audit      Export (JSONL/CSV), verify the per-playbook hash chain, or purge
+             rows older than --days. Uses the user API key; a playbook key that
+             performs vault operations cannot read the trail.
   secrets    Work with the playbook's encrypted vault. 'status' compares what
              the playbook needs against the vault and this shell, 'push' stores
              one value, and 'run' injects values into one child process.
@@ -205,7 +222,7 @@ function parse(args) {
   const separator = args.indexOf("--");
   const own = separator === -1 ? args.slice(1) : args.slice(1, separator);
   const rest = separator === -1 ? [] : args.slice(separator + 1);
-  const valueFlags = new Set(["--profile", "--hermes-home", "--target", "--name", "--key-env", "--key-header", "--url", "--shared", "--team", "--memory", "--managed-dir", "--hermes-bin", "--env-file", "--output", "--version", "--snapshot", "--client-id", "--playbook", "--from-env", "--rewrite", "--prefix"]);
+  const valueFlags = new Set(["--profile", "--hermes-home", "--target", "--name", "--key-env", "--key-header", "--url", "--shared", "--team", "--memory", "--managed-dir", "--hermes-bin", "--env-file", "--output", "--version", "--snapshot", "--client-id", "--playbook", "--from-env", "--rewrite", "--prefix", "--format", "--since", "--until", "--actor", "--action", "--operation", "--secret", "--limit", "--days"]);
   for (let i = 0; i < own.length; i++) {
     const arg = own[i];
     if (arg.startsWith("--")) {
@@ -572,6 +589,67 @@ async function runSecrets(url, flags, positional, rest) {
   throw new Error("Usage: agentplaybooks secrets <login|status|push|run|adopt> ...");
 }
 
+async function runAudit(url, flags, positional) {
+  const subcommand = positional[0];
+  if (!subcommand || !["export", "verify", "purge"].includes(subcommand)) {
+    throw new Error("Usage: agentplaybooks audit <export|verify|purge> [guid] ...");
+  }
+  const apiKey = await requireUserKey(url);
+  const guid = resolveAuditGuids(positional, flags);
+
+  if (subcommand === "export") {
+    const format = validateExportFormat(typeof flags.get("--format") === "string" ? flags.get("--format") : "jsonl");
+    const query = { ...auditQueryFromFlags(flags), format };
+    const guids = await collectExportGuids(url, apiKey, guid);
+    if (guids.length === 0) throw new Error("No playbook GUID given, and the key cannot audit any playbook.");
+    const chunks = [];
+    for (const id of guids) {
+      chunks.push(await fetchAuditExport(url, apiKey, id, query));
+    }
+    if (format === "csv" && chunks.length > 1) {
+      const lines = chunks.flatMap((chunk, index) => {
+        const parts = chunk.replace(/\n$/, "").split("\n");
+        return index === 0 ? parts : parts.slice(1);
+      });
+      process.stdout.write(`${lines.join("\n")}\n`);
+      return;
+    }
+    process.stdout.write(chunks.join(""));
+    return;
+  }
+
+  if (subcommand === "verify") {
+    const guids = guid ? [guid] : await collectExportGuids(url, apiKey, null);
+    if (guids.length === 0) throw new Error("Pass a playbook GUID to verify.");
+    let broken = false;
+    const reports = [];
+    for (const id of guids) {
+      const report = await fetchAuditVerify(url, apiKey, id);
+      reports.push({ guid: id, ...report });
+      if (!report.ok) broken = true;
+      if (!flags.has("--json")) {
+        if (report.ok) console.log(`${id}: ok (${report.checked} entries)`);
+        else {
+          const link = report.first_broken_link || report.broken;
+          console.log(`${id}: BROKEN at ${link?.id ?? "unknown"} (${link?.reason}: expected ${link?.expected}, got ${link?.actual})`);
+        }
+      }
+    }
+    if (flags.has("--json")) console.log(JSON.stringify(guid ? reports[0] : reports, null, 2));
+    if (broken) process.exitCode = 1;
+    return;
+  }
+
+  if (!guid) throw new Error("Usage: agentplaybooks audit purge <guid> [--days=N] [--yes]");
+  const days = typeof flags.get("--days") === "string" ? Number(flags.get("--days")) : undefined;
+  if (!flags.has("--yes")) {
+    throw new Error("Refusing to purge audit logs without --yes.");
+  }
+  const result = await fetchAuditPurge(url, apiKey, guid, Number.isFinite(days) ? days : undefined);
+  if (flags.has("--json")) console.log(JSON.stringify(result, null, 2));
+  else console.log(`Purged ${result.purged ?? 0} audit log(s) for ${guid}.`);
+}
+
 export async function run(args) {
   const { command, flags, positional, rest } = parse(args);
   if (command === "--version") {
@@ -800,6 +878,11 @@ export async function run(args) {
   }
 
   const url = resolveBaseUrl(typeof flags.get("--url") === "string" ? flags.get("--url") : undefined);
+
+  if (command === "audit") {
+    await runAudit(url, flags, positional);
+    return;
+  }
 
   if (command === "secrets") {
     await runSecrets(url, flags, positional, rest);

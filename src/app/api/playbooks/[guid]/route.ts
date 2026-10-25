@@ -4,6 +4,7 @@ import { getServiceSupabase } from "../../_shared/supabase";
 import { getAuthenticatedUser } from "../../_shared/auth";
 import { getPlaybookAccessRole } from "../../_shared/guards";
 import { buildPlaybookUpdate } from "@/lib/playbook-access";
+import { playbookViewForRole, roleMayWrite } from "@/lib/audit-access";
 import {
     formatAsOpenAPI,
     formatAsMCP,
@@ -78,6 +79,10 @@ export async function GET(
 
     if (!isPublicOrUnlisted && !accessRole) {
         return Response.json({ error: "Playbook not found" }, { status: 404 });
+    }
+
+    if (accessRole === "auditor") {
+        return Response.json(playbookViewForRole({ ...playbook, current_user_role: "auditor" }, "auditor"));
     }
 
     // Get related data. The attachments come along with the skills because a
@@ -162,7 +167,7 @@ export async function PUT(
     }
 
     const accessRole = await getPlaybookAccessRole(user.id, playbook.id);
-    if (!accessRole) {
+    if (!roleMayWrite(accessRole)) {
         return Response.json({ error: "Forbidden" }, { status: 403 });
     }
 

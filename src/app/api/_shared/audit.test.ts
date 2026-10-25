@@ -5,13 +5,18 @@ import {
   flushSecretAudit,
   recordSecretAudit,
   auditActor,
+  redactAuditSecrets,
+  sanitizeAuditInsert,
+  sanitizeAuditTarget,
 } from "./audit";
 import { getServiceSupabase } from "./supabase";
 
 vi.mock("./supabase", () => ({ getServiceSupabase: vi.fn() }));
 
-function mockVault() {
-  const insert = vi.fn().mockResolvedValue({ error: null });
+function mockVault(result: { data?: Record<string, unknown> | null; error: { message: string } | null } = { data: { id: "audit-1" }, error: null }) {
+  const single = vi.fn().mockResolvedValue(result);
+  const select = vi.fn().mockReturnValue({ single });
+  const insert = vi.fn().mockReturnValue({ select });
   vi.mocked(getServiceSupabase).mockReturnValue({
     from: vi.fn().mockReturnValue({ insert }),
   } as unknown as ReturnType<typeof getServiceSupabase>);
@@ -22,14 +27,14 @@ const context = { playbookId: "playbook1", actor: { type: "owner" as const, id: 
 
 describe("auditActor", () => {
   it("prefers the owner session over an API key, matching the handlers' own order", () => {
-    expect(auditActor({ id: "user1" }, { key_prefix: "apb_live_abc" })).toEqual({
+    expect(auditActor({ id: "user1" }, "apb_live_abc")).toEqual({
       type: "owner",
       id: "user1",
     });
   });
 
-  it("identifies an API key by its prefix", () => {
-    expect(auditActor(null, { key_prefix: "apb_live_abc" })).toEqual({
+  it("identifies an API key by its stored display prefix", () => {
+    expect(auditActor(null, "apb_live_abc")).toEqual({
       type: "api_key",
       id: "apb_live_abc",
     });
@@ -37,6 +42,35 @@ describe("auditActor", () => {
 
   it("falls back to anonymous when neither credential was accepted", () => {
     expect(auditActor(null, null)).toEqual({ type: "anonymous", id: null });
+  });
+});
+
+describe("sanitizeAuditInsert", () => {
+  const RAW_KEY = "apb_live_LEAKCHECKRAWAPIKEY0000000000000000";
+
+  it("replaces a full API key used as actor_id with a constant, not a slice of the raw key", () => {
+    const row = sanitizeAuditInsert({
+      playbook_id: "pb",
+      operation: "secret.use",
+      status: "success",
+      actor_id: RAW_KEY,
+    });
+    expect(row.actor_id).toBe("[redacted-key]");
+    expect(row.actor_id).not.toContain(RAW_KEY);
+  });
+
+  it("keeps the stored key prefix and user ids", () => {
+    expect(sanitizeAuditInsert({
+      playbook_id: "pb", operation: "secret.reveal", status: "success", actor_id: "apb_live_abc",
+    }).actor_id).toBe("apb_live_abc");
+    expect(sanitizeAuditInsert({
+      playbook_id: "pb", operation: "secret.reveal", status: "success", actor_id: "user-1",
+    }).actor_id).toBe("user-1");
+  });
+
+  it("drops URL userinfo, query and path from http(s) targets", () => {
+    expect(sanitizeAuditTarget("https://user:s3cret@api.example.com/v1?token=abc")).toBe("api.example.com");
+    expect(redactAuditSecrets(`Bearer ${RAW_KEY}`)).toBe("Bearer [redacted]");
   });
 });
 
@@ -130,10 +164,7 @@ describe("recordSecretAudit", () => {
   });
 
   it("swallows a failing write: an audit outage must not take the vault down", async () => {
-    const insert = vi.fn().mockResolvedValue({ error: { message: "relation does not exist" } });
-    vi.mocked(getServiceSupabase).mockReturnValue({
-      from: vi.fn().mockReturnValue({ insert }),
-    } as unknown as ReturnType<typeof getServiceSupabase>);
+    mockVault({ data: null, error: { message: "relation does not exist" } });
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
 
     await expect(

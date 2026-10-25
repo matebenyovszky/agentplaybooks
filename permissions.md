@@ -26,7 +26,11 @@ API Keys are now assigned a **Role**, which determines their permissions.
     - Can list, create, update, and delete memories and skills.
     - Suitable for collaborative agents.
 
-3.  **Admin** (`admin`)
+3.  **Auditor** (`auditor`)
+    - Read and export the playbook audit trail.
+    - Cannot read secret values or mutate playbook content.
+
+4.  **Admin** (`admin`)
     - Full access to everything.
     - Can modify Playbook settings (name, description, visibility).
     - Has full agent/API access within the playbook permission model.
@@ -35,16 +39,17 @@ API Keys are now assigned a **Role**, which determines their permissions.
 ## Human Collaboration
 
 - Human access is stored separately in `playbook_collaborators`; an API key is never converted into a user session.
-- The MVP has one collaborator role: `editor`.
+- Collaborator roles: `editor` (default) and `auditor`.
 - Editors can update playbook content, personas, skills, MCP servers, attachments, canvas, and memory.
 - Editors cannot access secrets, manage API keys or collaborators, change visibility, or delete the playbook.
+- Auditors can read/export/verify audit logs and playbook metadata. They cannot read secret values or mutate anything.
 - Invitations use a one-time random token, stored only as a SHA-256 hash, and expire after 72 hours.
 
 ### Implementation Details
 
 - **Database**:
     - `playbooks` table: `visibility` (enum: public, private, unlisted).
-    - `api_keys` table: `role` (text/enum: viewer, coworker, admin).
+    - `api_keys` table: `role` (text/enum: viewer, coworker, proposer, admin, auditor).
 - **API Headers**:
     - `Authorization: Bearer apb_<key>` used for API access.
     - `validateApiKey` checks the key's role against the requested operation.

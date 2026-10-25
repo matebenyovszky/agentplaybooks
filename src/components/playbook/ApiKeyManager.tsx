@@ -30,6 +30,7 @@ const ROLES = [
   { value: "viewer", label: "Viewer", description: "Read-only access to values" },
   { value: "coworker", label: "Coworker", description: "Read and write access" },
   { value: "proposer", label: "Proposer", description: "Read access; memory and skill changes wait for your review" },
+  { value: "auditor", label: "Auditor", description: "Read and export the audit trail. No secret values, no writes." },
   { value: "admin", label: "Admin", description: "Full access to modify playbook structure" },
 ];
 
@@ -37,6 +38,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
   viewer: ["memory:read", "canvas:read", "skills:read", "personas:read", "secrets:read"],
   proposer: ["memory:read", "memory:propose", "canvas:read", "skills:read", "skills:propose", "personas:read", "secrets:read"],
   coworker: ["memory:read", "memory:write", "canvas:read", "canvas:write", "skills:read", "skills:write", "personas:read", "personas:write", "secrets:read", "secrets:write"],
+  auditor: ["audit:read", "playbooks:read"],
   admin: ["full"],
 };
 
@@ -48,7 +50,7 @@ export function ApiKeyManager({ playbook_id, apiKeys, onUpdate }: ApiKeyManagerP
 
   // Create form state
   const [keyName, setKeyName] = useState("");
-  const [selectedRole, setSelectedRole] = useState<'viewer' | 'coworker' | 'proposer' | 'admin'>("viewer");
+  const [selectedRole, setSelectedRole] = useState<'viewer' | 'coworker' | 'proposer' | 'auditor' | 'admin'>("viewer");
 
   const handleCreateKey = async () => {
     // Role always selected

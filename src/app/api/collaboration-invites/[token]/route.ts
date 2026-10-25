@@ -9,7 +9,7 @@ async function findInvite(token: string) {
   const tokenHash = await hashToken(token);
   const { data } = await supabase
     .from("playbook_collaborators")
-    .select("id, playbook_id, user_id, accepted_at, invite_expires_at, playbooks!inner(id, name, user_id)")
+    .select("id, playbook_id, user_id, role, accepted_at, invite_expires_at, playbooks!inner(id, name, user_id)")
     .eq("invite_token_hash", tokenHash)
     .single();
   return data;
@@ -26,7 +26,11 @@ export async function GET(
   }
 
   const joined = invite.playbooks as unknown as { id: string; name: string; user_id: string };
-  return Response.json({ playbook_name: joined.name, expires_at: invite.invite_expires_at });
+  return Response.json({
+    playbook_name: joined.name,
+    expires_at: invite.invite_expires_at,
+    role: invite.role === "auditor" ? "auditor" : "editor",
+  });
 }
 
 export async function POST(

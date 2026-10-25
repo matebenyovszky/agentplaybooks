@@ -1,8 +1,6 @@
 import { presentedApiKey, validateApiKey } from "./auth";
-import { getPlaybookByGuid } from "./guards";
 import { getServiceSupabase } from "./supabase";
 import { verifiedClientFingerprint } from "@/lib/mtls";
-import type { AuditContext } from "./audit";
 import { recordSecretAudit } from "./audit";
 import { playbookIdentifierColumn } from "@/lib/playbook-identifier";
 
@@ -15,53 +13,59 @@ export function secretNames(value: unknown): value is string[] {
     && new Set(value).size === value.length;
 }
 
-export type RuntimeAccess = {
+export type PlaybookOwner = {
   playbookId: string;
   ownerId: string;
-  allowedNames: string[] | null;
-  clientId: string | null;
-  audit: AuditContext;
 };
 
-/** Explicit modes prevent a failed certificate check falling back to a bearer key. */
-export async function authorizeSecretRuntime(
-  request: Request, guid: string, mode: "api_key" | "mtls",
-): Promise<RuntimeAccess | null> {
-  const requestId = request.headers.get("cf-ray") || request.headers.get("x-request-id");
-  if (mode === "api_key") {
-    const key = await validateApiKey(request, "secrets:read");
-    if (!key) return null;
-    const playbook = await getPlaybookByGuid(guid, null, key.playbooks.id);
-    if (!playbook || playbook.id !== key.playbooks.id) return null;
-    return {
-      playbookId: playbook.id, ownerId: playbook.user_id, allowedNames: null, clientId: null,
-      audit: { playbookId: playbook.id, actor: { type: "api_key", id: key.key_prefix }, requestId },
-    };
-  }
+export type MtlsRuntimeGrant = {
+  clientId: string;
+  allowedNames: string[] | null;
+};
 
-  // A certificate credential never implicitly inherits a bearer key's privileges.
+/** Playbook id and owner from the GUID/UUID in the URL. Does not read a bearer key. */
+export async function playbookOwnerByGuid(guid: string): Promise<PlaybookOwner | null> {
+  const { data, error } = await getServiceSupabase()
+    .from("playbooks")
+    .select("id, user_id")
+    .eq(playbookIdentifierColumn(guid), guid)
+    .maybeSingle();
+  if (error || !data?.id || !data.user_id) return null;
+  return { playbookId: data.id, ownerId: data.user_id };
+}
+
+/**
+ * Whether this request's playbook key is bound to `playbookId` and may load
+ * runtime vault values. Returns only a boolean so the call cannot taint the
+ * SIEM HMAC body (CodeQL `js/insufficient-password-hash`).
+ */
+export async function bearerMayLoadRuntime(request: Request, playbookId: string): Promise<boolean> {
+  const accepted = await validateApiKey(request, "secrets:read");
+  return Boolean(accepted && accepted.playbooks.id === playbookId);
+}
+
+/**
+ * Certificate grant for this playbook, or null. Does not fall back to a bearer
+ * key. Denied attempts are recorded with the mTLS client id, not a key prefix.
+ */
+export async function mtlsRuntimeGrant(
+  request: Request, playbookId: string,
+): Promise<MtlsRuntimeGrant | null> {
+  const requestId = request.headers.get("cf-ray") || request.headers.get("x-request-id");
   if (presentedApiKey(request)) return null;
   const fingerprint = verifiedClientFingerprint(request);
   if (!fingerprint) return null;
-  const db = getServiceSupabase();
-  const { data: playbook, error: playbookError } = await db.from("playbooks")
-    .select("id, user_id").eq(playbookIdentifierColumn(guid), guid).maybeSingle();
-  if (playbookError || !playbook) return null;
-  const { data: client, error } = await db.from("secret_clients").select("*")
-    .eq("playbook_id", playbook.id).eq("certificate_sha256", fingerprint)
+  const { data: client, error } = await getServiceSupabase().from("secret_clients").select("*")
+    .eq("playbook_id", playbookId).eq("certificate_sha256", fingerprint)
     .eq("is_active", true).maybeSingle();
   if (error || !client || (client.expires_at && Date.parse(client.expires_at) <= Date.now())) {
     await recordSecretAudit({
-      playbookId: playbook.id, actor: { type: "mtls", id: client?.id ?? null }, requestId,
+      playbookId, actor: { type: "mtls", id: client?.id ?? null }, requestId,
     }, {
       operation: "secret.reveal", status: "denied",
       reason: error ? "client_lookup_failed" : client ? "client_expired" : "client_not_registered_or_revoked",
     });
     return null;
   }
-  return {
-    playbookId: playbook.id, ownerId: playbook.user_id,
-    allowedNames: client.secret_names, clientId: client.id,
-    audit: { playbookId: playbook.id, actor: { type: "mtls", id: client.id }, requestId },
-  };
+  return { clientId: client.id, allowedNames: client.secret_names };
 }

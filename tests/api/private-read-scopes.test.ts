@@ -19,6 +19,13 @@ describe("actorMayRead", () => {
     }
   });
 
+  it("denies content reads to an auditor member and an auditor playbook key", () => {
+    expect(actorMayRead({ kind: "member", role: "auditor" }, "memory:read")).toBe(false);
+    expect(actorMayRead({ kind: "member", role: "auditor" }, "secrets:read")).toBe(false);
+    expect(actorMayRead(key(["audit:read", "playbooks:read", "secrets:read"], "auditor"), "memory:read")).toBe(false);
+    expect(actorMayRead(key(["audit:read", "playbooks:read"], "auditor"), "playbooks:read")).toBe(true);
+  });
+
   it("keeps a memory:read key's old access to every private read", () => {
     const legacy = key(["memory:read", "memory:write"]);
     for (const permission of ["memory:read", "skills:read", "canvas:read", "playbooks:read", "personas:read"]) {
@@ -98,7 +105,7 @@ describe("read scope table", () => {
     const unchecked = PLAYBOOK_TOOLS.map((tool) => tool.name).filter((name) => {
       if (name in READ_TOOL_PERMISSIONS || NO_DATA_TOOLS.has(name)) return false;
       const body = cases.get(name);
-      return !body || !/validateApiKey\(|validatePlaybookCredential\(/.test(body);
+      return !body || !/validateApiKey\(|validatePlaybookCredential\(|acceptPlaybookCredential\(/.test(body);
     });
     expect(unchecked).toEqual([]);
   });

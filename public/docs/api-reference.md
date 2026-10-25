@@ -960,8 +960,14 @@ an API key's prefix), the destination **host** in `target` for `secret.use`, and
 Entries never contain a secret value, a full outbound URL (a path or query string carries data
 of its own), or an API key.
 
-Owner access only: a session, or a **user** API key with `playbooks:read`. A playbook API key —
-the credential agents use to perform vault operations — cannot read the record of them.
+Owner or **auditor** access: a session, a **user** API key with `playbooks:read` or
+`audit:read`, or a playbook API key whose role is `auditor`. A playbook API key that
+performs vault operations still cannot read the record of them.
+
+Export the same filters as JSONL or CSV (`format=jsonl|csv`, also
+`GET /api/playbooks/:guid/audit/export`). Verify the per-playbook hash chain at
+`GET /api/playbooks/:guid/audit/verify`. Owners may purge old rows at
+`POST /api/playbooks/:guid/audit/purge`. See [Audit Logs](./audit-logs.md).
 
 ```json
 {

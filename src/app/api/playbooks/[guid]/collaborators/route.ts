@@ -35,7 +35,7 @@ export async function GET(
   const supabase = getServiceSupabase();
   const { data, error } = await supabase
     .from("playbook_collaborators")
-    .select("id, user_id, invite_expires_at, accepted_at, created_at")
+    .select("id, user_id, role, invite_expires_at, accepted_at, created_at")
     .eq("playbook_id", playbook.id)
     .order("created_at", { ascending: false });
 
@@ -87,6 +87,12 @@ export async function POST(
     return Response.json({ error: "Collaboration limit reached" }, { status: 409 });
   }
 
+  const body = await request.json().catch(() => ({} as Record<string, unknown>));
+  const role = body.role === undefined || body.role === null ? "editor" : body.role;
+  if (role !== "editor" && role !== "auditor") {
+    return Response.json({ error: "Invalid role. Expected editor or auditor." }, { status: 400 });
+  }
+
   const token = generateInviteToken();
   const tokenHash = await hashToken(token);
   const expiresAt = new Date(Date.now() + INVITE_TTL_MS).toISOString();
@@ -97,6 +103,7 @@ export async function POST(
       invited_by: user.id,
       invite_token_hash: tokenHash,
       invite_expires_at: expiresAt,
+      role,
     })
     .select("id, invite_expires_at, created_at")
     .single();

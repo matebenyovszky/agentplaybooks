@@ -30,6 +30,7 @@ import { getServiceSupabase, getSupabase } from "@/app/api/_shared/supabase";
 import { resolveAllowedOrigins } from "@/app/api/_shared/hono";
 import { checkPlaybookWriteAccess, getPlaybookAccessRole, resolvePlaybookId } from "@/app/api/_shared/guards";
 import { buildPlaybookUpdate } from "@/lib/playbook-access";
+import { playbookViewForRole, roleMayWrite } from "@/lib/audit-access";
 import { validateAgentSkillDescription, validateAgentSkillName } from "@/lib/agent-skills";
 import { demonstrationsError, recordingError } from "@/lib/demonstrations";
 import { DEFAULT_USER_API_KEY_PERMISSIONS } from "@/lib/user-api-key-permissions";
@@ -49,7 +50,7 @@ import { MEMORY_SEARCH_PARAMETERS, memoryWriteFields, parseMemorySearch } from "
  * constraint. Kept here so an unknown role is refused with a clear 400 rather
  * than reaching the database as a constraint violation.
  */
-const API_KEY_ROLES = ["viewer", "coworker", "proposer", "admin"] as const;
+const API_KEY_ROLES = ["viewer", "coworker", "proposer", "admin", "auditor"] as const;
 
 // Types
 type Bindings = {
@@ -604,7 +605,7 @@ app.post("/playbooks/:id/api-keys", async (c) => {
       key_prefix: keyPrefix,
       name: name || null,
       role: role || "viewer",
-      permissions: permissions || ["memory:read", "memory:write"],
+      permissions: permissions || (role === "auditor" ? ["audit:read", "playbooks:read"] : ["memory:read", "memory:write"]),
       expires_at: expires_at || null,
       is_active: true,
     })
@@ -1100,6 +1101,15 @@ app.get("/manage/playbooks/:id", async (c) => {
 
   const accessRole = await getPlaybookAccessRole(user.id, playbookId);
   if (!accessRole) return c.json({ error: "Playbook not found" }, 404);
+  if (accessRole === "auditor") {
+    const { data: playbook, error } = await supabase
+      .from("playbooks")
+      .select("id, guid, name, description, visibility, created_at, updated_at, user_id, tags")
+      .eq("id", playbookId)
+      .single();
+    if (error || !playbook) return c.json({ error: "Playbook not found" }, 404);
+    return c.json(playbookViewForRole({ ...playbook, current_user_role: "auditor" }, "auditor"));
+  }
 
   const { data: playbook, error } = await supabase
     .from("playbooks")
@@ -1158,7 +1168,7 @@ app.put("/manage/playbooks/:id", async (c) => {
   const playbookId = await resolvePlaybookId(c.req.param("id"));
 
   const accessRole = await getPlaybookAccessRole(user.id, playbookId);
-  if (!accessRole) {
+  if (!roleMayWrite(accessRole)) {
     return c.json({ error: "Forbidden" }, 403);
   }
 

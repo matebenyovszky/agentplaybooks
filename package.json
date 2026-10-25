@@ -29,6 +29,7 @@
     "release:check": "node scripts/check-release-distribution.mjs",
     "test:watch": "vitest",
     "audit:production": "node scripts/audit-production.mjs",
+    "audit:chain": "tsx scripts/verify-audit-hash-chain.ts",
     "docs:check": "node scripts/check-security-docs.mjs",
     "inventory:self-host": "node scripts/list-self-host-stack.mjs",
     "smoke": "node scripts/smoke-mcp.mjs",
