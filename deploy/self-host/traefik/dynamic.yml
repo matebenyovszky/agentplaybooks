@@ -10,7 +10,7 @@ http:
         - pass-client-cert
         - mtls-verify
       tls:
-        options: mtls
+        options: default
 
   middlewares:
     strip-client-cert:
@@ -40,7 +40,7 @@ tls:
     - certFile: /certs/server.crt
       keyFile: /certs/server.key
   options:
-    mtls:
+    default:
       minVersion: VersionTLS12
       clientAuth:
         caFiles:

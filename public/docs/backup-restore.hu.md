@@ -6,7 +6,7 @@ Mentés, üzletmenet-folytonosság és katasztrófa utáni helyreállítás ön�
 
 A tesztterv szerinti restore drill — mentésből visszaállítás üres gépre, titkok olvashatóságának ellenőrzése, audit-nyomvonal, RTO rögzítése — automatizált: `scripts/self-host/restore-drill.sh` és `.github/workflows/self-host-restore-drill.yml`.
 
-Kapcsolódó: [Önhosztolás](./self-hosting.md), [Platformközi ügynökmentések](./portable-agent-backups.md) (`apb push` / `apb pull` a playbook fájljairól — **nem** titokszéf- vagy adatbázis-mentés). Ugyanez a runbook a repóban: `docs/self-host/backup-restore.hu.md`.
+Kapcsolódó: [Önhosztolás](./self-hosting.md), [Platformközi ügynökmentések](./portable-agent-backups.md) (`apb push` / `apb pull` a playbook fájljairól — **nem** titokszéf- vagy adatbázis-mentés).
 
 ## Mit kell menteni
 
@@ -17,7 +17,7 @@ Az önhosztolt példány állapot nélküli alkalmazás-konténerből áll (a gy
 | **Postgres / Supabase adatbázis** | Playbookok, titokszéf-titkosított értékek (`public.secrets`), `public.audit_logs`, auth-felhasználók, memória, pillanatképek | `pg_dump` egyedi formátum, a teljes adatbázis (minden nem-katalógus séma) |
 | **Titokszéf-táblák** | AES-256-GCM titkosított szöveg, IV, hitelesítő címke. A mesterkulcs nélkül használhatatlan | Az adatbázis-mentésben benne van |
 | **Objektumtár** | Supabase Storage bucketek / feltöltött fájlok | A storage-kötet tar archívuma |
-| **Konfiguráció** | Compose fájlok, `supabase/config.toml` | Belemásolódik az archívumba |
+| **Konfiguráció** | Compose fájlok, `supabase/config.toml` | Csak a repository revíziója; az élő konfiguráció külön mentendő |
 | **Környezet / titkok** | Kapcsolati URL-ek, JWT, service-role kulcs | Csak **kitakart** másolat (`<redacted>`) |
 | **Titkosítási mesterkulcs** (`SECRETS_ENCRYPTION_KEY`) | HKDF bemenet minden titokhoz | **Soha nincs az archívumban.** Külön tárolandó (HSM, lezárt boríték, jelszókezelő), saját offsite másolattal |
 
@@ -179,3 +179,28 @@ A drill:
 9. Kiírja az `RTO_SECONDS` értéket
 
 CI: `.github/workflows/self-host-restore-drill.yml` (pull request és `main` ezeknek a fájloknak a változásakor, plusz heti ütemezés).
+
+## Ellenőrzött visszaállítási védelem (2026-10-25)
+
+A mentési és visszaállítási gépen Python 3.12+ szükséges. A visszaállítás az
+adatbázis lecserélése előtt ellenőrzi a manifestet, az összetevők SHA-256
+ellenőrzőösszegét és az archívum fájlútvonalait. Az ellenőrzőösszeg sérülést
+észlel; ismeretlen forrásból származó mentést nem hitelesít. A titkosított
+mentéseket hozzáférés-védett tárhelyen kell tartani.
+
+Az adatbázis-jogosultságok is visszaállnak (nincs `--no-acl`). A hivatkozott
+PostgreSQL-szerepköröket előbb létre kell hozni a célklaszteren: azok nem
+részei a pg_dump mentésnek. A próba service_role szerepkörrel is olvas egy
+privát playbookot a visszaállítás után.
+
+Elérhetetlen objektumtárnál a mentés és a visszaállítás hibával leáll.
+A `backup.sh --skip-storage` kifejezetten adatbázis-only mentést készít,
+amit a manifest is jelöl; az objektumokat ebből nem lehet visszaállítani.
+A teljes mentés idejére állítsuk le az alkalmazás és az objektumtár írásait:
+a két összetevő mentése nem egyetlen atomi pillanatkép.
+
+A konfigurációs leltár csak a környezeti változók neveit tartalmazza;
+értékeket, megjegyzéseket és többsoros folytatásokat nem másol. Az élő
+Compose/TOML fájlok tartalmazhatnak titkokat, ezért nem kerülnek bele.
+Az üzemeltetési konfigurációt, szerepköröket, mesterkulcsot és más hitelesítő
+adatokat külön, védett konfigurációtárban kell megőrizni.

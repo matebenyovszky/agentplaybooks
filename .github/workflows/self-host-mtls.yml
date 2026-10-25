@@ -53,7 +53,9 @@ jobs:
         run: |
           set -eu
           status() { curl -s --cacert deploy/self-host/certs/ca.crt -o /dev/null -w '%{http_code}' "$@" https://localhost:8443/; }
-          test "$(status --cert deploy/self-host/certs/client.crt --key deploy/self-host/certs/client.key)" = 200
+          actual="$(status --cert deploy/self-host/certs/client.crt --key deploy/self-host/certs/client.key)"
+          echo "Valid certificate: HTTP $actual"
+          test "$actual" = 200
           test "$(status)" = 401
           test "$(status -H "X-SSL-Client-Fingerprint: $TEST_CLIENT_FINGERPRINT" -H "X-Forwarded-Tls-Client-Cert: $TEST_CLIENT_FINGERPRINT" -H 'X-SSL-Client-Verify: SUCCESS')" = 401
           # A certificate outside the CA must fail TLS or be denied, never 200.
