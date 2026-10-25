@@ -58,7 +58,7 @@ adatfeldolgozók. *jogi ellenőrzés szükséges*
 | Beszállító mérnök | Aki a javítást szállítja | Reprodukál, javít, `cli-v*` címkét vág, titkot nem ír gitbe vagy jegybe |
 | Auditor (ha elkészül) | Az ügyfél kijelölt, csak olvasó szerepe | `audit_logs` olvasása; ma a nyomvonalat csak a playbook **tulajdonosa** (munkamenet vagy `playbooks:read` felhasználói API-kulcs) olvashatja |
 
-<!-- TODO(mate): nevesíteni a beszállítói PSIRT-gazdát és az ügyeleti rendet. Az e-mail a SECURITY.md helyőrzője marad, amíg ki nincs töltve. -->
+<!-- TODO(mate): nevesíteni a beszállítói PSIRT-gazdát és az ügyeleti rendet. -->
 
 ## Észlelés
 
@@ -205,7 +205,7 @@ számított **24 órán** belül (77. § (1) 1.; NIS2 23. cikk (4) a)).
 TLP:
 Bejelentő szervezet (jogi név, adó- / org. azonosító):
 IBF neve és 24/7 elérhetősége:
-Beszállítói kapcsolat (AgentPlaybooks): TODO(mate) biztonsági postaláda a SECURITY.md-ben
+Beszállítói kapcsolat (AgentPlaybooks): https://github.com/matebenyovszky/agentplaybooks/security/advisories/new
 Hatóság / portál: NBSZ NKI / incidens.nki.gov.hu  (vagy más: ________)
 Tudomásszerzés ideje (UTC):
 A csomag előállításának ideje (UTC):
@@ -317,7 +317,7 @@ Minden jelentősebb kiadás után végigvinni egy kiszivárgott
 `SECRETS_ENCRYPTION_KEY` vagy aktívan kihasznált függőségi CVE esetet:
 észlelés → bizonyíték zárolása → 24 órás csomag 24 órán belül → javítás +
 aláírt SBOM → az ügyfél IBF próbabejelentése az NKI felé. A hiányokat
-(nincs e-mail, nincs export, nincs auditor szerep) termékmunkaként
+(nincs export, nincs auditor szerep) termékmunkaként
 rögzíteni, nem sikeres tesztként.
 
 ## Források (elsődleges)

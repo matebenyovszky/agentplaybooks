@@ -57,7 +57,7 @@ the processor. *jogi ellenőrzés szükséges*
 | Supplier engineer | Whoever ships the fix | Reproduce, patch, cut a `cli-v*` tag, do not leak secrets into git or tickets |
 | Auditor (once shipped) | Customer-designated read-only role | Reads `audit_logs`; today only the playbook **owner** (session or user API key with `playbooks:read`) can read the trail |
 
-<!-- TODO(mate): name the supplier PSIRT owner and on-call rotation. Email stays the SECURITY.md placeholder until filled. -->
+<!-- TODO(mate): name the supplier PSIRT owner and on-call rotation. -->
 
 ## Detection
 
@@ -200,7 +200,7 @@ Deadline: without undue delay, at the latest **24 hours** after awareness
 TLP:
 Reporting entity (legal name, tax / org id):
 IBF name and 24/7 contact:
-Supplier contact (AgentPlaybooks): TODO(mate) security mailbox in SECURITY.md
+Supplier contact (AgentPlaybooks): https://github.com/matebenyovszky/agentplaybooks/security/advisories/new
 Authority / portal: NBSZ NKI / incidens.nki.gov.hu  (or other: ________)
 Time we became aware (UTC):
 Time this package was produced (UTC):
@@ -310,7 +310,7 @@ Sensitivity of this notification:
 Once per major release, walk a leaked `SECRETS_ENCRYPTION_KEY` or an
 actively exploited dependency CVE through: detect → freeze evidence → 24h
 package in under 24 hours → patch + signed SBOM → customer IBF mock-files
-to NKI. Record gaps (missing email, missing export, missing auditor role)
+to NKI. Record gaps (missing export, missing auditor role)
 as product work, not as a passed test.
 
 ## References (primary)

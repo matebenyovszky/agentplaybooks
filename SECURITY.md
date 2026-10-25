@@ -40,27 +40,12 @@ revision, unless the issue is still present on a supported version.
 vulnerability.** Do not post exploit details on social media before a fix is
 available.
 
-### 1. GitHub private vulnerability reporting (preferred)
-
-Use GitHub’s private advisory form:
+The only security contact is GitHub private vulnerability reporting:
 
 **[Report a vulnerability](https://github.com/matebenyovszky/agentplaybooks/security/advisories/new)**
 
 That opens a draft [GitHub Security Advisory](https://docs.github.com/en/code-security/security-advisories/working-with-repository-security-advisories/about-repository-security-advisories)
-visible only to maintainers until we publish it. If the button is missing,
-private reporting may not be enabled yet — use the contact placeholder below.
-
-<!-- TODO(mate): enable Settings → Code security → Private vulnerability reporting on github.com/matebenyovszky/agentplaybooks -->
-
-### 2. Security contact (email)
-
-<!-- TODO(mate): replace the line below with a monitored security mailbox (and optionally a PGP fingerprint). Do not invent an address. -->
-
-**Security contact (email):** `TODO(mate): add a monitored security mailbox here — do not guess this address.`
-
-Use this only if GitHub private reporting is unavailable. Put `SECURITY` in
-the subject. Do not send secret values, vault keys, or customer data in the
-clear if you can avoid it; describe impact and a reproduction instead.
+visible only to maintainers until we publish it. There is no security email.
 
 ### What to include
 
