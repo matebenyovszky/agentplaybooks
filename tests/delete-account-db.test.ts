@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { PGlite } from "@electric-sql/pglite";
 import { pg_trgm } from "@electric-sql/pglite/contrib/pg_trgm";
+import { pgcrypto } from "@electric-sql/pglite/contrib/pgcrypto";
 
 const USER = "00000000-0000-4000-8000-0000000000a1";
 const OTHER = "00000000-0000-4000-8000-0000000000b1";
@@ -22,7 +23,7 @@ describe("delete_account in PostgreSQL", () => {
     Number(((await db.query<{ n: number }>(`select count(*)::int as n from ${sql}`)).rows[0]).n);
 
   beforeAll(async () => {
-    db = new PGlite({ extensions: { pg_trgm } });
+    db = new PGlite({ extensions: { pg_trgm, pgcrypto } });
     await db.exec(`
       create role anon;
       create role authenticated;
@@ -30,6 +31,7 @@ describe("delete_account in PostgreSQL", () => {
       create role supabase_auth_admin;
       create schema auth;
       create schema extensions;
+      create extension pgcrypto with schema extensions;
       create function extensions.uuid_generate_v4() returns uuid language sql as 'select gen_random_uuid()';
       create function auth.uid() returns uuid language sql as
         'select nullif(current_setting(''request.jwt.claim.sub'', true), '''')::uuid';

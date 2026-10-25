@@ -100,7 +100,7 @@ describe("GET /.well-known/skills", () => {
 
     await siteGet(new Request("https://apbks.test/.well-known/skills/index.json"), params(["index.json"]));
 
-    expect(createServerClient).toHaveBeenCalledWith("https://db.test", process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+    expect(createServerClient).toHaveBeenCalledWith("https://db.test", process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY, expect.any(Function));
   });
 
   it("serves SKILL.md as markdown, keeping fields outside the spec", async () => {
