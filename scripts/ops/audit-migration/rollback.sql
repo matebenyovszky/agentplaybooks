@@ -1,7 +1,6 @@
 -- Fully reverse 20261024120000_audit_logs_compliance.sql.
--- Idempotent. Runs in one transaction. Restores row content from
--- public.audit_logs_backup_20261025 when that table exists and the migration
--- had added hash columns (the backfill rewrites prev_hash/hash).
+-- Idempotent. Runs in one transaction. Only the added hash columns are removed;
+-- original fields and every audit row written since backup are preserved.
 --
 -- Also removes version 20261024120000 from supabase_migrations.schema_migrations
 -- so a later Deploy Supabase `db push` will not treat a rolled-back database as
@@ -31,41 +30,12 @@ DROP FUNCTION IF EXISTS public.audit_log_canonical(uuid, uuid, uuid, text, text,
 DROP TABLE IF EXISTS public.audit_chain_checkpoints CASCADE;
 
 DROP INDEX IF EXISTS public.audit_logs_playbook_prev_hash_idx;
+DROP INDEX IF EXISTS public.audit_logs_playbook_hash_idx;
+DROP FUNCTION IF EXISTS audit_private.is_auditor(uuid);
+DROP SCHEMA IF EXISTS audit_private;
 
--- Restore original row bodies while the extra columns still exist so a second
--- pass (columns already dropped) is a no-op.
-DO $$
-DECLARE
-  n bigint;
-  has_hash boolean;
-BEGIN
-  SELECT EXISTS (
-    SELECT 1
-    FROM information_schema.columns
-    WHERE table_schema = 'public'
-      AND table_name = 'audit_logs'
-      AND column_name = 'hash'
-  ) INTO has_hash;
-
-  IF to_regclass('public.audit_logs_backup_20261025') IS NULL THEN
-    RAISE NOTICE 'no audit_logs_backup_20261025 — skipping row restore';
-  ELSIF NOT has_hash THEN
-    RAISE NOTICE 'hash column already dropped — skipping row restore';
-  ELSE
-    DELETE FROM public.audit_logs;
-    INSERT INTO public.audit_logs (
-      id, playbook_id, mcp_server_id, operation, target, status, latency_ms,
-      error_code, request_id, created_at, actor_type, actor_id, secret_name
-    )
-    SELECT
-      id, playbook_id, mcp_server_id, operation, target, status, latency_ms,
-      error_code, request_id, created_at, actor_type, actor_id, secret_name
-    FROM public.audit_logs_backup_20261025;
-    GET DIAGNOSTICS n = ROW_COUNT;
-    RAISE NOTICE 'restored % rows from audit_logs_backup_20261025', n;
-  END IF;
-END
-$$;
+-- Backfill never changes original columns. Restoring the old copy with
+-- DELETE/INSERT would discard new security events, so retain all live rows.
 
 ALTER TABLE public.audit_logs DROP COLUMN IF EXISTS prev_hash;
 ALTER TABLE public.audit_logs DROP COLUMN IF EXISTS hash;

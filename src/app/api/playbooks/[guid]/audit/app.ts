@@ -161,7 +161,7 @@ async function readAuditLogs(c: Context, formatDefault = "json") {
 
 async function loadChainLogs(
   playbookId: string,
-): Promise<{ logs: AuditChainEntry[]; error: string | null }> {
+): Promise<{ logs: AuditChainEntry[]; error: string | null; overflow?: boolean }> {
   const supabase = getServiceSupabase();
   const pageSize = 500;
   const logs: AuditChainEntry[] = [];
@@ -176,8 +176,13 @@ async function loadChainLogs(
     if (error) return { logs, error: error.message };
     const rows = (data || []) as AuditChainEntry[];
     logs.push(...rows);
-    if (rows.length < pageSize) break;
+    if (rows.length < pageSize) return { logs, error: null };
   }
+  const { data: extra, error } = await supabase.from("audit_logs").select("id")
+    .eq("playbook_id", playbookId).order("created_at", { ascending: true })
+    .order("id", { ascending: true }).range(100000, 100000);
+  if (error) return { logs: [], error: error.message };
+  if (extra?.length) return { logs: [], error: "Audit trail exceeds the online verification limit; run the operator hash-chain verifier", overflow: true };
   return { logs, error: null };
 }
 
@@ -193,12 +198,12 @@ async function verifyAuditLogs(c: Context) {
     .from("audit_chain_checkpoints")
     .select("anchor_hash, purged_through, purged_through_id, purged_count, created_at")
     .eq("playbook_id", auth.playbook.id)
-    .order("created_at", { ascending: false })
+    .order("checkpoint_seq", { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  const { logs, error } = await loadChainLogs(auth.playbook.id);
-  if (error) return c.json({ error }, 500);
+  const { logs, error, overflow } = await loadChainLogs(auth.playbook.id);
+  if (error) return c.json({ error }, overflow ? 413 : 500);
 
   const startHash = checkpoint?.anchor_hash || GENESIS_HASH;
   const report = verifyAuditChain(orderByChainLinks(logs, startHash), startHash);

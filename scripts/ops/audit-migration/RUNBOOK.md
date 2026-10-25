@@ -21,9 +21,7 @@ trigger fills `prev_hash`/`hash`, `playbook_collaborators.role` defaults to
 migration (hash columns, `purge_audit_logs`, auditor RLS). Do not merge/deploy
 first.
 
-Pause writes to `audit_logs` for the window, or run it at night when inserts
-are negligible. The backfill disables the hash trigger while it rewrites rows;
-a concurrent insert in that window would skip hashing.
+Pause audit-producing application writes until postflight and version recording finish. The migration also holds an exclusive writer lock inside one transaction while triggers are disabled; any error rolls back trigger and data changes together. Night-time traffic is not a substitute for a maintenance window.
 
 The migration filename/timestamp is **`20261024120000`**. Do not rename it.
 #208's staging cutoff is `20260919075416`; its only version alias is
@@ -286,8 +284,7 @@ It walks **`prev_hash` pointers** from genesis / latest checkpoint (not
 `ORDER BY created_at, id`). Several inserts in one transaction share `now()`,
 and UUID `id` is not insertion order; timestamp order would report false
 breaks. Backfill of existing rows still uses `created_at, id` (those rows
-already have distinct timestamps). Rollback is unchanged: it restores original
-columns from the backup table and drops hash objects.
+already have distinct timestamps). Rollback removes the added hash objects and preserves all original columns and all live rows, including events written after the backup.
 
 ---
 
@@ -359,17 +356,14 @@ psql "$PROD_DB_URL" -v ON_ERROR_STOP=1 -f scripts/ops/audit-migration/preflight.
 **Expected after rollback:**
 
 ```
-NOTICE:  restored 1000 rows from audit_logs_backup_20261025
 NOTICE:  removed schema_migrations version 20261024120000
  checkpoints_dropped | hash_column_dropped | canonical_dropped | trigger_dropped | collaborator_role_dropped | live_row_count | backup_row_count | schema_migrations_row
  t                   | t                   | t                 | t               | t                         |           1000 |             1000 |                     0
 ```
 
-Then preflight `row_count`, `checksum_ids`, and `checksum_original` **match
-the original preflight**. Rollback is idempotent (a second run succeeds with
-`does not exist, skipping` / `hash column already dropped`).
+Rollback preserves all live rows. With writes paused, preflight checksums and counts match the original. If new events arrived, their rows remain: compare original fields for IDs in the private backup, and record the additional event count. Never replace the live audit table with the older copy. Rollback is idempotent.
 
-The backup table is kept. Drop it only after you are sure you will not roll
+The backup table is kept with RLS enabled and API-role grants revoked. Drop it only after you are sure you will not roll
 back again:
 
 ```bash
@@ -383,7 +377,7 @@ back again:
 
 Local rehearsal (PostgreSQL 16 on this VM, fixture in
 `fixture-pre-migration.sql`), including three sequential INSERTs in one
-transaction after migrate (postflight still 0 mismatches; rollback discards
+transaction after migrate (postflight still 0 mismatches; rollback preserves
 them):
 
 | Step | N = 1,000 |
@@ -417,8 +411,7 @@ operator copy-paste.
 | 100,000 | ~16 s | ~2–5 min |
 | 1,000,000 | ~3 min | ~8–15 min |
 
-Writes to `audit_logs` during the window should be paused or are negligible
-at night.
+Writes to `audit_logs` must remain paused through postflight and version recording.
 
 ---
 
@@ -493,8 +486,8 @@ that row. So:
 | Prod state at merge | What the workflow does |
 | --- | --- |
 | Manual runbook done **and** §7b recorded `20261024120000` | `db push` sees that version already applied; it does **not** re-execute the SQL. Dry-run / apply report up to date for this file (other pending versions, if any, still run). No second backfill, no conflict with the existing unique `(playbook_id, prev_hash)` index or the deny-UPDATE trigger. |
-| Manual `psql -f` done **without** recording the version | `db push` treats `20261024120000` as pending and **executes the file again**. The SQL is mostly `IF NOT EXISTS` / `CREATE OR REPLACE`, and the backfill **skips rows that already have `hash` and `prev_hash`**, so a second pass should not rewrite hashes — but it is still an unattended prod DDL pass and is **not** the intended path. Record the version. |
-| Merge **without** the manual runbook | Workflow **auto-applies** `20261024120000_audit_logs_compliance.sql` to the heap project: full backfill, no preflight/backup/postflight from this runbook. **Do not do this.** |
+| Manual `psql -f` done **without** recording the version | Deployment fails at the staged manual-migration guard. Complete postflight and record the version before retrying. |
+| Merge **without** the manual runbook | Deployment fails before this migration's DDL. The source has `-- @manual-production-migration`; staging replaces it with a same-version exception guard. Do not merge early: application deployment also depends on the completed schema. |
 
 Required order:
 
@@ -537,9 +530,14 @@ That runs:
 - re-apply the migration SQL (idempotent; backfill skips hashed rows)
 - three sequential INSERTs in one transaction (shared `now()`); postflight
   still `mismatch_count = 0`
-- rollback (unrecords the version; extra rows discarded with the restore)
-  → preflight matching the original checksum
+- rollback (unrecords the version; extra rows preserved)
+  → original backup rows unchanged and all later events retained
 - second rollback (idempotent)
 
 Expected: `PASS: local rehearsal complete` with
 `PASS: rollback preflight matches original checksum_original=… count=1000`.
+
+
+## Audit corrections (2026-10-25)
+
+The backup is private even when Supabase inherits public-table API grants. Auditor membership is checked through a fixed-search-path, authenticated-only helper in the unexposed audit_private schema; the full playbooks row is not exposed to auditors. Retention walks a true chain prefix and orders checkpoints by an identity sequence, including same-timestamp transactions. Apply/backfill is transactional under a writer lock. Rollback keeps subsequent audit events. Re-run the expanded migration tests and local rehearsal before production use; historical timing figures above predate these corrections.

@@ -5,6 +5,7 @@
  */
 
 import { createHmac } from "node:crypto";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 import type { AuditChainEntry } from "@/lib/audit-chain";
 import { auditLogToExportRow } from "@/lib/audit-chain";
 
@@ -35,6 +36,7 @@ function hmacKeyBytes(hmacKey: string): Buffer {
 export function readAuditForwardConfig(env: Record<string, string | undefined> = process.env): AuditForwardConfig {
   const webhookUrl = env.AUDIT_SIEM_WEBHOOK_URL?.trim() || undefined;
   const webhookHmacKey = env.AUDIT_SIEM_WEBHOOK_SECRET || undefined;
+  if (webhookUrl) validateWebhookUrl(webhookUrl);
   if (webhookHmacKey !== undefined) hmacKeyBytes(webhookHmacKey);
   if (webhookUrl && webhookHmacKey === undefined) {
     throw new Error(
@@ -54,8 +56,19 @@ export function scheduleBackground(work: () => Promise<void>): void {
   const task = work().catch((error) => {
     console.error("Audit forward failed", error);
   });
+  try {
+    getCloudflareContext().ctx.waitUntil(task);
+    return;
+  } catch { /* The Node.js server has no Worker execution context. */ }
   const waitUntil = (globalThis as { waitUntil?: (p: Promise<unknown>) => void }).waitUntil;
   waitUntil?.(task);
+}
+
+function validateWebhookUrl(url: string): void {
+  const target = new URL(url);
+  if (target.protocol !== "https:" || target.username || target.password) {
+    throw new Error("AUDIT_SIEM_WEBHOOK_URL must be HTTPS without embedded credentials");
+  }
 }
 
 function sleep(ms: number): Promise<void> {
@@ -86,6 +99,7 @@ async function sendWebhook(
   config: AuditForwardConfig,
   fetchImpl: typeof fetch,
 ): Promise<void> {
+  validateWebhookUrl(url);
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
@@ -95,7 +109,7 @@ async function sendWebhook(
     );
   }
   headers[config.hmacHeader || "X-Audit-Signature"] = siemSignature(body, config.webhookHmacKey);
-  const response = await fetchImpl(url, { method: "POST", headers, body });
+  const response = await fetchImpl(url, { method: "POST", headers, body, redirect: "error", signal: AbortSignal.timeout(5000) });
   if (!response.ok) {
     throw new Error(`SIEM webhook HTTP ${response.status}`);
   }

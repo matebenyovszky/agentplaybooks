@@ -1,10 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
+const { cloudflareContext } = vi.hoisted(() => ({ cloudflareContext: vi.fn() }));
+vi.mock("@opennextjs/cloudflare", () => ({ getCloudflareContext: cloudflareContext }));
 import {
   rfc5424Syslog,
   siemSignature,
   forwardAuditLog,
   readAuditForwardConfig,
   SIEM_HMAC_KEY_MIN_BYTES,
+  scheduleBackground,
 } from "./audit-forward";
 import { GENESIS_HASH, hashAuditEntry } from "@/lib/audit-chain";
 
@@ -75,5 +78,21 @@ describe("audit forwarding", () => {
       webhookHmacKey: undefined,
       hmacHeader: "X-Audit-Signature",
     });
+  });
+
+  it("keeps Worker forwarding alive through the actual execution context", async () => {
+    const waitUntil = vi.fn();
+    cloudflareContext.mockReturnValue({ ctx: { waitUntil } });
+    const work = vi.fn(async () => undefined);
+    scheduleBackground(work);
+    expect(waitUntil).toHaveBeenCalledOnce();
+    await waitUntil.mock.calls[0][0];
+    expect(work).toHaveBeenCalledOnce();
+  });
+
+  it("refuses plaintext destinations or embedded credentials", () => {
+    for (const url of ["http://siem.example/audit", "https://user:password@siem.example/audit"]) {
+      expect(() => readAuditForwardConfig({ AUDIT_SIEM_WEBHOOK_URL: url, AUDIT_SIEM_WEBHOOK_SECRET: HMAC_KEY })).toThrow(/HTTPS/);
+    }
   });
 });

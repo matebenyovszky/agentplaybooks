@@ -155,6 +155,15 @@ describe("audit trail API", () => {
     expect(denied.status).toBe(404);
   });
 
+  it("does not claim to verify a truncated large audit trail", async () => {
+    vi.mocked(getAuthenticatedUser).mockResolvedValue({ id: "owner-1" });
+    vi.mocked(getPlaybookAccessRole).mockResolvedValue("owner");
+    vi.mocked(getServiceSupabase).mockReturnValue(serviceClient({ logs: Array(500).fill(chained[0]) }) as never);
+    const response = await app.request("/api/playbooks/guid-1/audit/verify");
+    expect(response.status).toBe(413);
+    await expect(response.json()).resolves.toMatchObject({ error: expect.stringContaining("operator") });
+  });
+
   it("purges for the owner via the SQL function", async () => {
     vi.mocked(getAuthenticatedUser).mockResolvedValue({ id: "owner-1" });
     vi.mocked(getPlaybookAccessRole).mockResolvedValue("owner");

@@ -244,7 +244,10 @@ export type AuditExportFormat = "json" | "jsonl" | "csv";
 
 function csvCell(value: unknown): string {
   if (value === undefined || value === null) return "";
-  const text = String(value);
+  const raw = String(value);
+  // Audit fields can contain caller-controlled text. Quoting alone does not
+  // stop spreadsheet programs from interpreting an exported cell as a formula.
+  const text = typeof value === "string" && /^[\s\u0000]*[=+\-@]/.test(raw) ? `'${raw}` : raw;
   if (/[",\n\r]/.test(text)) return `"${text.replaceAll('"', '""')}"`;
   return text;
 }

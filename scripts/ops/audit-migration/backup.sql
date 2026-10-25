@@ -26,6 +26,11 @@ BEGIN
 END
 $$;
 
+-- Supabase may grant new public tables to API roles by default. Keep the
+-- rollback copy private, including when an earlier run already created it.
+ALTER TABLE public.audit_logs_backup_20261025 ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.audit_logs_backup_20261025 FROM PUBLIC, anon, authenticated;
+
 SELECT
   (SELECT count(*) FROM public.audit_logs) AS live_row_count,
   (SELECT count(*) FROM public.audit_logs_backup_20261025) AS backup_row_count,

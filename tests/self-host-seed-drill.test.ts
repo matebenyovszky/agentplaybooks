@@ -7,7 +7,7 @@ const KEY = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
 describe("self-host restore-drill seed SQL", () => {
   it("inserts audit rows one at a time so the hash-chain trigger can chain them", () => {
-    const result = spawnSync("npx", ["tsx", "scripts/self-host/seed-drill.ts"], {
+    const result = spawnSync(process.execPath, ["--import", "tsx", "scripts/self-host/seed-drill.ts"], {
       cwd: repoRoot,
       encoding: "utf8",
       env: { ...process.env, SECRETS_ENCRYPTION_KEY: KEY },

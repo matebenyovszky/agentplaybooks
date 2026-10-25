@@ -85,7 +85,7 @@ WITH RECURSIVE anchors AS (
         SELECT c.anchor_hash
         FROM public.audit_chain_checkpoints c
         WHERE c.playbook_id = p.playbook_id
-        ORDER BY c.created_at DESC, c.id DESC
+        ORDER BY c.checkpoint_seq DESC
         LIMIT 1
       ),
       repeat('0', 64)

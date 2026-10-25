@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { PGlite } from "@electric-sql/pglite";
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { canonicalAuditJson, GENESIS_HASH, hashAuditCanonical } from "@/lib/audit-chain";
+import { canonicalAuditJson, GENESIS_HASH, hashAuditCanonical, orderByChainLinks, verifyAuditChain, type AuditChainEntry } from "@/lib/audit-chain";
 
 const OWNER = "00000000-0000-4000-8000-0000000000aa";
 const AUDITOR = "00000000-0000-4000-8000-0000000000bb";
@@ -21,6 +21,8 @@ beforeAll(async () => {
     CREATE ROLE anon;
     CREATE ROLE authenticated;
     CREATE ROLE service_role BYPASSRLS;
+    CREATE SCHEMA supabase_migrations;
+    CREATE TABLE supabase_migrations.schema_migrations (version text PRIMARY KEY);
     CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql AS $$ SELECT current_setting('test.uid', true)::uuid $$;
     CREATE TABLE playbooks (
       id uuid PRIMARY KEY,
@@ -58,6 +60,10 @@ beforeAll(async () => {
       playbook_id uuid,
       role text DEFAULT 'viewer' NOT NULL
     );
+    ALTER TABLE playbook_collaborators ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE playbooks ENABLE ROW LEVEL SECURITY;
+    CREATE POLICY "Owners can read own playbooks" ON playbooks FOR SELECT
+      USING (user_id = auth.uid());
     ALTER TABLE api_keys ADD CONSTRAINT api_keys_role_check CHECK (role IN ('viewer', 'coworker', 'proposer', 'admin'));
     ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
     CREATE POLICY "Owners can read audit logs" ON audit_logs FOR SELECT
@@ -131,6 +137,7 @@ describe("audit compliance migration", () => {
     try {
       const readable = await db.query<{ n: number }>("SELECT count(*)::int AS n FROM audit_logs");
       expect(readable.rows[0].n).toBeGreaterThan(0);
+      expect((await db.query("SELECT * FROM playbooks")).rows).toHaveLength(0);
       await expect(db.query("UPDATE audit_logs SET operation = 'tamper'")).rejects.toThrow();
       await expect(db.query("INSERT INTO audit_logs (id, playbook_id, operation, status) VALUES (gen_random_uuid(), $1, 'tamper', 'success')", [PLAYBOOK])).rejects.toThrow();
     } finally {
@@ -178,5 +185,65 @@ describe("audit compliance migration", () => {
       "secret.use",
       "secret.reveal",
     ]);
+  });
+
+  it("keeps the backup private when Supabase grants new public tables to API roles", async () => {
+    await db.exec("ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO anon, authenticated");
+    const sql = readFileSync("scripts/ops/audit-migration/backup.sql", "utf8").replace(/^\\ir .*$/gm, "");
+    await db.exec(sql);
+    await db.exec("SET ROLE anon");
+    try {
+      await expect(db.query("SELECT * FROM public.audit_logs_backup_20261025")).rejects.toThrow();
+    } finally { await db.exec("RESET ROLE"); }
+    await db.exec(sql); // Existing backup copies must be hardened as well.
+    expect((await db.query<{ enabled: boolean }>("SELECT relrowsecurity AS enabled FROM pg_class WHERE oid='public.audit_logs_backup_20261025'::regclass")).rows[0].enabled).toBe(true);
+  });
+
+  it("retains the chain link when purged rows have equal timestamps and reverse UUID order", async () => {
+    const pb = "00000000-0000-4000-8000-0000000000ee";
+    await db.exec(`INSERT INTO playbooks VALUES ('${pb}', '${OWNER}')`);
+    for (const [id, at] of [["30", "2000-01-01"], ["20", "2000-01-01"], ["10", "2026-01-01"]]) {
+      await db.query("INSERT INTO audit_logs (id,playbook_id,operation,status,created_at) VALUES ($1,$2,'fixture','success',$3)", [`00000000-0000-4000-8000-0000000000${id}`, pb, at]);
+    }
+    await db.query("SELECT purge_audit_logs('2001-01-01',$1)", [pb]);
+    const anchor = (await db.query<{ anchor_hash: string }>("SELECT anchor_hash FROM audit_chain_checkpoints WHERE playbook_id=$1 ORDER BY checkpoint_seq DESC LIMIT 1", [pb])).rows[0].anchor_hash;
+    const rows = (await db.query<AuditChainEntry>("SELECT * FROM audit_logs WHERE playbook_id=$1", [pb])).rows;
+    expect(verifyAuditChain(orderByChainLinks(rows, anchor), anchor).ok).toBe(true);
+    expect(rows).toHaveLength(2);
+  });
+
+  it("never deletes an old timestamp behind a retained chain link", async () => {
+    const pb = "00000000-0000-4000-8000-0000000000ef";
+    await db.exec(`INSERT INTO playbooks VALUES ('${pb}', '${OWNER}')`);
+    for (const at of ["2026-01-01", "2000-01-01"]) {
+      await db.query("INSERT INTO audit_logs (playbook_id,operation,status,created_at) VALUES ($1,'fixture','success',$2)", [pb, at]);
+    }
+    const result = await db.query<{ n: number }>("SELECT (purge_audit_logs('2001-01-01',$1)->>'purged')::int AS n", [pb]);
+    expect(result.rows[0].n).toBe(0);
+    expect((await db.query("SELECT * FROM audit_logs WHERE playbook_id=$1", [pb])).rows).toHaveLength(2);
+  });
+
+  it("orders retention checkpoints independently of transaction timestamps and UUIDs", async () => {
+    const pb = "00000000-0000-4000-8000-0000000000f0";
+    await db.exec(`INSERT INTO playbooks VALUES ('${pb}', '${OWNER}')`);
+    await db.query("INSERT INTO audit_logs (playbook_id,operation,status) VALUES ($1,'fixture','success')", [pb]);
+    await db.exec("BEGIN");
+    await db.query("SELECT purge_audit_logs(now()+interval '1 day',$1)", [pb]);
+    await db.query("SELECT purge_audit_logs(now()+interval '1 day',$1)", [pb]);
+    await db.exec("COMMIT");
+    const checkpoints = (await db.query<{ anchor_hash: string }>("SELECT anchor_hash FROM audit_chain_checkpoints WHERE playbook_id=$1 ORDER BY checkpoint_seq DESC", [pb])).rows;
+    expect(checkpoints).toHaveLength(2);
+    const rows = (await db.query<AuditChainEntry>("SELECT * FROM audit_logs WHERE playbook_id=$1", [pb])).rows;
+    expect(verifyAuditChain(orderByChainLinks(rows, checkpoints[0].anchor_hash), checkpoints[0].anchor_hash).ok).toBe(true);
+  });
+
+  it("rolls back schema changes without discarding audit rows written after backup", async () => {
+    const before = (await db.query<{ n: number }>("SELECT count(*)::int AS n FROM audit_logs")).rows[0].n;
+    await db.query("INSERT INTO audit_logs (playbook_id,operation,status) VALUES ($1,'post.backup.event','success')", [PLAYBOOK]);
+    const sql = readFileSync("scripts/ops/audit-migration/rollback.sql", "utf8").replace(/^\\ir .*$/gm, "");
+    await db.exec(sql);
+    await db.exec(sql);
+    expect((await db.query<{ n: number }>("SELECT count(*)::int AS n FROM audit_logs")).rows[0].n).toBe(before + 1);
+    expect((await db.query("SELECT * FROM audit_logs WHERE operation='post.backup.event'")).rows).toHaveLength(1);
   });
 });

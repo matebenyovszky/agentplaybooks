@@ -1,3 +1,4 @@
+-- @manual-production-migration
 -- Audit-log compliance: hash chain, auditor role, retention checkpoints.
 --
 -- PRODUCTION: this migration rewrites every existing audit_logs row to backfill
@@ -10,6 +11,12 @@
 --
 -- Fresh installs that already applied an updated supabase/schema.sql are a
 -- no-op on the ADD COLUMN / CREATE TABLE IF NOT EXISTS statements.
+
+BEGIN;
+SET LOCAL lock_timeout = '10s';
+-- Keep old writers blocked while triggers are disabled and rows are backfilled.
+-- A failure rolls back both the data changes and trigger state.
+LOCK TABLE public.audit_logs IN SHARE ROW EXCLUSIVE MODE;
 
 CREATE SCHEMA IF NOT EXISTS extensions;
 CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
@@ -24,6 +31,26 @@ ALTER TABLE public.playbook_collaborators
   CHECK (role IN ('editor', 'auditor'));
 COMMENT ON COLUMN public.playbook_collaborators.role IS
   'editor: content write, no secrets. auditor: read/export audit logs and playbook metadata only.';
+
+-- The membership table itself has RLS with no client SELECT policy. Check only
+-- the caller's accepted auditor membership without exposing invite hashes or
+-- granting access to the full private playbook row.
+CREATE SCHEMA IF NOT EXISTS audit_private;
+REVOKE ALL ON SCHEMA audit_private FROM PUBLIC, anon, authenticated;
+GRANT USAGE ON SCHEMA audit_private TO authenticated, service_role;
+CREATE OR REPLACE FUNCTION audit_private.is_auditor(p_playbook_id uuid)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = pg_catalog
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.playbook_collaborators c
+    WHERE c.playbook_id = p_playbook_id
+      AND c.user_id = (SELECT auth.uid())
+      AND c.accepted_at IS NOT NULL AND c.role = 'auditor'
+  );
+$$;
+REVOKE ALL ON FUNCTION audit_private.is_auditor(uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION audit_private.is_auditor(uuid) TO authenticated, service_role;
 
 ALTER TABLE public.api_keys DROP CONSTRAINT IF EXISTS api_keys_role_check;
 ALTER TABLE public.api_keys ADD CONSTRAINT api_keys_role_check
@@ -45,9 +72,12 @@ COMMENT ON COLUMN public.audit_logs.hash IS
 CREATE UNIQUE INDEX IF NOT EXISTS audit_logs_playbook_prev_hash_idx
   ON public.audit_logs (playbook_id, prev_hash)
   WHERE prev_hash IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS audit_logs_playbook_hash_idx
+  ON public.audit_logs (playbook_id, hash) WHERE hash IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS public.audit_chain_checkpoints (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  checkpoint_seq bigint GENERATED ALWAYS AS IDENTITY,
   playbook_id uuid NOT NULL REFERENCES public.playbooks(id) ON DELETE CASCADE,
   anchor_hash text NOT NULL,
   purged_through timestamptz NOT NULL,
@@ -55,12 +85,14 @@ CREATE TABLE IF NOT EXISTS public.audit_chain_checkpoints (
   purged_count integer NOT NULL CHECK (purged_count >= 0),
   created_at timestamptz NOT NULL DEFAULT now()
 );
+ALTER TABLE public.audit_chain_checkpoints
+  ADD COLUMN IF NOT EXISTS checkpoint_seq bigint GENERATED ALWAYS AS IDENTITY;
 
 COMMENT ON TABLE public.audit_chain_checkpoints IS
   'Anchor hashes for prefixes removed by retention. Remaining rows chain from the latest anchor_hash.';
 
 CREATE INDEX IF NOT EXISTS audit_chain_checkpoints_playbook_created_idx
-  ON public.audit_chain_checkpoints (playbook_id, created_at DESC);
+  ON public.audit_chain_checkpoints (playbook_id, checkpoint_seq DESC);
 
 ALTER TABLE public.audit_chain_checkpoints ENABLE ROW LEVEL SECURITY;
 
@@ -75,14 +107,8 @@ CREATE POLICY "Owners can read audit chain checkpoints"
 
 DROP POLICY IF EXISTS "Auditors can read audit chain checkpoints" ON public.audit_chain_checkpoints;
 CREATE POLICY "Auditors can read audit chain checkpoints"
-  ON public.audit_chain_checkpoints FOR SELECT
-  USING (EXISTS (
-    SELECT 1 FROM public.playbook_collaborators
-    WHERE playbook_collaborators.playbook_id = audit_chain_checkpoints.playbook_id
-      AND playbook_collaborators.user_id = auth.uid()
-      AND playbook_collaborators.accepted_at IS NOT NULL
-      AND playbook_collaborators.role = 'auditor'
-  ));
+  ON public.audit_chain_checkpoints FOR SELECT TO authenticated
+  USING (audit_private.is_auditor(playbook_id));
 
 REVOKE ALL ON public.audit_chain_checkpoints FROM PUBLIC, anon, authenticated;
 GRANT SELECT ON public.audit_chain_checkpoints TO authenticated;
@@ -170,7 +196,7 @@ BEGIN
       SELECT c.anchor_hash INTO prev
       FROM public.audit_chain_checkpoints c
       WHERE c.playbook_id = NEW.playbook_id
-      ORDER BY c.created_at DESC, c.id DESC
+      ORDER BY c.checkpoint_seq DESC
       LIMIT 1;
     END IF;
 
@@ -281,6 +307,8 @@ AS $$
 DECLARE
   playbook uuid;
   last_row public.audit_logs%ROWTYPE;
+  start_hash text;
+  purge_ids uuid[];
   n integer;
   total integer := 0;
   playbooks_touched integer := 0;
@@ -297,16 +325,29 @@ BEGIN
   LOOP
     PERFORM pg_advisory_xact_lock(('x' || substr(md5(playbook::text), 1, 16))::bit(64)::bigint);
 
-    SELECT count(*) INTO n
-    FROM public.audit_logs
-    WHERE playbook_id = playbook AND created_at < p_older_than;
+    SELECT c.anchor_hash INTO start_hash
+    FROM public.audit_chain_checkpoints c WHERE c.playbook_id = playbook
+    ORDER BY c.checkpoint_seq DESC LIMIT 1;
+    start_hash := COALESCE(start_hash, repeat('0', 64));
+
+    -- Retention removes a chain prefix, not every row with an old timestamp.
+    -- Transaction timestamps can tie or move backwards relative to append order.
+    WITH RECURSIVE prefix AS (
+      SELECT a.id, a.hash, 1 AS depth FROM public.audit_logs a
+      WHERE a.playbook_id = playbook AND a.prev_hash = start_hash
+        AND a.created_at < p_older_than
+      UNION ALL
+      SELECT child.id, child.hash, parent.depth + 1
+      FROM prefix parent JOIN public.audit_logs child
+        ON child.playbook_id = playbook AND child.prev_hash = parent.hash
+      WHERE child.created_at < p_older_than
+    )
+    SELECT array_agg(id ORDER BY depth), count(*)::integer
+      INTO purge_ids, n FROM prefix;
     CONTINUE WHEN n = 0;
 
-    SELECT * INTO last_row
-    FROM public.audit_logs
-    WHERE playbook_id = playbook AND created_at < p_older_than
-    ORDER BY created_at DESC, id DESC
-    LIMIT 1;
+    SELECT * INTO last_row FROM public.audit_logs
+    WHERE id = purge_ids[array_length(purge_ids, 1)];
 
     INSERT INTO public.audit_chain_checkpoints (
       playbook_id, anchor_hash, purged_through, purged_through_id, purged_count
@@ -315,7 +356,7 @@ BEGIN
     );
 
     DELETE FROM public.audit_logs
-    WHERE playbook_id = playbook AND created_at < p_older_than;
+    WHERE playbook_id = playbook AND id = ANY(purge_ids);
 
     INSERT INTO public.audit_logs (
       playbook_id, operation, status, actor_type, actor_id, target
@@ -349,29 +390,16 @@ GRANT EXECUTE ON FUNCTION public.purge_audit_logs(timestamptz, uuid, text, text)
 
 DROP POLICY IF EXISTS "Auditors can read audit logs" ON public.audit_logs;
 CREATE POLICY "Auditors can read audit logs"
-  ON public.audit_logs FOR SELECT
-  USING (EXISTS (
-    SELECT 1 FROM public.playbook_collaborators
-    WHERE playbook_collaborators.playbook_id = audit_logs.playbook_id
-      AND playbook_collaborators.user_id = auth.uid()
-      AND playbook_collaborators.accepted_at IS NOT NULL
-      AND playbook_collaborators.role = 'auditor'
-  ));
+  ON public.audit_logs FOR SELECT TO authenticated
+  USING (audit_private.is_auditor(playbook_id));
 
 -- Playbook-scoped API key role used for machine auditors (no vault access).
 ALTER TABLE public.api_keys DROP CONSTRAINT IF EXISTS api_keys_role_check;
 ALTER TABLE public.api_keys ADD CONSTRAINT api_keys_role_check
   CHECK (role IN ('viewer', 'coworker', 'proposer', 'admin', 'auditor'));
 
--- Auditors may SELECT the playbook row (metadata). Column stripping is API-side
--- because RLS is row-level; they still have no UPDATE/DELETE policy.
+-- The authorized application API returns metadata to auditors. A SELECT policy
+-- on this table would expose instructions/persona/config as well as metadata.
 DROP POLICY IF EXISTS "Auditors can read playbook metadata" ON public.playbooks;
-CREATE POLICY "Auditors can read playbook metadata"
-  ON public.playbooks FOR SELECT
-  USING (EXISTS (
-    SELECT 1 FROM public.playbook_collaborators
-    WHERE playbook_collaborators.playbook_id = playbooks.id
-      AND playbook_collaborators.user_id = auth.uid()
-      AND playbook_collaborators.accepted_at IS NOT NULL
-      AND playbook_collaborators.role = 'auditor'
-  ));
+
+COMMIT;

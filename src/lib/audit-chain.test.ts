@@ -144,6 +144,15 @@ describe("export formats", () => {
     expect(formatAuditCsv(chained)).toContain('"host,with,commas"');
   });
 
+  it("exports untrusted formula-like text as a literal spreadsheet cell", () => {
+    for (const target of ["=1+1", "+cmd", "-1+2", "@SUM(1)", "\t=1+1"]) {
+      const entry = { ...base, id: "f0000000-0000-4000-8000-000000000002", target };
+      const csv = formatAuditCsv([entry]);
+      expect(csv).toContain(`'${target}`);
+      expect(JSON.parse(formatAuditJsonl([entry])).target).toBe(target);
+    }
+  });
+
   it("accepts ndjson as an alias of jsonl", () => {
     expect(parseAuditExportFormat("ndjson")).toBe("jsonl");
     expect(parseAuditExportFormat("CSV")).toBe("csv");

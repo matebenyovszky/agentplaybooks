@@ -15,6 +15,11 @@ export PGHOST="${PGHOST:-/var/run/postgresql}"
 export PGUSER="${PGUSER:-ubuntu}"
 
 checksum_sql() {
+  local original_only="${1:-false}"
+  local original_filter=""
+  if [ "$original_only" = true ]; then
+    original_filter="WHERE id IN (SELECT id FROM public.audit_logs_backup_20261025)"
+  fi
   psql -d "$DB" -A -t -v ON_ERROR_STOP=1 -c "
     SELECT md5(coalesce(string_agg(row_md5, '' ORDER BY id), ''))
     FROM (
@@ -26,7 +31,7 @@ checksum_sql() {
         to_char(timezone('UTC', created_at), 'YYYY-MM-DD\"T\"HH24:MI:SS.MS\"Z\"'),
         coalesce(actor_type, ''), coalesce(actor_id, ''), coalesce(secret_name, '')
       )) AS row_md5
-      FROM public.audit_logs
+      FROM public.audit_logs $original_filter
     ) rows;
   " | tr -d '[:space:]'
 }
@@ -178,8 +183,7 @@ echo "PASS: re-apply left count=$IDEM_COUNT checksum_original=$IDEM_CHECKSUM mis
 echo
 echo "=== 7b. sequential inserts in one transaction (shared now()) ==="
 # now() is transaction-stable; UUID id is not insertion order. The trigger
-# must append to the unreferenced tip so these rows chain. A single multi-row
-# INSERT still collides (BEFORE INSERT cannot see sibling rows).
+# must append to the unreferenced tip so these rows chain. The production code inserts audit events individually.
 psql -d "$DB" -v ON_ERROR_STOP=1 <<'SQL'
 BEGIN;
 INSERT INTO public.audit_logs (playbook_id, operation, status)
@@ -197,7 +201,7 @@ if [[ "$SAME_TXN_COUNT" != "$((ORIG_COUNT + 3))" ]]; then
   exit 1
 fi
 echo "PASS: same-txn inserts chained; postflight mismatches=0; count=$SAME_TXN_COUNT"
-echo "(rollback restores the backup table, so the extra rows do not affect checksums)"
+echo "(rollback must preserve these new events and the original row bodies)"
 
 echo
 echo "=== 8. rollback ==="
@@ -212,15 +216,15 @@ fi
 echo "rollback_seconds=$T_ROLLBACK unrecorded=t"
 
 echo
-echo "=== 9. preflight after rollback (must match original checksum) ==="
+echo "=== 9. preflight after rollback (original fields unchanged, new rows retained) ==="
 psql -d "$DB" -v ON_ERROR_STOP=1 -f "$DIR/preflight.sql"
-FINAL_CHECKSUM="$(checksum_sql)"
+FINAL_CHECKSUM="$(checksum_sql true)"
 FINAL_COUNT="$(psql -d "$DB" -A -t -v ON_ERROR_STOP=1 -c 'SELECT count(*) FROM public.audit_logs;' | tr -d '[:space:]')"
-if [[ "$FINAL_COUNT" != "$ORIG_COUNT" || "$FINAL_CHECKSUM" != "$ORIG_CHECKSUM" ]]; then
+if [[ "$FINAL_COUNT" != "$SAME_TXN_COUNT" || "$FINAL_CHECKSUM" != "$ORIG_CHECKSUM" ]]; then
   echo "FAIL: rollback checksum mismatch before=$ORIG_CHECKSUM after=$FINAL_CHECKSUM"
   exit 1
 fi
-echo "PASS: rollback preflight matches original checksum_original=$FINAL_CHECKSUM count=$FINAL_COUNT"
+echo "PASS: rollback retains new events and matches original checksum_original=$FINAL_CHECKSUM count=$FINAL_COUNT"
 
 echo
 echo "=== 10. rollback is idempotent ==="
