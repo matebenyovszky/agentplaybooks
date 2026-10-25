@@ -1,7 +1,13 @@
 import { createApiApp } from "@/app/api/_shared/hono";
 import { getServiceSupabase } from "@/app/api/_shared/supabase";
 import { storedDisplayPrefix } from "@/app/api/_shared/auth";
-import { authorizeRuntimeAccess, MAX_RUNTIME_SECRETS, secretNames } from "@/app/api/_shared/secret-runtime";
+import {
+  bearerMayLoadRuntime,
+  MAX_RUNTIME_SECRETS,
+  mtlsRuntimeGrant,
+  playbookOwnerByGuid,
+  secretNames,
+} from "@/app/api/_shared/secret-runtime";
 import { recordSecretAudit, type AuditContext } from "@/app/api/_shared/audit";
 import { decryptSecret } from "@/lib/crypto";
 
@@ -17,15 +23,16 @@ app.onError(() => new Response(JSON.stringify({ error: "Secret loading failed" }
 }));
 
 function auditTrail(
-  access: { playbookId: string; clientId: string | null },
+  playbookId: string,
+  clientId: string | null,
   displayPrefix: string | null,
   request: Request,
 ): AuditContext {
   const requestId = request.headers.get("cf-ray") || request.headers.get("x-request-id");
   return {
-    playbookId: access.playbookId,
-    actor: access.clientId
-      ? { type: "mtls", id: access.clientId }
+    playbookId,
+    actor: clientId
+      ? { type: "mtls", id: clientId }
       : { type: "api_key", id: displayPrefix },
     requestId,
   };
@@ -43,12 +50,28 @@ app.post("/", async c => {
     || (mode !== "api_key" && mode !== "mtls")) {
     return c.json({ error: "Provide up to 100 distinct secret names and a valid auth_mode" }, 400);
   }
-  const access = await authorizeRuntimeAccess(c.req.raw, c.req.param("guid") || "", mode);
-  if (!access) return c.json({ error: "Authentication required or credential not authorized for this playbook" }, 401);
-  const displayPrefix = access.clientId ? null : await storedDisplayPrefix(c.req.raw);
-  const audit = auditTrail(access, displayPrefix, c.req.raw);
+  const playbook = await playbookOwnerByGuid(c.req.param("guid") || "");
+  if (!playbook) {
+    return c.json({ error: "Authentication required or credential not authorized for this playbook" }, 401);
+  }
+  let clientId: string | null = null;
+  let allowedNames: string[] | null = null;
+  if (mode === "api_key") {
+    if (!await bearerMayLoadRuntime(c.req.raw, playbook.playbookId)) {
+      return c.json({ error: "Authentication required or credential not authorized for this playbook" }, 401);
+    }
+  } else {
+    const grant = await mtlsRuntimeGrant(c.req.raw, playbook.playbookId);
+    if (!grant) {
+      return c.json({ error: "Authentication required or credential not authorized for this playbook" }, 401);
+    }
+    clientId = grant.clientId;
+    allowedNames = grant.allowedNames;
+  }
+  const displayPrefix = clientId ? null : await storedDisplayPrefix(c.req.raw);
+  const audit = auditTrail(playbook.playbookId, clientId, displayPrefix, c.req.raw);
   const names = [...required, ...optional];
-  const denied = names.filter(name => access.allowedNames && !access.allowedNames.includes(name));
+  const denied = names.filter(name => allowedNames && !allowedNames.includes(name));
   if (denied.length) {
     await Promise.all(denied.map(name => recordSecretAudit(audit, {
       operation: "secret.reveal", status: "denied", secretName: name, reason: "client_scope",
@@ -57,7 +80,7 @@ app.post("/", async c => {
   }
   const db = getServiceSupabase();
   const { data: rows, error } = await db.from("secrets").select("*")
-    .eq("playbook_id", access.playbookId).in("name", names);
+    .eq("playbook_id", playbook.playbookId).in("name", names);
   if (error || !rows) return c.json({ error: "Secret loading failed" }, 503);
   const byName = new Map(rows.map(row => [row.name, row]));
   const missing = required.filter(name => !byName.has(name));
@@ -78,8 +101,8 @@ app.post("/", async c => {
   const values: Record<string, string> = Object.create(null);
   try {
     for (const row of rows) {
-      values[row.name] = await decryptSecret(row, access.ownerId, {
-        playbookId: access.playbookId, secretName: row.name,
+      values[row.name] = await decryptSecret(row, playbook.ownerId, {
+        playbookId: playbook.playbookId, secretName: row.name,
       });
     }
   } catch {
@@ -91,6 +114,6 @@ app.post("/", async c => {
     await db.from("secrets").update({ last_used_at: now, use_count: row.use_count + 1 }).eq("id", row.id);
     await recordSecretAudit(audit, { operation: "secret.reveal", status: "success", secretName: row.name });
   }));
-  if (access.clientId) await db.from("secret_clients").update({ last_used_at: now }).eq("id", access.clientId);
+  if (clientId) await db.from("secret_clients").update({ last_used_at: now }).eq("id", clientId);
   return c.json({ values, missing_optional: optional.filter(name => !byName.has(name)) });
 });
