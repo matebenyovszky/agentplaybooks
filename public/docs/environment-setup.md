@@ -12,6 +12,12 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 SECRETS_ENCRYPTION_KEY=your-64-char-hex-key
 # Application URL (for production)
 NEXT_PUBLIC_APP_URL=https://apbks.com
+
+# Self-hosted secret-client mTLS only. Leave unset (cloudflare) in hosted production.
+# MTLS_MODE=proxy
+# MTLS_PROXY_FINGERPRINT_HEADER=X-SSL-Client-Fingerprint
+# MTLS_PROXY_VERIFY_HEADER=X-SSL-Client-Verify
+# MTLS_TRUSTED_PROXIES=172.28.0.10/32
 ```
 
 ## OAuth Configuration (CRITICAL)

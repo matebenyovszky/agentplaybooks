@@ -28,6 +28,7 @@ Welcome to the AgentPlaybooks documentation.
 - [Management API & MCP](./management-api.md) - AI-driven playbook management
 - [Developer Guide](./developer-guide.md) - Contributing and development
 - [Self-Hosting](./self-hosting.md) - Deploy your own instance
+- [Self-hosted mTLS](./self-hosted-mtls.md) - Client-certificate secret loading on Docker/local (nginx, Caddy, Traefik)
 - [Architecture](./architecture.md) - System design and components
 - [Security documentation pack](./security.md) - Supplier assessment, asset inventory, MK r. / NIST risk template (Hungarian original in `docs/security/`)
 

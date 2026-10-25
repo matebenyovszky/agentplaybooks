@@ -552,6 +552,16 @@ Policies written against `auth.uid()` are currently inert, because no
 JWT-bearing client performs table queries — the browser talks only to
 `/api/*`, never to Postgres directly.
 
+## Security
+
+Report vulnerabilities privately — see [SECURITY.md](SECURITY.md). Do not open
+a public issue for a security defect.
+
+Self-hosted operators assembling a NIS2 / 418/2024. 77. § filing can start from
+the [incident runbook](docs/security/incident-runbook.md)
+([HU](docs/security/incident-runbook.hu.md)). Release SBOMs and `cosign verify`
+are in [docs/security/supply-chain.md](docs/security/supply-chain.md).
+
 ## Contributing
 
 1. Fork the repository
