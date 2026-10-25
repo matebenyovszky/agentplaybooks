@@ -56,6 +56,7 @@ import {
 import { PLAYBOOK_TOOLS } from "@/app/api/_shared/playbook-tools";
 import { structuredToolResult } from "@/app/api/_shared/mcp-tool-hints";
 import { resolveToolset, searchToolCatalog, type ToolsetView } from "@/app/api/_shared/toolsets";
+import { isAnonymousPublicRequest, isPublicBuiltinTool, isPublicMcpServer, isReadOnlyTool } from "@/app/api/_shared/public-mcp-tools";
 import {
   callFederatedTool,
   federatedCallPrefixes,
@@ -156,7 +157,9 @@ async function federatedResources(servers: MCPServer[], playbookId: string, requ
 
 function invalidateFederatedDiscovery(playbookId: string, serverId?: string) {
   for (const view of ["full", "runtime", "memory", "admin"]) {
-    toolListBodies.delete(`${playbookId}:${view}`);
+    for (const access of ["public", "authenticated"]) {
+      toolListBodies.delete(`${playbookId}:${view}:${access}`);
+    }
   }
   if (serverId) {
     toolDiscovery.delete(`${playbookId}:${serverId}`);
@@ -164,24 +167,26 @@ function invalidateFederatedDiscovery(playbookId: string, serverId?: string) {
   }
 }
 
-async function toolListJson(playbookId: string, view: ToolsetView, requestId?: string): Promise<string> {
+async function toolListJson(playbookId: string, view: ToolsetView, requestId?: string, anonymous = false): Promise<string> {
+  const access = anonymous ? "public" : "authenticated";
+  const builtins = PLAYBOOK_TOOLS.filter(tool => view.includes(tool.name, false) && (!anonymous || isPublicBuiltinTool(tool)));
   if (view.name === "memory" || view.name === "admin") {
-    let body = builtinToolListBodies.get(view.name);
+    const cacheKey = `${view.name}:${access}`;
+    let body = builtinToolListBodies.get(cacheKey);
     if (body === undefined) {
-      body = JSON.stringify(PLAYBOOK_TOOLS.filter(tool => view.includes(tool.name, false)));
-      builtinToolListBodies.set(view.name, body);
+      body = JSON.stringify(builtins);
+      builtinToolListBodies.set(cacheKey, body);
     }
     return body;
   }
-  return cachedDiscovery(toolListBodies, `${playbookId}:${view.name}`, async () => {
-    const builtins = PLAYBOOK_TOOLS.filter((tool) => view.includes(tool.name, false));
-
+  return cachedDiscovery(toolListBodies, `${playbookId}:${view.name}:${access}`, async () => {
     const { data: mcpRows } = await getServiceSupabase()
       .from("mcp_servers")
       .select("*")
       .eq("playbook_id", playbookId);
-    const federated = await federatedTools((mcpRows || []) as MCPServer[], playbookId, requestId);
-    return JSON.stringify([...builtins, ...federated.filter((tool) => view.includes(tool.name, true))]);
+    const servers = (mcpRows || []) as MCPServer[];
+    const federated = await federatedTools(anonymous ? servers.filter(isPublicMcpServer) : servers, playbookId, requestId);
+    return JSON.stringify([...builtins, ...federated.filter(tool => view.includes(tool.name, true) && (!anonymous || isReadOnlyTool(tool)))]);
   });
 }
 
@@ -327,6 +332,7 @@ app.get("/", async (c) => {
   let { data: playbook } = await query
     .eq("visibility", "public")
     .maybeSingle();
+  const isPublicPlaybook = Boolean(playbook);
 
   // If not found as public, try API key auth for private playbooks
   let privateExists = false;
@@ -354,6 +360,8 @@ app.get("/", async (c) => {
     .select("*")
     .eq("playbook_id", playbook.id);
   const mcpServers = (mcpRows || []) as MCPServer[];
+  const anonymousPublic = await isAnonymousPublicRequest(c.req.raw, playbook.id, isPublicPlaybook);
+  const visibleServers = anonymousPublic ? mcpServers.filter(isPublicMcpServer) : mcpServers;
   const persona = playbookToPersona(playbook);
 
   // Build tools: start with built-in playbook tools
@@ -361,8 +369,8 @@ app.get("/", async (c) => {
   // not executable functions. Use list_skills / get_skill / the Skills resource instead.
   const requestId = c.req.header("cf-ray") || c.req.header("x-request-id");
   const tools: McpTool[] = [
-    ...PLAYBOOK_TOOLS,
-    ...await federatedTools(mcpServers, playbook.id, requestId),
+    ...PLAYBOOK_TOOLS.filter(tool => !anonymousPublic || isPublicBuiltinTool(tool)),
+    ...(await federatedTools(visibleServers, playbook.id, requestId)).filter(tool => !anonymousPublic || isReadOnlyTool(tool)),
   ];
 
   // Build resources
@@ -382,7 +390,7 @@ app.get("/", async (c) => {
     },
   ];
 
-  resources.push(...await federatedResources(mcpServers, playbook.id, requestId));
+  resources.push(...await federatedResources(visibleServers, playbook.id, requestId));
 
   // MCP Server manifest
   const manifest = {
@@ -559,6 +567,7 @@ app.post("/", async (c) => {
     }, 400);
   }
 
+  const anonymousPublic = await isAnonymousPublicRequest(c.req.raw, playbook.id, !privateRowExists);
   logMcpDiscovery(c.req.raw, method, playbook.id, privateActor, rpcParams);
 
   // Handle MCP methods
@@ -600,6 +609,7 @@ app.post("/", async (c) => {
         playbook.id,
         toolsetView,
         c.req.header("cf-ray") || c.req.header("x-request-id"),
+        anonymousPublic,
       );
       return c.body(
         `{"jsonrpc":"2.0","id":${JSON.stringify(id) ?? "null"},"result":{"tools":${toolsJson}}}`,
@@ -704,7 +714,7 @@ app.post("/", async (c) => {
         ? await serviceSupabase.from("mcp_servers").select("*").eq("playbook_id", playbook.id)
         : { data: [] };
       resources.push(...await federatedResources(
-        (mcpRows || []) as MCPServer[],
+        anonymousPublic ? ((mcpRows || []) as MCPServer[]).filter(isPublicMcpServer) : (mcpRows || []) as MCPServer[],
         playbook.id,
         c.req.header("cf-ray") || c.req.header("x-request-id"),
       ));
@@ -1128,6 +1138,9 @@ use_secret_write({
 
       if (federatedServer) {
         const server = federatedServer;
+        if (anonymousPublic && !isPublicMcpServer(server)) {
+          return c.json({ jsonrpc: "2.0", id, error: { code: -32001, message: "Authentication required: this tool is not a public read-only tool." } }, 403);
+        }
         const access = (server.transport_config as { access?: string } | null)?.access;
         if (access !== "public") {
           const apiKey = await acceptPlaybookCredential(c.req.raw, "tools:call");
@@ -1144,7 +1157,7 @@ use_secret_write({
             server,
             toolName,
             args,
-            await federationOptions(server, playbook.id, c.req.header("cf-ray") || c.req.header("x-request-id")),
+            { ...await federationOptions(server, playbook.id, c.req.header("cf-ray") || c.req.header("x-request-id")), readOnly: anonymousPublic },
           );
           return c.json({
             jsonrpc: "2.0",
@@ -1181,6 +1194,10 @@ use_secret_write({
       try {
         let result: unknown;
 
+        const builtin = PLAYBOOK_TOOLS.find(tool => tool.name === toolName);
+        if (anonymousPublic && builtin && !isPublicBuiltinTool(builtin)) {
+          throw new Error("Authentication required: this tool is not a public read-only tool.");
+        }
         const readPermission = READ_TOOL_PERMISSIONS[toolName];
         if (readPermission && !mayRead(readPermission)) {
           throw new Error(`API key with ${readPermission} permission required`);
@@ -1198,7 +1215,7 @@ use_secret_write({
                   .select("*")
                   .eq("playbook_id", playbook.id);
                 return federatedTools(
-                  (catalogRows || []) as MCPServer[],
+                  anonymousPublic ? ((catalogRows || []) as MCPServer[]).filter(isPublicMcpServer) : (catalogRows || []) as MCPServer[],
                   playbook.id,
                   c.req.header("cf-ray") || c.req.header("x-request-id"),
                 );
@@ -1207,8 +1224,8 @@ use_secret_write({
             // The searchable catalog respects the view: a pinned connection
             // must not discover tools it would then be refused.
             result = searchToolCatalog([
-              ...PLAYBOOK_TOOLS.filter((tool) => toolsetView.includes(tool.name, false)),
-              ...federated.filter((tool) => toolsetView.includes(tool.name, true)),
+              ...PLAYBOOK_TOOLS.filter(tool => toolsetView.includes(tool.name, false) && (!anonymousPublic || isPublicBuiltinTool(tool))),
+              ...federated.filter(tool => toolsetView.includes(tool.name, true) && (!anonymousPublic || isReadOnlyTool(tool))),
             ], query, limit);
             break;
           }

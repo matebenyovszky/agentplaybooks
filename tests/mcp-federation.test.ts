@@ -35,6 +35,44 @@ function jsonResponse(value: unknown, init?: ResponseInit) {
 }
 
 describe("MCP federation", () => {
+  it("checks fresh upstream read-only declarations before anonymous calls, including legacy aliases", async () => {
+    const calls: string[] = [];
+    const fetchMock = vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
+      const request = JSON.parse(String(init?.body));
+      calls.push(request.method);
+      if (request.method === "tools/list") return jsonResponse({ jsonrpc: "2.0", id: request.id, result: { tools: [
+        { name: "search", inputSchema: { type: "object" }, annotations: { readOnlyHint: true, destructiveHint: false } },
+        { name: "delete", inputSchema: { type: "object" }, annotations: { readOnlyHint: false } },
+        { name: "unknown", inputSchema: { type: "object" } },
+      ] } });
+      return jsonResponse({ jsonrpc: "2.0", id: request.id, result: { content: [{ type: "text", text: "found" }] } });
+    });
+    // Stored declarations may have become stale. A cached safe declaration must
+    // not authorize a tool that is now a write in the upstream's current catalog.
+    const connection = server({ tools: [{ name: "delete", inputSchema: {}, annotations: { readOnlyHint: true } }] });
+    for (const name of ["research__delete", "research__unknown", "ext__123456781234__delete"]) {
+      await expect(callFederatedTool(connection, name, {}, { readOnly: true, fetch: fetchMock as typeof fetch })).rejects.toThrow("not a public read-only tool");
+    }
+    expect(calls).not.toContain("tools/call");
+    await expect(callFederatedTool(connection, "research__search", {}, { readOnly: true, fetch: fetchMock as typeof fetch })).resolves.toEqual({ content: [{ type: "text", text: "found" }] });
+    expect(calls.filter(method => method === "tools/call")).toHaveLength(1);
+  });
+
+  it("derives public OpenAPI reads from HTTP methods and refuses POST even with a misleading stored declaration", async () => {
+    const connection = server({ transport_type: "openapi", transport_config: { access: "public", openapi: {
+      openapi: "3.1.0", servers: [{ url: "https://api.example.com" }], paths: { "/items": {
+        get: { operationId: "readItems" }, post: { operationId: "createItem" }, head: { operationId: "checkItems" },
+      } },
+    } }, tools: [{ name: "createItem", inputSchema: {}, annotations: { readOnlyHint: true } }] });
+    const fetchMock = vi.fn(async () => jsonResponse({ items: [] }));
+    const listed = await listFederatedTools([connection], { fetch: fetchMock as typeof fetch });
+    expect(listed.filter(tool => tool.annotations?.readOnlyHint).map(tool => tool._meta.originalName).sort()).toEqual(["checkItems", "readItems"]);
+    await expect(callFederatedTool(connection, "research__createItem", {}, { readOnly: true, fetch: fetchMock as typeof fetch })).rejects.toThrow("not a public read-only operation");
+    expect(fetchMock).not.toHaveBeenCalled();
+    await callFederatedTool(connection, "research__readItems", {}, { readOnly: true, fetch: fetchMock as typeof fetch });
+    expect(fetchMock).toHaveBeenCalledWith("https://api.example.com/items", expect.objectContaining({ method: "GET" }));
+  });
+
   it("discovers, namespaces, and calls upstream MCP tools", async () => {
     const fetchMock = vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
       const request = JSON.parse(String(init?.body)) as { method: string };

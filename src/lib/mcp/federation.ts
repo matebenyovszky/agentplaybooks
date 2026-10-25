@@ -52,6 +52,8 @@ export type FederationAuditEvent = {
 };
 
 export type FederationOptions = {
+  /** Reject non-read tools before invoking an upstream; absent hints fail closed. */
+  readOnly?: boolean;
   fetch?: typeof globalThis.fetch;
   secrets?: FederatedSecrets;
   audit?: (event: FederationAuditEvent) => void | Promise<void>;
@@ -291,6 +293,9 @@ export async function callFederatedTool(
   const tool = await resolveTool(server, namespacedName, options);
   if (server.transport_type === "openapi") {
     return callOpenApiOperation(server, tool.originalName, args, options);
+  }
+  if (options.readOnly && (tool.annotations?.readOnlyHint !== true || tool.annotations?.destructiveHint === true)) {
+    throw new FederationError("Authentication required: this tool is not a public read-only tool", "READ_ONLY_REQUIRED", 403);
   }
   return audited(server, "tools/call", tool.originalName, options, () =>
     mcpRequest(server, "tools/call", { name: tool.originalName, arguments: args }, options),
@@ -574,10 +579,16 @@ function mcpHeaders(headers: Record<string, string>, sessionId?: string | null) 
 
 async function discoverOpenApiTools(server: MCPServer, options: FederationOptions): Promise<McpTool[]> {
   const spec = await loadOpenApiSpec(server, options);
-  return collectOpenApiOperations(spec).map(({ operationId, operation }) => ({
+  return collectOpenApiOperations(spec).map(({ operationId, operation, method }) => ({
     name: operationId,
     description: stringValue(operation.description) || stringValue(operation.summary) || operationId,
     inputSchema: openApiInputSchema(operation),
+    annotations: {
+      readOnlyHint: method === "GET" || method === "HEAD",
+      destructiveHint: method !== "GET" && method !== "HEAD",
+      idempotentHint: ["GET", "HEAD", "PUT", "DELETE"].includes(method),
+      openWorldHint: true,
+    },
   }));
 }
 
@@ -592,6 +603,9 @@ async function callOpenApiOperation(
     const spec = await loadOpenApiSpec(server, options);
     const operation = collectOpenApiOperations(spec).find((item) => item.operationId === operationId);
     if (!operation) throw new FederationError(`OpenAPI operation not found: ${operationId}`, "TOOL_NOT_FOUND", 404);
+    if (options.readOnly && !["GET", "HEAD"].includes(operation.method)) {
+      throw new FederationError("Authentication required: this operation is not a public read-only operation", "READ_ONLY_REQUIRED", 403);
+    }
     const baseUrl = config.base_url || firstOpenApiServer(spec);
     if (!baseUrl) throw new FederationError("OpenAPI integration has no base URL", "MISSING_URL", 400);
     const url = new URL(joinOpenApiUrl(baseUrl, operation.path));
@@ -643,7 +657,7 @@ function collectOpenApiOperations(spec: Record<string, unknown>): OpenApiOperati
   const result: OpenApiOperation[] = [];
   for (const [path, pathValue] of Object.entries(paths)) {
     const pathItem = objectValue(pathValue);
-    for (const method of ["get", "post", "put", "patch", "delete"]) {
+    for (const method of ["get", "head", "post", "put", "patch", "delete"]) {
       const operation = objectValue(pathItem[method]);
       if (!Object.keys(operation).length) continue;
       const operationId = stringValue(operation.operationId) || sanitizeName(`${method}_${path}`);
@@ -684,17 +698,17 @@ async function resolveTool(server: MCPServer, namespacedName: string, options: F
   // and tool execution remain unchanged; stale declarations fail at execution.
   const declared = (server.tools || []).find(candidate =>
     sanitizeName(candidate.name) === remainder || candidate.name === remainder);
-  if (declared) return { originalName: declared.name };
+  if (declared && !options.readOnly) return { originalName: declared.name, annotations: declared.annotations };
   const tools = server.transport_type === "openapi"
     ? await discoverOpenApiTools(server, options)
-    : await mcpListTools(server, options).catch(() => server.tools || []);
+    : options.readOnly ? await mcpListTools(server, options) : await mcpListTools(server, options).catch(() => server.tools || []);
   // The advertised names are sanitized, so match on the sanitized form — but an
   // exact original name (`searchWeb`) is accepted too; a caller that already
   // knows the upstream spelling should not be punished for using it.
   const tool = tools.find((candidate) =>
     sanitizeName(candidate.name) === remainder || candidate.name === remainder);
   if (!tool) throw new FederationError(`Federated tool not found: ${namespacedName}`, "TOOL_NOT_FOUND", 404);
-  return { originalName: tool.name };
+  return { originalName: tool.name, annotations: tool.annotations };
 }
 
 async function buildHeaders(
