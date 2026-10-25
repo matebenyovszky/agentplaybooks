@@ -169,6 +169,16 @@ This records `"allow_insecure_http": true` in the profile's
 `agentplaybooks/config.json`. Put the instance behind HTTPS before production
 use.
 
+### Client-certificate (mTLS) secret loading
+
+API keys work against the Node/Docker origin unchanged. Certificate clients do
+not: the origin only trusts Cloudflare's TLS context by default, so mTLS fails
+closed until a terminator verifies client certs and `MTLS_MODE=proxy` is set.
+
+The [self-hosted mTLS guide](./self-hosted-mtls.md) covers nginx, Caddy, and
+Traefik, a `deploy/self-host/docker-compose.mtls.yml` example, and openssl
+commands for a test CA. Hungarian: [Önhosztolt mTLS](./self-hosted-mtls.hu.md).
+
 ### Run
 
 ```bash
@@ -217,8 +227,40 @@ an empty database: the incremental history cannot create the core tables.
 | `AUDIT_CRON_SECRET` | No | Bearer token for the instance purge endpoint. Unset hides the endpoint. `CRON_SECRET` is also accepted. |
 | `AUDIT_SYSLOG_URL` | No | Optional RFC 5424 forwarder: `udp://host:514`, `tcp://host:514`, or `tls://host:6514`. Off by default. |
 | `AUDIT_SIEM_WEBHOOK_URL` | No | Optional HTTPS POST of each audit event. Off by default. Pair with `AUDIT_SIEM_WEBHOOK_SECRET` for an HMAC `X-Audit-Signature` header. |
+| `NO_EGRESS` | No | Set to `true` on an air-gapped instance to disable optional outbound calls (today: MCP registry search) unless `MCP_REGISTRY_URL` points at an internal mirror. Unset keeps the hosted default. |
+| `MCP_REGISTRY_URL` | No | Override for `GET /api/mcp-registry/search`. Unset uses the official registry. Empty disables it. An internal URL is used even when `NO_EGRESS=true`. |
+| `MTLS_MODE` | No | Secret-client certificate auth. Default `cloudflare` (hosted production). Set `proxy` behind a TLS terminator that verifies client certs; `off` disables certificate auth. Unknown values fail closed. See [Self-hosted mTLS](./self-hosted-mtls.md). |
+| `MTLS_PROXY_FINGERPRINT_HEADER` | No | Required when `MTLS_MODE=proxy`. Header the terminator sets after verifying the client cert (hex SHA-256 or PEM). |
+| `MTLS_PROXY_VERIFY_HEADER` | No | Optional. When set, that header must equal `SUCCESS` or mTLS is rejected. |
+| `MTLS_TRUSTED_PROXIES` | No | Required when `MTLS_MODE=proxy`. Comma-separated IPs/CIDRs of the terminator. Headers from any other source are ignored. |
 
 Existing databases need `20261024120000_audit_logs_compliance.sql` (hash chain backfill, auditor role, retention checkpoints). That migration rewrites every `audit_logs` row and **must not be applied to production without approval and a backup**. See [Audit Logs](./audit-logs.md).
+
+### Air-gapped / no-egress
+
+A local or government deploy should not open a path out of the operator's
+network. The production Dockerfile already sets `NEXT_TELEMETRY_DISABLED=1`.
+Set `NO_EGRESS=true` (and `SECRETS_REQUIRE_ALLOWED_HOSTS=true` if agents must
+not pick arbitrary `use_secret` destinations). The **No egress** GitHub Actions
+workflow (`deploy/airgap/`) is the automated proof: the stack runs on a Docker
+network with `internal: true`, a DNS sink allow-lists only compose service
+names, and the job fails if any external lookup or outbound packet is
+attempted.
+
+| Call | When | Disable / pin |
+| --- | --- | --- |
+| Geist fonts (`next/font/local`) | **Build time.** Committed variable fonts in `src/app/fonts/` (merged in #200). `next build` does not fetch Google Fonts. | Nothing to disable. `npm ci` still needs a registry (or an offline cache). |
+| Next.js telemetry | Disabled in the production image (`NEXT_TELEMETRY_DISABLED=1`). | Keep that env set. |
+| Official MCP registry (`registry.modelcontextprotocol.io`) | `GET /api/mcp-registry/search` only, when someone uses the dashboard search. | `NO_EGRESS=true`, or `MCP_REGISTRY_URL=` to disable, or `MCP_REGISTRY_URL=http://…` for an internal mirror. |
+| `use_secret` / secrets proxy | Whenever an agent or API client names a URL. That is the feature. | Pin each secret with `allowed_hosts`; set `SECRETS_REQUIRE_ALLOWED_HOSTS=true` so unpinned secrets cannot leave. |
+| OAuth token exchange (Google, Microsoft, LinkedIn, X) | Only if you configure those providers and complete a consent flow. | Leave the providers disabled (the self-hosted default). |
+| Entra ID / other SSO | Login redirects to the IdP. | Do not enable external IdPs on an air-gapped instance; use email auth against local GoTrue, or an internal IdP. |
+| Seed / import scripts | Manual tooling (`scripts/seed-data.ts` talks to GitHub). | Do not run them on the air-gapped host. |
+| Hosted product URLs in generated text (`agentplaybooks.ai` in OAuth metadata, plugin export, docs links) | String construction, not a network call. | Set `NEXT_PUBLIC_APP_URL` to this instance at **build** time. |
+
+The air-gap CI job still builds and pulls images **before** isolating the
+network (`npm ci` and base-image pulls need it). Fonts no longer do. Runtime of
+that image, with `NO_EGRESS=true`, is what the observer measures.
 
 ### Pinning a secret to specific destinations
 
@@ -317,3 +359,5 @@ supabase db dump > backup.sql
 - [ ] RLS is enabled on all tables
 - [ ] Auth providers configured with correct redirect URLs
 - [ ] Custom domain uses HTTPS
+- [ ] Vulnerability reports follow [SECURITY.md](https://github.com/matebenyovszky/agentplaybooks/blob/main/SECURITY.md); incident filing uses the [incident runbook](https://github.com/matebenyovszky/agentplaybooks/blob/main/docs/security/incident-runbook.md) (the operator is the reporting entity)
+- [ ] Release SBOMs are verified with [`cosign verify-blob`](https://github.com/matebenyovszky/agentplaybooks/blob/main/docs/security/supply-chain.md) before production deploy

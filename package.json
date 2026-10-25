@@ -68,7 +68,7 @@
   },
   "overrides": {
     "nanoid": "3.3.18",
-    "undici": "7.30.0",
+    "undici": "7.30.1",
     "postcss": "8.5.28",
     "sharp": "0.35.5",
     "@opennextjs/cloudflare": {

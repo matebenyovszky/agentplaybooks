@@ -1,0 +1,7 @@
+FROM alpine:3.21
+RUN apk add --no-cache curl jq
+COPY flow.sh /flow.sh
+COPY check-egress.sh /check-egress.sh
+RUN chmod +x /flow.sh /check-egress.sh
+WORKDIR /
+CMD ["sleep", "infinity"]

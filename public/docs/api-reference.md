@@ -817,8 +817,10 @@ Returns the decrypted value. If called with an API key, the request will only su
 
 For application startup loading, use `POST /api/playbooks/:guid/secrets/resolve`
 with `names`, optional `optional_names`, and `auth_mode` (`api_key` or `mtls`).
-API keys require `secrets:read`. Certificate clients require a Cloudflare-verified,
-owner-registered certificate with explicit allowed names. Both require the secret's
+API keys require `secrets:read`. Certificate clients require a verified,
+owner-registered certificate with explicit allowed names (Cloudflare TLS context
+by default, or `MTLS_MODE=proxy` on self-hosted installs — see
+[Self-hosted mTLS](./self-hosted-mtls.md)). Both require the secret's
 `allow_api_key_reveal` flag and refuse expired secrets. The response contains `values`
 and `missing_optional`; a failed batch contains no plaintext values. Maximum 100
 distinct names. See [Python Secrets](./python-secrets.md) for the client package,

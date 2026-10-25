@@ -18,6 +18,12 @@ NEXT_PUBLIC_APP_URL=https://apbks.com
 # AUDIT_SYSLOG_URL=udp://loghost:514
 # AUDIT_SIEM_WEBHOOK_URL=https://siem.example/hooks/audit
 # AUDIT_SIEM_WEBHOOK_SECRET=replace-me
+
+# Self-hosted secret-client mTLS only. Leave unset (cloudflare) in hosted production.
+# MTLS_MODE=proxy
+# MTLS_PROXY_FINGERPRINT_HEADER=X-SSL-Client-Fingerprint
+# MTLS_PROXY_VERIFY_HEADER=X-SSL-Client-Verify
+# MTLS_TRUSTED_PROXIES=172.28.0.10/32
 ```
 
 ## OAuth Configuration (CRITICAL)
