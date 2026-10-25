@@ -2,7 +2,7 @@ import { appendFileSync, copyFileSync, mkdtempSync, mkdirSync, readFileSync, rea
 import { tmpdir } from "node:os";
 import { basename, join, resolve } from "node:path";
 
-const projectRef = "bydcjwxfiiolmnddzbpy";
+const projectRef = "zcphxfospbvqplonkvco";
 const root = resolve(import.meta.dirname, "..");
 const versions = readFileSync(join(root, "supabase", "deploy-baseline-versions.txt"), "utf8")
   .split(/\r?\n/)
@@ -17,10 +17,14 @@ if (new Set(versions).size !== versions.length || versions.some((version, index)
 }
 
 const cutoff = versions.at(-1);
+// This SQL was deployed through Dashboard under a different timestamp.
+// Its normalized SQL matched the heap project's recorded statement on 2026-10-25.
+const recordedVersionAliases = new Map([["20261002120000", "20261009220418"]]);
 const migrationDir = join(root, "supabase", "migrations");
 const forwardFiles = readdirSync(migrationDir)
   .filter((file) => file.endsWith(".sql"))
   .map((file) => ({ file, version: /^([0-9]{14})/.exec(file)?.[1] }))
+  .map(({ file, version }) => ({ file, version: recordedVersionAliases.get(version) || version }))
   .filter(({ version }) => version && version > cutoff)
   .sort((a, b) => a.version.localeCompare(b.version));
 
@@ -52,8 +56,8 @@ for (const version of versions) {
   writeFileSync(join(stagedMigrations, `${version}_already_applied.sql`),
     `-- Version ${version} is already in this production project's migration history.\n`);
 }
-for (const { file } of forwardFiles) {
-  copyFileSync(join(migrationDir, file), join(stagedMigrations, basename(file)));
+for (const { file, version } of forwardFiles) {
+  copyFileSync(join(migrationDir, file), join(stagedMigrations, `${version}_${basename(file).slice(15)}`));
 }
 
 if (process.env.GITHUB_OUTPUT) {
@@ -61,3 +65,4 @@ if (process.env.GITHUB_OUTPUT) {
 }
 console.log(`Prepared ${versions.length} historical versions and ${forwardFiles.length} forward migrations in ${workdir}.`);
 console.log(`Forward migrations: ${forwardFiles.map(({ file }) => file).join(", ") || "none"}`);
+
