@@ -2,12 +2,17 @@
 -- Run before the in-DB backup and before 20261024120000_audit_logs_compliance.sql.
 -- Safe: read-only. Does not touch prod data.
 --
+-- Production target: heap project zcphxfospbvqplonkvco. Retired project
+-- bydcjwxfiiolmnddzbpy is forbidden. Run check-project.sh on PROD_DB_URL first.
+--
 -- Copy the summary row onto the RUNBOOK record sheet.
 -- checksum_ids     = md5 of all ids ordered by id
 -- checksum_original = md5 of per-row md5s over the original columns only
 --                     (id, playbook_id, mcp_server_id, operation, target, status,
 --                      latency_ms, error_code, request_id, created_at, actor_type,
 --                      actor_id, secret_name). Ignores prev_hash/hash if present.
+
+\ir check-project.sql
 
 \echo === audit_logs preflight summary ===
 

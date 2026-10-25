@@ -4,6 +4,11 @@
 --    public.audit_log_canonical + extensions.digest, exactly as the migration
 --    and src/lib/audit-chain.ts do. Report mismatch_count and first_broken_id
 --    (chain order: created_at, id). Expect mismatch_count = 0.
+--
+-- Production target: heap project zcphxfospbvqplonkvco. Retired project
+-- bydcjwxfiiolmnddzbpy is forbidden. Run check-project.sh on PROD_DB_URL first.
+
+\ir check-project.sql
 
 \echo === audit_logs postflight summary (original columns) ===
 

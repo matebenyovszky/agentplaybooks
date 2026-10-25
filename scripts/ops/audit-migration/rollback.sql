@@ -3,8 +3,17 @@
 -- public.audit_logs_backup_20261025 when that table exists and the migration
 -- had added hash columns (the backfill rewrites prev_hash/hash).
 --
+-- Also removes version 20261024120000 from supabase_migrations.schema_migrations
+-- so a later Deploy Supabase `db push` will not treat a rolled-back database as
+-- already migrated.
+--
+-- Production target: heap project zcphxfospbvqplonkvco. Retired project
+-- bydcjwxfiiolmnddzbpy is forbidden. Run check-project.sh on PROD_DB_URL first.
+--
 -- Does not drop the backup table. Does not revoke GRANT SELECT on audit_logs
 -- (that grant may already have existed on hosted projects).
+
+\ir check-project.sql
 
 BEGIN;
 
@@ -88,6 +97,23 @@ ALTER TABLE public.api_keys DROP CONSTRAINT IF EXISTS api_keys_role_check;
 ALTER TABLE public.api_keys ADD CONSTRAINT api_keys_role_check
   CHECK (role IN ('viewer', 'coworker', 'proposer', 'admin'));
 
+-- Unrecord so merge+Deploy Supabase cannot skip a rolled-back database.
+DO $$
+BEGIN
+  IF to_regclass('supabase_migrations.schema_migrations') IS NULL THEN
+    RAISE NOTICE 'supabase_migrations.schema_migrations missing — skip unrecord';
+  ELSE
+    DELETE FROM supabase_migrations.schema_migrations
+    WHERE version = '20261024120000';
+    IF FOUND THEN
+      RAISE NOTICE 'removed schema_migrations version 20261024120000';
+    ELSE
+      RAISE NOTICE 'schema_migrations version 20261024120000 was not present';
+    END IF;
+  END IF;
+END
+$$;
+
 SELECT
   (to_regclass('public.audit_chain_checkpoints') IS NULL) AS checkpoints_dropped,
   (NOT EXISTS (
@@ -104,6 +130,14 @@ SELECT
   CASE
     WHEN to_regclass('public.audit_logs_backup_20261025') IS NULL THEN NULL
     ELSE (SELECT count(*) FROM public.audit_logs_backup_20261025)
-  END AS backup_row_count;
+  END AS backup_row_count,
+  CASE
+    WHEN to_regclass('supabase_migrations.schema_migrations') IS NULL THEN NULL
+    ELSE (
+      SELECT count(*)::integer
+      FROM supabase_migrations.schema_migrations
+      WHERE version = '20261024120000'
+    )
+  END AS schema_migrations_row;
 
 COMMIT;

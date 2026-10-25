@@ -2,8 +2,13 @@
 -- migration. Idempotent: if audit_logs_backup_20261025 already exists, it is
 -- left unchanged (do not overwrite a good backup).
 --
+-- Production target: heap project zcphxfospbvqplonkvco. Retired project
+-- bydcjwxfiiolmnddzbpy is forbidden. Run check-project.sh on PROD_DB_URL first.
+--
 -- This is the restore source for rollback.sql. Also take a pg_dump file
 -- (see RUNBOOK.md); this table is the fast in-cluster copy.
+
+\ir check-project.sql
 
 BEGIN;
 
