@@ -12,7 +12,8 @@ import {
 } from "@/app/api/_shared/auth";
 import { READ_TOOL_PERMISSIONS, readPermissionForResource } from "@/app/api/_shared/private-read-scopes";
 import { getServiceSupabase, getSupabase } from "@/app/api/_shared/supabase";
-import { loadFederationSecrets } from "@/app/api/_shared/federation-secrets";
+import { anonymousMayCall, configReferencesSecrets, loadFederationSecrets, SECRET_ROUTING_DENIED } from "@/app/api/_shared/federation-secrets";
+import { assertPublicDestination, UnsafeDestinationError } from "@/lib/outbound-destination";
 import {
   METHOD_NOT_FOUND,
   discoverResult,
@@ -755,8 +756,8 @@ app.post("/", async (c) => {
         if (!serverRow) {
           return c.json({ jsonrpc: "2.0", id, error: { code: -32002, message: "Federated resource server not found" } });
         }
-        const access = (serverRow.transport_config as { access?: string } | null)?.access;
-        if (access !== "public") {
+        // "public" covers keyless upstreams only; see anonymousMayCall.
+        if (!anonymousMayCall(serverRow as MCPServer)) {
           const apiKey = await acceptPlaybookCredential(c.req.raw, "tools:call");
           if (!apiKey || apiKey.playbooks.id !== playbook.id) {
             return c.json({
@@ -1125,8 +1126,8 @@ use_secret_write({
 
       if (federatedServer) {
         const server = federatedServer;
-        const access = (server.transport_config as { access?: string } | null)?.access;
-        if (access !== "public") {
+        // "public" covers keyless upstreams only; see anonymousMayCall.
+        if (!anonymousMayCall(server as MCPServer)) {
           const apiKey = await acceptPlaybookCredential(c.req.raw, "tools:call");
           if (!apiKey || apiKey.playbooks.id !== playbook.id) {
             return c.json({
@@ -2401,8 +2402,8 @@ use_secret_write({
               .maybeSingle();
             if (serverError || !server) throw new Error("Connected MCP server not found");
 
-            const access = (server.transport_config as { access?: string } | null)?.access;
-            if (access !== "public") {
+            // "public" covers keyless upstreams only; see anonymousMayCall.
+            if (!anonymousMayCall(server as MCPServer)) {
               const credential = await acceptPlaybookCredential(c.req.raw, "tools:call");
               if (!credential || credential.playbooks.id !== playbook.id) {
                 throw new Error("Credential with tools:call or full permission required");
@@ -2441,6 +2442,12 @@ use_secret_write({
             if (!credential || credential.playbooks.id !== playbook.id) {
               throw new Error("Credential with playbooks:write or full permission required");
             }
+            if (configReferencesSecrets(args.transport_config)) {
+              const secretCredential = await acceptPlaybookCredential(c.req.raw, "secrets:read");
+              if (!secretCredential || secretCredential.playbooks.id !== playbook.id) {
+                throw new Error(SECRET_ROUTING_DENIED);
+              }
+            }
             const name = typeof args.name === "string" ? args.name.trim() : "";
             if (!name) throw new Error("name is required");
             const transportType = (args.transport_type as string | undefined) || "http";
@@ -2477,6 +2484,12 @@ use_secret_write({
             const credential = await acceptPlaybookCredential(c.req.raw, "playbooks:write");
             if (!credential || credential.playbooks.id !== playbook.id) {
               throw new Error("Credential with playbooks:write or full permission required");
+            }
+            if (configReferencesSecrets(args.transport_config)) {
+              const secretCredential = await acceptPlaybookCredential(c.req.raw, "secrets:read");
+              if (!secretCredential || secretCredential.playbooks.id !== playbook.id) {
+                throw new Error(SECRET_ROUTING_DENIED);
+              }
             }
             const serverId = args.server_id as string;
             if (!serverId) throw new Error("server_id is required");
@@ -2683,17 +2696,11 @@ use_secret_write({
               if (parsed.username || parsed.password) {
                 throw new Error("Credentials in proxy URLs are not allowed");
               }
-              // Block private/internal IPs (including IPv6 variants)
-              const hostname = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, "");
-              if (hostname === "localhost" || hostname === "127.0.0.1" || hostname === "0.0.0.0" ||
-                  hostname === "::1" || hostname === "::ffff:127.0.0.1" || hostname === "0000:0000:0000:0000:0000:0000:0000:0001" ||
-                  hostname.startsWith("::ffff:10.") || hostname.startsWith("::ffff:192.168.") || hostname.startsWith("::ffff:172.") ||
-                  hostname.startsWith("10.") || hostname.startsWith("192.168.") ||
-                  hostname.startsWith("172.") || hostname.startsWith("169.254.") ||
-                  hostname.startsWith("fc") || hostname.startsWith("fd") || hostname.startsWith("fe80") ||
-                  hostname.endsWith(".internal") || hostname.endsWith(".local") ||
-                  hostname === "metadata.google.internal" ||
-                  !/^[a-z0-9.:\-\[\]]+$/i.test(hostname)) {
+              // Private, internal and resolving-to-internal destinations —
+              // see src/lib/outbound-destination.ts.
+              const unsafe = await assertPublicDestination(parsed.toString()).then(() => null, (error: unknown) => error);
+              if (unsafe) {
+                if (!(unsafe instanceof UnsafeDestinationError)) throw unsafe;
                 secretAudit.status = "denied";
                 secretAudit.reason = "private_destination";
                 throw new Error("Requests to private/internal addresses are not allowed");
@@ -2821,6 +2828,10 @@ use_secret_write({
               throw new Error("API key with secrets:write or full permission required");
             }
             secretAuditKeyPrefix = await storedDisplayPrefix(c.req.raw);
+            if (args.allow_api_key_reveal && storeSecretApiKey.kind !== "session") {
+              secretAudit.reason = "reveal_requires_owner";
+              throw new Error("Only the playbook owner can allow API-key reveal");
+            }
             secretAudit.status = "error";
 
             const storeName = args.name as string;
@@ -2857,7 +2868,9 @@ use_secret_write({
                 description: (args.description as string) || null,
                 category: (args.category as SecretCategory) || "general",
                 expires_at: expiresAtInput(args.expires_at) ?? null,
-                allow_api_key_reveal: (args.allow_api_key_reveal as boolean) || false,
+                // Only the owner's session may allow reading the value back with a
+                // key; refused above for keys.
+                allow_api_key_reveal: storeSecretApiKey.kind === "session" && Boolean(args.allow_api_key_reveal),
                 encrypted_value: encrypted.encrypted_value,
                 iv: encrypted.iv,
                 auth_tag: encrypted.auth_tag,

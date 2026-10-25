@@ -4,7 +4,8 @@ import { getAuthenticatedUser, storedDisplayPrefix, validateApiKey } from "@/app
 import { getPlaybookByGuid } from "@/app/api/_shared/guards";
 import { encryptSecret, decryptSecret } from "@/lib/crypto";
 import { expiredSecretMessage, expiresAtInput, isSecretExpired } from "@/lib/secret-expiry";
-import { checkSecretDestination, normalizeAllowedHosts } from "@/lib/secret-destinations";
+import { checkSecretDestination, narrowsAllowedHosts, normalizeAllowedHosts } from "@/lib/secret-destinations";
+import { assertPublicDestination, UnsafeDestinationError } from "@/lib/outbound-destination";
 import { secretProxyStream, type ProxyStreamOutcome } from "@/lib/secret-proxy-stream";
 import {
   buildExchangeBody,
@@ -147,6 +148,14 @@ app.post("/", async (c) => {
 
   const body = await c.req.json();
   const { name, value, description, category, expires_at, allow_api_key_reveal, allowed_hosts } = body;
+
+  // Only the owner decides that a secret's plaintext may be read with a key.
+  // Otherwise a key could create a name with reveal on and wait for the owner
+  // to rotate a real credential into it.
+  if (!isOwner && allow_api_key_reveal) {
+    await recordSecretAudit(audit, { operation: "secret.create", status: "denied", reason: "reveal_requires_owner" });
+    return c.json({ error: "Only the playbook owner can allow API-key reveal" }, 403);
+  }
 
   if (!name || typeof name !== "string" || name.trim().length === 0) {
     return c.json({ error: "name is required" }, 400);
@@ -405,7 +414,7 @@ app.put("/:name", async (c) => {
   // Find existing secret
   const { data: existing, error: findError } = await supabase
     .from("secrets")
-    .select("id")
+    .select("id, allowed_hosts, allow_api_key_reveal")
     .eq("playbook_id", playbook.id)
     .eq("name", name)
     .single();
@@ -418,6 +427,26 @@ app.put("/:name", async (c) => {
       reason: "not_found",
     });
     return c.json({ error: "Secret not found" }, 404);
+  }
+
+  // A key may rotate a value or tighten where it goes; only the owner may
+  // allow reading it back, or send it somewhere new.
+  if (!isOwner) {
+    const enablesReveal = Boolean(allow_api_key_reveal) && !existing.allow_api_key_reveal;
+    const widensHosts = allowed_hosts !== undefined && !narrowsAllowedHosts(existing.allowed_hosts, allowed_hosts);
+    if (enablesReveal || widensHosts) {
+      await recordSecretAudit(audit, {
+        operation,
+        status: "denied",
+        secretName: name,
+        reason: enablesReveal ? "reveal_requires_owner" : "allowed_hosts_widening_requires_owner",
+      });
+      return c.json({
+        error: enablesReveal
+          ? "Only the playbook owner can allow API-key reveal"
+          : "An API key may only narrow allowed_hosts; widening or clearing it needs the playbook owner",
+      }, 403);
+    }
   }
 
   const updateData: SecretsUpdate = {
@@ -583,17 +612,11 @@ app.post("/proxy", async (c) => {
     if (parsed.username || parsed.password) {
       return c.json({ error: "Credentials in proxy URLs are not allowed" }, 400);
     }
-    // Block private/internal IPs (including IPv6 variants)
-    const hostname = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, "");
-    if (hostname === "localhost" || hostname === "127.0.0.1" || hostname === "0.0.0.0" ||
-        hostname === "::1" || hostname === "::ffff:127.0.0.1" || hostname === "0000:0000:0000:0000:0000:0000:0000:0001" ||
-        hostname.startsWith("::ffff:10.") || hostname.startsWith("::ffff:192.168.") || hostname.startsWith("::ffff:172.") ||
-        hostname.startsWith("10.") || hostname.startsWith("192.168.") ||
-        hostname.startsWith("172.") || hostname.startsWith("169.254.") ||
-        hostname.startsWith("fc") || hostname.startsWith("fd") || hostname.startsWith("fe80") ||
-        hostname.endsWith(".internal") || hostname.endsWith(".local") ||
-        hostname === "metadata.google.internal" ||
-        !/^[a-z0-9.:\-\[\]]+$/i.test(hostname)) {
+    // Private, internal and resolving-to-internal destinations — see
+    // src/lib/outbound-destination.ts.
+    const unsafe = await assertPublicDestination(parsed.toString()).then(() => null, (error: unknown) => error);
+    if (unsafe) {
+      if (!(unsafe instanceof UnsafeDestinationError)) throw unsafe;
       await recordSecretAudit(audit, {
         operation: "secret.use",
         status: "denied",
