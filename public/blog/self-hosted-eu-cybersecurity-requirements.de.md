@@ -18,10 +18,10 @@ Im gehosteten Dienst läuft die Anwendung auf Cloudflare, die Datenbank auf Supa
 Was das konkret heißt:
 
 - Tresorwerte liegen als **AES-256-GCM**-Ciphertext unter einem per-Benutzer-HKDF-Schlüssel. Der Masterschlüssel (`SECRETS_ENCRYPTION_KEY`) steht in *Ihrer* Prozessumgebung. Es gibt kein KMS und kein HSM im Produkt.
-- Agenten nutzen benannte Secrets über **`use_secret`** (GET/HEAD) und **`use_secret_write`** (POST/PUT/PATCH/DELETE) oder `POST /api/playbooks/:guid/secrets/proxy`. Der Server entschlüsselt, setzt einen Header und liefert **nur die HTTP-Antwort**. Das Modell sieht den Wert nicht, es sei denn, Sie schalten Reveal für dieses Secret frei.
+- Agenten nutzen benannte Secrets über **`use_secret`** (GET/HEAD) und **`use_secret_write`** (POST/PUT/PATCH/DELETE) oder `POST /api/playbooks/:guid/secrets/proxy`. Der Server entschlüsselt, setzt einen Header und liefert **nur die HTTP-Antwort**. Der Proxy gibt den Tresorwert nicht direkt zurück. Das Ziel kann Zugangsdaten jedoch in seiner HTTP-Antwort spiegeln; erlauben Sie daher nur vertrauenswürdige Ziele. Reveal ist eine separate ausdrückliche Berechtigung.
 - Jedes Secret kann Ziele mit **`allowed_hosts`** festnageln. `SECRETS_REQUIRE_ALLOWED_HOSTS=true` macht das Nageln auf Ihrer Instanz Pflicht.
 - **`expires_at`** stoppt Proxy, Föderation und API-Key-Reveal. Die Eigentümerin kann den Wert im Dashboard weiter öffnen, um ihn zu ersetzen.
-- Zertifikatsklienten (`secret_clients`) brauchen im Self-Host einen TLS-Terminator und **`MTLS_MODE=proxy`**, der Fingerprint-Header nur von `MTLS_TRUSTED_PROXIES` akzeptiert. Ohne Terminator bleibt Zertifikatsauth geschlossen.
+- Zertifikatsklienten (`secret_clients`) brauchen im Self-Host einen TLS-Terminator und **`MTLS_MODE=proxy`**, der den privaten Proxykanal mit `MTLS_PROXY_SHARED_SECRET` authentifiziert und dessen gesetzte Adresse gegen `MTLS_TRUSTED_PROXIES` prüft. Ohne Terminator bleibt Zertifikatsauth geschlossen.
 - Anmeldung lässt sich mit **Microsoft Entra ID** auf Ihren Tenant begrenzen (`GOTRUE_EXTERNAL_AZURE_*` an GoTrue). Es gibt keine Anwendungs-MFA; MFA ist eine IdP-Kontrolle.
 - Verschlüsseltes On-Prem-Backup und eine Restore-Übung auf leerer Maschine sind dokumentiert. Der Masterschlüssel liegt **nie** im Archiv.
 
@@ -84,7 +84,7 @@ Ehrliche Lücken: kein KMS/HSM, keine Neuverschlüsselung beim Masterkey-Wechsel
 
 Folgen Sie den bestehenden Leitfäden, nicht nur dieser Kurzfassung:
 
-1. [Self-Hosting](/docs/self-hosting) — `supabase/schema.sql` für eine neue Datenbank, selbst gehostetes Supabase (kein nacktes Postgres), Docker-`app` auf Port 3000 oder Cloudflare Pages. `NEXT_PUBLIC_APP_URL` und `SECRETS_ENCRYPTION_KEY` zur **Build**-Zeit setzen.
+1. [Self-Hosting](/docs/self-hosting) — `supabase/schema.sql` für eine neue Datenbank, selbst gehostetes Supabase (kein nacktes Postgres), Docker-`app` auf Port 3000 oder Cloudflare Pages. `NEXT_PUBLIC_APP_URL` zur **Build**-Zeit setzen. `SECRETS_ENCRYPTION_KEY` ausschließlich in der geschützten **Laufzeit**-Umgebung bereitstellen, niemals in ein Image oder eine öffentliche Buildvariable einbetten.
 2. [Self-hosted mTLS](/docs/self-hosted-mtls) — Terminator + `MTLS_MODE=proxy`, wenn Sie Zertifikatsklienten nutzen.
 3. [On-Prem-Backup und Restore](/docs/backup-restore) — derselbe Text wie `docs/self-host/backup-restore.md` im Repository; `scripts/self-host/backup.sh` und der Empty-Machine-Drill.
 4. [Audit-Logs](/docs/audit-logs) — Hash-Kette, Export, Aufbewahrung, Auditor-Rolle und optionales SIEM/Syslog (`AUDIT_SYSLOG_URL`, `AUDIT_SIEM_WEBHOOK_URL`).

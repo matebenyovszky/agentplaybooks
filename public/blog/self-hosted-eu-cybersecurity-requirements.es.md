@@ -18,10 +18,10 @@ En el servicio alojado, la aplicación corre en Cloudflare y la base de datos en
 En la práctica:
 
 - Los valores de la caja fuerte se guardan como texto cifrado **AES-256-GCM** bajo una clave HKDF por usuario. La clave maestra (`SECRETS_ENCRYPTION_KEY`) vive en el entorno de *tu* proceso. No hay KMS ni HSM en el producto.
-- Los agentes usan secretos con nombre mediante **`use_secret`** (GET/HEAD) y **`use_secret_write`** (POST/PUT/PATCH/DELETE), o `POST /api/playbooks/:guid/secrets/proxy`. El servidor descifra, inyecta una cabecera y devuelve **solo la respuesta HTTP**. El modelo no ve el valor salvo que actives reveal para ese secreto.
+- Los agentes usan secretos con nombre mediante **`use_secret`** (GET/HEAD) y **`use_secret_write`** (POST/PUT/PATCH/DELETE), o `POST /api/playbooks/:guid/secrets/proxy`. El servidor descifra, inyecta una cabecera y devuelve **solo la respuesta HTTP**. El proxy no devuelve directamente el valor de la bóveda. El destino aún puede reflejar credenciales en su respuesta HTTP; permite solo destinos de confianza. Reveal es una capacidad explícita independiente.
 - Cada secreto puede fijar destinos con **`allowed_hosts`**. `SECRETS_REQUIRE_ALLOWED_HOSTS=true` hace obligatorio el fijado en tu instancia.
 - **`expires_at`** detiene el proxy, la federación y el reveal con clave de API. El propietario aún puede abrir el valor en el panel para sustituirlo.
-- Los clientes con certificado (`secret_clients`) en autoalojamiento necesitan un terminador TLS y **`MTLS_MODE=proxy`**, que solo confía cabeceras de huella desde `MTLS_TRUSTED_PROXIES`. Sin terminador, la autenticación por certificado queda cerrada.
+- Los clientes con certificado (`secret_clients`) en autoalojamiento necesitan un terminador TLS y **`MTLS_MODE=proxy`**, que autentica el canal privado del proxy con `MTLS_PROXY_SHARED_SECRET` y comprueba su dirección declarada con `MTLS_TRUSTED_PROXIES`. Sin terminador, la autenticación por certificado queda cerrada.
 - El inicio de sesión puede limitarse a tu inquilino con **Microsoft Entra ID** (`GOTRUE_EXTERNAL_AZURE_*` en GoTrue). No hay MFA a nivel de aplicación; el MFA es un control del IdP.
 - La copia de seguridad cifrada en las instalaciones y un ensayo de restauración en máquina vacía están documentados. La clave maestra **nunca** va dentro del archivo.
 
@@ -84,7 +84,7 @@ Lagunas honestas: no hay KMS/HSM, no hay recifrado al cambiar la clave maestra, 
 
 Sigue las guías existentes, no solo este resumen:
 
-1. [Autoalojamiento](/docs/self-hosting) — `supabase/schema.sql` para una base nueva, Supabase autoalojado (no Postgres desnudo), `app` Docker en el puerto 3000 o Cloudflare Pages. Fija `NEXT_PUBLIC_APP_URL` y `SECRETS_ENCRYPTION_KEY` en el **build**.
+1. [Autoalojamiento](/docs/self-hosting) — `supabase/schema.sql` para una base nueva, Supabase autoalojado (no Postgres desnudo), `app` Docker en el puerto 3000 o Cloudflare Pages. Fija `NEXT_PUBLIC_APP_URL` en el **build**. Proporciona `SECRETS_ENCRYPTION_KEY` únicamente en el entorno protegido de **ejecución**; nunca lo incluyas en una imagen o variable pública de compilación.
 2. [mTLS autoalojado](/docs/self-hosted-mtls) — terminador + `MTLS_MODE=proxy` si usas clientes con certificado.
 3. [Copia y restauración in situ](/docs/backup-restore) — el mismo texto que `docs/self-host/backup-restore.md` en el repositorio; `scripts/self-host/backup.sh` y el ensayo en máquina vacía.
 4. [Registros de auditoría](/docs/audit-logs) — cadena de hashes, exportación, retención, rol auditor y SIEM/syslog opcional (`AUDIT_SYSLOG_URL`, `AUDIT_SIEM_WEBHOOK_URL`).

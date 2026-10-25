@@ -18,10 +18,10 @@ A hosztolt szolgáltatásban az alkalmazás Cloudflare-en, az adatbázis Supabas
 Gyakorlatban:
 
 - A széf értékei **AES-256-GCM** titkosított szövegként, felhasználónkénti HKDF-kulccsal tárolódnak. A mesterkulcs (`SECRETS_ENCRYPTION_KEY`) a *te* folyamatod környezetében van. A termékben nincs KMS és nincs HSM.
-- Az ügynökök elnevezett titkokat a **`use_secret`** (GET/HEAD) és a **`use_secret_write`** (POST/PUT/PATCH/DELETE) eszközzel, vagy a `POST /api/playbooks/:guid/secrets/proxy` végponttal használnak. A szerver visszafejt, fejlécbe tesz, és **csak a HTTP választ** adja vissza. A modell nem látja az értéket, hacsak egy adott titokra nem engedélyezed a reveal-t.
+- Az ügynökök elnevezett titkokat a **`use_secret`** (GET/HEAD) és a **`use_secret_write`** (POST/PUT/PATCH/DELETE) eszközzel, vagy a `POST /api/playbooks/:guid/secrets/proxy` végponttal használnak. A szerver visszafejt, fejlécbe tesz, és **csak a HTTP választ** adja vissza. A proxy közvetlenül nem adja vissza a széf értékét. A célrendszer HTTP-válasza azonban visszatükrözhet hitelesítő adatot, ezért csak megbízható célokat engedélyezz; a reveal külön, kifejezett jogosultság.
 - Minden titok **`allowed_hosts`** listával rögzíthető. A `SECRETS_REQUIRE_ALLOWED_HOSTS=true` a saját példányon kötelezővé teszi a rögzítést.
 - A titok **`expires_at`** mezője leállítja a proxyt, a föderációt és az API-kulcsos reveal-t. A tulajdonos a vezérlőpulton továbbra is megnyithatja az értéket, hogy lecserélje.
-- Tanúsítványos kliensek (`secret_clients`) saját hosztoláskor TLS-lezárót és **`MTLS_MODE=proxy`** beállítást igényelnek, amely az ujjlenyomat-fejléceket csak a `MTLS_TRUSTED_PROXIES` címekről fogadja. Lezáró nélkül a tanúsítványos azonosítás zárva marad.
+- Tanúsítványos kliensek (`secret_clients`) saját hosztoláskor TLS-lezárót és **`MTLS_MODE=proxy`** beállítást igényelnek, amely a proxy privát csatornáját `MTLS_PROXY_SHARED_SECRET` kulccsal hitelesíti, és a beállított proxycímet a `MTLS_TRUSTED_PROXIES` listával ellenőrzi. Lezáró nélkül a tanúsítványos azonosítás zárva marad.
 - A belépés a saját tenanszra szűkíthető **Microsoft Entra ID**-vel (`GOTRUE_EXTERNAL_AZURE_*` a GoTrue-n). Alkalmazásszintű MFA nincs; az MFA az identitásszolgáltató feladata.
 - A helyszíni titkosított mentés és az üres gépre visszaállítás gyakorlata dokumentált. A mesterkulcs **soha** nincs az archívumban.
 
@@ -90,7 +90,7 @@ A szoftver ezeket nem végzi el helyetted:
 
 A meglévő útmutatókat kövesd, ne ezt az összefoglalót:
 
-1. [Önhosztolás](/docs/self-hosting) — új adatbázishoz `supabase/schema.sql`, saját hosztolású Supabase (nem csupasz Postgres), Docker `app` a 3000-es porton vagy Cloudflare Pages. A `NEXT_PUBLIC_APP_URL` és a `SECRETS_ENCRYPTION_KEY` **build** idején kell.
+1. [Önhosztolás](/docs/self-hosting) — új adatbázishoz `supabase/schema.sql`, saját hosztolású Supabase (nem csupasz Postgres), Docker `app` a 3000-es porton vagy Cloudflare Pages. A `NEXT_PUBLIC_APP_URL` **build** idején kell. A `SECRETS_ENCRYPTION_KEY` kizárólag védett **futásidejű** környezeti változó legyen; ne kerüljön konténerképbe vagy nyilvános buildváltozóba.
 2. [Önhosztolt mTLS](/docs/self-hosted-mtls) — lezáró + `MTLS_MODE=proxy`, ha tanúsítványos klienst használsz.
 3. [Helyszíni mentés és visszaállítás](/docs/backup-restore) — ugyanaz a szöveg, mint a repó `docs/self-host/backup-restore.hu.md` fájlja; `scripts/self-host/backup.sh` és az üres gépes gyakorlat.
 4. [Auditnaplók](/docs/audit-logs) — hash-lánc, export, megőrzés, auditor szerep és opcionális SIEM/syslog (`AUDIT_SYSLOG_URL`, `AUDIT_SIEM_WEBHOOK_URL`).

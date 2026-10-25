@@ -18,10 +18,10 @@ On the hosted service, the application runs on Cloudflare and the database on Su
 What that split means in practice:
 
 - Vault values are stored as **AES-256-GCM** ciphertext under a per-user HKDF key. The master key (`SECRETS_ENCRYPTION_KEY`) lives in *your* process environment. There is no KMS or HSM in the product.
-- Agents use named secrets through **`use_secret`** (GET/HEAD) and **`use_secret_write`** (POST/PUT/PATCH/DELETE), or `POST /api/playbooks/:guid/secrets/proxy`. The server decrypts, injects a header, and returns **only the HTTP response**. The model does not see the value unless you turn on reveal for that secret.
+- Agents use named secrets through **`use_secret`** (GET/HEAD) and **`use_secret_write`** (POST/PUT/PATCH/DELETE), or `POST /api/playbooks/:guid/secrets/proxy`. The server decrypts, injects a header, and returns **only the HTTP response**. The proxy does not return the vault value directly. A destination can still echo credentials in its HTTP response, so allow only trusted destinations; reveal is a separate explicit capability.
 - Each secret can pin destinations with **`allowed_hosts`**. `SECRETS_REQUIRE_ALLOWED_HOSTS=true` makes pinning mandatory on your instance.
 - **`expires_at`** on a secret stops proxy, federation, and API-key reveal. The owner can still open the value in the dashboard in order to replace it.
-- Certificate clients (`secret_clients`) on self-host need a TLS terminator and **`MTLS_MODE=proxy`**, which trusts fingerprint headers only from `MTLS_TRUSTED_PROXIES`. Without a terminator, certificate auth fails closed.
+- Certificate clients (`secret_clients`) on self-host need a TLS terminator and **`MTLS_MODE=proxy`**, which authenticates the private proxy channel with `MTLS_PROXY_SHARED_SECRET` and checks its stamped address against `MTLS_TRUSTED_PROXIES`. Without a terminator, certificate auth fails closed.
 - Sign-in can be limited to your tenant with **Microsoft Entra ID** (`GOTRUE_EXTERNAL_AZURE_*` on GoTrue). There is no application-level MFA; MFA is an IdP control.
 - Encrypted on-prem backup and an empty-machine restore drill are documented. The master key is **never** inside the archive.
 
@@ -84,7 +84,7 @@ Honest gaps: no KMS/HSM, no re-encryption when the master key changes, no app MF
 
 Follow the existing guides rather than this summary:
 
-1. [Self-Hosting](/docs/self-hosting) — `supabase/schema.sql` for a new database, self-hosted Supabase (not bare Postgres), Docker `app` on port 3000 or Cloudflare Pages. Set `NEXT_PUBLIC_APP_URL` and `SECRETS_ENCRYPTION_KEY` at **build** time.
+1. [Self-Hosting](/docs/self-hosting) — `supabase/schema.sql` for a new database, self-hosted Supabase (not bare Postgres), Docker `app` on port 3000 or Cloudflare Pages. Set `NEXT_PUBLIC_APP_URL` at **build** time. Provide `SECRETS_ENCRYPTION_KEY` only in the protected **runtime** environment; never bake it into an image or a public build variable.
 2. [Self-hosted mTLS](/docs/self-hosted-mtls) — terminator + `MTLS_MODE=proxy` if you use certificate clients.
 3. [On-prem backup and restore](/docs/backup-restore) — same text as `docs/self-host/backup-restore.md` in the repository; `scripts/self-host/backup.sh` and the empty-machine drill.
 4. [Audit logs](/docs/audit-logs) — hash chain, export, retention, auditor role, and optional SIEM/syslog (`AUDIT_SYSLOG_URL`, `AUDIT_SIEM_WEBHOOK_URL`).
