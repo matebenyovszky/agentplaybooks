@@ -213,6 +213,34 @@ an empty database: the incremental history cannot create the core tables.
 | `SECRETS_ENCRYPTION_KEY` | Yes for the secrets vault | 64 hexadecimal characters. Rotating it makes existing secrets undecryptable — there is no re-encryption tooling yet. |
 | `ALLOWED_ORIGINS` | No | Comma-separated origins allowed to make credentialed cross-origin API calls. Setting it **replaces** the default list, which is what a self-hosted instance wants — otherwise the project's own domains stay trusted. Unset keeps the previous behaviour. |
 | `SECRETS_REQUIRE_ALLOWED_HOSTS` | No | Set to `true` to refuse outbound use of any secret that has not declared `allowed_hosts`. Off by default. |
+| `NO_EGRESS` | No | Set to `true` on an air-gapped instance to disable optional outbound calls (today: MCP registry search) unless `MCP_REGISTRY_URL` points at an internal mirror. Unset keeps the hosted default. |
+| `MCP_REGISTRY_URL` | No | Override for `GET /api/mcp-registry/search`. Unset uses the official registry. Empty disables it. An internal URL is used even when `NO_EGRESS=true`. |
+
+### Air-gapped / no-egress
+
+A local or government deploy should not open a path out of the operator's
+network. The production Dockerfile already sets `NEXT_TELEMETRY_DISABLED=1`.
+Set `NO_EGRESS=true` (and `SECRETS_REQUIRE_ALLOWED_HOSTS=true` if agents must
+not pick arbitrary `use_secret` destinations). The **No egress** GitHub Actions
+workflow (`deploy/airgap/`) is the automated proof: the stack runs on a Docker
+network with `internal: true`, a DNS sink allow-lists only compose service
+names, and the job fails if any external lookup or outbound packet is
+attempted.
+
+| Call | When | Disable / pin |
+| --- | --- | --- |
+| Google Fonts (`next/font/google` Geist) | **Build time** (`next build`). Open PR #200 replaces this with `next/font/local`. | Build the image on a networked host, then copy it in. After #200 lands, `next build` no longer needs Google. `npm ci` still needs a registry (or an offline cache). |
+| Next.js telemetry | Disabled in the production image (`NEXT_TELEMETRY_DISABLED=1`). | Keep that env set. |
+| Official MCP registry (`registry.modelcontextprotocol.io`) | `GET /api/mcp-registry/search` only, when someone uses the dashboard search. | `NO_EGRESS=true`, or `MCP_REGISTRY_URL=` to disable, or `MCP_REGISTRY_URL=http://…` for an internal mirror. |
+| `use_secret` / secrets proxy | Whenever an agent or API client names a URL. That is the feature. | Pin each secret with `allowed_hosts`; set `SECRETS_REQUIRE_ALLOWED_HOSTS=true` so unpinned secrets cannot leave. |
+| OAuth token exchange (Google, Microsoft, LinkedIn, X) | Only if you configure those providers and complete a consent flow. | Leave the providers disabled (the self-hosted default). |
+| Entra ID / other SSO | Login redirects to the IdP. | Do not enable external IdPs on an air-gapped instance; use email auth against local GoTrue, or an internal IdP. |
+| Seed / import scripts | Manual tooling (`scripts/seed-data.ts` talks to GitHub). | Do not run them on the air-gapped host. |
+| Hosted product URLs in generated text (`agentplaybooks.ai` in OAuth metadata, plugin export, docs links) | String construction, not a network call. | Set `NEXT_PUBLIC_APP_URL` to this instance at **build** time. |
+
+The air-gap CI job builds the app image **before** isolating the network
+because of the build-time font fetch on `main`. Runtime of that image, with
+`NO_EGRESS=true`, is what the observer measures.
 
 ### Pinning a secret to specific destinations
 

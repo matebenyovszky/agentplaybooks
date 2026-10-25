@@ -9,6 +9,9 @@
 #
 # A bare PostgreSQL container is not enough and is deliberately not included
 # here -- see public/docs/self-hosting.md.
+#
+# The air-gapped no-egress proof (isolated network, DNS sink, secrets flow)
+# lives in deploy/airgap/ and .github/workflows/no-egress.yml.
 
 services:
   app:
@@ -40,3 +43,8 @@ services:
       # Optional. "true" refuses outbound use of any secret that has not
       # declared allowed_hosts.
       SECRETS_REQUIRE_ALLOWED_HOSTS: ${SECRETS_REQUIRE_ALLOWED_HOSTS:-}
+      # Optional. "true" disables optional outbound calls (MCP registry search)
+      # unless MCP_REGISTRY_URL points at an internal mirror. Unset keeps the
+      # hosted default. See public/docs/self-hosting.md.
+      NO_EGRESS: ${NO_EGRESS:-}
+      MCP_REGISTRY_URL: ${MCP_REGISTRY_URL:-}

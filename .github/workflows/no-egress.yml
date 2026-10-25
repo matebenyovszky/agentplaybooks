@@ -1,0 +1,122 @@
+name: No egress
+
+# Isolated-network E2E for self-hosted AgentPlaybooks. Images are built and
+# pulled on the runner (build-time fetches, including next/font/google on main,
+# are not part of this proof). Runtime is a Docker network with internal: true
+# plus a DNS sink; the job fails on any external lookup or outbound packet.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: no-egress-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  no-egress:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      COMPOSE: docker compose -f deploy/airgap/docker-compose.yml --env-file deploy/airgap/airgap.env
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Load air-gap fixture env
+        run: |
+          set -a
+          # shellcheck disable=SC1091
+          . deploy/airgap/airgap.env
+          set +a
+          echo "ANON_KEY=$ANON_KEY" >> "$GITHUB_ENV"
+          echo "SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY" >> "$GITHUB_ENV"
+          echo "NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL" >> "$GITHUB_ENV"
+          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY" >> "$GITHUB_ENV"
+          echo "NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL" >> "$GITHUB_ENV"
+
+      - name: Pull self-host base images
+        run: |
+          docker pull supabase/postgres:17.6.1.136
+          docker pull supabase/gotrue:v2.197.0
+          docker pull postgrest/postgrest:v14.18
+          docker pull nginx:1.27-alpine
+          docker pull alpine:3.21
+
+      - name: Build app image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          load: true
+          tags: agentplaybooks-app:no-egress
+          cache-from: type=gha,scope=no-egress-app
+          cache-to: type=gha,scope=no-egress-app,mode=max
+          provenance: false
+          sbom: false
+          build-args: |
+            NEXT_PUBLIC_SUPABASE_URL=http://kong:8000
+            NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ env.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+            NEXT_PUBLIC_APP_URL=http://app:3000
+
+      - name: Build observer image
+        uses: docker/build-push-action@v6
+        with:
+          context: deploy/airgap
+          file: deploy/airgap/Dockerfile.observer
+          load: true
+          tags: agentplaybooks-observer:no-egress
+          cache-from: type=gha,scope=no-egress-observer
+          cache-to: type=gha,scope=no-egress-observer,mode=max
+          provenance: false
+          sbom: false
+
+      - name: Build tester image
+        uses: docker/build-push-action@v6
+        with:
+          context: deploy/airgap
+          file: deploy/airgap/Dockerfile.tester
+          load: true
+          tags: agentplaybooks-tester:no-egress
+          cache-from: type=gha,scope=no-egress-tester
+          cache-to: type=gha,scope=no-egress-tester,mode=max
+          provenance: false
+          sbom: false
+
+      - name: Start isolated stack
+        run: $COMPOSE up -d --wait --wait-timeout 240 --no-build --pull never
+
+      - name: Secrets flow inside the air gap
+        run: $COMPOSE exec -T tester /flow.sh
+
+      - name: Fail on outbound DNS or packets
+        run: $COMPOSE exec -T observer /check-egress.sh
+
+      - name: Collect logs on failure
+        if: failure()
+        run: |
+          mkdir -p /tmp/no-egress-logs
+          $COMPOSE ps -a > /tmp/no-egress-logs/ps.txt || true
+          $COMPOSE logs --no-color --tail=400 > /tmp/no-egress-logs/compose.log 2>&1 || true
+          $COMPOSE exec -T observer sh -c 'cat /var/log/airgap/dnsmasq.log' > /tmp/no-egress-logs/dnsmasq.log || true
+          $COMPOSE exec -T observer sh -c 'cat /var/log/airgap/tcpdump.log' > /tmp/no-egress-logs/tcpdump.log || true
+          $COMPOSE exec -T observer sh -c 'cat /var/log/airgap/tcpdump.meta' > /tmp/no-egress-logs/tcpdump.meta || true
+          cat /tmp/no-egress-logs/compose.log || true
+
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: no-egress-logs
+          path: /tmp/no-egress-logs
+          if-no-files-found: ignore
+
+      - name: Tear down
+        if: always()
+        run: $COMPOSE down -v --remove-orphans || true

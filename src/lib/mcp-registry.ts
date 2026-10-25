@@ -196,3 +196,24 @@ export function normalizeRegistryResponse(response: OfficialRegistryResponse) {
     metadata: response.metadata ?? {},
   };
 }
+
+export const OFFICIAL_MCP_REGISTRY_SERVERS_URL =
+  "https://registry.modelcontextprotocol.io/v0.1/servers";
+
+/**
+ * Where `GET /api/mcp-registry/search` should fetch from, or `null` to refuse.
+ *
+ * Unset env keeps the official registry (hosted behaviour). An empty
+ * `MCP_REGISTRY_URL` disables the lookup. `NO_EGRESS=true` does the same
+ * unless an operator points `MCP_REGISTRY_URL` at an internal mirror.
+ */
+export function resolveMcpRegistryServersUrl(
+  noEgress = process.env.NO_EGRESS,
+  configured = process.env.MCP_REGISTRY_URL,
+): string | null {
+  const trimmed = configured?.trim();
+  if (trimmed) return trimmed;
+  if (configured !== undefined && configured.trim() === "") return null;
+  if (noEgress?.trim().toLowerCase() === "true") return null;
+  return OFFICIAL_MCP_REGISTRY_SERVERS_URL;
+}
