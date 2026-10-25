@@ -13,6 +13,7 @@
 | Document | Hungarian (primary) | English |
 |----------|---------------------|---------|
 | Whitepaper (architecture, crypto, auth, audit, SDLC, gaps) | [whitepaper.hu.md](./whitepaper.hu.md) | [whitepaper.md](./whitepaper.md) |
+| Hungary / NIS2 control-by-control gap assessment (this audit) | — | [hu-nis2-gap-assessment.md](../compliance/hu-nis2-gap-assessment.md) |
 | Asset inventory (components, ports, keys, dependencies) | [asset-inventory.hu.md](./asset-inventory.hu.md) | [asset-inventory.md](./asset-inventory.md) |
 | Risk-assessment template (NIST 800-53 families ↔ MK r. / NIS2) | [risk-assessment.hu.md](./risk-assessment.hu.md) | [risk-assessment.md](./risk-assessment.md) |
 | Spreadsheet export | [risk-assessment.csv](./risk-assessment.csv) (bilingual) | same file |

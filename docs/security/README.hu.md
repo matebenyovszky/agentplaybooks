@@ -13,6 +13,7 @@
 | Dokumentum | Magyar (elsődleges) | Angol |
 |------------|---------------------|-------|
 | Fehérkönyv (architektúra, kripto, auth, audit, SDLC, hiányosságok) | [whitepaper.hu.md](./whitepaper.hu.md) | [whitepaper.md](./whitepaper.md) |
+| Magyarország / NIS2 kontrollonkénti hiányelemzés (ez az audit) | — | [hu-nis2-gap-assessment.md](../compliance/hu-nis2-gap-assessment.md) |
 | Eszközleltár (komponensek, portok, kulcsok, függőségek) | [asset-inventory.hu.md](./asset-inventory.hu.md) | [asset-inventory.md](./asset-inventory.md) |
 | Kockázatelemzés-sablon (NIST 800-53 családok ↔ MK r. / NIS2) | [risk-assessment.hu.md](./risk-assessment.hu.md) | [risk-assessment.md](./risk-assessment.md) |
 | Táblázatkezelő-export | [risk-assessment.csv](./risk-assessment.csv) (kétnyelvű) | ugyanaz a fájl |
