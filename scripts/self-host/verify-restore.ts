@@ -83,6 +83,35 @@ async function main() {
     throw new Error(`audit_logs count ${auditCount} != ${AUDIT_COUNT}`);
   }
 
+  const chainMismatches = Number(psql(`
+    WITH ordered AS (
+      SELECT
+        prev_hash,
+        hash,
+        public.audit_log_canonical(
+          id, playbook_id, mcp_server_id, operation, target, status,
+          latency_ms, error_code, actor_type, actor_id, secret_name,
+          request_id, created_at, prev_hash
+        ) AS canonical,
+        lag(hash) OVER (
+          PARTITION BY playbook_id
+          ORDER BY created_at ASC, id ASC
+        ) AS prev_row_hash
+      FROM public.audit_logs
+      WHERE playbook_id = '${PLAYBOOK_ID}'
+    )
+    SELECT count(*)::text
+    FROM ordered
+    WHERE hash IS DISTINCT FROM encode(
+            extensions.digest(convert_to(canonical, 'UTF8'), 'sha256'),
+            'hex'
+          )
+       OR prev_hash IS DISTINCT FROM coalesce(prev_row_hash, repeat('0', 64))
+  `));
+  if (chainMismatches !== 0) {
+    throw new Error(`audit hash-chain mismatches=${chainMismatches}`);
+  }
+
   const storageFile = run([
     "exec",
     "-T",
@@ -100,6 +129,7 @@ async function main() {
       `PLAYBOOK=${GUID}`,
       `SECRET_DECRYPTED=1`,
       `AUDIT_LOGS=${auditCount}`,
+      `AUDIT_CHAIN_OK=1`,
       `STORAGE_OBJECT=${STORAGE_OBJECT}`,
     ].join("\n") + "\n",
   );

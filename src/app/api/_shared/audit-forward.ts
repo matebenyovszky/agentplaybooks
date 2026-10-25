@@ -76,8 +76,9 @@ export function rfc5424Syslog(
 /** HMAC-SHA256 of the SIEM webhook body using a random >=32-byte key. */
 export function siemSignature(body: string, hmacKey: string): string {
   const key = hmacKeyBytes(hmacKey);
-  // codeql[js/insufficient-password-hash]: HMAC-SHA256 message authentication with a random >=32-byte key; not password storage
-  const digest = createHmac("sha256", key).update(body, "utf8").digest("hex");
+  // HMAC-SHA256 message authentication with a random >=32-byte key; not password storage.
+  // codeql[js/insufficient-password-hash]: HMAC over a redacted JSON body; key is random >=32 bytes, not a password KDF
+  const digest = createHmac("sha256", key).update(body, "utf8").digest("hex"); // lgtm[js/insufficient-password-hash]
   return `sha256=${digest}`;
 }
 

@@ -113,8 +113,7 @@ find_audit_chain_verify() {
     "${REPO_ROOT}/scripts/self-host/verify-audit-chain.sh" \
     "${REPO_ROOT}/scripts/verify-audit-chain.ts" \
     "${REPO_ROOT}/scripts/verify-audit-hash-chain.ts" \
-    "${REPO_ROOT}/scripts/self-host/verify-audit-hash-chain.ts" \
-    "${REPO_ROOT}/src/lib/audit-chain.ts"
+    "${REPO_ROOT}/scripts/self-host/verify-audit-hash-chain.ts"
   do
     if [ -f "$candidate" ]; then
       case "$candidate" in
