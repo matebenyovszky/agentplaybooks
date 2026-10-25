@@ -1,11 +1,10 @@
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import { expect, type Page } from "@playwright/test";
 
 import { orientationsOf, type ViewportCase } from "./viewports";
 
-const fixturesDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtures");
+const fixturesDir = path.join(__dirname, "fixtures");
 
 export const FIXTURES = {
   playbook: path.join(fixturesDir, "playbook-shell.html"),
