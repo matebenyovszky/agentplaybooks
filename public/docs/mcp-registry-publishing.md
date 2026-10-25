@@ -37,20 +37,33 @@ Tool execution requires an AgentPlaybooks user API key in the
 `Authorization: Bearer apb_live_...` header. Discovery and initialization do
 not require a key.
 
-## Publish
+## Publish automatically
 
-Generate an Ed25519 key pair locally and publish the generated public proof at
-`https://agentplaybooks.ai/.well-known/mcp-registry-auth`. Keep the private
-key outside the repository. Then authenticate and publish from the repository
-root:
+The **Publish MCP Registry** GitHub Actions workflow publishes the exact
+`server.json` from a released CLI tag after the **Publish CLI** workflow
+succeeds. It runs from protected `main`; it never executes code from the
+release tag. The tag must point to a commit included in `main`, the CLI and
+registry versions must agree, and the npm version must already be public.
 
-```powershell
-mcp-publisher login http --domain agentplaybooks.ai --private-key <private-key-hex>
-mcp-publisher publish
+The Ed25519 seed is stored as `MCP_REGISTRY_PRIVATE_KEY` in the
+`mcp-registry-publish` GitHub environment. That environment allows protected
+branches only. Never commit, print, or attach the private key to build artifacts.
+Only its public proof belongs in the `/.well-known/mcp-registry-auth` route.
+
+For an existing release, dispatch from `main`:
+
+```sh
+gh workflow run publish-mcp-registry.yml --ref main -f release_tag=cli-v0.7.0
 ```
 
-Publishing is an external release operation: review `server.json`, deploy the
-matching server version and public proof file, and only then run `publish`.
+Deploy the matching public proof before running the workflow. When rotating the
+publisher key, update the environment secret and the public proof together;
+the previous key stops authenticating after the new proof is deployed.
+
+The workflow checks the official publisher archive against a pinned checksum,
+authenticates with the domain proof, publishes, and verifies the exact version
+is active. Re-running an already active version is a no-op. This does not
+publish to Cursor, OpenAI, or other manually reviewed plugin directories.
 
 Verify the result:
 
