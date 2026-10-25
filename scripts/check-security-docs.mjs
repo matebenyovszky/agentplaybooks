@@ -13,7 +13,6 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const securityDir = join(repoRoot, "docs", "security");
 
 const requiredFiles = [
   "README.md",
