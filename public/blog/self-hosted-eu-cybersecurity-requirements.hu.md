@@ -7,7 +7,7 @@ author: Mate Benyovszky
 
 # Hogyan segít megfelelni egy saját hosztolású példány az uniós kiberbiztonsági követelményeknek
 
-Egy helyi AgentPlaybooks-példány nem tanúsítvány. **Segíthet megfelelni** több uniós szabály technikai részének, mert **a titkok, az audit-sorok és a playbook-adatok azon az infrastruktúrán maradnak, amelyet te üzemeltetsz**. A jogi kötelezettségek — kockázatelemzés, incidensbejelentés, képzés, hatásvizsgálat, infrastruktúra-edzés — az üzemeltetőéi maradnak.
+Egy helyi AgentPlaybooks-példány nem tanúsítvány. **Segíthet megfelelni** több uniós szabály technikai részének, mert **a titkok, az audit-sorok és a playbook-adatok azon az infrastruktúrán maradnak, amelyet te üzemeltetsz**. A jogi kötelezettségek — kockázatelemzés, incidensbejelentés, képzés, hatásvizsgálat, infrastruktúra megerősítése — az üzemeltetőéi maradnak.
 
 Ez nyilvános források első olvasata a jelenlegi `main` ághoz képest, nem jogi tanács. Az, hogy mi köt téged, a jogászod és az információbiztonságért felelős személyed döntése.
 
@@ -24,7 +24,7 @@ Gyakorlatban:
 - Tanúsítványos kliensek (`secret_clients`) saját hosztoláskor TLS-lezárót és **`MTLS_MODE=proxy`** beállítást igényelnek, amely az ujjlenyomat-fejléceket csak a `MTLS_TRUSTED_PROXIES` címekről fogadja. Lezáró nélkül a tanúsítványos azonosítás zárva marad.
 - A belépés a saját tenanszra szűkíthető **Microsoft Entra ID**-vel (`GOTRUE_EXTERNAL_AZURE_*` a GoTrue-n). Alkalmazásszintű MFA nincs; az MFA az identitásszolgáltató feladata.
 - Az **`audit_logs`** a széf műveleteit (`secret.*`) és a föderált MCP-hívásokat rögzíti. Az elutasítás is esemény. A sor hostname-et tart, teljes URL-t és titokértéket nem. A `main`-en az olvasás tulajdonosi (`GET /api/playbooks/:guid/audit`, legfeljebb 500 sor). A skill-, memória- és canvas-írások nincsenek naplózva.
-- A helyszíni titkosított mentés és az üres gépre visszaállítás gyakorlata dokumentált. A mesterkulcs **soha** nincs a archívumban.
+- A helyszíni titkosított mentés és az üres gépre visszaállítás gyakorlata dokumentált. A mesterkulcs **soha** nincs az archívumban.
 
 ## Követelmény és funkció
 
@@ -42,7 +42,7 @@ A „segít” nem azt jelenti, hogy „teljesíti”. Az (EU) 2024/2690 végreh
 | GDPR 13. cikk | Tájékoztatás az érintetteknek | Saját hosztoláskor általában te vagy az adatkezelő, és neked kell tájékoztatnod. A hosztolt adatvédelmi tájékoztató a te példányodra nem vonatkozik |
 | CRA (EU) 2024/2847 | Piacon, kereskedelmi tevékenység keretében forgalomba hozott digitális elemeket tartalmazó termékek | A díjmentes, nem monetizált nyílt forráskód jelenleg kívül esik ezen a kereskedelmi-tevékenység teszten (preambulum (18)). Az SBOM és a sérülékenységkezelés már a repóban van, ha a státusz később változik |
 | DORA (EU) 2022/2554 | IKT-naplózás és incidensbejelentés a hatálya alá tartozó pénzügyi szervezeteknek | Ha a DORA téged köt, a kötelezettség a tiéd marad. A helyi példány a vonatkozó naplókat a te rendszereiden tartja |
-| MI-rendelet (EU) 2024/1689 | Naplózás / nyilvántartás magas kockázatú rendszereknél (12. cikk) és a üzembe helyezőnél (26. cikk) | A termék nem minősíti a te MI-rendszeredet. A széf- és föderációs audit sorok a te nyilvántartásodba kerülhetnek, ha hatály alá esel |
+| MI-rendelet (EU) 2024/1689 | Naplózás / nyilvántartás magas kockázatú rendszereknél (12. cikk) és az üzembe helyezőnél (26. cikk) | A termék nem minősíti a te MI-rendszeredet. A széf- és föderációs audit sorok a te nyilvántartásodba kerülhetnek, ha hatály alá esel |
 
 ### Magyar sajátosságok
 
@@ -75,7 +75,7 @@ A szoftver ezeket nem végzi el helyetted:
 - **Kockázatkezelés** — besorolás, 21. cikk szerinti politika, kontrollválasztás a 2024/2690 alatt, maradék kockázat.
 - **Incidensbejelentés** — NIS2 23. cikk és a 418/2024. 77. § órái. Az [incidens runbook](https://github.com/matebenyovszky/agentplaybooks/blob/main/docs/security/incident-runbook.hu.md) a *te* beadványod sablonja.
 - **Képzés** — a 21. cikk (2) (g) szervezeti kontroll, nem szoftverfunkció.
-- **Infrastruktúra edzése** — TLS-lezárás, hálózati izoláció, javítási ablakok, fizikai védelem, IdP MFA. A compose a 3000-es porton indítja az appot; nem zár TLS-t, és nem indítja a Supabase-t.
+- **Infrastruktúra megerősítése** — TLS-lezárás, hálózati izoláció, javítási ablakok, fizikai védelem, IdP MFA. A compose a 3000-es porton indítja az appot; nem zár TLS-t, és nem indítja a Supabase-t.
 - **DPIA és GDPR-szerepek** — saját hosztoláskor általában te döntöd el a célokat és az eszközöket. A hatásvizsgálat, a kezelési nyilvántartás és a 13. cikk szerinti tájékoztatás a tiéd, ha személyes adat van a rendszerben.
 
 Őszinte hiányok a `main`-en: nincs KMS/HSM, nincs újratitkosítás a mesterkulcs cseréjekor, nincs alkalmazás-MFA, nincs SAML, nincs auditor szerep, nincs hash-lánc, nincs SIEM-export, nincs aláírt konténer-registry image, a CSP jelenleg Report-Only.
