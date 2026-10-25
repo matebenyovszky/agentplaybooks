@@ -105,7 +105,7 @@ describe("read scope table", () => {
     const unchecked = PLAYBOOK_TOOLS.map((tool) => tool.name).filter((name) => {
       if (name in READ_TOOL_PERMISSIONS || NO_DATA_TOOLS.has(name)) return false;
       const body = cases.get(name);
-      return !body || !/validateApiKey\(|validatePlaybookCredential\(/.test(body);
+      return !body || !/validateApiKey\(|validatePlaybookCredential\(|acceptPlaybookCredential\(/.test(body);
     });
     expect(unchecked).toEqual([]);
   });

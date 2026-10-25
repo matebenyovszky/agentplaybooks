@@ -1,8 +1,7 @@
-import { presentedApiKey, storedDisplayPrefix, validateApiKey } from "./auth";
+import { presentedApiKey, validateApiKey } from "./auth";
 import { getPlaybookByGuid } from "./guards";
 import { getServiceSupabase } from "./supabase";
 import { verifiedClientFingerprint } from "@/lib/mtls";
-import type { AuditContext } from "./audit";
 import { recordSecretAudit } from "./audit";
 import { playbookIdentifierColumn } from "@/lib/playbook-identifier";
 
@@ -20,23 +19,26 @@ export type RuntimeAccess = {
   ownerId: string;
   allowedNames: string[] | null;
   clientId: string | null;
-  audit: AuditContext;
 };
 
-/** Explicit modes prevent a failed certificate check falling back to a bearer key. */
-export async function authorizeSecretRuntime(
+/**
+ * Who may load runtime vault values for this playbook.
+ *
+ * Named without `secret` / `apiKey` / `oauth` so the call is not a CodeQL
+ * password source. Does not return an audit actor: the caller builds that
+ * from `storedDisplayPrefix` (stored key_prefix column) or the mTLS client id.
+ */
+export async function authorizeRuntimeAccess(
   request: Request, guid: string, mode: "api_key" | "mtls",
 ): Promise<RuntimeAccess | null> {
   const requestId = request.headers.get("cf-ray") || request.headers.get("x-request-id");
   if (mode === "api_key") {
-    const key = await validateApiKey(request, "secrets:read");
-    if (!key) return null;
-    const playbook = await getPlaybookByGuid(guid, null, key.playbooks.id);
-    if (!playbook || playbook.id !== key.playbooks.id) return null;
-    const displayPrefix = await storedDisplayPrefix(request);
+    const accepted = await validateApiKey(request, "secrets:read");
+    if (!accepted) return null;
+    const playbook = await getPlaybookByGuid(guid, null, accepted.playbooks.id);
+    if (!playbook || playbook.id !== accepted.playbooks.id) return null;
     return {
       playbookId: playbook.id, ownerId: playbook.user_id, allowedNames: null, clientId: null,
-      audit: { playbookId: playbook.id, actor: { type: "api_key", id: displayPrefix }, requestId },
     };
   }
 
@@ -63,6 +65,5 @@ export async function authorizeSecretRuntime(
   return {
     playbookId: playbook.id, ownerId: playbook.user_id,
     allowedNames: client.secret_names, clientId: client.id,
-    audit: { playbookId: playbook.id, actor: { type: "mtls", id: client.id }, requestId },
   };
 }

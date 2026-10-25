@@ -146,4 +146,28 @@ describe("audit compliance migration", () => {
       await db.exec("RESET ROLE");
     }
   });
+
+  it("chains sequential inserts that share a transaction timestamp", async () => {
+    const pb = "00000000-0000-4000-8000-0000000000dd";
+    await db.exec(`INSERT INTO playbooks VALUES ('${pb}', '${OWNER}')`);
+    await db.exec("BEGIN");
+    await db.exec(
+      `INSERT INTO audit_logs (playbook_id, operation, status) VALUES ('${pb}', 'secret.create', 'success')`,
+    );
+    await db.exec(
+      `INSERT INTO audit_logs (playbook_id, operation, status) VALUES ('${pb}', 'secret.use', 'success')`,
+    );
+    await db.exec(
+      `INSERT INTO audit_logs (playbook_id, operation, status) VALUES ('${pb}', 'secret.reveal', 'denied')`,
+    );
+    await db.exec("COMMIT");
+    const rows = await db.query<{ operation: string; prev_hash: string; hash: string }>(
+      `SELECT operation, prev_hash, hash FROM audit_logs WHERE playbook_id = '${pb}' ORDER BY created_at, id`,
+    );
+    expect(rows.rows).toHaveLength(3);
+    expect(rows.rows[0].prev_hash).toBe(GENESIS_HASH);
+    expect(rows.rows[1].prev_hash).toBe(rows.rows[0].hash);
+    expect(rows.rows[2].prev_hash).toBe(rows.rows[1].hash);
+    expect(new Set(rows.rows.map((row) => row.hash)).size).toBe(3);
+  });
 });

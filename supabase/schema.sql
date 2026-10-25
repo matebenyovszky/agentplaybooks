@@ -1194,8 +1194,14 @@ BEGIN
   END IF;
   PERFORM pg_advisory_xact_lock(('x' || substr(md5(NEW.playbook_id::text), 1, 16))::bit(64)::bigint);
   IF NEW.prev_hash IS NULL THEN
+    -- Chain tip: hash not used as any other row's prev_hash. created_at+id is
+    -- not insertion order (now() is transaction-stable; UUID ids are random).
     SELECT a.hash INTO prev FROM public.audit_logs a
       WHERE a.playbook_id = NEW.playbook_id AND a.hash IS NOT NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM public.audit_logs child
+          WHERE child.playbook_id = a.playbook_id AND child.prev_hash = a.hash
+        )
       ORDER BY a.created_at DESC, a.id DESC LIMIT 1;
     IF prev IS NULL THEN
       SELECT c.anchor_hash INTO prev FROM public.audit_chain_checkpoints c

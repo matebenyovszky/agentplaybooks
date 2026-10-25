@@ -149,10 +149,20 @@ BEGIN
   PERFORM pg_advisory_xact_lock(('x' || substr(md5(NEW.playbook_id::text), 1, 16))::bit(64)::bigint);
 
   IF NEW.prev_hash IS NULL THEN
+    -- Chain tip: the hash no other row in this playbook uses as prev_hash.
+    -- Do not ORDER BY created_at, id — now() is transaction-stable, so several
+    -- rows share a timestamp, and UUID id is not insertion order. That made
+    -- sequential INSERTs in one transaction collide on playbook_prev_hash_idx.
     SELECT a.hash INTO prev
     FROM public.audit_logs a
     WHERE a.playbook_id = NEW.playbook_id
       AND a.hash IS NOT NULL
+      AND NOT EXISTS (
+        SELECT 1
+        FROM public.audit_logs child
+        WHERE child.playbook_id = a.playbook_id
+          AND child.prev_hash = a.hash
+      )
     ORDER BY a.created_at DESC, a.id DESC
     LIMIT 1;
 
