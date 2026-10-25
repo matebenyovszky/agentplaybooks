@@ -113,6 +113,31 @@ describe("POST /api/playbooks/:id/api-keys — role handling", () => {
     expect(inserted.at(-1)?.role).toBe("viewer");
   });
 
+  it("does not grant memory write when permissions are omitted for a viewer", async () => {
+    await POST(createKeyRequest({ name: "raw viewer", role: "viewer" }));
+    const permissions = inserted.at(-1)?.permissions as string[];
+    expect(permissions).toContain("memory:read");
+    expect(permissions).not.toContain("memory:write");
+    expect(permissions).not.toContain("full");
+  });
+
+  it("defaults omitted permissions from the requested role, not a write fallback", async () => {
+    await POST(createKeyRequest({ role: "coworker" }));
+    expect(inserted.at(-1)?.permissions).toEqual(expect.arrayContaining(["memory:write", "skills:write"]));
+
+    inserted.length = 0;
+    await POST(createKeyRequest({ name: "unspecified" }));
+    expect(inserted.at(-1)?.permissions).toEqual(
+      expect.arrayContaining(["memory:read", "canvas:read", "skills:read"]),
+    );
+    expect(inserted.at(-1)?.permissions).not.toContain("memory:write");
+  });
+
+  it("keeps an explicit permissions list", async () => {
+    await POST(createKeyRequest({ role: "viewer", permissions: ["memory:read"] }));
+    expect(inserted.at(-1)?.permissions).toEqual(["memory:read"]);
+  });
+
   it("refuses an unknown role instead of quietly downgrading it", async () => {
     const res = await POST(createKeyRequest({ role: "superuser" }));
 
