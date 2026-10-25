@@ -375,10 +375,6 @@ ALTER TABLE public.skill_versions ADD CONSTRAINT skill_versions_change_type_chec
 
 ALTER TABLE public.api_keys ADD CONSTRAINT api_keys_playbook_id_fkey FOREIGN KEY (playbook_id) REFERENCES playbooks(id) ON DELETE CASCADE;
 
-ALTER TABLE public.audit_logs ADD CONSTRAINT mcp_proxy_audit_logs_mcp_server_id_fkey FOREIGN KEY (mcp_server_id) REFERENCES mcp_servers(id) ON DELETE CASCADE;
-
-ALTER TABLE public.audit_logs ADD CONSTRAINT mcp_proxy_audit_logs_playbook_id_fkey FOREIGN KEY (playbook_id) REFERENCES playbooks(id) ON DELETE CASCADE;
-
 ALTER TABLE public.canvas ADD CONSTRAINT canvas_playbook_id_fkey FOREIGN KEY (playbook_id) REFERENCES playbooks(id) ON DELETE CASCADE;
 
 ALTER TABLE public.canvas ADD CONSTRAINT canvas_run_playbook_fk FOREIGN KEY (run_id, playbook_id) REFERENCES playbook_runs(id, playbook_id) ON DELETE CASCADE;
@@ -1528,5 +1524,455 @@ ALTER TABLE public.api_keys ADD CONSTRAINT api_keys_role_check
 -- The authorized application API returns metadata to auditors. A SELECT policy
 -- on this table would expose instructions/persona/config as well as metadata.
 DROP POLICY IF EXISTS "Auditors can read playbook metadata" ON public.playbooks;
+
+COMMIT;
+
+-- --------------------------------------------------------------------
+-- Folded in from 20261025120000_audit_logs_tamper_resistance.sql
+-- Keep this section identical to the migration.
+-- --------------------------------------------------------------------
+
+-- The audit trail outlives what it describes, and only retention deletes it.
+--
+-- Until now three ordinary operations erased audit history without leaving a
+-- trace:
+--
+--   * deleting a playbook cascaded to every audit row of that playbook
+--     (audit_logs.playbook_id and audit_chain_checkpoints.playbook_id were
+--     ON DELETE CASCADE), and deleting an account deletes its playbooks;
+--   * deleting a federated MCP server cascaded to the rows of its calls
+--     (audit_logs.mcp_server_id), which also broke the playbook's hash chain;
+--   * any role with DELETE or TRUNCATE on the table could remove rows; only
+--     UPDATE was refused.
+--
+-- After this migration:
+--
+--   * audit_logs and audit_chain_checkpoints keep the playbook and server ids
+--     as plain values, without foreign keys, so the trail of a deleted playbook,
+--     server or account stays in the table and its chain still verifies;
+--   * DELETE on audit_logs is refused unless it comes from
+--     public.purge_audit_logs, the retention function, which records a
+--     checkpoint and an audit.retention_purge row for every prefix it removes;
+--   * TRUNCATE is refused on both tables, and checkpoints cannot be changed or
+--     deleted at all;
+--   * the API roles lose UPDATE, DELETE and TRUNCATE on both tables.
+--
+-- A database superuser can still disable triggers. That is outside what a
+-- database can enforce on itself; forwarding the trail to an external syslog or
+-- SIEM (AUDIT_SYSLOG_URL / AUDIT_SIEM_WEBHOOK_URL) is what makes such an edit
+-- detectable.
+--
+-- No row is rewritten: this is DDL plus function replacements only.
+
+BEGIN;
+SET LOCAL lock_timeout = '10s';
+
+-- --------------------------------------------------------------------
+-- 1. No cascades into the trail
+-- --------------------------------------------------------------------
+
+-- The constraints still carry the table's former name.
+ALTER TABLE public.audit_logs DROP CONSTRAINT IF EXISTS mcp_proxy_audit_logs_playbook_id_fkey;
+ALTER TABLE public.audit_logs DROP CONSTRAINT IF EXISTS mcp_proxy_audit_logs_mcp_server_id_fkey;
+ALTER TABLE public.audit_logs DROP CONSTRAINT IF EXISTS audit_logs_playbook_id_fkey;
+ALTER TABLE public.audit_logs DROP CONSTRAINT IF EXISTS audit_logs_mcp_server_id_fkey;
+ALTER TABLE public.audit_chain_checkpoints DROP CONSTRAINT IF EXISTS audit_chain_checkpoints_playbook_id_fkey;
+
+COMMENT ON COLUMN public.audit_logs.playbook_id IS
+  'The playbook the event belongs to. Deliberately not a foreign key: the trail outlives the playbook.';
+COMMENT ON COLUMN public.audit_logs.mcp_server_id IS
+  'The federated server of a call, if any. Deliberately not a foreign key: the trail outlives the server.';
+
+-- --------------------------------------------------------------------
+-- 2. Only retention deletes rows
+-- --------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION public.audit_logs_deny_delete()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, public, pg_temp
+AS $$
+BEGIN
+  -- purge_audit_logs sets this transaction-local flag around its own DELETE.
+  -- The API roles cannot run arbitrary SQL, so they cannot set it.
+  IF TG_OP = 'DELETE' AND current_setting('agentplaybooks.audit_purge', true) = 'on' THEN
+    RETURN OLD;
+  END IF;
+  RAISE EXCEPTION 'audit trail rows cannot be removed outside retention (public.purge_audit_logs): %', lower(TG_OP)
+    USING ERRCODE = 'insufficient_privilege';
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.audit_chain_checkpoints_immutable()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, public, pg_temp
+AS $$
+BEGIN
+  RAISE EXCEPTION 'audit chain checkpoints cannot be changed (%)', lower(TG_OP)
+    USING ERRCODE = 'insufficient_privilege';
+END;
+$$;
+
+DROP TRIGGER IF EXISTS audit_logs_deny_delete ON public.audit_logs;
+CREATE TRIGGER audit_logs_deny_delete
+  BEFORE DELETE ON public.audit_logs
+  FOR EACH ROW
+  EXECUTE FUNCTION public.audit_logs_deny_delete();
+
+DROP TRIGGER IF EXISTS audit_logs_deny_truncate ON public.audit_logs;
+CREATE TRIGGER audit_logs_deny_truncate
+  BEFORE TRUNCATE ON public.audit_logs
+  FOR EACH STATEMENT
+  EXECUTE FUNCTION public.audit_logs_deny_delete();
+
+DROP TRIGGER IF EXISTS audit_chain_checkpoints_immutable ON public.audit_chain_checkpoints;
+CREATE TRIGGER audit_chain_checkpoints_immutable
+  BEFORE UPDATE OR DELETE ON public.audit_chain_checkpoints
+  FOR EACH ROW
+  EXECUTE FUNCTION public.audit_chain_checkpoints_immutable();
+
+DROP TRIGGER IF EXISTS audit_chain_checkpoints_deny_truncate ON public.audit_chain_checkpoints;
+CREATE TRIGGER audit_chain_checkpoints_deny_truncate
+  BEFORE TRUNCATE ON public.audit_chain_checkpoints
+  FOR EACH STATEMENT
+  EXECUTE FUNCTION public.audit_chain_checkpoints_immutable();
+
+REVOKE ALL ON FUNCTION public.audit_logs_deny_delete() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.audit_chain_checkpoints_immutable() FROM PUBLIC, anon, authenticated;
+
+-- The API roles append and read; they never change or remove history.
+REVOKE UPDATE, DELETE, TRUNCATE ON public.audit_logs FROM PUBLIC, anon, authenticated, service_role;
+REVOKE UPDATE, DELETE, TRUNCATE ON public.audit_chain_checkpoints FROM PUBLIC, anon, authenticated, service_role;
+
+-- --------------------------------------------------------------------
+-- 3. Retention is the one deleter
+-- --------------------------------------------------------------------
+
+-- Same body as in 20261024120000_audit_logs_compliance.sql, with the purge flag
+-- set around the DELETE.
+CREATE OR REPLACE FUNCTION public.purge_audit_logs(
+  p_older_than timestamptz,
+  p_playbook_id uuid DEFAULT NULL,
+  p_actor_type text DEFAULT 'system',
+  p_actor_id text DEFAULT 'retention'
+) RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, public, pg_temp
+AS $$
+DECLARE
+  playbook uuid;
+  last_row public.audit_logs%ROWTYPE;
+  start_hash text;
+  purge_ids uuid[];
+  n integer;
+  total integer := 0;
+  playbooks_touched integer := 0;
+BEGIN
+  IF p_older_than IS NULL THEN
+    RAISE EXCEPTION 'p_older_than is required';
+  END IF;
+
+  FOR playbook IN
+    SELECT DISTINCT playbook_id
+    FROM public.audit_logs
+    WHERE created_at < p_older_than
+      AND (p_playbook_id IS NULL OR playbook_id = p_playbook_id)
+  LOOP
+    PERFORM pg_advisory_xact_lock(('x' || substr(md5(playbook::text), 1, 16))::bit(64)::bigint);
+
+    SELECT c.anchor_hash INTO start_hash
+    FROM public.audit_chain_checkpoints c WHERE c.playbook_id = playbook
+    ORDER BY c.checkpoint_seq DESC LIMIT 1;
+    start_hash := COALESCE(start_hash, repeat('0', 64));
+
+    -- Retention removes a chain prefix, not every row with an old timestamp.
+    -- Transaction timestamps can tie or move backwards relative to append order.
+    WITH RECURSIVE prefix AS (
+      SELECT a.id, a.hash, 1 AS depth FROM public.audit_logs a
+      WHERE a.playbook_id = playbook AND a.prev_hash = start_hash
+        AND a.created_at < p_older_than
+      UNION ALL
+      SELECT child.id, child.hash, parent.depth + 1
+      FROM prefix parent JOIN public.audit_logs child
+        ON child.playbook_id = playbook AND child.prev_hash = parent.hash
+      WHERE child.created_at < p_older_than
+    )
+    SELECT array_agg(id ORDER BY depth), count(*)::integer
+      INTO purge_ids, n FROM prefix;
+    CONTINUE WHEN n = 0;
+
+    SELECT * INTO last_row FROM public.audit_logs
+    WHERE id = purge_ids[array_length(purge_ids, 1)];
+
+    INSERT INTO public.audit_chain_checkpoints (
+      playbook_id, anchor_hash, purged_through, purged_through_id, purged_count
+    ) VALUES (
+      playbook, last_row.hash, last_row.created_at, last_row.id, n
+    );
+
+    PERFORM set_config('agentplaybooks.audit_purge', 'on', true);
+    DELETE FROM public.audit_logs
+    WHERE playbook_id = playbook AND id = ANY(purge_ids);
+    PERFORM set_config('agentplaybooks.audit_purge', 'off', true);
+
+    INSERT INTO public.audit_logs (
+      playbook_id, operation, status, actor_type, actor_id, target
+    ) VALUES (
+      playbook,
+      'audit.retention_purge',
+      'success',
+      COALESCE(p_actor_type, 'system'),
+      COALESCE(p_actor_id, 'retention'),
+      to_char(timezone('UTC', p_older_than), 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+    );
+
+    total := total + n;
+    playbooks_touched := playbooks_touched + 1;
+  END LOOP;
+
+  RETURN jsonb_build_object(
+    'purged', total,
+    'playbooks', playbooks_touched,
+    'older_than', p_older_than
+  );
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.purge_audit_logs(timestamptz, uuid, text, text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.purge_audit_logs(timestamptz, uuid, text, text) TO service_role;
+
+COMMIT;
+
+-- --------------------------------------------------------------------
+-- Folded in from 20261025130000_audit_config_changes.sql
+-- Keep this section identical to the migration.
+-- --------------------------------------------------------------------
+
+-- Record every change to who can do what, and to what agents are told, in the
+-- audit trail — from the database, so no write path can skip it.
+--
+-- Until now the trail held vault operations and federated calls only. Turning
+-- a playbook public, issuing or revoking an API key, adding a collaborator,
+-- pointing an MCP server somewhere else or rewriting a skill left no trace.
+-- These writes happen in some forty places across the REST API, the MCP tools
+-- and the management API, and owners can also write some of these tables
+-- directly through the Data API. A trigger on each table is the one place all
+-- of them pass through.
+--
+-- Recorded tables and operations:
+--
+--   playbooks               playbook.create / playbook.update / playbook.visibility / playbook.delete
+--   skills                  skill.create / skill.update / skill.delete
+--   mcp_servers             mcp_server.create / mcp_server.update / mcp_server.delete
+--   api_keys                api_key.create / api_key.update / api_key.rotate / api_key.revoke / api_key.delete
+--   playbook_collaborators  collaborator.invite / collaborator.accept / collaborator.update / collaborator.remove
+--
+-- `target` names the object and the columns that changed. Values are recorded
+-- only for access-control columns (visibility, role, permissions, is_active,
+-- expires_at); content such as instructions or skill bodies is not copied into
+-- the trail, and key hashes and invite token hashes never are.
+--
+-- The actor:
+--
+--   * a write through the Data API with a user's own JWT is that user;
+--   * a write by the application (service_role) carries the actor the app
+--     authenticated, in the `x-apb-actor` request header (`type:id`); the
+--     header is trusted only from service_role, so a user cannot claim to be
+--     someone else;
+--   * anything else (an operator in psql, a migration) is `system` and the
+--     database role.
+--
+-- Bookkeeping columns (updated_at, star_count, last_used_at, a server's cached
+-- tool list) do not produce events. Children deleted by a cascade from a
+-- deleted playbook do not either: the playbook.delete row covers them.
+
+BEGIN;
+SET LOCAL lock_timeout = '10s';
+
+CREATE SCHEMA IF NOT EXISTS audit_private;
+
+CREATE OR REPLACE FUNCTION audit_private.request_actor(OUT actor_type text, OUT actor_id text, OUT request_id text)
+LANGUAGE plpgsql
+STABLE
+SET search_path = pg_catalog, public, pg_temp
+AS $$
+DECLARE
+  claims json := nullif(current_setting('request.jwt.claims', true), '')::json;
+  headers json := nullif(current_setting('request.headers', true), '')::json;
+  claimed text;
+BEGIN
+  request_id := left(COALESCE(headers ->> 'x-apb-request-id', headers ->> 'x-request-id', headers ->> 'cf-ray'), 128);
+  IF claims ->> 'role' = 'service_role' THEN
+    claimed := headers ->> 'x-apb-actor';
+    IF claimed IS NOT NULL AND position(':' IN claimed) > 1 THEN
+      actor_type := left(split_part(claimed, ':', 1), 32);
+      actor_id := nullif(left(substr(claimed, position(':' IN claimed) + 1), 128), '');
+      RETURN;
+    END IF;
+    actor_type := 'system';
+    actor_id := 'service_role';
+    RETURN;
+  END IF;
+  IF claims ->> 'sub' IS NOT NULL THEN
+    actor_type := 'owner';
+    actor_id := left(claims ->> 'sub', 128);
+    RETURN;
+  END IF;
+  actor_type := 'system';
+  actor_id := current_user::text;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION audit_private.record_config_change()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, public, pg_temp
+AS $$
+DECLARE
+  entity text;
+  ignored text[];
+  shown text[];
+  old_row jsonb := CASE WHEN TG_OP = 'INSERT' THEN NULL ELSE to_jsonb(OLD) END;
+  new_row jsonb := CASE WHEN TG_OP = 'DELETE' THEN NULL ELSE to_jsonb(NEW) END;
+  row_data jsonb := COALESCE(new_row, old_row);
+  changed text[] := ARRAY[]::text[];
+  details text[] := ARRAY[]::text[];
+  col text;
+  op text;
+  label text;
+  playbook uuid;
+  actor record;
+BEGIN
+  CASE TG_TABLE_NAME
+    WHEN 'playbooks' THEN
+      entity := 'playbook';
+      ignored := ARRAY['updated_at', 'star_count', 'created_at'];
+      shown := ARRAY['visibility'];
+      playbook := (row_data ->> 'id')::uuid;
+      label := row_data ->> 'guid';
+    WHEN 'skills' THEN
+      entity := 'skill';
+      ignored := ARRAY['created_at'];
+      shown := ARRAY[]::text[];
+      playbook := (row_data ->> 'playbook_id')::uuid;
+      label := row_data ->> 'name';
+    WHEN 'mcp_servers' THEN
+      entity := 'mcp_server';
+      ignored := ARRAY['tools', 'resources', 'created_at'];
+      shown := ARRAY['transport_type'];
+      playbook := (row_data ->> 'playbook_id')::uuid;
+      label := row_data ->> 'name';
+    WHEN 'api_keys' THEN
+      entity := 'api_key';
+      ignored := ARRAY['last_used_at', 'created_at'];
+      shown := ARRAY['role', 'permissions', 'is_active', 'expires_at'];
+      playbook := (row_data ->> 'playbook_id')::uuid;
+      label := row_data ->> 'key_prefix';
+    WHEN 'playbook_collaborators' THEN
+      entity := 'collaborator';
+      ignored := ARRAY['created_at'];
+      shown := ARRAY['role'];
+      playbook := (row_data ->> 'playbook_id')::uuid;
+      label := COALESCE(row_data ->> 'user_id', 'pending-invite');
+    ELSE
+      RETURN NULL;
+  END CASE;
+
+  -- A child removed because its playbook was deleted: playbook.delete covers
+  -- it. AFTER triggers run once the cascade is complete, so the playbook is
+  -- already gone when the child's trigger fires.
+  IF TG_OP = 'DELETE' AND entity <> 'playbook'
+     AND NOT EXISTS (SELECT 1 FROM public.playbooks p WHERE p.id = playbook) THEN
+    RETURN NULL;
+  END IF;
+
+  IF TG_OP = 'UPDATE' THEN
+    FOR col IN SELECT jsonb_object_keys(new_row) LOOP
+      CONTINUE WHEN col = ANY(ignored);
+      IF new_row -> col IS DISTINCT FROM old_row -> col THEN
+        changed := changed || col;
+        IF col = ANY(shown) THEN
+          details := details || format('%s=%s->%s', col, COALESCE(old_row ->> col, 'null'), COALESCE(new_row ->> col, 'null'));
+        END IF;
+      END IF;
+    END LOOP;
+    IF cardinality(changed) = 0 THEN
+      RETURN NULL;
+    END IF;
+  ELSIF TG_OP = 'INSERT' THEN
+    FOREACH col IN ARRAY shown LOOP
+      IF new_row ? col THEN
+        details := details || format('%s=%s', col, COALESCE(new_row ->> col, 'null'));
+      END IF;
+    END LOOP;
+  END IF;
+
+  op := entity || CASE TG_OP
+    WHEN 'INSERT' THEN CASE entity WHEN 'collaborator' THEN '.invite' ELSE '.create' END
+    WHEN 'DELETE' THEN CASE entity WHEN 'collaborator' THEN '.remove' ELSE '.delete' END
+    ELSE '.update'
+  END;
+  IF TG_OP = 'UPDATE' THEN
+    IF entity = 'playbook' AND 'visibility' = ANY(changed) THEN
+      op := 'playbook.visibility';
+    ELSIF entity = 'api_key' AND 'key_hash' = ANY(changed) THEN
+      op := 'api_key.rotate';
+    ELSIF entity = 'api_key' AND (old_row ->> 'is_active')::boolean AND NOT (new_row ->> 'is_active')::boolean THEN
+      op := 'api_key.revoke';
+    ELSIF entity = 'collaborator' AND old_row ->> 'accepted_at' IS NULL AND new_row ->> 'accepted_at' IS NOT NULL THEN
+      op := 'collaborator.accept';
+    END IF;
+  END IF;
+
+  SELECT * INTO actor FROM audit_private.request_actor();
+
+  INSERT INTO public.audit_logs (playbook_id, operation, target, status, actor_type, actor_id, request_id)
+  VALUES (
+    playbook,
+    op,
+    left(concat_ws(' ',
+      entity || ':' || COALESCE(label, row_data ->> 'id'),
+      CASE WHEN cardinality(changed) > 0 THEN 'changed=' || array_to_string(changed, ',') END,
+      CASE WHEN cardinality(details) > 0 THEN array_to_string(details, ' ') END
+    ), 500),
+    'success',
+    actor.actor_type,
+    actor.actor_id,
+    actor.request_id
+  );
+  RETURN NULL;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION audit_private.request_actor() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION audit_private.record_config_change() FROM PUBLIC, anon, authenticated;
+
+DROP TRIGGER IF EXISTS audit_config_change ON public.playbooks;
+CREATE TRIGGER audit_config_change
+  AFTER INSERT OR UPDATE OR DELETE ON public.playbooks
+  FOR EACH ROW EXECUTE FUNCTION audit_private.record_config_change();
+
+DROP TRIGGER IF EXISTS audit_config_change ON public.skills;
+CREATE TRIGGER audit_config_change
+  AFTER INSERT OR UPDATE OR DELETE ON public.skills
+  FOR EACH ROW EXECUTE FUNCTION audit_private.record_config_change();
+
+DROP TRIGGER IF EXISTS audit_config_change ON public.mcp_servers;
+CREATE TRIGGER audit_config_change
+  AFTER INSERT OR UPDATE OR DELETE ON public.mcp_servers
+  FOR EACH ROW EXECUTE FUNCTION audit_private.record_config_change();
+
+DROP TRIGGER IF EXISTS audit_config_change ON public.api_keys;
+CREATE TRIGGER audit_config_change
+  AFTER INSERT OR UPDATE OR DELETE ON public.api_keys
+  FOR EACH ROW EXECUTE FUNCTION audit_private.record_config_change();
+
+DROP TRIGGER IF EXISTS audit_config_change ON public.playbook_collaborators;
+CREATE TRIGGER audit_config_change
+  AFTER INSERT OR UPDATE OR DELETE ON public.playbook_collaborators
+  FOR EACH ROW EXECUTE FUNCTION audit_private.record_config_change();
 
 COMMIT;
