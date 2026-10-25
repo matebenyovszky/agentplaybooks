@@ -53,9 +53,9 @@ async function main() {
     ).trim();
 
   const playbook = psql(
-    `SELECT guid || '|' || name FROM public.playbooks WHERE id = '${PLAYBOOK_ID}'`,
+    `SET ROLE service_role; SELECT guid || '|' || name FROM public.playbooks WHERE id = '${PLAYBOOK_ID}'`,
   );
-  if (playbook !== `${GUID}|${PLAYBOOK_NAME}`) {
+  if (playbook.split("\n").at(-1) !== `${GUID}|${PLAYBOOK_NAME}`) {
     throw new Error(`Playbook mismatch: ${playbook}`);
   }
 

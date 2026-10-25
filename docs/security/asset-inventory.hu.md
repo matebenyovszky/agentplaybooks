@@ -118,3 +118,5 @@ Főbb táblák: `playbooks`, `secrets`, `audit_logs`, `api_keys`, `user_api_keys
 3. A `docs:check` a relatív linkeket és a citált forrásutakat ellenőrzi, a futó konténereket nem.
 
 A CM (Configuration Management) család ügyféli fele: a kimenet verziózása, eltérésvizsgálat a fenti statikus táblához képest — lásd [risk-assessment.hu.md](./risk-assessment.hu.md).
+
+`MTLS_PROXY_SHARED_SECRET`: private proxy channel token, required in proxy mode; same random value in app and terminator. Rotate both together. Forwarded IP headers alone are not trusted.
