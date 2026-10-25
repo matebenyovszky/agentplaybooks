@@ -255,6 +255,17 @@ function parseMarkdown(md: string): string {
         .replace(/^(\d+)\. (.*$)/gm, '<li class="ml-4">$2</li>')
         // Blockquotes
         .replace(/^> (.*$)/gm, '<blockquote class="border-l-4 border-indigo-500 pl-4 my-4 text-neutral-600 dark:text-neutral-400 italic">$1</blockquote>')
+        // Tables (same basic parser as docs)
+        .replace(/\|(.+)\|/g, (match) => {
+            const cells = match.split("|").filter((c) => c.trim());
+            if (cells.every((c) => /^[-:]+$/.test(c.trim()))) return "";
+            const isHeader = cells.some((c) => c.includes("---"));
+            const tag = isHeader ? "th" : "td";
+            const cellClass = isHeader
+                ? "px-4 py-3 text-left text-sm font-semibold text-neutral-800 dark:text-neutral-200 bg-neutral-100 dark:bg-neutral-900"
+                : "px-4 py-3 text-sm text-neutral-700 dark:text-neutral-300";
+            return `<tr>${cells.map((c) => `<${tag} class="${cellClass}">${c.trim()}</${tag}>`).join("")}</tr>`;
+        })
         // Horizontal rules
         .replace(/^---$/gm, '<hr class="border-neutral-200 dark:border-neutral-800 my-8" />')
         // Paragraphs
@@ -273,6 +284,11 @@ function parseMarkdown(md: string): string {
     // Wrap lists
     html = html.replace(/(<li[^>]*>.*?<\/li>\n?)+/g, (match) => {
         return `<ul class="list-disc list-inside mb-4 space-y-2 text-neutral-700 dark:text-neutral-300">${match}</ul>`;
+    });
+
+    // Wrap tables
+    html = html.replace(/(<tr>.*?<\/tr>\n?)+/g, (match) => {
+        return `<div class="overflow-x-auto mb-6"><table class="w-full border-collapse">${match}</table></div>`;
     });
 
     // Step 4: Restore inline code blocks
