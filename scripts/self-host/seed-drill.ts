@@ -64,11 +64,15 @@ INSERT INTO public.secrets (
   'restore-drill'
 );
 
+-- Separate INSERTs so the hash-chain trigger sees the previous row.
+-- A multi-row INSERT assigns the same prev_hash to every row and collides on
+-- audit_logs_playbook_prev_hash_idx.
 INSERT INTO public.audit_logs (playbook_id, operation, target, status, actor_type, actor_id, secret_name)
-VALUES
-  (${sqlLiteral(PLAYBOOK_ID)}, 'secret.create', NULL, 'success', 'owner', ${sqlLiteral(OWNER)}, ${sqlLiteral(SECRET_NAME)}),
-  (${sqlLiteral(PLAYBOOK_ID)}, 'secret.use', 'api.example.invalid', 'success', 'api_key', 'apb_drill', ${sqlLiteral(SECRET_NAME)}),
-  (${sqlLiteral(PLAYBOOK_ID)}, 'secret.reveal', NULL, 'denied', 'anonymous', NULL, ${sqlLiteral(SECRET_NAME)});
+VALUES (${sqlLiteral(PLAYBOOK_ID)}, 'secret.create', NULL, 'success', 'owner', ${sqlLiteral(OWNER)}, ${sqlLiteral(SECRET_NAME)});
+INSERT INTO public.audit_logs (playbook_id, operation, target, status, actor_type, actor_id, secret_name)
+VALUES (${sqlLiteral(PLAYBOOK_ID)}, 'secret.use', 'api.example.invalid', 'success', 'api_key', 'apb_drill', ${sqlLiteral(SECRET_NAME)});
+INSERT INTO public.audit_logs (playbook_id, operation, target, status, actor_type, actor_id, secret_name)
+VALUES (${sqlLiteral(PLAYBOOK_ID)}, 'secret.reveal', NULL, 'denied', 'anonymous', NULL, ${sqlLiteral(SECRET_NAME)});
 
 CREATE SCHEMA IF NOT EXISTS storage;
 GRANT USAGE ON SCHEMA public TO service_role;

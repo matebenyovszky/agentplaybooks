@@ -7365,21 +7365,21 @@ var require_dist = __commonJS({
   }
 });
 
-// src/cli.js
+// packages/cli/src/cli.js
 import os7 from "node:os";
 import { readFile as readFile14 } from "node:fs/promises";
 import path17 from "node:path";
 import readline2 from "node:readline";
 
-// src/checks.js
+// packages/cli/src/checks.js
 var import_yaml3 = __toESM(require_dist(), 1);
 import path3 from "node:path";
 
-// src/agents.js
+// packages/cli/src/agents.js
 var import_yaml2 = __toESM(require_dist(), 1);
 import path2 from "node:path";
 
-// src/discovery.js
+// packages/cli/src/discovery.js
 var import_yaml = __toESM(require_dist(), 1);
 import { createHash } from "node:crypto";
 import { access, readdir, readFile } from "node:fs/promises";
@@ -7713,7 +7713,7 @@ async function discoverGlobal({
   return combined;
 }
 
-// src/agents.js
+// packages/cli/src/agents.js
 var SAFE_AGENT_NAME = /^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/;
 var COMMON_FIELDS = /* @__PURE__ */ new Set(["name", "description", "tools", "model", "extensions"]);
 var TOOL_SCOPE_MARKER = "\n\n[AgentPlaybooks tool scope]\nUse only these tools: ";
@@ -7858,7 +7858,7 @@ ${(0, import_yaml2.stringify)(values, { lineWidth: 0 }).trimEnd()}
 ${prompt}`;
 }
 
-// src/checks.js
+// packages/cli/src/checks.js
 var SKILL_NAME_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 var PLACEHOLDER_PATTERN = /^(?:\$\{|\$[A-Za-z_]|\{\{|<|your[_-]|example|changeme|replace[_-]|env:|vault:|secret:|process\.env|import\.meta\.env|os\.environ|os\.getenv|System\.getenv|Deno\.env|getenv\(|ENV\[)/i;
 var CREDENTIAL_PATTERNS = [
@@ -8207,7 +8207,7 @@ function analyze(inventory) {
   };
 }
 
-// src/doctor.js
+// packages/cli/src/doctor.js
 var PLATFORM_LABELS = {
   claude: "Claude",
   cursor: "Cursor",
@@ -8308,7 +8308,7 @@ function printDoctor(report) {
   printPushable(report);
 }
 
-// src/oauth.js
+// packages/cli/src/oauth.js
 import crypto from "node:crypto";
 import http from "node:http";
 function base64url(buffer) {
@@ -8408,7 +8408,7 @@ function startCallbackServer({ path: path18 = "/callback", timeoutMs = 3e5, crea
   };
 }
 
-// src/auth-command.js
+// packages/cli/src/auth-command.js
 async function fetchTemplate(url, id, { fetchImpl = fetch } = {}) {
   const response = await fetchImpl(`${url}/api/connections?id=${encodeURIComponent(id)}`, {
     headers: { Accept: "application/json" }
@@ -8534,12 +8534,12 @@ function checkPrerequisites(state) {
   return null;
 }
 
-// src/sync.js
+// packages/cli/src/sync.js
 import { mkdir as mkdir2, readFile as readFile3, rename as rename2, writeFile as writeFile2, copyFile as copyFile2 } from "node:fs/promises";
 import os3 from "node:os";
 import path6 from "node:path";
 
-// src/adapters.js
+// packages/cli/src/adapters.js
 var import_yaml4 = __toESM(require_dist(), 1);
 import { access as access2, mkdir, copyFile, readFile as readFile2, readdir as readdir2, rename, writeFile } from "node:fs/promises";
 import os2 from "node:os";
@@ -9137,7 +9137,7 @@ function planMcpServersAction({ root, target, definitions, existingContent = nul
   };
 }
 
-// src/manifest.js
+// packages/cli/src/manifest.js
 import path5 from "node:path";
 function slugify(value) {
   const slug = value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 64);
@@ -9254,7 +9254,7 @@ function comparableManifest(manifest) {
   return copy;
 }
 
-// src/sync.js
+// packages/cli/src/sync.js
 var MANIFEST_NAME = "agentplaybook.json";
 async function readExisting(manifestPath) {
   try {
@@ -9414,11 +9414,11 @@ function printSyncPlan(plan) {
   printTargetSuggestion(plan);
 }
 
-// src/agent-plugins.js
+// packages/cli/src/agent-plugins.js
 import { copyFile as copyFile3, mkdir as mkdir3, readFile as readFile5, readdir as readdir4, realpath, rename as rename3, writeFile as writeFile3 } from "node:fs/promises";
 import path8 from "node:path";
 
-// src/snapshot.js
+// packages/cli/src/snapshot.js
 import { createHash as createHash3 } from "node:crypto";
 import { lstat, readFile as readFile4, readdir as readdir3 } from "node:fs/promises";
 import path7 from "node:path";
@@ -9615,12 +9615,19 @@ async function assertSafeDestination(root, relative) {
   return current;
 }
 
-// src/plugin-package.js
+// packages/cli/src/text.js
+function trimEndCharacters(value, characters) {
+  let end = value.length;
+  while (end > 0 && characters.includes(value[end - 1])) end--;
+  return value.slice(0, end);
+}
+
+// packages/cli/src/plugin-package.js
 var PLUGIN_SCHEMA = "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json";
 var MCP_SCHEMA = "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json";
 var PLUGIN_NAME = /^(?!.*(?:--|\.\.))[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/;
 function pluginName(value) {
-  const slug = String(value).toLowerCase().replace(/[^a-z0-9.-]+/g, "-").replace(/-+/g, "-").replace(/\.+/g, ".").replace(/^[.-]+|[.-]+$/g, "").slice(0, 64).replace(/[.-]+$/g, "");
+  const slug = trimEndCharacters(String(value).toLowerCase().replace(/[^a-z0-9.-]+/g, "-").replace(/-+/g, "-").replace(/\.+/g, ".").replace(/^[.-]+/, "").slice(0, 64), ".-");
   return PLUGIN_NAME.test(slug) ? slug : "agent-playbook";
 }
 function portablePluginManifest({ name, version = "1.0.0", description, author, homepage, repository, license, keywords, extensions } = {}) {
@@ -9641,7 +9648,7 @@ function portableMcpConfig(mcpServers) {
   return { $schema: MCP_SCHEMA, mcpServers };
 }
 
-// src/agent-plugins.js
+// packages/cli/src/agent-plugins.js
 var PLUGIN_NAME2 = /^(?!.*(?:--|\.\.))[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/;
 var SECRET_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
 var REF_PATTERNS = [/\$\{([A-Za-z_][A-Za-z0-9_]*)\}/g, /(?<![\w$])\$([A-Za-z_][A-Za-z0-9_]*)/g, /env:([A-Za-z_][A-Za-z0-9_]*)/g];
@@ -10162,11 +10169,11 @@ function printPluginPlan(plan) {
   console.log("No files have been changed. Run again with --apply to write these changes.");
 }
 
-// src/hermes-distribution.js
+// packages/cli/src/hermes-distribution.js
 import { mkdir as mkdir5, readFile as readFile7, readdir as readdir6, rename as rename5, writeFile as writeFile5 } from "node:fs/promises";
 import path10 from "node:path";
 
-// src/remote.js
+// packages/cli/src/remote.js
 import { chmod, mkdir as mkdir4, readdir as readdir5, readFile as readFile6, rename as rename4, writeFile as writeFile4 } from "node:fs/promises";
 import os4 from "node:os";
 import path9 from "node:path";
@@ -10190,7 +10197,7 @@ function isSafeSkillFile(filename) {
 }
 function resolveBaseUrl(flagUrl, env = process.env) {
   const url = flagUrl || env.AGENTPLAYBOOKS_URL || DEFAULT_BASE_URL;
-  return url.replace(/\/+$/, "");
+  return trimEndCharacters(url, "/");
 }
 function credentialsPath(homedir = os4.homedir()) {
   return path9.join(homedir, ".agentplaybooks", "credentials.json");
@@ -10935,7 +10942,7 @@ function decidePush({ apply, yes, json, interactive, actionCount }) {
   return { upload: false, reason: "ask" };
 }
 
-// src/hermes-distribution.js
+// packages/cli/src/hermes-distribution.js
 var PORTABLE_SKILLS_DIR = ".agents/skills";
 var PORTABLE_PERSONA_PATH3 = ".agents/persona.md";
 var MANIFEST_FILENAME = "distribution.yaml";
@@ -11008,7 +11015,7 @@ async function readPortableSkills(root) {
 }
 async function planHermesExport(root, destination, { name, version } = {}) {
   const link = await readLink(root);
-  const profileName = (name ?? link?.name ?? path10.basename(root)).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  const profileName = (name ?? link?.name ?? path10.basename(root)).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   if (!SAFE_PROFILE_NAME.test(profileName)) {
     throw new Error(`'${profileName}' is not a usable Hermes profile name. Pass --name with a lowercase, hyphenated one.`);
   }
@@ -11083,7 +11090,7 @@ function hermesInstallHint(plan) {
   ].join("\n");
 }
 
-// src/connect.js
+// packages/cli/src/connect.js
 import { readFile as readFile8 } from "node:fs/promises";
 import path11 from "node:path";
 import { createHash as createHash4 } from "node:crypto";
@@ -11240,7 +11247,7 @@ conflict (${item.target}): ${item.reason}`);
   }
 }
 
-// src/hermes-setup.js
+// packages/cli/src/hermes-setup.js
 import { access as access3, readFile as readFile9, stat, lstat as lstat2 } from "node:fs/promises";
 import { constants } from "node:fs";
 import { createHash as createHash5 } from "node:crypto";
@@ -11298,7 +11305,7 @@ async function inspectHermes(root, options = {}) {
   const keyEnvVar = options.keyEnvVar ?? "APBKS_KEY_AGENTPLAYBOOKS";
   if (!/^[A-Z_][A-Z0-9_]*$/.test(keyEnvVar)) throw new Error("Invalid key environment variable name.");
   const profileEnv = (await readOptional(path12.join(profile.directory, ".env")))?.toString() ?? "";
-  const declared = profileEnv.split(/\r?\n/).some((line) => new RegExp(`^\\s*(?:export\\s+)?${keyEnvVar}\\s*=`).test(line));
+  const declared = profileEnv.split(/\r?\n/).some((line) => /^\s*(?:export\s+)?([A-Z_][A-Z0-9_]*)\s*=/.exec(line)?.[1] === keyEnvVar);
   return {
     host: os5.hostname(),
     profile: profile.directory,
@@ -11437,7 +11444,7 @@ function printHermesSetup(plan, log = console.log) {
   if (!d.keyInProcess) log(`Configure a playbook-scoped key as ${plan.keyEnvVar} in the profile secret environment; never paste it into chat. Run 'apb hermes doctor <guid> --check' in that environment to verify tools.`);
 }
 
-// src/hermes-memory.js
+// packages/cli/src/hermes-memory.js
 var import_yaml6 = __toESM(require_dist(), 1);
 import { readFile as readFile10 } from "node:fs/promises";
 import { createHash as createHash6 } from "node:crypto";
@@ -11551,9 +11558,9 @@ function printHermesMemoryPlan(plan, log = console.log) {
   log("Use 'hermes memory setup' for credential setup, then 'hermes memory status' to verify.");
 }
 
-// src/hermes-bundle.js
-var import_yaml7 = __toESM(require_dist(), 1);
+// packages/cli/src/hermes-bundle.js
 import { spawnSync } from "node:child_process";
+var import_yaml7 = __toESM(require_dist(), 1);
 import { createHash as createHash7 } from "node:crypto";
 import { access as access4, chmod as chmod2, mkdir as mkdir6, readFile as readFile11, rename as rename6, rm, writeFile as writeFile6 } from "node:fs/promises";
 import os6 from "node:os";
@@ -11787,7 +11794,7 @@ function recordedSource(manifest) {
 function sameSource(recorded, source) {
   if (!recorded) return false;
   const normalize = (value) => {
-    const resolved = path14.resolve(value).replace(/[\\/]+$/, "");
+    const resolved = trimEndCharacters(path14.resolve(value), "\\/");
     return process.platform === "win32" ? resolved.toLowerCase() : resolved;
   };
   return normalize(recorded) === normalize(source);
@@ -12092,7 +12099,7 @@ async function applyHermesSync(plan, { runHermes = defaultRunHermes } = {}) {
   return { written, installed, plugins, memory, failures };
 }
 
-// src/adopt.js
+// packages/cli/src/adopt.js
 var import_yaml8 = __toESM(require_dist(), 1);
 import { readFile as readFile12, writeFile as writeFile7, rename as rename7 } from "node:fs/promises";
 import path15 from "node:path";
@@ -12239,7 +12246,7 @@ async function inventoryForAdoption({ global = false, root } = {}) {
   return global ? discoverGlobal() : discover(root);
 }
 
-// src/secrets.js
+// packages/cli/src/secrets.js
 import { spawn } from "node:child_process";
 import path16 from "node:path";
 import { readFile as readFile13 } from "node:fs/promises";
@@ -12383,7 +12390,7 @@ async function readManifestSecrets(root) {
   }
 }
 
-// src/prompt.js
+// packages/cli/src/prompt.js
 import readline from "node:readline";
 import { Writable } from "node:stream";
 async function readToEnd(input) {
@@ -12421,7 +12428,102 @@ async function promptForLine(question, { input = process.stdin, output = process
   return readLine(readline.createInterface({ input, output }), question);
 }
 
-// src/cli.js
+// packages/cli/src/audit.js
+var EXPORT_FORMATS = /* @__PURE__ */ new Set(["json", "jsonl", "ndjson", "csv"]);
+function auditQueryFromFlags(flags) {
+  const query = {};
+  const format = flags.get("--format");
+  if (typeof format === "string") query.format = format === "ndjson" ? "jsonl" : format;
+  const since = flags.get("--since");
+  if (typeof since === "string") query.since = since;
+  const until = flags.get("--until");
+  if (typeof until === "string") query.until = until;
+  const actor = flags.get("--actor");
+  if (typeof actor === "string") query.actor = actor;
+  const action = flags.get("--action") ?? flags.get("--operation");
+  if (typeof action === "string") query.action = action;
+  const secret = flags.get("--secret");
+  if (typeof secret === "string") query.secret = secret;
+  const limit = flags.get("--limit");
+  if (typeof limit === "string") query.limit = limit;
+  return query;
+}
+function queryString(query) {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value != null && value !== "") params.set(key, String(value));
+  }
+  const encoded = params.toString();
+  return encoded ? `?${encoded}` : "";
+}
+async function fetchAuditExport(url, apiKey, guid, query, { fetchImpl = fetch } = {}) {
+  const path18 = `/api/playbooks/${guid}/audit/export${queryString(query)}`;
+  const response = await fetchImpl(`${url}${path18}`, {
+    headers: { Authorization: `Bearer ${apiKey}` }
+  });
+  const text = await response.text();
+  if (!response.ok) {
+    let message = `HTTP ${response.status}`;
+    try {
+      message = JSON.parse(text).error || message;
+    } catch {
+    }
+    const error = new Error(`GET ${path18} failed: ${message}`);
+    error.status = response.status;
+    throw error;
+  }
+  return text;
+}
+async function fetchAuditVerify(url, apiKey, guid, { fetchImpl = fetch } = {}) {
+  const path18 = `/api/playbooks/${guid}/audit/verify`;
+  const response = await fetchImpl(`${url}${path18}`, {
+    headers: { Authorization: `Bearer ${apiKey}` }
+  });
+  let payload = null;
+  try {
+    payload = await response.json();
+  } catch {
+  }
+  if (!response.ok && response.status !== 409) {
+    const message = payload?.error || `HTTP ${response.status}`;
+    const error = new Error(`GET ${path18} failed: ${message}`);
+    error.status = response.status;
+    throw error;
+  }
+  return payload;
+}
+async function fetchAuditPurge(url, apiKey, guid, days, { fetchImpl } = {}) {
+  return await request(url, `/api/playbooks/${guid}/audit/purge`, {
+    method: "POST",
+    apiKey,
+    body: days ? { days } : {},
+    fetchImpl
+  });
+}
+function resolveAuditGuids(positional, flags) {
+  const fromFlag = typeof flags.get("--playbook") === "string" ? flags.get("--playbook") : null;
+  const fromPositional = positional[1] || null;
+  return fromFlag || fromPositional || null;
+}
+async function collectExportGuids(url, apiKey, requested, { fetchImpl } = {}) {
+  if (requested) return [requested];
+  const playbooks = await listPlaybooks(url, apiKey, { fetchImpl });
+  return playbooks.filter((playbook) => playbook.current_user_role === "owner" || playbook.current_user_role === "auditor").map((playbook) => playbook.guid).filter(Boolean);
+}
+function validateExportFormat(format) {
+  if (!format) return "jsonl";
+  if (!EXPORT_FORMATS.has(format)) throw new Error("format must be jsonl or csv (json is also accepted).");
+  return format === "ndjson" ? "jsonl" : format;
+}
+async function requireUserKey(url) {
+  const apiKey = await resolveApiKey(url);
+  if (!apiKey) {
+    throw new Error(`No API key for ${url}. Run 'agentplaybooks login' or set AGENTPLAYBOOKS_API_KEY.`);
+  }
+  return apiKey;
+}
+
+// packages/cli/src/cli.js
 var HELP = `AgentPlaybooks CLI
 
 Usage:
@@ -12465,6 +12567,10 @@ Usage:
   agentplaybooks secrets run [path] -- <command> [args...]
   agentplaybooks secrets adopt [path] [--global] [--apply] [--rewrite=<files>]
                               [--prefix=<P>] [--json] [--yes]
+  agentplaybooks audit export [guid] [--format=jsonl|csv] [--since=ISO] [--until=ISO]
+                              [--actor=<id>] [--action=<op>] [--playbook=<guid>] [--url=<base>]
+  agentplaybooks audit verify [guid] [--playbook=<guid>] [--json] [--url=<base>]
+  agentplaybooks audit purge <guid> [--days=N] [--yes] [--url=<base>]
 
 Commands:
   memory     Install and configure the native Hermes memory provider for a private
@@ -12533,6 +12639,9 @@ Commands:
              --global uploads this machine's own skills instead of one project's,
              as a workstation playbook. MCP configuration stays local: a
              home-scoped MCP config is where auth headers live.
+  audit      Export (JSONL/CSV), verify the per-playbook hash chain, or purge
+             rows older than --days. Uses the user API key; a playbook key that
+             performs vault operations cannot read the trail.
   secrets    Work with the playbook's encrypted vault. 'status' compares what
              the playbook needs against the vault and this shell, 'push' stores
              one value, and 'run' injects values into one child process.
@@ -12561,7 +12670,7 @@ function parse(args) {
   const separator = args.indexOf("--");
   const own = separator === -1 ? args.slice(1) : args.slice(1, separator);
   const rest = separator === -1 ? [] : args.slice(separator + 1);
-  const valueFlags = /* @__PURE__ */ new Set(["--profile", "--hermes-home", "--target", "--name", "--key-env", "--key-header", "--url", "--shared", "--team", "--memory", "--managed-dir", "--hermes-bin", "--env-file", "--output", "--version", "--snapshot", "--client-id", "--playbook", "--from-env", "--rewrite", "--prefix"]);
+  const valueFlags = /* @__PURE__ */ new Set(["--profile", "--hermes-home", "--target", "--name", "--key-env", "--key-header", "--url", "--shared", "--team", "--memory", "--managed-dir", "--hermes-bin", "--env-file", "--output", "--version", "--snapshot", "--client-id", "--playbook", "--from-env", "--rewrite", "--prefix", "--format", "--since", "--until", "--actor", "--action", "--operation", "--secret", "--limit", "--days"]);
   for (let i = 0; i < own.length; i++) {
     const arg = own[i];
     if (arg.startsWith("--")) {
@@ -12854,6 +12963,64 @@ async function runSecrets(url, flags, positional, rest) {
   }
   throw new Error("Usage: agentplaybooks secrets <login|status|push|run|adopt> ...");
 }
+async function runAudit(url, flags, positional) {
+  const subcommand = positional[0];
+  if (!subcommand || !["export", "verify", "purge"].includes(subcommand)) {
+    throw new Error("Usage: agentplaybooks audit <export|verify|purge> [guid] ...");
+  }
+  const apiKey = await requireUserKey(url);
+  const guid = resolveAuditGuids(positional, flags);
+  if (subcommand === "export") {
+    const format = validateExportFormat(typeof flags.get("--format") === "string" ? flags.get("--format") : "jsonl");
+    const query = { ...auditQueryFromFlags(flags), format };
+    const guids = await collectExportGuids(url, apiKey, guid);
+    if (guids.length === 0) throw new Error("No playbook GUID given, and the key cannot audit any playbook.");
+    const chunks = [];
+    for (const id of guids) {
+      chunks.push(await fetchAuditExport(url, apiKey, id, query));
+    }
+    if (format === "csv" && chunks.length > 1) {
+      const lines = chunks.flatMap((chunk, index) => {
+        const parts = chunk.replace(/\n$/, "").split("\n");
+        return index === 0 ? parts : parts.slice(1);
+      });
+      process.stdout.write(`${lines.join("\n")}
+`);
+      return;
+    }
+    process.stdout.write(chunks.join(""));
+    return;
+  }
+  if (subcommand === "verify") {
+    const guids = guid ? [guid] : await collectExportGuids(url, apiKey, null);
+    if (guids.length === 0) throw new Error("Pass a playbook GUID to verify.");
+    let broken = false;
+    const reports = [];
+    for (const id of guids) {
+      const report = await fetchAuditVerify(url, apiKey, id);
+      reports.push({ guid: id, ...report });
+      if (!report.ok) broken = true;
+      if (!flags.has("--json")) {
+        if (report.ok) console.log(`${id}: ok (${report.checked} entries)`);
+        else {
+          const link = report.first_broken_link || report.broken;
+          console.log(`${id}: BROKEN at ${link?.id ?? "unknown"} (${link?.reason}: expected ${link?.expected}, got ${link?.actual})`);
+        }
+      }
+    }
+    if (flags.has("--json")) console.log(JSON.stringify(guid ? reports[0] : reports, null, 2));
+    if (broken) process.exitCode = 1;
+    return;
+  }
+  if (!guid) throw new Error("Usage: agentplaybooks audit purge <guid> [--days=N] [--yes]");
+  const days = typeof flags.get("--days") === "string" ? Number(flags.get("--days")) : void 0;
+  if (!flags.has("--yes")) {
+    throw new Error("Refusing to purge audit logs without --yes.");
+  }
+  const result = await fetchAuditPurge(url, apiKey, guid, Number.isFinite(days) ? days : void 0);
+  if (flags.has("--json")) console.log(JSON.stringify(result, null, 2));
+  else console.log(`Purged ${result.purged ?? 0} audit log(s) for ${guid}.`);
+}
 async function run(args) {
   const { command, flags, positional, rest } = parse(args);
   if (command === "--version") {
@@ -13076,6 +13243,10 @@ async function run(args) {
     return;
   }
   const url = resolveBaseUrl(typeof flags.get("--url") === "string" ? flags.get("--url") : void 0);
+  if (command === "audit") {
+    await runAudit(url, flags, positional);
+    return;
+  }
   if (command === "secrets") {
     await runSecrets(url, flags, positional, rest);
     return;

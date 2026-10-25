@@ -120,6 +120,7 @@ describe("playbook collaborator management", () => {
       invited_by: "owner-1",
       invite_token_hash: "hashed-invite-token",
       invite_expires_at: "2026-07-24T10:00:00.000Z",
+      role: "editor",
     });
     expect(JSON.stringify(mutations.insertQuery.insert.mock.calls)).not.toContain("plain-invite-token");
     expect(await response.json()).toEqual(expect.objectContaining({

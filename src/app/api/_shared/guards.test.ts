@@ -61,6 +61,24 @@ describe("playbook access guards", () => {
     await expect(checkPlaybookWriteAccess("editor-1", "playbook-1")).resolves.toBe(true);
   });
 
+  it("does not grant write access to an auditor", async () => {
+    mockSupabaseResults(
+      { data: null, error: null },
+      { data: { id: "collaborator-1", role: "auditor" }, error: null },
+    );
+
+    await expect(getPlaybookAccessRole("auditor-1", "playbook-1")).resolves.toBe("auditor");
+  });
+
+  it("refuses writes from an auditor membership", async () => {
+    mockSupabaseResults(
+      { data: null, error: null },
+      { data: { id: "collaborator-1", role: "auditor" }, error: null },
+    );
+
+    await expect(checkPlaybookWriteAccess("auditor-1", "playbook-1")).resolves.toBe(false);
+  });
+
   it("denies users who are neither owner nor editor", async () => {
     mockSupabaseResults(
       { data: null, error: null },

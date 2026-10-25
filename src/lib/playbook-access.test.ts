@@ -26,4 +26,11 @@ describe("buildPlaybookUpdate", () => {
       user_id: "replacement",
     }, "owner")).toEqual({ visibility: "unlisted" });
   });
+
+  it("refuses every field for an auditor", () => {
+    expect(buildPlaybookUpdate({
+      name: "Nope",
+      visibility: "public",
+    }, "auditor")).toEqual({});
+  });
 });

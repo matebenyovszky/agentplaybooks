@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { app } from "@/app/api/playbooks/[guid]/secrets/app";
-import { getAuthenticatedUser, validateApiKey } from "@/app/api/_shared/auth";
+import { getAuthenticatedUser, storedDisplayPrefix, validateApiKey } from "@/app/api/_shared/auth";
 import { getPlaybookByGuid } from "@/app/api/_shared/guards";
 import { getServiceSupabase } from "@/app/api/_shared/supabase";
 import { recordSecretAudit } from "@/app/api/_shared/audit";
@@ -13,7 +13,7 @@ import { expiresAtInput, isSecretExpired } from "@/lib/secret-expiry";
  * but nothing on the server compared it to the clock.
  */
 
-vi.mock("@/app/api/_shared/auth", () => ({ getAuthenticatedUser: vi.fn(), validateApiKey: vi.fn() }));
+vi.mock("@/app/api/_shared/auth", () => ({ getAuthenticatedUser: vi.fn(), validateApiKey: vi.fn(), storedDisplayPrefix: vi.fn() }));
 vi.mock("@/app/api/_shared/guards", () => ({ getPlaybookByGuid: vi.fn() }));
 vi.mock("@/app/api/_shared/supabase", () => ({ getServiceSupabase: vi.fn() }));
 vi.mock("@/lib/crypto", () => ({ encryptSecret: vi.fn(), decryptSecret: vi.fn() }));
@@ -31,6 +31,7 @@ let secret: Record<string, unknown>;
 function asApiKey() {
   vi.mocked(getAuthenticatedUser).mockResolvedValue(null);
   vi.mocked(validateApiKey).mockResolvedValue({ playbooks: { id: "pb1" }, key_prefix: "apb_live" } as never);
+  vi.mocked(storedDisplayPrefix).mockResolvedValue("apb_live");
 }
 
 function asOwner() {

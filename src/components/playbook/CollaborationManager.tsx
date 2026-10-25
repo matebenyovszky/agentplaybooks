@@ -10,6 +10,7 @@ type CollaboratorRow = {
   display_name: string | null;
   status: "active" | "pending" | "expired";
   invite_expires_at: string;
+  role?: "editor" | "auditor";
 };
 
 export function CollaborationManager({ playbookId }: { playbookId: string }) {
@@ -19,6 +20,7 @@ export function CollaborationManager({ playbookId }: { playbookId: string }) {
   const [creating, setCreating] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [inviteRole, setInviteRole] = useState<"editor" | "auditor">("editor");
 
   const load = useCallback(async () => {
     const response = await authFetch(`/api/playbooks/${playbookId}/collaborators`);
@@ -33,7 +35,11 @@ export function CollaborationManager({ playbookId }: { playbookId: string }) {
   const createInvite = async () => {
     setCreating(true);
     setError(null);
-    const response = await authFetch(`/api/playbooks/${playbookId}/collaborators`, { method: "POST" });
+    const response = await authFetch(`/api/playbooks/${playbookId}/collaborators`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ role: inviteRole }),
+    });
     const data = await response.json().catch(() => null);
     if (response.ok && data?.invite_path) {
       setInviteUrl(`${window.location.origin}${data.invite_path}`);
@@ -61,10 +67,20 @@ export function CollaborationManager({ playbookId }: { playbookId: string }) {
   return (
     <div className="space-y-6">
       <div className="p-5 rounded-xl bg-white dark:bg-slate-900/80 border border-neutral-200 dark:border-slate-700/50">
-        <h3 className="font-semibold text-neutral-900 dark:text-white mb-2">Invite an editor</h3>
+        <h3 className="font-semibold text-neutral-900 dark:text-white mb-2">Invite a collaborator</h3>
         <p className="text-sm text-neutral-600 dark:text-slate-400 mb-4">
-          The link can be accepted once and expires after 72 hours. Editors can change playbook content, but cannot access secrets, API keys, visibility, sharing, or deletion.
+          The link can be accepted once and expires after 72 hours. Editors can change playbook content. Auditors can read and export the audit trail and playbook metadata, but cannot read secret values or change anything.
         </p>
+        <div className="flex flex-wrap gap-3 mb-4">
+          <label className="text-sm flex items-center gap-2">
+            <input type="radio" name="invite-role" checked={inviteRole === "editor"} onChange={() => setInviteRole("editor")} />
+            Editor
+          </label>
+          <label className="text-sm flex items-center gap-2">
+            <input type="radio" name="invite-role" checked={inviteRole === "auditor"} onChange={() => setInviteRole("auditor")} />
+            Auditor
+          </label>
+        </div>
         <button
           onClick={createInvite}
           disabled={creating}
@@ -104,7 +120,9 @@ export function CollaborationManager({ playbookId }: { playbookId: string }) {
                     {row.status === "active" ? row.display_name || `User ${row.user_id?.slice(0, 8)}` : "Invite link"}
                   </p>
                   <p className="text-xs text-neutral-500">
-                    {row.status === "active" ? "Editor" : `${row.status} · expires ${new Date(row.invite_expires_at).toLocaleString()}`}
+                    {row.status === "active"
+                      ? (row.role === "auditor" ? "Auditor" : "Editor")
+                      : `${row.status}${row.role === "auditor" ? " auditor" : ""} · expires ${new Date(row.invite_expires_at).toLocaleString()}`}
                   </p>
                 </div>
                 <button onClick={() => remove(row.id)} className="p-2 text-red-500 hover:bg-red-500/10 rounded" aria-label="Remove access">

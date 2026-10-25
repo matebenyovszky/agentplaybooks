@@ -74,6 +74,19 @@ Biztonsági szabályok:
 export AGENTPLAYBOOKS_API_KEY=<sajat-user-api-kulcs>
 apb login               # kulcs ellenőrzése és tárolása (~/.agentplaybooks, 0600)
 apb playbooks           # a kulccsal elérhető playbookok listája
+```
+
+### Auditnyom: export és ellenőrzés
+
+User API-kulccsal (vagy auditor közreműködőként) exportálható és ellenőrizhető
+a playbook hash-lánca. A trezorműveleteket végző playbook kulcs nem olvashatja
+a nyomot. Lásd: [Auditnapló](./audit-logs.md).
+
+```bash
+apb audit export <guid> --format=jsonl --since=2026-01-01T00:00:00Z --action=secret.
+apb audit export --format=csv > trail.csv
+apb audit verify <guid>
+apb audit purge <guid> --days=365 --yes
 
 apb push --apply        # hosztolt rekordok + privát, verziózott mentés
 apb backups <guid>      # mentési verziók azonosítói

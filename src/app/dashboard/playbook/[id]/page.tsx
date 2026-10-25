@@ -66,7 +66,7 @@ import { McpRegistrySearch } from "@/components/playbook/McpRegistrySearch";
 import { CollaborationManager } from "@/components/playbook/CollaborationManager";
 
 type TabType = "details" | "skills" | "mcp" | "canvas" | "memory" | "secrets" | "apiKeys" | "sharing";
-type PlaybookWithAccess = Playbook & { current_user_role?: "owner" | "editor" | "viewer" };
+type PlaybookWithAccess = Playbook & { current_user_role?: "owner" | "editor" | "auditor" | "viewer" };
 
 // Debounce hook
 function useDebounce<T>(value: T, delay: number): T {
