@@ -18,16 +18,16 @@ This runbook has two jobs:
 1. Help a **customer** (the operator of a hosted or self-hosted
    AgentPlaybooks instance — for example a Hungarian public body) assemble
    the evidence package for statutory incident reporting.
-2. Tell **AgentPlaybooks maintainers** how we support that customer and how
-   we handle product vulnerabilities, including CRA Art. 14 if we are a
+2. Tell **the maintainers** how we support that customer and how we handle
+   product vulnerabilities, including CRA Art. 14 if we are later a
    manufacturer.
 
 **The customer is the reporting entity.** Under NIS2 Art. 23 and 418/2024.
 (XII. 23.) Korm. rendelet 77. §, the organisation that operates the
 electronic information system files with its competent authority. For
 Hungarian **state and municipal bodies** that is typically **NBSZ NKI**
-(incidens.nki.gov.hu; if the portal is down, NKI publishes a fallback such
-as csirt@nki.gov.hu). *jogi ellenőrzés szükséges*
+([incidens.nki.gov.hu](https://incidens.nki.gov.hu)). If the portal is down,
+NKI publishes a fallback on that site. *jogi ellenőrzés szükséges*
 
 We are the **supplier**. We do not submit the NKI / NIS2 filing in the
 customer’s name. We provide logs, SBOMs, fixed versions, and a filled-in
@@ -40,7 +40,12 @@ vulnerabilities and severe incidents affecting product security to the
 coordinator CSIRT and ENISA via the Single Reporting Platform. Open-source
 made available for free may fall under a different regime; a paid pilot or
 support contract may make us a manufacturer. Art. 14 reporting has applied
-since 11 September 2026. *jogi ellenőrzés szükséges*
+since 11 September 2026. **CRA manufacturer / open-source steward status:
+open, to be decided.** That open item does not block operator filings or
+GitHub reports. *jogi ellenőrzés szükséges*
+
+Reports via GitHub private vulnerability reporting are reviewed by the
+maintainers on a best-effort basis.
 
 GDPR Art. 33 (72-hour personal-data breach to the supervisory authority) is
 the **controller’s** duty. On a self-hosted instance we are generally not
@@ -51,13 +56,11 @@ the processor. *jogi ellenőrzés szükséges*
 | Role | Who | Does |
 | --- | --- | --- |
 | Customer IBF | Customer’s information-security officer | Decides reportability, files to NKI / the competent authority, owns statutory clocks |
-| Customer incident lead | Named on-call on the customer side | Detection, containment on *their* infrastructure, evidence preservation |
+| Customer incident lead | Named contact on the customer side | Detection, containment on *their* infrastructure, evidence preservation |
 | Customer legal / DPO | Customer | NIS2 / Kiberbiztonsági tv. / GDPR classification. *jogi ellenőrzés szükséges* |
-| Supplier PSIRT | AgentPlaybooks maintainer (see [SECURITY.md](../../SECURITY.md)) | Product triage, patches, CVE/GHSA, CRA Art. 14 if we are manufacturer, SBOM of the fixed release |
-| Supplier engineer | Whoever ships the fix | Reproduce, patch, cut a `cli-v*` tag, do not leak secrets into git or tickets |
+| Maintainers | The AgentPlaybooks maintainers (see [SECURITY.md](../../SECURITY.md)) | Best-effort product triage, patches, CVE/GHSA, SBOM of a fixed release; CRA Art. 14 only if manufacturer status is decided |
+| Whoever ships the fix | A maintainer | Reproduce, patch, cut a `cli-v*` tag, do not leak secrets into git or tickets |
 | Auditor (once shipped) | Customer-designated read-only role | Reads `audit_logs`; today only the playbook **owner** (session or user API key with `playbooks:read`) can read the trail |
-
-<!-- TODO(mate): name the supplier PSIRT owner and on-call rotation. -->
 
 ## Detection
 
@@ -92,12 +95,15 @@ entity** does. *jogi ellenőrzés szükséges*
 
 ### Severity (product / operational)
 
-| Severity | Examples | Supplier fix target ([SECURITY.md](../../SECURITY.md)) |
-| --- | --- | --- |
-| Critical | Secrets vault key leak; remote unauthenticated read of secret values; active exploitation | 24h ack, fix in 7 days |
-| High | Auth bypass to another tenant’s playbooks; privilege escalation to service role | 2 business days ack, 30-day fix |
-| Medium | Authenticated audit-log injection; CSRF on a state-changing route | 90-day fix |
-| Low | Info leak of non-secret metadata; hardening gap | Next regular release |
+These labels help the operator and the maintainers talk about impact. They
+are **not** fix deadlines or a promised response time.
+
+| Severity | Examples |
+| --- | --- |
+| Critical | Secrets vault key leak; remote unauthenticated read of secret values; active exploitation |
+| High | Auth bypass to another tenant’s playbooks; privilege escalation to service role |
+| Medium | Authenticated audit-log injection; CSRF on a state-changing route |
+| Low | Info leak of non-secret metadata; hardening gap |
 
 Statutory **reportability** is not the same as this table. A Medium product
 bug can still be a reportable incident at the customer if it degraded a
@@ -177,9 +183,11 @@ the environment:
 
 ## Reporting data packages
 
-Clocks below follow **418/2024. (XII. 23.) Korm. r. 77. §** and **NIS2
-Art. 23**. They start when the **reporting entity** becomes aware, not when
-a supplier engineer reads Slack. *jogi ellenőrzés szükséges*
+The clocks below are the **operator’s regulatory reporting duties** under
+**418/2024. (XII. 23.) Korm. r. 77. §** and **NIS2 Art. 23**, not a promise
+that maintainers will respond to a GitHub report on those clocks. They
+start when the **reporting entity** (the customer) becomes aware.
+*jogi ellenőrzés szükséges*
 
 Hungarian state bodies file electronically to **NBSZ NKI**
 ([incidens.nki.gov.hu](https://incidens.nki.gov.hu)); if the EIR is
@@ -199,7 +207,7 @@ Deadline: without undue delay, at the latest **24 hours** after awareness
 ```text
 TLP:
 Reporting entity (legal name, tax / org id):
-IBF name and 24/7 contact:
+IBF name and contact:
 Supplier contact (AgentPlaybooks): https://github.com/matebenyovszky/agentplaybooks/security/advisories/new
 Authority / portal: NBSZ NKI / incidens.nki.gov.hu  (or other: ________)
 Time we became aware (UTC):
@@ -278,14 +286,22 @@ Supplier appendix:
 If still ongoing: progress against the 72h plan; why it is not closed.
 ```
 
-### CRA Art. 14 — manufacturer (AgentPlaybooks), not the customer
+### CRA Art. 14 — manufacturer track, not the customer
 
-Use this **in addition to** the customer packages when we are a
-manufacturer and we become aware of an **actively exploited vulnerability**
-in the product, or a **severe incident** affecting product security.
-File via the ENISA Single Reporting Platform to the coordinator CSIRT
-(main EU establishment) and ENISA. Notify users of corrective measures.
+**CRA manufacturer / open-source steward status: open, to be decided.**
+That does not block the operator packages above or GitHub reports.
 *jogi ellenőrzés szükséges*
+
+Use this **in addition to** the customer packages if manufacturer status is
+decided and we become aware of an **actively exploited vulnerability** in
+the product, or a **severe incident** affecting product security. File via
+the ENISA Single Reporting Platform to the coordinator CSIRT (main EU
+establishment) and ENISA. Notify users of corrective measures.
+*jogi ellenőrzés szükséges*
+
+The 24h / 72h / final-report steps in the table are CRA Art. 14 statutory
+duties *if* we are a manufacturer, not a promised response time to
+researchers.
 
 | Step | Actively exploited vulnerability | Severe incident affecting product security |
 | --- | --- | --- |
@@ -296,7 +312,7 @@ File via the ENISA Single Reporting Platform to the coordinator CSIRT
 
 ```text
 TLP:
-Manufacturer (legal name, EU main establishment): TODO(mate) — jogi ellenőrzés szükséges
+Manufacturer (legal name, EU main establishment): open, to be decided — jogi ellenőrzés szükséges
 SRP filing id:
 Product name / version / cli-v* / SBOM:
 Member States where we know the product was made available:
@@ -308,10 +324,12 @@ Sensitivity of this notification:
 ## Tabletop (minimum)
 
 Once per major release, walk a leaked `SECRETS_ENCRYPTION_KEY` or an
-actively exploited dependency CVE through: detect → freeze evidence → 24h
-package in under 24 hours → patch + signed SBOM → customer IBF mock-files
-to NKI. Record gaps (missing export, missing auditor role)
-as product work, not as a passed test.
+actively exploited dependency CVE through: detect → freeze evidence →
+assemble the **operator’s** 24-hour statutory filing package → patch +
+signed SBOM → customer IBF mock-files to NKI. Record gaps (missing export,
+missing auditor role) as product work, not as a passed test. The 24-hour
+step is the operator’s 77. § duty, not a maintainer response promise.
+*jogi ellenőrzés szükséges*
 
 ## References (primary)
 

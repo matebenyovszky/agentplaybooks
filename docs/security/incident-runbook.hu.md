@@ -18,17 +18,17 @@ A runbook két feladatot lát el:
 1. Segíti az **ügyfelet** (a hosztolt vagy self-hosted AgentPlaybooks
    példány üzemeltetőjét, például egy magyar állami szervet) a törvényi
    incidensbejelentés adatcsomagjának összeállításában.
-2. Megmondja az **AgentPlaybooks karbantartóinak**, hogyan támogatjuk az
-   ügyfelet, és hogyan kezeljük a terméksérülékenységeket, ideértve a CRA
-   14. cikkét, ha gyártók vagyunk.
+2. Megmondja a **karbantartóknak**, hogyan támogatjuk az ügyfelet, és
+   hogyan kezeljük a terméksérülékenységeket, ideértve a CRA 14. cikkét,
+   ha később gyártók lennénk.
 
 **Az ügyfél a bejelentésre kötelezett szervezet.** A NIS2 23. cikke és a
 418/2024. (XII. 23.) Korm. rendelet 77. §-a szerint az elektronikus
 információs rendszert üzemeltető szervezet jelent a hatáskörrel rendelkező
 szervnek. Magyar **állami és önkormányzati szervek** esetén ez jellemzően
-az **NBSZ NKI** (incidens.nki.gov.hu; ha a portál nem elérhető, az NKI
-tartalékcsatornát ad meg, például csirt@nki.gov.hu). *jogi ellenőrzés
-szükséges*
+az **NBSZ NKI** ([incidens.nki.gov.hu](https://incidens.nki.gov.hu)). Ha a
+portál nem elérhető, az NKI tartalékcsatornát ad meg ugyanazon a honlapon.
+*jogi ellenőrzés szükséges*
 
 Mi a **beszállító** vagyunk. Az NKI / NIS2 bejelentést nem az ügyfél
 nevében adjuk be. Naplókat, SBOM-ot, javított verziót és kitöltött
@@ -41,7 +41,13 @@ sérülékenységet és a termék biztonságát érintő súlyos incidenst a
 koordinátorként kijelölt CSIRT-nek és az ENISA-nak az egységes bejelentési
 platformon. Az ingyenesen elérhető nyílt forrás más rezsim alá eshet; a
 fizetős pilot vagy támogatás gyártóvá tehet. A 14. cikk szerinti jelentés
-2026. szeptember 11-től alkalmazandó. *jogi ellenőrzés szükséges*
+2026. szeptember 11-től alkalmazandó. **CRA gyártói / nyílt forrású
+steward státusz: nyitott, döntésre vár.** Ez a nyitott tétel nem blokkolja
+az üzemeltetői bejelentést és a GitHub-jelentéseket. *jogi ellenőrzés
+szükséges*
+
+A GitHub privát sérülékenység-bejelentésen érkező jelentéseket a
+karbantartók legjobb tudásuk szerint, erőfeszítés alapon vizsgálják.
 
 A GDPR 33. cikk (72 órás adatvédelmi incidens a felügyeleti hatóságnak) az
 **adatkezelő** kötelezettsége. Self-hosted példánynál általában nem vagyunk
@@ -52,13 +58,11 @@ adatfeldolgozók. *jogi ellenőrzés szükséges*
 | Szerep | Ki | Mit csinál |
 | --- | --- | --- |
 | Ügyfél IBF | Az ügyfél információbiztonságért felelős személye | Dönt a bejelentéskötelességről, beadja az NKI / hatóság felé, birtokolja a törvényi órákat |
-| Ügyfél incidensvezető | Az ügyfél ügyeletes kapcsolattartója | Észlelés, elhárítás a *saját* infrastruktúrán, bizonyíték megőrzése |
+| Ügyfél incidensvezető | Az ügyfél kijelölt kapcsolattartója | Észlelés, elhárítás a *saját* infrastruktúrán, bizonyíték megőrzése |
 | Ügyfél jog / DPO | Ügyfél | NIS2 / Kiberbiztonsági tv. / GDPR besorolás. *jogi ellenőrzés szükséges* |
-| Beszállító PSIRT | AgentPlaybooks karbantartó ([SECURITY.md](../../SECURITY.md)) | Terméktriaázs, javítás, CVE/GHSA, CRA 14. cikk ha gyártók vagyunk, a javított kiadás SBOM-ja |
-| Beszállító mérnök | Aki a javítást szállítja | Reprodukál, javít, `cli-v*` címkét vág, titkot nem ír gitbe vagy jegybe |
+| Karbantartók | Az AgentPlaybooks karbantartói ([SECURITY.md](../../SECURITY.md)) | Erőfeszítés alapú terméktriaázs, javítás, CVE/GHSA, a javított kiadás SBOM-ja; CRA 14. cikk csak ha a gyártói státusz eldől |
+| Aki a javítást szállítja | Egy karbantartó | Reprodukál, javít, `cli-v*` címkét vág, titkot nem ír gitbe vagy jegybe |
 | Auditor (ha elkészül) | Az ügyfél kijelölt, csak olvasó szerepe | `audit_logs` olvasása; ma a nyomvonalat csak a playbook **tulajdonosa** (munkamenet vagy `playbooks:read` felhasználói API-kulcs) olvashatja |
-
-<!-- TODO(mate): nevesíteni a beszállítói PSIRT-gazdát és az ügyeleti rendet. -->
 
 ## Észlelés
 
@@ -93,12 +97,15 @@ tudomásszerzése** igen. *jogi ellenőrzés szükséges*
 
 ### Súlyosság (termék / üzemeltetés)
 
-| Súlyosság | Példák | Beszállítói javítási cél ([SECURITY.md](../../SECURITY.md)) |
-| --- | --- | --- |
-| Kritikus | Vault-kulcs szivárgás; hitelesítés nélküli titokolvasás; aktív kihasználás | 24 órás nyugtázás, javítás 7 napon belül |
-| Magas | Auth-bypass másik tenánsz playbookjaira; service-role jogosultságkiterjesztés | 2 munkanapos nyugtázás, 30 napos javítás |
-| Közepes | Hitelesített auditnapló-injektálás; CSRF állapotváltoztató útvonalon | 90 napos javítás |
-| Alacsony | Nem titok metaadat szivárgása; megerősítési hiány | Következő rendes kiadás |
+Ezek a címkék az üzemeltető és a karbantartók közötti beszélgetést
+segítik. **Nem** javítási határidők, és nem ígért válaszidő.
+
+| Súlyosság | Példák |
+| --- | --- |
+| Kritikus | Vault-kulcs szivárgás; hitelesítés nélküli titokolvasás; aktív kihasználás |
+| Magas | Auth-bypass másik tenánsz playbookjaira; service-role jogosultságkiterjesztés |
+| Közepes | Hitelesített auditnapló-injektálás; CSRF állapotváltoztató útvonalon |
+| Alacsony | Nem titok metaadat szivárgása; megerősítési hiány |
 
 A törvényi **bejelentéskötelesség** nem azonos ezzel a táblázattal. Egy
 közepes termékhiba is bejelentendő incidens lehet az ügyfélnél, ha az
@@ -181,10 +188,12 @@ továbbra is az ügyfél birtokolja:
 
 ## Bejelentési adatcsomagok
 
-Az alábbi órák a **418/2024. (XII. 23.) Korm. r. 77. §**-át és a **NIS2
-23. cikkét** követik. Akkor indulnak, amikor a **bejelentésre kötelezett
-szervezet** tudomást szerez, nem amikor egy beszállítói mérnök elolvassa a
-Slacket. *jogi ellenőrzés szükséges*
+Az alábbi órák az **üzemeltető törvényi bejelentési kötelezettségei** a
+**418/2024. (XII. 23.) Korm. r. 77. §** és a **NIS2 23. cikke** szerint,
+nem ígéret arra, hogy a karbantartók egy GitHub-jelentésre ezeken az
+órákon belül válaszolnak. Akkor indulnak, amikor a **bejelentésre
+kötelezett szervezet** (az ügyfél) tudomást szerez.
+*jogi ellenőrzés szükséges*
 
 Magyar állami szervek elektronikusan az **NBSZ NKI**-nak jelentenek
 ([incidens.nki.gov.hu](https://incidens.nki.gov.hu)); honvédelmi célú EIR
@@ -204,7 +213,7 @@ számított **24 órán** belül (77. § (1) 1.; NIS2 23. cikk (4) a)).
 ```text
 TLP:
 Bejelentő szervezet (jogi név, adó- / org. azonosító):
-IBF neve és 24/7 elérhetősége:
+IBF neve és elérhetősége:
 Beszállítói kapcsolat (AgentPlaybooks): https://github.com/matebenyovszky/agentplaybooks/security/advisories/new
 Hatóság / portál: NBSZ NKI / incidens.nki.gov.hu  (vagy más: ________)
 Tudomásszerzés ideje (UTC):
@@ -284,14 +293,22 @@ Beszállítói függelék:
 Ha még folyamatban: haladás a 72 órás tervhez képest; miért nincs lezárva.
 ```
 
-### CRA 14. cikk — gyártó (AgentPlaybooks), nem az ügyfél
+### CRA 14. cikk — gyártói sáv, nem az ügyfél
 
-Ezt a csomagot az ügyfélcsomagok **mellé** használd, ha gyártók vagyunk, és
-tudomást szerzünk a termékben lévő **aktívan kihasznált sérülékenységről**,
-vagy a termék biztonságát érintő **súlyos incidensről**. Az ENISA egységes
-bejelentési platformján a koordinátor CSIRT-nek (uniós főtelephely) és az
-ENISA-nak. A felhasználókat a javító / enyhítő intézkedésről értesíteni
-kell. *jogi ellenőrzés szükséges*
+**CRA gyártói / nyílt forrású steward státusz: nyitott, döntésre vár.**
+Ez nem blokkolja a fenti üzemeltetői csomagokat és a GitHub-jelentéseket.
+*jogi ellenőrzés szükséges*
+
+Ezt a csomagot az ügyfélcsomagok **mellé** használd, ha a gyártói státusz
+eldőlt, és tudomást szerzünk a termékben lévő **aktívan kihasznált
+sérülékenységről**, vagy a termék biztonságát érintő **súlyos
+incidensről**. Az ENISA egységes bejelentési platformján a koordinátor
+CSIRT-nek (uniós főtelephely) és az ENISA-nak. A felhasználókat a javító /
+enyhítő intézkedésről értesíteni kell. *jogi ellenőrzés szükséges*
+
+A táblázat 24 órás / 72 órás / zárójelentési lépései a CRA 14. cikk
+törvényi kötelezettségei, *ha* gyártók vagyunk, nem ígért válaszidő a
+kutatóknak.
 
 | Lépés | Aktívan kihasznált sérülékenység | A termék biztonságát érintő súlyos incidens |
 | --- | --- | --- |
@@ -302,7 +319,7 @@ kell. *jogi ellenőrzés szükséges*
 
 ```text
 TLP:
-Gyártó (jogi név, uniós főtelephely): TODO(mate) — jogi ellenőrzés szükséges
+Gyártó (jogi név, uniós főtelephely): nyitott, döntésre vár — jogi ellenőrzés szükséges
 SRP-azonosító:
 Termék neve / verzió / cli-v* / SBOM:
 Tagállamok, ahol tudomásunk szerint forgalomba hoztuk:
@@ -315,10 +332,12 @@ A bejelentés érzékenysége:
 
 Minden jelentősebb kiadás után végigvinni egy kiszivárgott
 `SECRETS_ENCRYPTION_KEY` vagy aktívan kihasznált függőségi CVE esetet:
-észlelés → bizonyíték zárolása → 24 órás csomag 24 órán belül → javítás +
-aláírt SBOM → az ügyfél IBF próbabejelentése az NKI felé. A hiányokat
-(nincs export, nincs auditor szerep) termékmunkaként
-rögzíteni, nem sikeres tesztként.
+észlelés → bizonyíték zárolása → az **üzemeltető** 24 órás törvényi
+bejelentési csomagjának összeállítása → javítás + aláírt SBOM → az ügyfél
+IBF próbabejelentése az NKI felé. A hiányokat (nincs export, nincs auditor
+szerep) termékmunkaként rögzíteni, nem sikeres tesztként. A 24 órás lépés
+az üzemeltető 77. § szerinti kötelezettsége, nem karbantartói
+válaszígéret. *jogi ellenőrzés szükséges*
 
 ## Források (elsődleges)
 

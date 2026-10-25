@@ -47,6 +47,9 @@ The only security contact is GitHub private vulnerability reporting:
 That opens a draft [GitHub Security Advisory](https://docs.github.com/en/code-security/security-advisories/working-with-repository-security-advisories/about-repository-security-advisories)
 visible only to maintainers until we publish it. There is no security email.
 
+Reports via GitHub private vulnerability reporting are reviewed by the
+maintainers on a best-effort basis.
+
 ### What to include
 
 - Affected component and version (`cli-v*`, git SHA, npm version, self-host
@@ -61,41 +64,21 @@ visible only to maintainers until we publish it. There is no security email.
 We do not need customer personal data, live credentials, or a full database
 dump.
 
-## Response timelines
+## Operator incident clocks (not a promise to reporters)
 
-These are maintainer targets for this project, not statutory filing deadlines.
-Statutory 24h / 72h / 1-month clocks belong to the **customer as reporting
-entity** (see the [incident runbook](docs/security/incident-runbook.md)).
+The 24-hour early warning, 72-hour incident notification, and one-month
+final report in the [incident runbook](docs/security/incident-runbook.md)
+are the **operator’s** statutory filing steps under 418/2024. (XII. 23.)
+Korm. r. 77. § and NIS2 Art. 23. They are not a promise that maintainers
+will acknowledge or patch a GitHub report on those clocks.
 *jogi ellenőrzés szükséges*
-
-| Step | Target |
-| --- | --- |
-| Acknowledge receipt | 2 business days (24 hours when the report says active exploitation or a secrets-vault compromise) |
-| Initial triage and severity | 5 business days |
-| Status update | At least every 14 days until a fix or a wontfix decision |
-| Fix available (Critical, including active exploitation) | 7 days after triage, or sooner if a customer incident is open |
-| Fix available (High) | 30 days after triage |
-| Fix available (Medium) | 90 days after triage |
-| Fix available (Low) | Next regular release |
-
-If we cannot meet a target we will say so on the private advisory and give a
-revised date.
 
 ## Coordinated disclosure
 
-Default embargo is **90 days** from our acknowledgement, aligned with common
-coordinated-vulnerability-disclosure practice. We may shorten it when:
-
-- we have evidence of active exploitation;
-- a customer incident requires operators to act;
-- the issue is already public.
-
-We may extend it by mutual agreement if a complete fix needs more time and
-there is no evidence of exploitation.
-
-Please do not publish exploit code, secrets, or customer-identifying details.
-A short high-level description after the embargo (or after we publish the
-advisory) is welcome.
+We prefer coordinated disclosure: please do not publish exploit code,
+secrets, or customer-identifying details before we publish an advisory, or
+before we agree that operators need to act. We may publish sooner if the
+issue is already public or is being actively exploited.
 
 We credit reporters in the advisory unless they ask otherwise.
 
@@ -156,3 +139,9 @@ Self-hosted operators remain responsible for their identity provider, network,
 backups, and the statutory incident filing to NBSZ NKI (or their competent
 authority). We help assemble evidence; we do not file that report for them.
 *jogi ellenőrzés szükséges*
+
+## Open items
+
+- CRA manufacturer / open-source steward status: **open, to be decided**.
+  This does not block vulnerability reporting or operator incident filing.
+  *jogi ellenőrzés szükséges*

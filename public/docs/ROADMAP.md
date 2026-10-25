@@ -508,7 +508,6 @@ Have ideas? Found something missing?
 
 - 💬 [GitHub Discussions](https://github.com/matebenyovszky/agentplaybooks/discussions)
 - 🐛 [Report Issues](https://github.com/matebenyovszky/agentplaybooks/issues)
-- 📧 [Email](mailto:hello@agentplaybooks.ai)
 
 ---
 
