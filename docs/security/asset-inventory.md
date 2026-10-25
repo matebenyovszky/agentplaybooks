@@ -17,6 +17,7 @@ Hungarian: [asset-inventory.hu.md](./asset-inventory.hu.md). Whitepaper: [whitep
 | Hono API | Same process | `src/app/api/` | — | REST / MCP / OpenAPI |
 | Non-root user | Image | `Dockerfile` `nextjs` uid 1001 | — | `NEXT_TELEMETRY_DISABLED=1`, healthcheck `wget` `:3000` |
 | Static docs | Image layer | `public/` | — | Worker builds pack this differently (Cloudflare) |
+| On-prem backup / restore | Scripts + runbook | [`scripts/self-host/`](../../scripts/self-host/), [`docs/self-host/backup-restore.md`](../self-host/backup-restore.md) | Encrypted archive in `BACKUP_DIR` | **Done on `main`:** [#203](https://github.com/matebenyovszky/agentplaybooks/pull/203). Master key is never in the archive |
 
 The script always prints declared compose; without Docker use `--declared-only`.
 
@@ -51,7 +52,8 @@ Schema: [`supabase/schema.sql`](../../supabase/schema.sql) (new project), [`supa
 
 | Name | Where | Classification | Rotation / revocation |
 |------|-------|----------------|------------------------|
-| `SECRETS_ENCRYPTION_KEY` | App env, 64 hex | Vault master key; no KMS | Rotation without re-encryption = data loss |
+| `SECRETS_ENCRYPTION_KEY` | App env, 64 hex | Vault master key; no KMS; **never in the backup archive** | Rotation without re-encryption = data loss |
+| `BACKUP_ENCRYPTION_PASSPHRASE` | Operator env for `backup.sh` | Archive encryption; must not equal the vault master key | Rotate independently of `SECRETS_ENCRYPTION_KEY` |
 | `SUPABASE_SERVICE_ROLE_KEY` | App env | Bypasses RLS; never to the client | Customer Auth/JWT secret rotation |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Build + runtime | Public anon key; the browser sees it | Rebuild required (Next inlines `NEXT_PUBLIC_*`) |
 | `NEXT_PUBLIC_SUPABASE_URL` | Build + runtime | Browser-reachable URL | Rebuild |

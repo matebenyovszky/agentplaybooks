@@ -1,6 +1,6 @@
 # AgentPlaybooks biztonsági fehérkönyv
 
-**Verzió:** 2026-10-25 · **Forrás:** a repó `main` ágának akkor aktuális kódja (benne a merge-elt [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200), [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201), [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204), [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205)). A maradék párhuzamos PR-ek: **Folyamatban / In progress**, merge előtt nem számítanak késznek.  
+**Verzió:** 2026-10-25 · **Forrás:** a repó `main` ágának akkor aktuális kódja (benne a merge-elt [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200), [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201), [#203](https://github.com/matebenyovszky/agentplaybooks/pull/203), [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204), [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205)). A maradék párhuzamos PR-ek: **Folyamatban / In progress**, merge előtt nem számítanak késznek.  
 **Elsődleges nyelv:** magyar. Angol: [whitepaper.md](./whitepaper.md).
 
 > **Jogi ellenőrzés szükséges.** Az alábbi hatály-, NIS2-, MK rendeleti, GDPR- és gyártói-státusz értelmezések nem minősülnek jogi tanácsnak. Éles bevezetés előtt az ügyfél jogászának és IBF-jének kell jóváhagynia.
@@ -175,7 +175,7 @@ HTTP-fejlécek (HSTS, `X-Frame-Options: DENY`, nosniff, Permissions-Policy): [`s
 | CycloneDX SBOM | Igen, a `main`-en | [`.github/workflows/sbom.yml`](../../.github/workflows/sbom.yml), [`docs/security/supply-chain.md`](./supply-chain.md). **Kész a `main`-en:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205) |
 | SBOM-blob cosign `cli-v*` tageken | Igen, a `main`-en | [`docs/security/supply-chain.md`](./supply-chain.md). Nincs aláírt konténer-**registry** publikálás |
 | `SECURITY.md`, incidens-runbook | Igen, a `main`-en | [`SECURITY.md`](../../SECURITY.md), [`docs/security/incident-runbook.md`](./incident-runbook.md). **Kész a `main`-en:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205). A PSIRT postaláda még helyőrző |
-| Automatizált titkosított DB-mentés / DR-runbook | Nem a `main`-en (`supabase db dump` egy sora) | **Folyamatban / In progress** (külön PR nyitás alatt; link még nincs) |
+| Titkosított helyszíni mentés / restore + üres-gép drill | Igen, a `main`-en | [`docs/self-host/backup-restore.md`](../self-host/backup-restore.md), [`scripts/self-host/backup.sh`](../../scripts/self-host/backup.sh), [`.github/workflows/self-host-restore-drill.yml`](../../.github/workflows/self-host-restore-drill.yml). **Kész a `main`-en:** [#203](https://github.com/matebenyovszky/agentplaybooks/pull/203). A mesterkulcs külön tárolt; a drill hash-lánc ellenőzése a [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202) megérkezéséig feltételes |
 
 A lockfile (`package-lock.json`, `packages/cli/package-lock.json`) a reprodukálható telepítés bemenete.
 
@@ -190,7 +190,7 @@ A lockfile (`package-lock.json`, `packages/cli/package-lock.json`) a reprodukál
 5. **Nincs SAML SSO.** OIDC/OAuth a GoTrue-n keresztül, ha az ügyfél bekapcsolja.
 6. **Audit: nincs export, megőrzés, hash-lánc a `main`-en.** Skills / memória / vászon írások nincsenek naplózva. **Folyamatban / In progress** (export, syslog/SIEM, megőrzés, hash-lánc): [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202).
 7. **A `SECURITY.md` és a 24/72 óra / 1 hónap incidens-runbook a `main`-en van.** **Kész a `main`-en:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205) — [`SECURITY.md`](../../SECURITY.md), [`docs/security/incident-runbook.md`](./incident-runbook.md). A PSIRT postaláda még helyőrző. Az ügyfél NKI-bejelentése (418/2024. 77. §) saját rend — **jogi ellenőrzés szükséges**.
-8. **Nincs mentés- és DR-runbook.** `supabase db dump`; playbook snapshotok nem tartalmazzák a titokértékeket. **Folyamatban / In progress:** külön PR nyitás alatt; link még nincs.
+8. **A helyszíni mentés / restore-runbook és az üres-gép drill a `main`-en van.** **Kész a `main`-en:** [#203](https://github.com/matebenyovszky/agentplaybooks/pull/203) — [`docs/self-host/backup-restore.md`](../self-host/backup-restore.md), [`scripts/self-host/backup.sh`](../../scripts/self-host/backup.sh), [`scripts/self-host/restore-drill.sh`](../../scripts/self-host/restore-drill.sh), [`.github/workflows/self-host-restore-drill.yml`](../../.github/workflows/self-host-restore-drill.yml). Az archívum AES-256-CBC; a `SECRETS_ENCRYPTION_KEY` nincs az archívumban. A playbook snapshotok továbbra sem tartalmazzák a széf értékeit. A drill hash-lánc ellenőzése a [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202) megérkezéséig opcionális.
 9. **A CodeQL, a CycloneDX SBOM és az SBOM-blob cosign a `main`-en van.** **Kész a `main`-en:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205) — [`.github/workflows/codeql.yml`](../../.github/workflows/codeql.yml), [`.github/workflows/sbom.yml`](../../.github/workflows/sbom.yml), [`docs/security/supply-chain.md`](./supply-chain.md). Dependabot + production npm audit + CLI provenance megmarad. Aláírt konténer-**registry** publikálás továbbra sincs.
 10. **A self-host mTLS trusted proxy-n a `main`-en van.** **Kész a `main`-en:** [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201) — `MTLS_MODE=proxy`, [`public/docs/self-hosted-mtls.md`](../../public/docs/self-hosted-mtls.md), [`deploy/self-host/docker-compose.mtls.yml`](../../deploy/self-host/docker-compose.mtls.yml). A Node továbbra sem terminál TLS-t; terminátor nélkül az alapértelmezés fail-closed.
 11. **Az izolált no-egress CI bizonyíték a `main`-en van.** **Kész a `main`-en:** fontok [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200) (`next/font/local`); secrets-flow CI [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204) — [`.github/workflows/no-egress.yml`](../../.github/workflows/no-egress.yml), [`deploy/airgap/`](../../deploy/airgap/). A produkciós compose továbbra is csak az `app`. Az `npm ci` és az alapimage-húzás az izolálás előtt történik. A `use_secret` pinelés nélkül kilép a hálózatról.
@@ -207,7 +207,7 @@ A lockfile (`package-lock.json`, `packages/cli/package-lock.json`) a reprodukál
 | Osztályba sorolás, kockázatelemzés, MK intézkedésválasztás | Sablon | IBF — **jogi ellenőrzés szükséges** |
 | Entra SSO + MFA, hálózat, TLS-terminálás, fizikai védelem | Konfigpontok | Üzemeltetés |
 | Naplómegőrzés, SIEM, incidensbejelentés NKI felé | Audit API + [`docs/security/incident-runbook.md`](./incident-runbook.md) | 24 / 72 óra / 1 hónap rend |
-| Mentés, RPO/RTO | `db dump` + snapshotok | Restore drill |
+| Mentés, RPO/RTO | [`docs/self-host/backup-restore.md`](../self-host/backup-restore.md) + titkosított archívum + CI drill | Ütemezés, offsite másolat, mesterkulcs-őrzés, mért RTO |
 | GDPR adatkezelő / adatfeldolgozó | Self-hoston általában az ügyfél a kezelő — **jogi ellenőrzés szükséges** | DPIA, ha kell |
 
 Részletes leképezés: [risk-assessment.hu.md](./risk-assessment.hu.md).
@@ -221,6 +221,6 @@ Részletes leképezés: [risk-assessment.hu.md](./risk-assessment.hu.md).
 | Authz | `src/app/api/_shared/guards.ts`, `src/app/api/_shared/permissions.ts`, `src/app/api/_shared/auth.ts`, `permissions.md` |
 | Audit | `src/app/api/_shared/audit.ts`, `src/app/api/playbooks/[guid]/audit/app.ts`, `supabase/migrations/20260819_audit_logs_secrets.sql` |
 | Lejárat / SSRF | `src/lib/secret-expiry.ts`, `src/lib/secret-destinations.ts`, `src/lib/mcp/federation.ts` |
-| Self-host | `docker-compose.yml`, `Dockerfile`, `public/docs/self-hosting.md`, `src/app/fonts/Geist-Variable.woff2`, `deploy/airgap/`, `.github/workflows/no-egress.yml` |
+| Self-host | `docker-compose.yml`, `Dockerfile`, `public/docs/self-hosting.md`, `src/app/fonts/Geist-Variable.woff2`, `deploy/airgap/`, `.github/workflows/no-egress.yml`, `docs/self-host/backup-restore.md`, `scripts/self-host/backup.sh`, `.github/workflows/self-host-restore-drill.yml` |
 | SDLC | `.github/dependabot.yml`, `.github/workflows/ci.yml`, `.github/workflows/publish-cli.yml`, `.github/workflows/codeql.yml`, `.github/workflows/sbom.yml`, `.github/workflows/no-egress.yml`, `scripts/audit-production.mjs`, `SECURITY.md`, `docs/security/incident-runbook.md`, `docs/security/supply-chain.md` |
 | Élő leltár | `scripts/list-self-host-stack.mjs` |

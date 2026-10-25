@@ -4,7 +4,7 @@
 
 **Audience:** the customer's information-security officer (IBF), risk, legal, and operations teams. Written for a Hungarian public-sector supplier assessment and EIR security classification.
 
-**Verified against source:** 2026-10-25, on the `main` branch as of that date (includes merged [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200), [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201), [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204), [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205)). Parallel open PRs that are not on `main` yet are marked **Folyamatban / In progress** on the gap list.
+**Verified against source:** 2026-10-25, on the `main` branch as of that date (includes merged [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200), [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201), [#203](https://github.com/matebenyovszky/agentplaybooks/pull/203), [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204), [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205)). Parallel open PRs that are not on `main` yet are marked **Folyamatban / In progress** on the gap list.
 
 > **jogi ellenőrzés szükséges.** This pack is not legal advice, not a certification, and not a substitute for the customer's own risk analysis or control selection under 7/2024. (VI. 24.) MK rendelet. Every note on scope, classification, responsibility split, or legal interpretation must be approved by the customer's counsel and IBF before production use.
 
@@ -18,6 +18,7 @@
 | Spreadsheet export | [risk-assessment.csv](./risk-assessment.csv) (bilingual) | same file |
 | Incident runbook (on `main` via [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205)) | [incident-runbook.hu.md](./incident-runbook.hu.md) | [incident-runbook.md](./incident-runbook.md) |
 | Supply-chain artifacts (on `main` via [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205)) | — | [supply-chain.md](./supply-chain.md) |
+| On-prem backup / restore (on `main` via [#203](https://github.com/matebenyovszky/agentplaybooks/pull/203)) | [backup-restore.hu.md](../self-host/backup-restore.hu.md) | [backup-restore.md](../self-host/backup-restore.md) |
 
 Live stack listing (`docker compose ps` / `images` / ports):
 
@@ -46,7 +47,7 @@ This pack **does not quote or invent** 7/2024 MK rendelet control IDs. Controls 
 | GDPR (EU) 2016/679 | Security of processing, processor status — [EUR-Lex](https://eur-lex.europa.eu/eli/reg/2016/679/oj) |
 | EiR guides (NBSZ NKI) | Practical help for the MK decree — [nki.gov.hu](https://nki.gov.hu/it-biztonsag/kiadvanyok/segedletek/eir-utmutato/) |
 
-Related operations guide: [`public/docs/self-hosting.md`](../../public/docs/self-hosting.md). Self-hosted mTLS: [`public/docs/self-hosted-mtls.md`](../../public/docs/self-hosted-mtls.md). Vulnerability policy: [`SECURITY.md`](../../SECURITY.md). Short website summary: [`public/docs/security.md`](../../public/docs/security.md) / [`public/docs/security.hu.md`](../../public/docs/security.hu.md).
+Related operations guide: [`public/docs/self-hosting.md`](../../public/docs/self-hosting.md). Self-hosted mTLS: [`public/docs/self-hosted-mtls.md`](../../public/docs/self-hosted-mtls.md). Backup/restore: [`docs/self-host/backup-restore.md`](../self-host/backup-restore.md). Vulnerability policy: [`SECURITY.md`](../../SECURITY.md). Short website summary: [`public/docs/security.md`](../../public/docs/security.md) / [`public/docs/security.hu.md`](../../public/docs/security.hu.md).
 
 ## Done on `main` (merged)
 
@@ -57,6 +58,7 @@ These gaps closed on `main`. Whitepaper rows keep the merged PR links.
 | 10 self-host mTLS via trusted proxy (`MTLS_MODE=proxy`) | [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201) |
 | 11 build-time Google Fonts (`next/font/local`) | [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200) |
 | 11 isolated no-egress CI (`deploy/airgap/`) | [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204) |
+| 8 on-prem backup / restore runbook + empty-machine drill | [#203](https://github.com/matebenyovszky/agentplaybooks/pull/203) |
 | 7 `SECURITY.md` / incident runbook; 9 CodeQL, CycloneDX SBOM, cosign of SBOM blobs | [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205) |
 
 ## Parallel PRs (not on `main`)
@@ -66,7 +68,6 @@ Code claims follow `main`. These gaps are still open; after they merge, flip the
 | Gap | Folyamatban / In progress |
 |-----|---------------------------|
 | 4 auditor role; 6 audit export / syslog / SIEM / retention / hash chain | [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202) |
-| 8 backup/DR runbook | a separate PR is being opened; no link yet |
 
 ## What this pack does not claim
 

@@ -63,5 +63,6 @@ describe("security documentation pack", () => {
     expect(whitepaper).toMatch(/pull\/200/);
     expect(whitepaper).toMatch(/pull\/204/);
     expect(whitepaper).toMatch(/pull\/205/);
+    expect(whitepaper).toMatch(/pull\/203/);
   });
 });

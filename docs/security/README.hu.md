@@ -4,7 +4,7 @@
 
 **Közönség:** ügyfél információbiztonságért felelős személye (IBF), kockázatkezelés, jog, üzemeltetés. Készült magyar állami / önkormányzati beszállítói értékeléshez és EIR biztonsági osztályba soroláshoz.
 
-**Ellenőrzés dátuma:** 2026-10-25. A kódbeli állítások a `main` ág akkor aktuális forrására vonatkoznak (benne a merge-elt [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200), [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201), [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204), [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205)). Párhuzamos, még nem merge-elt PR-ek a gap listában **Folyamatban / In progress** jelöléssel szerepelnek.
+**Ellenőrzés dátuma:** 2026-10-25. A kódbeli állítások a `main` ág akkor aktuális forrására vonatkoznak (benne a merge-elt [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200), [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201), [#203](https://github.com/matebenyovszky/agentplaybooks/pull/203), [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204), [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205)). Párhuzamos, még nem merge-elt PR-ek a gap listában **Folyamatban / In progress** jelöléssel szerepelnek.
 
 > **Jogi ellenőrzés szükséges.** Ez a csomag nem jogi tanács, nem tanúsítvány, és nem helyettesíti az ügyfél saját kockázatelemzését vagy a 7/2024. (VI. 24.) MK rendelet szerinti védelmi intézkedés-kiválasztást. Minden hatály-, osztályba sorolási, felelősségmegosztási és jogértelmezési megjegyzést az ügyfél jogászának és IBF-jének jóvá kell hagynia éles bevezetés előtt.
 
@@ -18,6 +18,7 @@
 | Táblázatkezelő-export | [risk-assessment.csv](./risk-assessment.csv) (kétnyelvű) | ugyanaz a fájl |
 | Incidens-runbook (`main`-en [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205) óta) | [incident-runbook.hu.md](./incident-runbook.hu.md) | [incident-runbook.md](./incident-runbook.md) |
 | Ellátási lánc artifactek (`main`-en [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205) óta) | — | [supply-chain.md](./supply-chain.md) |
+| Helyszíni mentés / visszaállítás (`main`-en [#203](https://github.com/matebenyovszky/agentplaybooks/pull/203) óta) | [backup-restore.hu.md](../self-host/backup-restore.hu.md) | [backup-restore.md](../self-host/backup-restore.md) |
 
 Élő stack-lista (Docker Compose `ps` / `images` / portok):
 
@@ -46,7 +47,7 @@ A csomag **nem idéz és nem talál ki** 7/2024. MK rendeleti tétel-azonosító
 | GDPR (EU) 2016/679 | Adatbiztonság, adatfeldolgozói státusz — [EUR-Lex](https://eur-lex.europa.eu/eli/reg/2016/679/oj) |
 | EiR útmutatók (NBSZ NKI) | Gyakorlati segítség a 7/2024. MK rendelethez — [nki.gov.hu](https://nki.gov.hu/it-biztonsag/kiadvanyok/segedletek/eir-utmutato/) |
 
-Kapcsolódó üzemeltetési útmutató: [`public/docs/self-hosting.md`](../../public/docs/self-hosting.md). Self-host mTLS: [`public/docs/self-hosted-mtls.md`](../../public/docs/self-hosted-mtls.md). Sérülékenység-politika: [`SECURITY.md`](../../SECURITY.md). Webes rövid összefoglaló: [`public/docs/security.md`](../../public/docs/security.md) / [`public/docs/security.hu.md`](../../public/docs/security.hu.md).
+Kapcsolódó üzemeltetési útmutató: [`public/docs/self-hosting.md`](../../public/docs/self-hosting.md). Self-host mTLS: [`public/docs/self-hosted-mtls.md`](../../public/docs/self-hosted-mtls.md). Mentés/visszaállítás: [`docs/self-host/backup-restore.md`](../self-host/backup-restore.md). Sérülékenység-politika: [`SECURITY.md`](../../SECURITY.md). Webes rövid összefoglaló: [`public/docs/security.md`](../../public/docs/security.md) / [`public/docs/security.hu.md`](../../public/docs/security.hu.md).
 
 ## Kész a `main`-en (merge-elve)
 
@@ -57,6 +58,7 @@ Ezek a gapek a `main`-en záródtak. A fehérkönyv sorai a merge-elt PR-ekre hi
 | 10 self-host mTLS trusted proxy-n (`MTLS_MODE=proxy`) | [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201) |
 | 11 build-kori Google Fonts (`next/font/local`) | [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200) |
 | 11 izolált no-egress CI (`deploy/airgap/`) | [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204) |
+| 8 helyszíni mentés / restore-runbook + üres-gép drill | [#203](https://github.com/matebenyovszky/agentplaybooks/pull/203) |
 | 7 `SECURITY.md` / incidens-runbook; 9 CodeQL, CycloneDX SBOM, SBOM-blob cosign | [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205) |
 
 ## Párhuzamos PR-ek (nincsenek a `main`-en)
@@ -66,7 +68,6 @@ A kódállítás a `main`. Az alábbi gapek még nyitottak; merge után a fehér
 | Gap | Folyamatban / In progress |
 |-----|---------------------------|
 | 4 auditor szerep; 6 audit export / syslog / SIEM / megőrzés / hash-lánc | [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202) |
-| 8 mentés/DR-runbook | külön PR nyitás alatt; link még nincs |
 
 ## Amit ez a csomag nem állít
 

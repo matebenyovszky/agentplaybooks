@@ -1,6 +1,6 @@
 # AgentPlaybooks security whitepaper
 
-**Version:** 2026-10-25 · **Source:** the `main` branch as of that date (includes merged [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200), [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201), [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204), [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205)). Remaining parallel PRs are **Folyamatban / In progress** and do not count as shipped until they merge.  
+**Version:** 2026-10-25 · **Source:** the `main` branch as of that date (includes merged [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200), [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201), [#203](https://github.com/matebenyovszky/agentplaybooks/pull/203), [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204), [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205)). Remaining parallel PRs are **Folyamatban / In progress** and do not count as shipped until they merge.  
 **Language of record for the assessment:** Hungarian ([whitepaper.hu.md](./whitepaper.hu.md)).
 
 > **jogi ellenőrzés szükséges.** Notes below on legal scope, NIS2, the MK decree, GDPR, and manufacturer status are not legal advice. The customer's counsel and IBF must approve them before production use.
@@ -175,7 +175,7 @@ HTTP headers (HSTS, `X-Frame-Options: DENY`, nosniff, Permissions-Policy): [`src
 | CycloneDX SBOM | Yes on `main` | [`.github/workflows/sbom.yml`](../../.github/workflows/sbom.yml), [`docs/security/supply-chain.md`](./supply-chain.md). **Done on `main`:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205) |
 | Cosign of SBOM blobs on `cli-v*` tags | Yes on `main` | [`docs/security/supply-chain.md`](./supply-chain.md). No signed container **registry** publish |
 | `SECURITY.md`, incident runbook | Yes on `main` | [`SECURITY.md`](../../SECURITY.md), [`docs/security/incident-runbook.md`](./incident-runbook.md). **Done on `main`:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205). PSIRT mailbox is still a placeholder |
-| Automated encrypted DB backup / DR runbook | Not on `main` (one-liner `supabase db dump`) | **Folyamatban / In progress** (separate PR being opened; no link yet) |
+| Encrypted on-prem backup / restore + empty-machine drill | Yes on `main` | [`docs/self-host/backup-restore.md`](../self-host/backup-restore.md), [`scripts/self-host/backup.sh`](../../scripts/self-host/backup.sh), [`.github/workflows/self-host-restore-drill.yml`](../../.github/workflows/self-host-restore-drill.yml). **Done on `main`:** [#203](https://github.com/matebenyovszky/agentplaybooks/pull/203). Master key is still stored separately; hash-chain verify in the drill is conditional until [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202) |
 
 Lockfiles (`package-lock.json`, `packages/cli/package-lock.json`) are the reproducible-install input.
 
@@ -190,7 +190,7 @@ Honest list for the supplier assessment. Status follows `main` as of 2026-10-25.
 5. **No SAML SSO.** OIDC/OAuth via GoTrue if the customer enables it.
 6. **Audit: no export, retention, or hash chain on `main`.** Skills / memory / canvas writes are not logged. **Folyamatban / In progress** (export, syslog/SIEM, retention, hash chain): [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202).
 7. **`SECURITY.md` and 24/72h / 1-month incident runbook are on `main`.** **Done on `main`:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205) — [`SECURITY.md`](../../SECURITY.md), [`docs/security/incident-runbook.md`](./incident-runbook.md). The PSIRT mailbox is still a placeholder. NKI notification (418/2024. § 77) remains the customer's process — **jogi ellenőrzés szükséges**.
-8. **No backup and DR runbook.** `supabase db dump`; playbook snapshots do not include secret values. **Folyamatban / In progress:** a separate PR is being opened; no link yet.
+8. **On-prem backup / restore runbook and empty-machine drill are on `main`.** **Done on `main`:** [#203](https://github.com/matebenyovszky/agentplaybooks/pull/203) — [`docs/self-host/backup-restore.md`](../self-host/backup-restore.md), [`scripts/self-host/backup.sh`](../../scripts/self-host/backup.sh), [`scripts/self-host/restore-drill.sh`](../../scripts/self-host/restore-drill.sh), [`.github/workflows/self-host-restore-drill.yml`](../../.github/workflows/self-host-restore-drill.yml). Archives are AES-256-CBC; `SECRETS_ENCRYPTION_KEY` is never in the archive. Playbook snapshots still do not include vault values. Hash-chain verify in the drill stays optional until [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202).
 9. **CodeQL, CycloneDX SBOMs, and cosign of SBOM blobs are on `main`.** **Done on `main`:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205) — [`.github/workflows/codeql.yml`](../../.github/workflows/codeql.yml), [`.github/workflows/sbom.yml`](../../.github/workflows/sbom.yml), [`docs/security/supply-chain.md`](./supply-chain.md). Dependabot + production npm audit + CLI provenance remain. There is still no signed container **registry** publish.
 10. **Self-host mTLS via trusted proxy is on `main`.** **Done on `main`:** [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201) — `MTLS_MODE=proxy`, [`public/docs/self-hosted-mtls.md`](../../public/docs/self-hosted-mtls.md), [`deploy/self-host/docker-compose.mtls.yml`](../../deploy/self-host/docker-compose.mtls.yml). Node still does not terminate TLS; without a terminator the default stays fail-closed.
 11. **Isolated no-egress CI evidence is on `main`.** **Done on `main`:** fonts [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200) (`next/font/local`); secrets-flow CI [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204) — [`.github/workflows/no-egress.yml`](../../.github/workflows/no-egress.yml), [`deploy/airgap/`](../../deploy/airgap/). Production compose is still app-only. `npm ci` and base-image pulls happen before isolation. `use_secret` still leaves the network unless destinations are pinned.
@@ -207,7 +207,7 @@ Honest list for the supplier assessment. Status follows `main` as of 2026-10-25.
 | Classification, risk analysis, MK control selection | Template | IBF — **jogi ellenőrzés szükséges** |
 | Entra SSO + MFA, network, TLS termination, physical protection | Config hooks | Operations |
 | Log retention, SIEM, NKI incident reporting | Audit API + [`docs/security/incident-runbook.md`](./incident-runbook.md) | 24 / 72 h / 1 month process |
-| Backup, RPO/RTO | `db dump` + snapshots | Restore drill |
+| Backup, RPO/RTO | [`docs/self-host/backup-restore.md`](../self-host/backup-restore.md) + encrypted archives + CI drill | Schedule, offsite copy, master-key custody, measured RTO |
 | GDPR controller / processor | On self-host the customer is generally the controller — **jogi ellenőrzés szükséges** | DPIA if required |
 
 Detailed mapping: [risk-assessment.md](./risk-assessment.md).
@@ -221,6 +221,6 @@ Detailed mapping: [risk-assessment.md](./risk-assessment.md).
 | Authz | `src/app/api/_shared/guards.ts`, `src/app/api/_shared/permissions.ts`, `src/app/api/_shared/auth.ts`, `permissions.md` |
 | Audit | `src/app/api/_shared/audit.ts`, `src/app/api/playbooks/[guid]/audit/app.ts`, `supabase/migrations/20260819_audit_logs_secrets.sql` |
 | Expiry / SSRF | `src/lib/secret-expiry.ts`, `src/lib/secret-destinations.ts`, `src/lib/mcp/federation.ts` |
-| Self-host | `docker-compose.yml`, `Dockerfile`, `public/docs/self-hosting.md`, `src/app/fonts/Geist-Variable.woff2`, `deploy/airgap/`, `.github/workflows/no-egress.yml` |
+| Self-host | `docker-compose.yml`, `Dockerfile`, `public/docs/self-hosting.md`, `src/app/fonts/Geist-Variable.woff2`, `deploy/airgap/`, `.github/workflows/no-egress.yml`, `docs/self-host/backup-restore.md`, `scripts/self-host/backup.sh`, `.github/workflows/self-host-restore-drill.yml` |
 | SDLC | `.github/dependabot.yml`, `.github/workflows/ci.yml`, `.github/workflows/publish-cli.yml`, `.github/workflows/codeql.yml`, `.github/workflows/sbom.yml`, `.github/workflows/no-egress.yml`, `scripts/audit-production.mjs`, `SECURITY.md`, `docs/security/incident-runbook.md`, `docs/security/supply-chain.md` |
 | Live inventory | `scripts/list-self-host-stack.mjs` |

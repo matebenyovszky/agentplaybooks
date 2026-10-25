@@ -35,7 +35,7 @@ Every CSV row sets `legal_flag` to `jogi ellenőrzés szükséges`.
 | RA | Risk Assessment | 21(2)(a) | Template + honest gaps; no automated engine | Annex 3, control selection | Completed CSV + IBF signature | partial |
 | SC | System and Communications Protection | 21(2)(h) | AES-256-GCM, HKDF, SSRF, `allowed_hosts`. **No KMS/HSM, no re-encryption.** Self-host mTLS via trusted proxy. **Done on `main`:** [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201) | HTTPS proxy, isolation, KMS decision | `crypto.test.ts`; proxy to link-local 400; `mtls.test.ts` | partial |
 | SI | System and Information Integrity | 21(2)(e) | Dependabot, `npm audit:production`, CI tests, CodeQL, CycloneDX SBOM, cosign of SBOM blobs. **Done on `main`:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205). No signed container registry; no in-app hash chain | Patch cadence, extra scanners | CI verify; audit:production; CodeQL; `supply-chain.md` | partial |
-| CP | Contingency Planning | 21(2)(c) | `supabase db dump`; snapshots are **not** vault values. **No DR runbook on `main`.** **Folyamatban / In progress:** separate PR being opened; no link yet | Backups, restore drill, RPO/RTO, master key | Restore onto empty machine | partial |
+| CP | Contingency Planning | 21(2)(c) | Encrypted on-prem backup/restore runbook + empty-machine CI drill. Snapshots are **not** vault values. **Done on `main`:** [#203](https://github.com/matebenyovszky/agentplaybooks/pull/203) | Schedule, offsite copy, master-key custody, RPO/RTO targets | `restore-drill.sh`; `.github/workflows/self-host-restore-drill.yml` | partial |
 | SA | System and Services Acquisition | 21(2)(d),(e); CRA? | MIT source, CI, CLI provenance, CycloneDX SBOM on `cli-v*` tags. **Done on `main`:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205). No signed container registry | Licence, CRA manufacturer status | `publish-cli.yml`; `sbom.yml`; this pack | partial |
 | SR | Supply Chain Risk Management | 21(2)(d), 21(3) | Lockfile, Dependabot, CLI provenance, CycloneDX + cosign of SBOM blobs. **Done on `main`:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205). No signed container registry | Image pin, CVEs, compare SBOM to running images | `npm ci`; inventory images; `cosign verify-blob` | partial |
 | AT | Awareness and Training | 21(2)(g) | Operator docs. No in-app training | Role-based training, evidence | Customer records | customer |
@@ -55,7 +55,7 @@ Evidence from the supplier-assessment requirement table, aligned to **today’s*
 
 1. Unit/integration in CI: crypto, expiry, `allowed_hosts`, RBAC — **present**. Hash-chain, SIEM export, auditor role — **absent on `main`** (**Folyamatban / In progress:** [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202)).
 2. E2E on an isolated network, zero egress at runtime — **on `main`**. Fonts no longer fetch at build. **Done on `main`:** fonts [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200); isolated CI [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204) (`.github/workflows/no-egress.yml`).
-3. Restore drill — customer exercise; no product backup/DR runbook on `main`. **Folyamatban / In progress:** a separate PR is being opened; no link yet.
+3. Restore drill — product empty-machine drill is on `main`. **Done on `main`:** [#203](https://github.com/matebenyovszky/agentplaybooks/pull/203). Customer still owns schedule, offsite copy, and master-key custody.
 4. Incident tabletop — customer; `SECURITY.md` + incident runbook are on `main`. **Done on `main`:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205).
 5. CVE process: Dependabot → patch → CLI provenance + CodeQL + signed CycloneDX SBOM on `cli-v*` tags. **Done on `main`:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205). Signed container registry publish is still absent.
 6. Pentest — not in this pack.
@@ -75,4 +75,7 @@ Evidence from the supplier-assessment requirement table, aligned to **today’s*
 - [`public/docs/self-hosted-mtls.md`](../../public/docs/self-hosted-mtls.md)
 - [`.github/workflows/no-egress.yml`](../../.github/workflows/no-egress.yml)
 - [`deploy/airgap/`](../../deploy/airgap/)
+- [`docs/self-host/backup-restore.md`](../self-host/backup-restore.md)
+- [`scripts/self-host/backup.sh`](../../scripts/self-host/backup.sh)
+- [`.github/workflows/self-host-restore-drill.yml`](../../.github/workflows/self-host-restore-drill.yml)
 - [`scripts/list-self-host-stack.mjs`](../../scripts/list-self-host-stack.mjs)

@@ -35,7 +35,7 @@ Minden CSV-sor `legal_flag` mezője: `jogi ellenőrzés szükséges`.
 | RA | Kockázatelemzés | 21(2)(a) | Sablon + őszinte gap lista; nincs automatikus motor | 3. melléklet, intézkedésválasztás | Kitöltött CSV + IBF aláírás | partial |
 | SC | Kommunikációvédelem | 21(2)(h) | AES-256-GCM, HKDF, SSRF, `allowed_hosts`. **Nincs KMS/HSM, nincs re-encryption.** Self-host mTLS trusted proxy-n. **Kész a `main`-en:** [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201) | HTTPS proxy, izoláció, KMS döntés | `crypto.test.ts`; proxy a link-localra 400; `mtls.test.ts` | partial |
 | SI | Integritás | 21(2)(e) | Dependabot, `npm audit:production`, CI teszt, CodeQL, CycloneDX SBOM, SBOM-blob cosign. **Kész a `main`-en:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205). Nincs aláírt konténer-registry; nincs alkalmazásbeli hash-lánc | Javítási ritmus, extra scanner | CI verify; audit:production; CodeQL; `supply-chain.md` | partial |
-| CP | Üzletmenet-folytonosság | 21(2)(c) | `supabase db dump`; snapshot **nem** vault-érték. **Nincs DR-runbook a `main`-en.** **Folyamatban / In progress:** külön PR nyitás alatt; link még nincs | Mentés, restore drill, RPO/RTO, mesterkulcs | Restore üres gépre | partial |
+| CP | Üzletmenet-folytonosság | 21(2)(c) | Titkosított helyszíni mentés/restore-runbook + üres-gép CI drill. A snapshot **nem** vault-érték. **Kész a `main`-en:** [#203](https://github.com/matebenyovszky/agentplaybooks/pull/203) | Ütemezés, offsite másolat, mesterkulcs-őrzés, RPO/RTO cél | `restore-drill.sh`; `.github/workflows/self-host-restore-drill.yml` | partial |
 | SA | Beszerzés | 21(2)(d),(e); CRA? | MIT forrás, CI, CLI provenance, CycloneDX SBOM `cli-v*` tageken. **Kész a `main`-en:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205). Nincs aláírt konténer-registry | Licenc, CRA gyártói státusz | `publish-cli.yml`; `sbom.yml`; ez a csomag | partial |
 | SR | Ellátási lánc | 21(2)(d), 21(3) | Lockfile, Dependabot, CLI provenance, CycloneDX + SBOM-blob cosign. **Kész a `main`-en:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205). Nincs aláírt konténer-registry | Image pin, CVE, SBOM összevetése a futó image-dzsel | `npm ci`; inventory images; `cosign verify-blob` | partial |
 | AT | Képzés | 21(2)(g) | Üzemeltetői doksik. Nincs in-app képzés | Szerepkörös képzés, igazolás | Ügyféli napló | customer |
@@ -55,7 +55,7 @@ A beszállítói értékelés requirement-táblája szerinti bizonyítékok, a *
 
 1. Unit/integráció a CI-ban: kripto, lejárat, `allowed_hosts`, RBAC — **van**. Hash-lánc, SIEM-export, auditor szerep — **nincs a `main`-en** (**Folyamatban / In progress:** [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202)).
 2. E2E izolált hálózaton, 0 kimenő forgalom runtime-ban — **van a `main`-en**. A fontok buildkor már nem töltődnek le. **Kész a `main`-en:** fontok [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200); izolált CI [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204) (`.github/workflows/no-egress.yml`).
-3. Restore drill — ügyféli gyakorlat; termék mentés/DR-runbook nincs a `main`-en. **Folyamatban / In progress:** külön PR nyitás alatt; link még nincs.
+3. Restore drill — a termék üres-gép drill a `main`-en van. **Kész a `main`-en:** [#203](https://github.com/matebenyovszky/agentplaybooks/pull/203). Az ütemezés, offsite másolat és a mesterkulcs-őrzés ügyféli.
 4. Incidens tabletop — ügyféli; `SECURITY.md` + incidens-runbook a `main`-en van. **Kész a `main`-en:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205).
 5. CVE-folyamat: Dependabot → javítás → CLI provenance + CodeQL + aláírt CycloneDX SBOM `cli-v*` tageken. **Kész a `main`-en:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205). Aláírt konténer-registry publikálás továbbra sincs.
 6. Pentest — nincs benne ebben a csomagban.
@@ -75,4 +75,7 @@ A beszállítói értékelés requirement-táblája szerinti bizonyítékok, a *
 - [`public/docs/self-hosted-mtls.md`](../../public/docs/self-hosted-mtls.md)
 - [`.github/workflows/no-egress.yml`](../../.github/workflows/no-egress.yml)
 - [`deploy/airgap/`](../../deploy/airgap/)
+- [`docs/self-host/backup-restore.md`](../self-host/backup-restore.md)
+- [`scripts/self-host/backup.sh`](../../scripts/self-host/backup.sh)
+- [`.github/workflows/self-host-restore-drill.yml`](../../.github/workflows/self-host-restore-drill.yml)
 - [`scripts/list-self-host-stack.mjs`](../../scripts/list-self-host-stack.mjs)

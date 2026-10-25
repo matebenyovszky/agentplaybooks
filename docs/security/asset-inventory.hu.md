@@ -17,6 +17,7 @@ Angol: [asset-inventory.md](./asset-inventory.md). Fehérkönyv: [whitepaper.hu.
 | Hono API | Ugyanaz a folyamat | `src/app/api/` | — | REST / MCP / OpenAPI |
 | Nem-root user | Image | `Dockerfile` `nextjs` uid 1001 | — | `NEXT_TELEMETRY_DISABLED=1`, healthcheck `wget` `:3000` |
 | Statikus doksik | Image réteg | `public/` | — | A worker build másképp csomagol (Cloudflare) |
+| Helyszíni mentés / restore | Scriptek + runbook | [`scripts/self-host/`](../../scripts/self-host/), [`docs/self-host/backup-restore.md`](../self-host/backup-restore.md) | Titkosított archívum a `BACKUP_DIR`-ben | **Kész a `main`-en:** [#203](https://github.com/matebenyovszky/agentplaybooks/pull/203). A mesterkulcs nincs az archívumban |
 
 A script a deklarált compose-t mindig kiírja; Docker nélkül `--declared-only`.
 
@@ -51,7 +52,8 @@ Séma: [`supabase/schema.sql`](../../supabase/schema.sql) (új projekt), [`supab
 
 | Név | Hol | Minősítés | Forgás / visszavonás |
 |-----|-----|-----------|----------------------|
-| `SECRETS_ENCRYPTION_KEY` | App env, 64 hex | Vault mesterkulcs; KMS nincs | Forgás újratitkosítás nélkül = adatvesztés |
+| `SECRETS_ENCRYPTION_KEY` | App env, 64 hex | Vault mesterkulcs; KMS nincs; **soha nincs a mentési archívumban** | Forgás újratitkosítás nélkül = adatvesztés |
+| `BACKUP_ENCRYPTION_PASSPHRASE` | Üzemeltetői env a `backup.sh`-hoz | Archívum-titkosítás; nem lehet azonos a vault mesterkulccsal | A `SECRETS_ENCRYPTION_KEY`-től függetlenül forgatandó |
 | `SUPABASE_SERVICE_ROLE_KEY` | App env | RLS megkerülés; soha a kliensnek | Ügyfél Auth/JWT secret rotációja |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Build + runtime | Nyilvános anon kulcs; a böngésző eléri | Újraépítés kell a cseréhez (Next inlined `NEXT_PUBLIC_*`) |
 | `NEXT_PUBLIC_SUPABASE_URL` | Build + runtime | Böngészőből elérhető URL | Újraépítés |
