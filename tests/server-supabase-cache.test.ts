@@ -33,17 +33,17 @@ describe("server Supabase clients", () => {
     expect(getServerServiceSupabase()).toBe(service);
     expect(anon).not.toBe(service);
     expect(createServerClient).toHaveBeenCalledTimes(2);
-    expect(createServerClient).toHaveBeenNthCalledWith(1, "https://db.test", "anon-one");
-    expect(createServerClient).toHaveBeenNthCalledWith(2, "https://db.test", "service-one");
+    expect(createServerClient).toHaveBeenNthCalledWith(1, "https://db.test", "anon-one", expect.any(Function));
+    expect(createServerClient).toHaveBeenNthCalledWith(2, "https://db.test", "service-one", expect.any(Function));
 
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-two";
     expect(getServerAnonSupabase()).not.toBe(anon);
     expect(getServerServiceSupabase()).toBe(service);
-    expect(createServerClient).toHaveBeenNthCalledWith(3, "https://db.test", "anon-two");
+    expect(createServerClient).toHaveBeenNthCalledWith(3, "https://db.test", "anon-two", expect.any(Function));
 
     process.env.SUPABASE_SERVICE_ROLE_KEY = "service-two";
     expect(getServerServiceSupabase()).not.toBe(service);
-    expect(createServerClient).toHaveBeenNthCalledWith(4, "https://db.test", "service-two");
+    expect(createServerClient).toHaveBeenNthCalledWith(4, "https://db.test", "service-two", expect.any(Function));
   });
 
   it("requires the correct key for each privilege level", async () => {

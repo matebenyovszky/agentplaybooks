@@ -1,3 +1,4 @@
+import { runWithAuditRequest } from "@/lib/audit-context";
 import { Hono } from "hono";
 import type { Context } from "hono";
 import { handle } from "hono/vercel";
@@ -94,6 +95,10 @@ type MCPServerWithPlaybook = MCPServer & {
 type StarredPlaybookRow = { playbooks?: Playbook | null };
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>().basePath("/api");
+
+// Database writes made while handling this request are attributed to the
+// caller the handler authenticates (see src/lib/audit-context.ts).
+app.use("*", (c, next) => runWithAuditRequest(c.req.raw, next));
 
 // CORS middleware. Same allow-list as the other API apps, so a self-hosted
 // instance's ALLOWED_ORIGINS also governs this catch-all route.

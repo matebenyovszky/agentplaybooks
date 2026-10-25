@@ -1,5 +1,6 @@
 // Native Request/Response handler: shared by Next.js and the Worker dispatcher.
 // @worker-native
+import { runWithAuditRequest } from "@/lib/audit-context";
 import { getAuthenticatedUser } from "@/app/api/_shared/auth";
 import { checkPlaybookOwnership } from "@/app/api/_shared/guards";
 import { getServiceSupabase } from "@/app/api/_shared/supabase";
@@ -60,7 +61,7 @@ export async function GET(
   })));
 }
 
-export async function POST(
+async function handlePOST(
   request: Request,
   { params }: { params: Promise<{ guid: string }> }
 ) {
@@ -116,4 +117,8 @@ export async function POST(
     invite_path: `/invite/${token}`,
     warning: "This invite link is shown once and expires in 72 hours.",
   }, { status: 201 });
+}
+
+export async function POST(request: Request, { params }: { params: Promise<{ guid: string }> }) {
+  return runWithAuditRequest(request, () => handlePOST(request, { params }));
 }

@@ -1,5 +1,6 @@
 // Native Request/Response handler: shared by Next.js and the Worker dispatcher.
 // @worker-native
+import { runWithAuditRequest } from "@/lib/audit-context";
 import { getServiceSupabase } from "../../_shared/supabase";
 import { getAuthenticatedUser } from "../../_shared/auth";
 import { getPlaybookAccessRole } from "../../_shared/guards";
@@ -140,7 +141,7 @@ export async function GET(
     }
 }
 
-export async function PUT(
+async function handlePUT(
     request: Request,
     { params }: { params: Promise<{ guid: string }> }
 ) {
@@ -191,7 +192,7 @@ export async function PUT(
     return Response.json(data);
 }
 
-export async function DELETE(
+async function handleDELETE(
     request: Request,
     { params }: { params: Promise<{ guid: string }> }
 ) {
@@ -232,4 +233,12 @@ export async function DELETE(
     }
 
     return Response.json({ success: true });
+}
+
+export async function PUT(request: Request, { params }: { params: Promise<{ guid: string }> }) {
+  return runWithAuditRequest(request, () => handlePUT(request, { params }));
+}
+
+export async function DELETE(request: Request, { params }: { params: Promise<{ guid: string }> }) {
+  return runWithAuditRequest(request, () => handleDELETE(request, { params }));
 }
