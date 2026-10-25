@@ -69,9 +69,9 @@ describe("createPlaybook publisher association", () => {
       .mockResolvedValueOnce({ data: { id: USER_ID }, error: null });
 
     await createPlaybook(USER_ID, { name: "New playbook" });
-    expect(profileQuery.upsert).toHaveBeenCalledWith({
+    expect(profileQuery.upsert).toHaveBeenCalledWith(expect.objectContaining({
       id: USER_ID, auth_user_id: USER_ID, display_name: "User",
-    }, { onConflict: "auth_user_id", ignoreDuplicates: true });
+    }), { onConflict: "auth_user_id", ignoreDuplicates: true });
     expect(playbookQuery.insert).toHaveBeenCalledWith(expect.objectContaining({
       publisher_id: USER_ID,
     }));

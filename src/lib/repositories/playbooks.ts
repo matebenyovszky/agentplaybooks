@@ -36,6 +36,8 @@ export async function getPublisherIdForAuthUser(userId: string): Promise<string>
     id: userId,
     auth_user_id: userId,
     display_name: "User",
+    avatar_svg: null, website_url: null, description: null,
+    is_verified: false, is_virtual: false, updated_at: new Date().toISOString(),
   }, { onConflict: "auth_user_id", ignoreDuplicates: true });
   if (creationError) throw new Error(`Failed to create publisher profile: ${creationError.message}`);
   const { data: profile, error: lookupError } = await supabase.from("profiles")
