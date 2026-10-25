@@ -1,10 +1,11 @@
 // Native Request/Response handler: shared by Next.js and the Worker dispatcher.
 // @worker-native
+import { runWithAuditRequest } from "@/lib/audit-context";
 import { getAuthenticatedUser } from "@/app/api/_shared/auth";
 import { checkPlaybookOwnership } from "@/app/api/_shared/guards";
 import { getServiceSupabase } from "@/app/api/_shared/supabase";
 
-export async function DELETE(
+async function handleDELETE(
   request: Request,
   { params }: { params: Promise<{ guid: string; collaboratorId: string }> }
 ) {
@@ -36,4 +37,8 @@ export async function DELETE(
     return Response.json({ error: "Collaborator or invite not found" }, { status: 404 });
   }
   return Response.json({ success: true });
+}
+
+export async function DELETE(request: Request, { params }: { params: Promise<{ guid: string; collaboratorId: string }> }) {
+  return runWithAuditRequest(request, () => handleDELETE(request, { params }));
 }

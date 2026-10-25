@@ -5,6 +5,7 @@ import type { ApiKey, UserApiKeysRow } from "@/lib/supabase/types";
 import { getPlaybookAccessRole } from "./guards";
 import { grantsPermission } from "./permissions";
 import { roleMayPerform } from "@/lib/audit-access";
+import { noteAuditActor } from "@/lib/audit-context";
 
 type ApiKeyWithPlaybook = ApiKey & {
   playbooks: { id: string; guid: string };
@@ -67,6 +68,7 @@ function lookupPlaybookKey(request: Request): Promise<ApiKey | null> {
     const { data, error } = await getServiceSupabase().from("api_keys")
       .select("*").eq("key_hash", keyHash).eq("is_active", true).maybeSingle();
     if (error || !data || (data.expires_at && Date.parse(data.expires_at) <= Date.now())) return null;
+    noteAuditActor(request, { type: "api_key", id: data.key_prefix || null });
     return data as ApiKey;
   })();
   playbookKeyLookups.set(request, lookup);
@@ -98,6 +100,7 @@ function lookupUserKey(request: Request): Promise<UserApiKeyData | null> {
     const { data, error } = await getServiceSupabase().from("user_api_keys")
       .select("*").eq("key_hash", keyHash).eq("is_active", true).maybeSingle();
     if (error || !data || (data.expires_at && Date.parse(data.expires_at) <= Date.now())) return null;
+    noteAuditActor(request, { type: "api_key", id: data.key_prefix || null });
     return data as UserApiKeyData;
   })();
   userKeyLookups.set(request, lookup);
@@ -134,7 +137,9 @@ export async function getAuthenticatedUser(request?: Request): Promise<{ id: str
     if (!authHeader?.startsWith("Bearer ") || authHeader.startsWith("Bearer apb_")) return null;
     const token = authHeader.slice("Bearer ".length);
     const { data: { user }, error } = await getSupabase().auth.getUser(token);
-    return !error && user ? { id: user.id } : null;
+    if (error || !user) return null;
+    noteAuditActor(request, { type: "owner", id: user.id });
+    return { id: user.id };
   })();
   userLookups.set(request, lookup);
   return lookup;
