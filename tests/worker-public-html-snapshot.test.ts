@@ -86,6 +86,9 @@ describe("deployment-time public HTML snapshots", () => {
     expect(response?.headers.get("X-APB-Page-Source")).toBe("STATIC");
     expect(response?.headers.get("X-Content-Type-Options")).toBe("nosniff");
     expect(response?.headers.get("X-Frame-Options")).toBe("DENY");
+    expect(response?.headers.get("Content-Security-Policy")).toContain("default-src 'self'");
+    expect(response?.headers.has("Content-Security-Policy-Report-Only")).toBe(false);
+    expect(response?.headers.get("Strict-Transport-Security")).toContain("max-age=31536000");
     expect(response?.headers.get("Cache-Control")).toContain("no-store");
     expect(response?.headers.get("ETag")).toContain('W/"apb-v1-hu-');
     expect(response?.headers.has("Last-Modified")).toBe(false);
