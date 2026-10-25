@@ -2,14 +2,21 @@
  * Browser security headers applied by Next.js (`next.config.ts`) and by the
  * Cloudflare Worker path handlers.
  *
- * CSP is enforcing. `connect-src` always allows the hosted Auth wildcard and,
+ * CSP is enforcing. `script-src` allows the Cloudflare Web Analytics beacon
+ * host. `connect-src` always allows the hosted Auth wildcard, the Cloudflare
+ * Insights RUM endpoint (`https://cloudflareinsights.com/cdn-cgi/rum`), and,
  * when `NEXT_PUBLIC_SUPABASE_URL` is set, that origin (and its websocket
  * scheme) so a self-hosted Auth host is not blocked. `'unsafe-inline'` /
  * `'unsafe-eval'` remain until Next.js can be moved onto nonces (P2).
  */
 
 export function connectSrcFor(supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL): string {
-  const parts = ["'self'", "https://*.supabase.co", "wss://*.supabase.co"];
+  const parts = [
+    "'self'",
+    "https://*.supabase.co",
+    "wss://*.supabase.co",
+    "https://cloudflareinsights.com",
+  ];
   if (supabaseUrl) {
     try {
       const parsed = new URL(supabaseUrl);
@@ -30,7 +37,7 @@ export function contentSecurityPolicy(supabaseUrl?: string): string {
     "object-src 'none'",
     "frame-ancestors 'none'",
     "form-action 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' blob: data: https: http:",
     "font-src 'self' data:",
