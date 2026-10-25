@@ -1,0 +1,9 @@
+FROM alpine:3.21
+RUN apk add --no-cache dnsmasq tcpdump iproute2 netcat-openbsd
+COPY dnsmasq.conf /etc/dnsmasq.conf
+COPY airgap.hosts /etc/airgap.hosts
+COPY observer-entrypoint.sh /observer-entrypoint.sh
+COPY check-egress.sh /check-egress.sh
+RUN chmod +x /observer-entrypoint.sh /check-egress.sh
+EXPOSE 53/udp 53/tcp
+ENTRYPOINT ["/observer-entrypoint.sh"]
