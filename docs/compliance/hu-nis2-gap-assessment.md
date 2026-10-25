@@ -1,6 +1,6 @@
 # Hungary Cybersecurity Act / NIS2 gap assessment (AgentPlaybooks)
 
-**Verified:** 2026-10-25 against `main` at `96e92fe`, plus the open branch `fix/p0-audit-secrets-private-instance` (pull request #216).  
+**Verified:** 2026-10-25 against `main` at `5a895ae` (includes merged [#216](https://github.com/matebenyovszky/agentplaybooks/pull/216)).  
 **Scope:** the software as shipped (app, API, MCP, CLI, self-host/air-gap deploy, Supabase migrations, CI), and what an operator needs from it when self-hosting.  
 **Not in scope as product gaps:** organisational duties of the operator (appointing an information-security officer, registering with the competent authority, classifying the electronic information system, filing incident reports). Those appear with status **operator**.
 
@@ -45,22 +45,22 @@ A row is **never** marked met because a whitepaper says so. Evidence is a reposi
 | #206 | Hungarian supplier-assessment security pack | `docs/security/` |
 | #207 | GitHub private vulnerability reporting is the only security contact (no email) | `SECURITY.md` |
 | #209 | Verified self-hosted EU cybersecurity guide (blog) | `public/blog/self-hosted-eu-cybersecurity-requirements.md` |
-| #216 (open, about to merge) | Audit tamper resistance (no cascade deletes; DELETE only via retention purge; immutable checkpoints); DB-trigger audit of playbooks / skills / mcp_servers / api_keys / collaborators; outbound destination allow-list and secret-exfiltration closes; private-instance switch | Verified on branch `fix/p0-audit-secrets-private-instance` (not on `main` until merge): supabase/migrations/20261025120000_audit_logs_tamper_resistance.sql, 20261025130000_audit_config_changes.sql, 20261025140000_private_instance.sql, src/lib/outbound-destination.ts, src/lib/audit-context.ts |
+| #216 (merged `5a895ae`) | Audit tamper resistance (no cascade deletes; DELETE only via retention purge; immutable checkpoints); DB-trigger audit of playbooks / skills / mcp_servers / api_keys / collaborators; outbound destination allow-list and secret-exfiltration closes; private-instance switch | `supabase/migrations/20261025120000_audit_logs_tamper_resistance.sql`, `supabase/migrations/20261025130000_audit_config_changes.sql`, `supabase/migrations/20261025140000_private_instance.sql`, `src/lib/outbound-destination.ts`, `src/lib/audit-context.ts`, `tests/audit-tamper-resistance-db.test.ts`, `tests/audit-config-changes-db.test.ts` |
 
-#216 **does** close skill **config** writes (create/update/delete of `skills` rows, without copying skill bodies). It **does not** close memory or canvas writes. Those remain a product gap on `main` and on that branch.
+#216 **does** close skill **config** writes (create/update/delete of `skills` rows, without copying skill bodies). It **does not** close memory or canvas writes. Those remain a product gap on `main` until [#222](https://github.com/matebenyovszky/agentplaybooks/pull/222).
 
 ---
 
 ## Prioritized fix list
 
-### P0 — do now (or already in #216)
+### P0 — do now (or already merged in #216)
 
 | ID | Item | Product vs operator | This audit |
 |----|------|---------------------|------------|
 | P0-1 | Playbook API-key create defaults omitted `permissions` to `memory:read` **and** `memory:write`, so a raw `role: "viewer"` (or omitted role) key can write memory. The dashboard sends the correct presets; the API does not. Contradicts `permissions.md` (“Viewer … Cannot modify data”). | Product | [#218](https://github.com/matebenyovszky/agentplaybooks/pull/218) |
 | P0-2 | CSP is `Content-Security-Policy-Report-Only` with `connect-src` hardcoded to `https://*.supabase.co`. XSS in the UI is not contained. | Product | [#219](https://github.com/matebenyovszky/agentplaybooks/pull/219) |
-| P0-3 | Audit trail erased on playbook/account delete (FK cascade); audit_logs writable by API roles | Product | **#216** (20261025120000_audit_logs_tamper_resistance.sql on that branch) — do not redo |
-| P0-4 | Secret exfiltration paths (redirects, public MCP credentials, API-key widening of allowed_hosts) | Product | **#216** (src/lib/outbound-destination.ts on that branch) — do not redo |
+| P0-3 | Audit trail erased on playbook/account delete (FK cascade); audit_logs writable by API roles | Product | **#216** (`supabase/migrations/20261025120000_audit_logs_tamper_resistance.sql`) — merged, do not redo |
+| P0-4 | Secret exfiltration paths (redirects, public MCP credentials, API-key widening of allowed_hosts) | Product | **#216** (`src/lib/outbound-destination.ts`) — merged, do not redo |
 | P0-5 | App-level MFA (NIST **IA-2(1)** / NIS2 Art. 21(2)(j)) | Product missing; operator can enforce at the IdP | **Design note only** — not a rushed PR |
 | P0-6 | KMS/HSM wrapping of `SECRETS_ENCRYPTION_KEY` and master-key re-encryption/rotation (NIST **SC-12** / **SC-13**) | Product missing; operator holds the env var | **Design note only** |
 
@@ -90,7 +90,7 @@ A row is **never** marked met because a whitepaper says so. Evidence is a reposi
 
 Large items (KMS/HSM, SAML, MFA) stay design notes. See [Design notes](#design-notes-not-rushed-prs).
 
-This document: [#217](https://github.com/matebenyovszky/agentplaybooks/pull/217). Only [#222](https://github.com/matebenyovszky/agentplaybooks/pull/222) contains a Supabase migration. Rebase the code PRs onto `main` after #216 merges.
+This document: [#217](https://github.com/matebenyovszky/agentplaybooks/pull/217). Only [#222](https://github.com/matebenyovszky/agentplaybooks/pull/222) contains a Supabase migration. Code fix PRs include a merge of `main` at `5a895ae` so they sit on top of #216 (no force-push).
 
 ---
 
@@ -138,7 +138,7 @@ Columns: **control** · **requirement summary** · **status** · **evidence** ·
 
 | Control | Requirement summary | Status | Evidence | Gap | Priority |
 |---------|---------------------|--------|----------|-----|----------|
-| AC-2 | Account management (provision, review, disable) | **partial** | Human roles `owner \| editor \| auditor`: `src/lib/audit-access.ts` (`PLAYBOOK_ACCESS_ROLES`, `roleMayWrite`, `roleMayReadAudit`, `roleMayReadSecrets`). Tests: `tests/api/audit-role.test.ts`, `tests/api/collaborators.test.ts`. API-key roles: `src/app/api/[[...route]]/route.ts` `API_KEY_ROLES`. Invites hashed, 72h: `src/app/api/playbooks/[guid]/collaborators/route.ts`. Key expiry/revoke: `src/app/api/_shared/auth.ts` (`lookupPlaybookKey`). Private-instance switch: **#216** 20261025140000_private_instance.sql (on that branch) | Joiner/leaver is the operator’s IdP. No periodic access-review workflow in the app | P2 |
+| AC-2 | Account management (provision, review, disable) | **partial** | Human roles `owner \| editor \| auditor`: `src/lib/audit-access.ts` (`PLAYBOOK_ACCESS_ROLES`, `roleMayWrite`, `roleMayReadAudit`, `roleMayReadSecrets`). Tests: `tests/api/audit-role.test.ts`, `tests/api/collaborators.test.ts`. API-key roles: `src/app/api/[[...route]]/route.ts` `API_KEY_ROLES`. Invites hashed, 72h: `src/app/api/playbooks/[guid]/collaborators/route.ts`. Key expiry/revoke: `src/app/api/_shared/auth.ts` (`lookupPlaybookKey`). Private-instance switch: **#216** `supabase/migrations/20261025140000_private_instance.sql` | Joiner/leaver is the operator’s IdP. No periodic access-review workflow in the app | P2 |
 | AC-3 | Access enforcement | **partial** | `src/app/api/_shared/guards.ts`, `src/app/api/_shared/permissions.ts` `grantsPermission`, `src/app/api/_shared/auth.ts` `authorizePlaybookRequest`. RLS exists (`supabase/schema.sql`) but the app uses `service_role`; whitepaper §11 item 15 is accurate. Collaborators table: RLS on, no client policies (`supabase/migrations/20260720_add_playbook_collaboration.sql`) | Authorization is API-layer. Direct Data API with `service_role` bypasses RLS (operator must not leak that key) | P1 (operator key custody) |
 | AC-6 | Least privilege | **partial** | Dashboard presets: `src/components/playbook/ApiKeyManager.tsx` `ROLE_PERMISSIONS` (viewer is read-only). Auditor cannot purge: `tests/api/audit.test.ts` (`does not let an auditor purge`). Secrets: `secrets:read` does not follow from `secrets:write` (`src/app/api/_shared/permissions.ts`) | **P0-1:** POST `/api/playbooks/:id/api-keys` uses `permissions \|\| (role === "auditor" ? … : ["memory:read", "memory:write"])` in `src/app/api/[[...route]]/route.ts`. `validateApiKey` gates non-admin keys on the **permissions array**, not the role label (`src/app/api/_shared/auth.ts`). A caller who omits `permissions` gets memory write | **P0** |
 | AC-7 | Unsuccessful logon / lockout / rate limiting | **missing** | Documented gap: `docs/security/whitepaper.md` item 12, `public/docs/api-reference.md`. No app limiter in `src/app/api/` | Brute-force of email/password or API keys is an operator WAF/IdP problem today | **P1** design |
@@ -149,12 +149,12 @@ Columns: **control** · **requirement summary** · **status** · **evidence** ·
 
 | Control | Requirement summary | Status | Evidence | Gap | Priority |
 |---------|---------------------|--------|----------|-----|----------|
-| AU-2 | Event logging (what is recorded) | **partial** | Vault: `src/app/api/_shared/audit.ts`, `src/lib/supabase/types.ts` `SECRET_AUDIT_OPERATIONS`. Federation: `federationAuditWriter`. Tests: `tests/api/audit.test.ts`, `tests/api/audit-secrets-not-logged.test.ts`. Config changes (playbooks, **skills**, MCP servers, API keys, collaborators): **#216** 20261025130000_audit_config_changes.sql (tests/audit-config-changes-db.test.ts on that branch) | **Memory and canvas writes are not logged** on `main` or #216. Skill *bodies* are not copied (intentional). Source IP / UA not stored | **P1** (memory/canvas); P1-6 IP/UA |
-| AU-3 | Content of audit records (no secrets) | **met** | `redactAuditSecrets`, `sanitizeAuditTarget` in `src/app/api/_shared/audit.ts`. Test: `tests/api/audit-secrets-not-logged.test.ts`. #216 trigger copies only access-control columns, never key hashes or skill bodies | — | — |
-| AU-9 | Protection of audit information | **partial** on `main`; **met** once #216 merges | Hash chain + UPDATE denied: `supabase/migrations/20261024120000_audit_logs_compliance.sql`, `src/lib/audit-chain.ts`, `tests/api/audit-compliance-migration.test.ts`. #216: drop FKs so deletes do not cascade; refuse DELETE except purge_audit_logs; immutable checkpoints; revoke UPDATE/DELETE/TRUNCATE from API roles (20261025120000_audit_logs_tamper_resistance.sql on that branch) | Until #216 merges, deleting a playbook erases its trail. No WORM / external timestamp (P2-7) | **P0** via #216 |
+| AU-2 | Event logging (what is recorded) | **partial** | Vault: `src/app/api/_shared/audit.ts`, `src/lib/supabase/types.ts` `SECRET_AUDIT_OPERATIONS`. Federation: `federationAuditWriter`. Tests: `tests/api/audit.test.ts`, `tests/api/audit-secrets-not-logged.test.ts`. Config changes (playbooks, **skills**, MCP servers, API keys, collaborators): **#216** `supabase/migrations/20261025130000_audit_config_changes.sql`, `tests/audit-config-changes-db.test.ts` | **Memory and canvas writes are not logged** on `main` (open [#222](https://github.com/matebenyovszky/agentplaybooks/pull/222)). Skill *bodies* are not copied (intentional). Source IP / UA not stored | **P1** (memory/canvas); P1-6 IP/UA |
+| AU-3 | Content of audit records (no secrets) | **met** | `redactAuditSecrets`, `sanitizeAuditTarget` in `src/app/api/_shared/audit.ts`. Test: `tests/api/audit-secrets-not-logged.test.ts`. #216 trigger copies only access-control columns, never key hashes or skill bodies (`tests/audit-config-changes-db.test.ts`) | — | — |
+| AU-9 | Protection of audit information | **met** | Hash chain + UPDATE denied: `supabase/migrations/20261024120000_audit_logs_compliance.sql`, `src/lib/audit-chain.ts`, `tests/api/audit-compliance-migration.test.ts`. #216: drop FKs so deletes do not cascade; refuse DELETE except `purge_audit_logs`; immutable checkpoints; revoke UPDATE/DELETE/TRUNCATE from API roles (`supabase/migrations/20261025120000_audit_logs_tamper_resistance.sql`, `tests/audit-tamper-resistance-db.test.ts`) | No independent WORM / external timestamp (P2-7). A database administrator can still rewrite the chain tip | P2-7 |
 | AU-10 | Non-repudiation / tamper evidence | **partial** | Per-playbook SHA-256 chain, checkpoints on retention purge, `npm run audit:chain`, `/audit/verify`. Restore drill invokes the verifier: `scripts/self-host/verify-restore.ts`, `.github/workflows/self-host-restore-drill.yml` | A database administrator can rewrite tip + checkpoint. Chain is evidence, not independent proof | P2-7 |
-| AU-11 | Audit retention | **met** | `purge_audit_logs` RPC; `AUDIT_RETENTION_DAYS`; `POST /api/cron/audit-purge`; owner purge. Tests: `tests/api/audit-purge-cron.test.ts`. Operator sets the period and the cron secret (`public/docs/self-hosting.md`) | Operator must schedule the cron. Unset keeps rows until a later purge (and, on `main`, until playbook delete — #216 stops that) | — |
-| AU-12 | Audit generation (coverage of write paths) | **partial** | Vault and federation writers in process. #216 adds table triggers so Data API writes cannot skip config events (src/lib/audit-context.ts x-apb-actor, trusted only from service_role, on that branch) | Memory/canvas still skip the trail. SIEM/syslog is best-effort (`src/app/api/_shared/audit.ts` “A write never throws”) | **P1-1** |
+| AU-11 | Audit retention | **met** | `purge_audit_logs` RPC; `AUDIT_RETENTION_DAYS`; `POST /api/cron/audit-purge`; owner purge. Tests: `tests/api/audit-purge-cron.test.ts`. Operator sets the period and the cron secret (`public/docs/self-hosting.md`). Playbook delete no longer erases the trail (#216) | Operator must schedule the cron. Unset keeps rows until a later purge | — |
+| AU-12 | Audit generation (coverage of write paths) | **partial** | Vault and federation writers in process. #216 adds table triggers so Data API writes cannot skip config events (`src/lib/audit-context.ts` `x-apb-actor`, trusted only from `service_role`) | Memory/canvas still skip the trail until [#222](https://github.com/matebenyovszky/agentplaybooks/pull/222). SIEM/syslog is best-effort (`src/app/api/_shared/audit.ts` “A write never throws”) | **P1-1** |
 
 ### IA — identification and authentication (NIS2 21(2)(i)(j); IR § 11)
 
@@ -169,7 +169,7 @@ Columns: **control** · **requirement summary** · **status** · **evidence** ·
 
 | Control | Requirement summary | Status | Evidence | Gap | Priority |
 |---------|---------------------|--------|----------|-----|----------|
-| SC-7 | Boundary protection / outbound control | **partial** on `main`; stronger on #216 | Secrets `allowed_hosts`: `src/lib/secret-destinations.ts`, `src/lib/secret-destinations.test.ts`. SSRF deny on proxy: `src/app/api/playbooks/[guid]/secrets/app.ts`. Federation `assertSafeRemoteUrl`: `src/lib/mcp/federation.ts`. No-egress CI: `.github/workflows/no-egress.yml`, `tests/airgap-observer.test.ts`. #216: src/lib/outbound-destination.ts on that branch; compose default SECRETS_REQUIRE_ALLOWED_HOSTS=true | On `main`, `SECRETS_REQUIRE_ALLOWED_HOSTS` is off by default (`docker-compose.yml`). Secrets proxy still allows `http:` as well as `https:`. DNS TOCTOU remains (documented on #216) | P1 (http-only optional follow-up); P2 DNS pin |
+| SC-7 | Boundary protection / outbound control | **partial** | Secrets `allowed_hosts`: `src/lib/secret-destinations.ts`, `src/lib/secret-destinations.test.ts`. SSRF deny on proxy: `src/app/api/playbooks/[guid]/secrets/app.ts`. Federation `assertSafeRemoteUrl`: `src/lib/mcp/federation.ts`. No-egress CI: `.github/workflows/no-egress.yml`, `tests/airgap-observer.test.ts`. #216: `src/lib/outbound-destination.ts`, `tests/lib/outbound-destination.test.ts`; compose default `SECRETS_REQUIRE_ALLOWED_HOSTS=true` (`docker-compose.yml`) | Secrets proxy still allows `http:` as well as `https:`. DNS TOCTOU remains (documented in #216) | P1 (http-only optional follow-up); P2 DNS pin |
 | SC-8 | Transmission confidentiality | **partial** | HSTS, `X-Frame-Options: DENY`, nosniff: `src/lib/security-headers.ts`, `next.config.ts`, applied in `src/worker/api-dispatch.ts`, `src/worker/page-routing.ts`, `src/worker/probe-paths.ts`, `src/worker/public-html-snapshot.ts`. Test checks nosniff + frame options: `tests/worker-public-html-snapshot.test.ts` (`serves the requested locale with native security headers and no browser cache`). mTLS: `src/lib/mtls.ts` | App does not terminate TLS. CSP is Report-Only (P0-2). Locale cookie not `SameSite` (P1-3) | **P0** CSP; **P1** cookie; operator TLS |
 | SC-12 | Cryptographic key establishment and management | **missing** | Master key: `src/lib/crypto.ts` `getMasterKeyHex()` from `SECRETS_ENCRYPTION_KEY`. Compose: rotating it makes existing secrets undecryptable | No KMS, no HSM, no key-version field, no re-encrypt job | **P0** design |
 | SC-13 | Cryptographic protection | **partial** | AES-256-GCM, 12-byte IV, HKDF-SHA-256 per user, v2 AAD (`userId`, `playbookId`, `secretName`): `src/lib/crypto.ts`. Tests: `src/lib/crypto.test.ts` (`round-trips a secret for its owner`, `still decrypts existing v1 ciphertext`, `rejects a 64-character value that is not hexadecimal`). Backup archives AES-256-CBC: `scripts/self-host/backup.sh`, `docs/self-host/backup-restore.md` | Algorithms are sound; key *management* is SC-12 | — |
@@ -190,8 +190,8 @@ Columns: **control** · **requirement summary** · **status** · **evidence** ·
 | Control | Requirement summary | Status | Evidence | Gap | Priority |
 |---------|---------------------|--------|----------|-----|----------|
 | CM-2 | Baseline configuration | **partial** | `scripts/list-self-host-stack.mjs`, `npm run inventory:self-host`. Asset list: `docs/security/asset-inventory.md`. Tests: `tests/security-docs-pack.test.ts` | Operator must run the inventory against the live compose and pin images | — |
-| CM-3 | Configuration change control | **partial** | Playbook/skill/MCP/API-key/collaborator change audit: **#216** triggers. Migrations auto-apply on merge: `.github/workflows/deploy-supabase.yml` (tests first, dry-run, then `db push`; no `continue-on-error`) | Memory/canvas still unaudited. Operator change windows for image rebuilds | **P1-1** |
-| CM-6 | Configuration settings | **partial** | Documented env: `public/docs/self-hosting.md`, `docker-compose.yml`. Air-gap flags: `NO_EGRESS`, `SECRETS_REQUIRE_ALLOWED_HOSTS` | Hosted defaults are not always the self-host-safe defaults (CORS, allowed_hosts on `main`) | **P1-2**; #216 flips allowed_hosts default |
+| CM-3 | Configuration change control | **partial** | Playbook/skill/MCP/API-key/collaborator change audit: **#216** triggers (`supabase/migrations/20261025130000_audit_config_changes.sql`). Migrations auto-apply on merge: `.github/workflows/deploy-supabase.yml` (tests first, dry-run, then `db push`; no `continue-on-error`) | Memory/canvas still unaudited until [#222](https://github.com/matebenyovszky/agentplaybooks/pull/222). Operator change windows for image rebuilds | **P1-1** |
+| CM-6 | Configuration settings | **partial** | Documented env: `public/docs/self-hosting.md`, `docker-compose.yml`. Air-gap flags: `NO_EGRESS`, `SECRETS_REQUIRE_ALLOWED_HOSTS` (compose default `true` after #216) | Hosted CORS defaults still trust product origins when a self-host `NEXT_PUBLIC_APP_URL` is set without `ALLOWED_ORIGINS` | **P1-2** |
 | CM-7 | Least functionality | **partial** | `NO_EGRESS=true` disables optional MCP-registry search unless `MCP_REGISTRY_URL` is an internal mirror. Air-gap compose: `deploy/airgap/docker-compose.yml`. Fonts local: #200 | Production `docker-compose.yml` is app-only (no bundled Supabase). Operator still supplies the data plane | — |
 
 ### CP — contingency (NIS2 21(2)(c); IR § 4)
@@ -297,17 +297,15 @@ Counted from the control table above (one status per row). **Operator** rows are
 
 | Status | Count |
 |--------|------:|
-| met | 6 |
-| partial | 30 |
+| met | 7 |
+| partial | 29 |
 | missing | 3 |
 | operator | 9 |
 | **Total rows** | **48** |
 
 **missing:** IA-2(1) MFA; SC-12 key management; AC-7 rate limiting.  
 **P0 product bugs with a small fix in this audit:** AC-6 API-key defaults; SC-8/SI-10 CSP Report-Only.  
-**P0 already on #216:** AU-9 tamper resistance; SC-7 exfiltration closes.
-
-If #216 merges before this document is used in an assessment, treat AU-9 as **met** (product half) and SC-7 as **partial** (http destinations and DNS TOCTOU remain). Re-verify the branch SHA.
+**P0 merged in #216:** AU-9 tamper resistance (now **met**); SC-7 exfiltration closes (still **partial**: `http:` destinations and DNS TOCTOU remain).
 
 ---
 

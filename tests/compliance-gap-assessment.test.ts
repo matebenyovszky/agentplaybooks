@@ -55,8 +55,8 @@ describe("Hungary / NIS2 gap assessment", () => {
     expect(markdown).toMatch(/not a certification/i);
     expect(markdown).not.toMatch(/\bcompliant\b/i);
     expect(markdown).not.toMatch(/\bcertified\b/i);
-    expect(markdown).toMatch(/\| met \| 6 \|/);
-    expect(markdown).toMatch(/\| partial \| 30 \|/);
+    expect(markdown).toMatch(/\| met \| 7 \|/);
+    expect(markdown).toMatch(/\| partial \| 29 \|/);
     expect(markdown).toMatch(/\| missing \| 3 \|/);
     expect(markdown).toMatch(/\| operator \| 9 \|/);
   });
