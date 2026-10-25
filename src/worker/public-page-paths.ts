@@ -23,6 +23,7 @@ export const publicPagePaths = new Set<string>([
   "/docs",
   "/docs/api-reference",
   "/docs/architecture",
+  "/docs/audit-logs",
   "/docs/bot-platform-integrations",
   "/docs/claude",
   "/docs/cli",

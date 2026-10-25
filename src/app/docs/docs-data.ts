@@ -93,6 +93,12 @@ export const docsEntries: DocEntry[] = [
     section: "guides",
   },
   {
+    slug: "audit-logs",
+    title: "Audit Logs",
+    description: "Export, retention, hash chain, and the read-only auditor role",
+    section: "guides",
+  },
+  {
     slug: "skills",
     title: "Skills",
     description: "Structured capability definitions",

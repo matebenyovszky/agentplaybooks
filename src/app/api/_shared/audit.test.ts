@@ -10,8 +10,10 @@ import { getServiceSupabase } from "./supabase";
 
 vi.mock("./supabase", () => ({ getServiceSupabase: vi.fn() }));
 
-function mockVault() {
-  const insert = vi.fn().mockResolvedValue({ error: null });
+function mockVault(result: { data?: Record<string, unknown> | null; error: { message: string } | null } = { data: { id: "audit-1" }, error: null }) {
+  const single = vi.fn().mockResolvedValue(result);
+  const select = vi.fn().mockReturnValue({ single });
+  const insert = vi.fn().mockReturnValue({ select });
   vi.mocked(getServiceSupabase).mockReturnValue({
     from: vi.fn().mockReturnValue({ insert }),
   } as unknown as ReturnType<typeof getServiceSupabase>);
@@ -130,10 +132,7 @@ describe("recordSecretAudit", () => {
   });
 
   it("swallows a failing write: an audit outage must not take the vault down", async () => {
-    const insert = vi.fn().mockResolvedValue({ error: { message: "relation does not exist" } });
-    vi.mocked(getServiceSupabase).mockReturnValue({
-      from: vi.fn().mockReturnValue({ insert }),
-    } as unknown as ReturnType<typeof getServiceSupabase>);
+    mockVault({ data: null, error: { message: "relation does not exist" } });
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
 
     await expect(

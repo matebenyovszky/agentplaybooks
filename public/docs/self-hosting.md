@@ -213,6 +213,12 @@ an empty database: the incremental history cannot create the core tables.
 | `SECRETS_ENCRYPTION_KEY` | Yes for the secrets vault | 64 hexadecimal characters. Rotating it makes existing secrets undecryptable — there is no re-encryption tooling yet. |
 | `ALLOWED_ORIGINS` | No | Comma-separated origins allowed to make credentialed cross-origin API calls. Setting it **replaces** the default list, which is what a self-hosted instance wants — otherwise the project's own domains stay trusted. Unset keeps the previous behaviour. |
 | `SECRETS_REQUIRE_ALLOWED_HOSTS` | No | Set to `true` to refuse outbound use of any secret that has not declared `allowed_hosts`. Off by default. |
+| `AUDIT_RETENTION_DAYS` | No | Positive integer of days to keep `audit_logs`. Unset, `0`, or `forever` keeps current behaviour (until playbook/account deletion). Requires a scheduler hitting `POST /api/cron/audit-purge`. |
+| `AUDIT_CRON_SECRET` | No | Bearer token for the instance purge endpoint. Unset hides the endpoint. `CRON_SECRET` is also accepted. |
+| `AUDIT_SYSLOG_URL` | No | Optional RFC 5424 forwarder: `udp://host:514`, `tcp://host:514`, or `tls://host:6514`. Off by default. |
+| `AUDIT_SIEM_WEBHOOK_URL` | No | Optional HTTPS POST of each audit event. Off by default. Pair with `AUDIT_SIEM_WEBHOOK_SECRET` for an HMAC `X-Audit-Signature` header. |
+
+Existing databases need `20261024120000_audit_logs_compliance.sql` (hash chain backfill, auditor role, retention checkpoints). That migration rewrites every `audit_logs` row and **must not be applied to production without approval and a backup**. See [Audit Logs](./audit-logs.md).
 
 ### Pinning a secret to specific destinations
 

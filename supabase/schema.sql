@@ -65,7 +65,9 @@ CREATE TABLE IF NOT EXISTS public.audit_logs (
   created_at timestamp with time zone DEFAULT now() NOT NULL,
   actor_type text,
   actor_id text,
-  secret_name text
+  secret_name text,
+  prev_hash text,
+  hash text
 );
 
 CREATE TABLE IF NOT EXISTS public.canvas (
@@ -150,7 +152,8 @@ CREATE TABLE IF NOT EXISTS public.playbook_collaborators (
   invite_token_hash text NOT NULL,
   invite_expires_at timestamp with time zone NOT NULL,
   accepted_at timestamp with time zone,
-  created_at timestamp with time zone DEFAULT now() NOT NULL
+  created_at timestamp with time zone DEFAULT now() NOT NULL,
+  role text DEFAULT 'editor'::text NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS public.playbook_runs (
@@ -337,7 +340,7 @@ ALTER TABLE public.profiles ADD CONSTRAINT profiles_auth_user_id_key UNIQUE (aut
 
 ALTER TABLE public.secrets ADD CONSTRAINT secrets_playbook_id_name_key UNIQUE (playbook_id, name);
 
-ALTER TABLE public.api_keys ADD CONSTRAINT api_keys_role_check CHECK ((role = ANY (ARRAY['viewer'::text, 'coworker'::text, 'admin'::text])));
+ALTER TABLE public.api_keys ADD CONSTRAINT api_keys_role_check CHECK ((role = ANY (ARRAY['viewer'::text, 'coworker'::text, 'proposer'::text, 'admin'::text, 'auditor'::text])));
 
 ALTER TABLE public.audit_logs ADD CONSTRAINT audit_logs_status_check CHECK ((status = ANY (ARRAY['success'::text, 'denied'::text, 'error'::text])));
 
@@ -352,6 +355,8 @@ ALTER TABLE public.memories ADD CONSTRAINT memories_status_check CHECK (((status
 ALTER TABLE public.memories ADD CONSTRAINT memories_tier_check CHECK ((tier = ANY (ARRAY['working'::text, 'contextual'::text, 'longterm'::text])));
 
 ALTER TABLE public.playbook_collaborators ADD CONSTRAINT playbook_collaborators_state_check CHECK ((((user_id IS NULL) AND (accepted_at IS NULL)) OR ((user_id IS NOT NULL) AND (accepted_at IS NOT NULL))));
+
+ALTER TABLE public.playbook_collaborators ADD CONSTRAINT playbook_collaborators_role_check CHECK ((role = ANY (ARRAY['editor'::text, 'auditor'::text])));
 
 ALTER TABLE public.playbook_runs ADD CONSTRAINT playbook_runs_status_check CHECK ((status = ANY (ARRAY['active'::text, 'completed'::text, 'archived'::text])));
 
@@ -429,6 +434,8 @@ CREATE INDEX idx_api_keys_key_hash ON public.api_keys USING btree (key_hash);
 CREATE INDEX idx_api_keys_playbook_id ON public.api_keys USING btree (playbook_id);
 
 CREATE INDEX audit_logs_playbook_created_idx ON public.audit_logs USING btree (playbook_id, created_at DESC);
+
+CREATE UNIQUE INDEX audit_logs_playbook_prev_hash_idx ON public.audit_logs USING btree (playbook_id, prev_hash) WHERE (prev_hash IS NOT NULL);
 
 CREATE INDEX canvas_playbook_sort_idx ON public.canvas USING btree (run_id, sort_order, updated_at DESC);
 
@@ -750,6 +757,10 @@ CREATE POLICY "Owners can read audit logs" ON public.audit_logs AS PERMISSIVE FO
    FROM playbooks
   WHERE ((playbooks.id = audit_logs.playbook_id) AND (playbooks.user_id = auth.uid())))));
 
+CREATE POLICY "Auditors can read audit logs" ON public.audit_logs AS PERMISSIVE FOR SELECT TO public USING ((EXISTS ( SELECT 1
+   FROM playbook_collaborators
+  WHERE ((playbook_collaborators.playbook_id = audit_logs.playbook_id) AND (playbook_collaborators.user_id = auth.uid()) AND (playbook_collaborators.accepted_at IS NOT NULL) AND (playbook_collaborators.role = 'auditor'::text)))));
+
 CREATE POLICY "Canvas documents follow run access" ON public.canvas AS PERMISSIVE FOR SELECT TO public USING ((EXISTS ( SELECT 1
    FROM playbook_runs
   WHERE ((playbook_runs.id = canvas.run_id) AND ((playbook_runs.created_by = auth.uid()) OR (EXISTS ( SELECT 1
@@ -829,6 +840,10 @@ CREATE POLICY "Users can insert own playbooks" ON public.playbooks AS PERMISSIVE
 CREATE POLICY "Users can manage own playbooks" ON public.playbooks AS PERMISSIVE FOR ALL TO authenticated USING ((user_id = auth.uid())) WITH CHECK ((user_id = auth.uid()));
 
 CREATE POLICY "Users can read own playbooks" ON public.playbooks AS PERMISSIVE FOR SELECT TO authenticated USING ((user_id = auth.uid()));
+
+CREATE POLICY "Auditors can read playbook metadata" ON public.playbooks AS PERMISSIVE FOR SELECT TO public USING ((EXISTS ( SELECT 1
+   FROM playbook_collaborators
+  WHERE ((playbook_collaborators.playbook_id = playbooks.id) AND (playbook_collaborators.user_id = auth.uid()) AND (playbook_collaborators.accepted_at IS NOT NULL) AND (playbook_collaborators.role = 'auditor'::text)))));
 
 CREATE POLICY "Users can update own playbooks" ON public.playbooks AS PERMISSIVE FOR UPDATE TO authenticated USING ((user_id = auth.uid())) WITH CHECK ((user_id = auth.uid()));
 
@@ -1104,3 +1119,160 @@ grant execute on function public.increment_usage_count(text, uuid)
   to service_role;
 grant execute on function public.handle_new_user()
   to supabase_auth_admin;
+
+-- --------------------------------------------------------------------
+-- Folded in from 20261024120000_audit_logs_compliance.sql
+-- Per-playbook hash chain, auditor role, retention checkpoints.
+-- --------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS public.audit_chain_checkpoints (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  playbook_id uuid NOT NULL REFERENCES public.playbooks(id) ON DELETE CASCADE,
+  anchor_hash text NOT NULL,
+  purged_through timestamptz NOT NULL,
+  purged_through_id uuid,
+  purged_count integer NOT NULL CHECK (purged_count >= 0),
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS audit_chain_checkpoints_playbook_created_idx
+  ON public.audit_chain_checkpoints (playbook_id, created_at DESC);
+ALTER TABLE public.audit_chain_checkpoints ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.audit_chain_checkpoints FROM anon, authenticated;
+GRANT SELECT ON public.audit_chain_checkpoints TO authenticated;
+GRANT ALL ON public.audit_chain_checkpoints TO service_role;
+GRANT SELECT ON public.audit_logs TO authenticated;
+
+CREATE POLICY "Owners can read audit chain checkpoints" ON public.audit_chain_checkpoints
+  FOR SELECT USING ((EXISTS ( SELECT 1 FROM playbooks
+    WHERE ((playbooks.id = audit_chain_checkpoints.playbook_id) AND (playbooks.user_id = auth.uid())))));
+CREATE POLICY "Auditors can read audit chain checkpoints" ON public.audit_chain_checkpoints
+  FOR SELECT USING ((EXISTS ( SELECT 1 FROM playbook_collaborators
+    WHERE ((playbook_collaborators.playbook_id = audit_chain_checkpoints.playbook_id)
+      AND (playbook_collaborators.user_id = auth.uid())
+      AND (playbook_collaborators.accepted_at IS NOT NULL)
+      AND (playbook_collaborators.role = 'auditor'::text)))));
+
+CREATE OR REPLACE FUNCTION public.audit_log_canonical(
+  p_id uuid, p_playbook_id uuid, p_mcp_server_id uuid, p_operation text, p_target text,
+  p_status text, p_latency_ms integer, p_error_code text, p_actor_type text, p_actor_id text,
+  p_secret_name text, p_request_id text, p_created_at timestamptz, p_prev_hash text
+) RETURNS text
+LANGUAGE sql IMMUTABLE
+SET search_path = pg_catalog, public, pg_temp
+AS $$
+  SELECT concat(
+    '{',
+    '"actor_id":', COALESCE(to_json(p_actor_id)::text, 'null'), ',',
+    '"actor_type":', COALESCE(to_json(p_actor_type)::text, 'null'), ',',
+    '"created_at":', to_json(to_char(timezone('UTC', p_created_at), 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'))::text, ',',
+    '"error_code":', COALESCE(to_json(p_error_code)::text, 'null'), ',',
+    '"id":', to_json(p_id::text)::text, ',',
+    '"latency_ms":', COALESCE(p_latency_ms, 0)::text, ',',
+    '"mcp_server_id":', COALESCE(to_json(p_mcp_server_id::text)::text, 'null'), ',',
+    '"operation":', to_json(p_operation)::text, ',',
+    '"playbook_id":', to_json(p_playbook_id::text)::text, ',',
+    '"prev_hash":', to_json(COALESCE(p_prev_hash, repeat('0', 64)))::text, ',',
+    '"request_id":', COALESCE(to_json(p_request_id)::text, 'null'), ',',
+    '"secret_name":', COALESCE(to_json(p_secret_name)::text, 'null'), ',',
+    '"status":', to_json(p_status)::text, ',',
+    '"target":', COALESCE(to_json(p_target)::text, 'null'),
+    '}'
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.audit_logs_assign_hash()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, public, pg_temp
+AS $$
+DECLARE
+  prev text;
+  canonical text;
+BEGIN
+  IF TG_OP = 'UPDATE' THEN
+    RAISE EXCEPTION 'audit_logs rows are immutable';
+  END IF;
+  PERFORM pg_advisory_xact_lock(('x' || substr(md5(NEW.playbook_id::text), 1, 16))::bit(64)::bigint);
+  IF NEW.prev_hash IS NULL THEN
+    SELECT a.hash INTO prev FROM public.audit_logs a
+      WHERE a.playbook_id = NEW.playbook_id AND a.hash IS NOT NULL
+      ORDER BY a.created_at DESC, a.id DESC LIMIT 1;
+    IF prev IS NULL THEN
+      SELECT c.anchor_hash INTO prev FROM public.audit_chain_checkpoints c
+        WHERE c.playbook_id = NEW.playbook_id
+        ORDER BY c.created_at DESC, c.id DESC LIMIT 1;
+    END IF;
+    NEW.prev_hash := COALESCE(prev, repeat('0', 64));
+  END IF;
+  canonical := public.audit_log_canonical(
+    NEW.id, NEW.playbook_id, NEW.mcp_server_id, NEW.operation, NEW.target,
+    NEW.status, NEW.latency_ms, NEW.error_code, NEW.actor_type, NEW.actor_id,
+    NEW.secret_name, NEW.request_id, NEW.created_at, NEW.prev_hash
+  );
+  NEW.hash := encode(extensions.digest(convert_to(canonical, 'UTF8'), 'sha256'), 'hex');
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS audit_logs_assign_hash ON public.audit_logs;
+CREATE TRIGGER audit_logs_assign_hash BEFORE INSERT ON public.audit_logs
+  FOR EACH ROW EXECUTE FUNCTION public.audit_logs_assign_hash();
+DROP TRIGGER IF EXISTS audit_logs_deny_update ON public.audit_logs;
+CREATE TRIGGER audit_logs_deny_update BEFORE UPDATE ON public.audit_logs
+  FOR EACH ROW EXECUTE FUNCTION public.audit_logs_assign_hash();
+
+CREATE OR REPLACE FUNCTION public.purge_audit_logs(
+  p_older_than timestamptz,
+  p_playbook_id uuid DEFAULT NULL,
+  p_actor_type text DEFAULT 'system',
+  p_actor_id text DEFAULT 'retention'
+) RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = pg_catalog, public, pg_temp
+AS $$
+DECLARE
+  playbook uuid;
+  last_row public.audit_logs%ROWTYPE;
+  n integer;
+  total integer := 0;
+  playbooks_touched integer := 0;
+BEGIN
+  IF p_older_than IS NULL THEN
+    RAISE EXCEPTION 'p_older_than is required';
+  END IF;
+  FOR playbook IN
+    SELECT DISTINCT playbook_id FROM public.audit_logs
+    WHERE created_at < p_older_than
+      AND (p_playbook_id IS NULL OR playbook_id = p_playbook_id)
+  LOOP
+    PERFORM pg_advisory_xact_lock(('x' || substr(md5(playbook::text), 1, 16))::bit(64)::bigint);
+    SELECT count(*) INTO n FROM public.audit_logs
+      WHERE playbook_id = playbook AND created_at < p_older_than;
+    CONTINUE WHEN n = 0;
+    SELECT * INTO last_row FROM public.audit_logs
+      WHERE playbook_id = playbook AND created_at < p_older_than
+      ORDER BY created_at DESC, id DESC LIMIT 1;
+    INSERT INTO public.audit_chain_checkpoints (
+      playbook_id, anchor_hash, purged_through, purged_through_id, purged_count
+    ) VALUES (playbook, last_row.hash, last_row.created_at, last_row.id, n);
+    DELETE FROM public.audit_logs
+      WHERE playbook_id = playbook AND created_at < p_older_than;
+    INSERT INTO public.audit_logs (playbook_id, operation, status, actor_type, actor_id, target)
+      VALUES (
+        playbook, 'audit.retention_purge', 'success',
+        COALESCE(p_actor_type, 'system'), COALESCE(p_actor_id, 'retention'),
+        to_char(timezone('UTC', p_older_than), 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+      );
+    total := total + n;
+    playbooks_touched := playbooks_touched + 1;
+  END LOOP;
+  RETURN jsonb_build_object('purged', total, 'playbooks', playbooks_touched, 'older_than', p_older_than);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.audit_log_canonical(uuid, uuid, uuid, text, text, text, integer, text, text, text, text, text, timestamptz, text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.audit_log_canonical(uuid, uuid, uuid, text, text, text, integer, text, text, text, text, text, timestamptz, text) TO service_role;
+REVOKE ALL ON FUNCTION public.audit_logs_assign_hash() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.audit_logs_assign_hash() TO service_role;
+REVOKE ALL ON FUNCTION public.purge_audit_logs(timestamptz, uuid, text, text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.purge_audit_logs(timestamptz, uuid, text, text) TO service_role;

@@ -24,7 +24,7 @@ type PlaybookWithCounts = Playbook & {
   mcp_server_count?: number;
   persona_count?: number;
   memory_count?: number;
-  current_user_role?: "owner" | "editor";
+  current_user_role?: "owner" | "editor" | "auditor";
 };
 
 export default function DashboardPage() {
@@ -171,10 +171,10 @@ export default function DashboardPage() {
               >
                 <div className="flex items-start justify-between mb-4">
                   <h3 className="text-lg font-semibold text-neutral-900 dark:text-white">{playbook.name}</h3>
-                  {playbook.current_user_role === "editor" ? (
+                  {playbook.current_user_role === "editor" || playbook.current_user_role === "auditor" ? (
                     <span className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-500/10 px-2 py-1 rounded-full">
                       <UsersRound className="h-3 w-3" />
-                      Shared
+                      {playbook.current_user_role === "auditor" ? "Auditor" : "Shared"}
                     </span>
                   ) : playbook.visibility === 'public' ? (
                     <span className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-500/10 px-2 py-1 rounded-full">

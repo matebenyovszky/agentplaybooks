@@ -22,7 +22,10 @@
 
 import { getServiceSupabase } from "./supabase";
 import type { FederationAuditEvent } from "@/lib/mcp/federation";
-import type { AuditActorType, SecretAuditOperation } from "@/lib/supabase/types";
+import type { AuditActorType, AuditLogRow, SecretAuditOperation } from "@/lib/supabase/types";
+import { scheduleAuditForward } from "./audit-forward";
+
+type AuditLogInsert = Partial<AuditLogRow> & Pick<AuditLogRow, "playbook_id" | "operation" | "status">;
 
 export type AuditActor = {
   type: AuditActorType;
@@ -98,22 +101,32 @@ export function destinationHostOf(url: string | null | undefined): string | null
  * trail. Both MCP entry points use this one rather than each keeping its own
  * copy of the insert.
  */
+async function insertAuditLog(row: AuditLogInsert): Promise<void> {
+  const { data, error } = await getServiceSupabase()
+    .from("audit_logs")
+    .insert(row)
+    .select()
+    .single();
+  if (error) {
+    console.error("Failed to write audit log", error.message);
+    return;
+  }
+  scheduleAuditForward(data ?? row);
+}
+
 export function federationAuditWriter(playbookId: string, requestId?: string | null) {
   return async (event: FederationAuditEvent) => {
     try {
-      const { error } = await getServiceSupabase()
-        .from("audit_logs")
-        .insert({
-          playbook_id: playbookId,
-          mcp_server_id: event.serverId,
-          operation: event.operation,
-          target: event.target || null,
-          status: event.status,
-          latency_ms: event.latencyMs,
-          error_code: event.errorCode || null,
-          request_id: requestId || null,
-        });
-      if (error) console.error("Failed to write audit log", error.message);
+      await insertAuditLog({
+        playbook_id: playbookId,
+        mcp_server_id: event.serverId,
+        operation: event.operation,
+        target: event.target || null,
+        status: event.status,
+        latency_ms: event.latencyMs,
+        error_code: event.errorCode || null,
+        request_id: requestId || null,
+      });
     } catch (err) {
       // Same contract as the vault writer: losing an audit row must not turn a
       // working federated call into a failed one.
@@ -127,22 +140,19 @@ export async function recordSecretAudit(
   draft: SecretAuditDraft,
 ): Promise<void> {
   try {
-    const { error } = await getServiceSupabase()
-      .from("audit_logs")
-      .insert({
-        playbook_id: context.playbookId,
-        // No federated server is involved in a vault operation.
-        mcp_server_id: null,
-        operation: draft.operation,
-        target: draft.target ?? null,
-        status: draft.status,
-        error_code: draft.reason ?? null,
-        actor_type: context.actor.type,
-        actor_id: context.actor.id,
-        secret_name: draft.secretName ?? null,
-        request_id: context.requestId ?? null,
-      });
-    if (error) console.error("Failed to write audit log", error.message);
+    await insertAuditLog({
+      playbook_id: context.playbookId,
+      // No federated server is involved in a vault operation.
+      mcp_server_id: null,
+      operation: draft.operation,
+      target: draft.target ?? null,
+      status: draft.status,
+      error_code: draft.reason ?? null,
+      actor_type: context.actor.type,
+      actor_id: context.actor.id,
+      secret_name: draft.secretName ?? null,
+      request_id: context.requestId ?? null,
+    });
   } catch (err) {
     console.error("Failed to write audit log", err);
   }

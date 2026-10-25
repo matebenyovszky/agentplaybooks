@@ -1,8 +1,9 @@
 import { getServerServiceSupabase as getServiceSupabase } from "@/lib/supabase/server";
 import type { Playbook } from "@/lib/supabase/types";
 import { generateGuid } from "@/lib/utils";
+import { playbookViewForRole, type PlaybookAccessRole } from "@/lib/audit-access";
 
-export type PlaybookAccessRole = "owner" | "editor";
+export type { PlaybookAccessRole };
 
 export type PlaybookListItem = Playbook & {
   skill_count: number;
@@ -19,17 +20,21 @@ type PlaybookWithCounts = Playbook & {
 
 function withCounts(
   rows: PlaybookWithCounts[],
-  role: PlaybookAccessRole,
+  roleFor: (playbookId: string) => PlaybookAccessRole,
 ): PlaybookListItem[] {
   return rows.map((row) => {
     const { skills, mcp_servers, memories, ...playbook } = row;
-    return {
+    const role = roleFor(playbook.id);
+    const listed = {
       ...playbook,
       current_user_role: role,
       skill_count: skills?.[0]?.count || 0,
       mcp_server_count: mcp_servers?.[0]?.count || 0,
       memory_count: memories?.[0]?.count || 0,
     };
+    return (role === "auditor"
+      ? { ...playbookViewForRole(listed as unknown as Record<string, unknown>, "auditor"), skill_count: listed.skill_count, mcp_server_count: listed.mcp_server_count, memory_count: listed.memory_count }
+      : listed) as PlaybookListItem;
   });
 }
 
@@ -61,7 +66,7 @@ export async function listAccessiblePlaybooks(
 
   const { data: memberships, error: membershipError } = await supabase
     .from("playbook_collaborators")
-    .select("playbook_id")
+    .select("playbook_id, role")
     .eq("user_id", userId)
     .not("accepted_at", "is", null);
 
@@ -72,6 +77,12 @@ export async function listAccessiblePlaybooks(
   }
 
   const sharedIds = (memberships || []).map(({ playbook_id }) => playbook_id);
+  const roleByPlaybook = new Map<string, PlaybookAccessRole>(
+    (memberships || []).map((row) => [
+      row.playbook_id,
+      row.role === "auditor" ? "auditor" : "editor",
+    ]),
+  );
   let sharedData: typeof ownedData = [];
   if (sharedIds.length > 0) {
     const sharedResult = await supabase
@@ -84,8 +95,8 @@ export async function listAccessiblePlaybooks(
   }
 
   return [
-    ...withCounts((ownedData || []) as unknown as PlaybookWithCounts[], "owner"),
-    ...withCounts((sharedData || []) as unknown as PlaybookWithCounts[], "editor"),
+    ...withCounts((ownedData || []) as unknown as PlaybookWithCounts[], () => "owner"),
+    ...withCounts((sharedData || []) as unknown as PlaybookWithCounts[], (id) => roleByPlaybook.get(id) ?? "editor"),
   ].sort(
     (left, right) =>
       new Date(right.updated_at).getTime() - new Date(left.updated_at).getTime(),

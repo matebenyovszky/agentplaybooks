@@ -12,6 +12,12 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 SECRETS_ENCRYPTION_KEY=your-64-char-hex-key
 # Application URL (for production)
 NEXT_PUBLIC_APP_URL=https://apbks.com
+# Optional audit compliance (all off / keep-forever by default)
+# AUDIT_RETENTION_DAYS=365
+# AUDIT_CRON_SECRET=replace-me
+# AUDIT_SYSLOG_URL=udp://loghost:514
+# AUDIT_SIEM_WEBHOOK_URL=https://siem.example/hooks/audit
+# AUDIT_SIEM_WEBHOOK_SECRET=replace-me
 ```
 
 ## OAuth Configuration (CRITICAL)

@@ -25,6 +25,7 @@ const docSlugs = [
   "readme",
   "api-reference",
   "architecture",
+  "audit-logs",
   "bot-platform-integrations",
   "claude",
   "cli",

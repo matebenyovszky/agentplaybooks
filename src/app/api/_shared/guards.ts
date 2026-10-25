@@ -1,6 +1,12 @@
 import { getServiceSupabase } from "./supabase";
 import type { Playbook } from "@/lib/supabase/types";
 import { playbookIdentifierColumn } from "@/lib/playbook-identifier";
+import {
+  roleMayWrite,
+  type PlaybookAccessRole,
+} from "@/lib/audit-access";
+
+export type { PlaybookAccessRole };
 
 /**
  * The UUID of the playbook a request names by UUID or by GUID. Routes keyed on
@@ -36,8 +42,6 @@ export async function checkPlaybookOwnership(userId: string, playbookId: string)
   return !!playbook;
 }
 
-export type PlaybookAccessRole = "owner" | "editor";
-
 export async function getPlaybookAccessRole(
   userId: string,
   playbookId: string
@@ -48,7 +52,7 @@ export async function getPlaybookAccessRole(
 
   const { data: collaborator, error } = await getServiceSupabase()
     .from("playbook_collaborators")
-    .select("id")
+    .select("id, role")
     .eq("playbook_id", playbookId)
     .eq("user_id", userId)
     .not("accepted_at", "is", null)
@@ -58,11 +62,12 @@ export async function getPlaybookAccessRole(
     throw new Error(`Failed to check playbook collaboration: ${error.message}`);
   }
 
-  return collaborator ? "editor" : null;
+  if (!collaborator) return null;
+  return collaborator.role === "auditor" ? "auditor" : "editor";
 }
 
 export async function checkPlaybookWriteAccess(userId: string, playbookId: string): Promise<boolean> {
-  return (await getPlaybookAccessRole(userId, playbookId)) !== null;
+  return roleMayWrite(await getPlaybookAccessRole(userId, playbookId));
 }
 
 /**

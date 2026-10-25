@@ -12,6 +12,7 @@ Welcome to the AgentPlaybooks documentation.
 - [Hermes Memory Provider](./hermes-memory.md) - Native memory setup, profile boundaries, and shared knowledge
 - [AgentPlaybooks Tools in Hermes](./hermes-portable-agents.md) - Connect playbook skills, MCP/OpenAPI tools, and credentials
 - [Team Collaboration](./team-collaboration.md) - Share playbooks securely with human editors
+- [Audit Logs](./audit-logs.md) - Export, retention, hash chain, and the auditor role
 - [Roadmap](./ROADMAP.md) - Development roadmap and future plans
 
 ### Core Concepts

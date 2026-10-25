@@ -6,7 +6,7 @@ import { operationPathsFromTools, secretProxyOpenApiPath } from "@/app/api/_shar
 import { MEMORY_SEARCH_PARAMETERS } from "@/lib/memory";
 
 export type PlaybookWithExports = Playbook & {
-    current_user_role?: "owner" | "editor" | "viewer";
+    current_user_role?: "owner" | "editor" | "auditor" | "viewer";
     persona?: Persona | null;
     personas?: Persona[];
     skills: Skill[];

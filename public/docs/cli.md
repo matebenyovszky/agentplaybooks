@@ -153,6 +153,19 @@ Safety rules:
 export AGENTPLAYBOOKS_API_KEY=<your-user-api-key>
 apb login               # verify and store the key (~/.agentplaybooks, 0600)
 apb playbooks           # list playbooks your key can access
+```
+
+### Audit trail: export and verify
+
+A user API key (or an auditor collaborator using theirs) can export and check
+the playbook hash chain. Playbook keys that perform vault operations cannot
+read the trail. See [Audit Logs](./audit-logs.md).
+
+```bash
+apb audit export <guid> --format=jsonl --since=2026-01-01T00:00:00Z --action=secret.
+apb audit export --format=csv > trail.csv
+apb audit verify <guid>
+apb audit purge <guid> --days=365 --yes
 
 apb push --apply        # hosted records + private versioned portable backup
 apb backups <guid>      # list backup revision IDs

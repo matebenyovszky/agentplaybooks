@@ -12,6 +12,7 @@ export const USER_API_KEY_PERMISSION_OPTIONS = [
   { id: "tools:call", label: "Call Connected Tools", description: "Call non-public tools on connected MCP servers" },
   { id: "secrets:read", label: "Use Secrets", description: "List metadata and use secrets through the zero-exposure proxy" },
   { id: "secrets:write", label: "Manage Secrets", description: "Store, rotate, and delete encrypted secrets" },
+  { id: "audit:read", label: "Read Audit Logs", description: "Export and verify the playbook audit trail. Does not grant secret values." },
   { id: "full", label: "Full Access", description: "All current and future permissions" },
 ] as const;
 
