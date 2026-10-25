@@ -4,7 +4,7 @@
 
 **Audience:** the customer's information-security officer (IBF), risk, legal, and operations teams. Written for a Hungarian public-sector supplier assessment and EIR security classification.
 
-**Verified against source:** 2026-10-25, on the `main` branch as of that date. Parallel open PRs that are not on `main` yet are marked **Folyamatban / In progress** on the gap list.
+**Verified against source:** 2026-10-25, on the `main` branch as of that date (includes merged [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200), [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201), [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205)). Parallel open PRs that are not on `main` yet are marked **Folyamatban / In progress** on the gap list.
 
 > **jogi ellenőrzés szükséges.** This pack is not legal advice, not a certification, and not a substitute for the customer's own risk analysis or control selection under 7/2024. (VI. 24.) MK rendelet. Every note on scope, classification, responsibility split, or legal interpretation must be approved by the customer's counsel and IBF before production use.
 
@@ -16,6 +16,8 @@
 | Asset inventory (components, ports, keys, dependencies) | [asset-inventory.hu.md](./asset-inventory.hu.md) | [asset-inventory.md](./asset-inventory.md) |
 | Risk-assessment template (NIST 800-53 families ↔ MK r. / NIS2) | [risk-assessment.hu.md](./risk-assessment.hu.md) | [risk-assessment.md](./risk-assessment.md) |
 | Spreadsheet export | [risk-assessment.csv](./risk-assessment.csv) (bilingual) | same file |
+| Incident runbook (on `main` via [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205)) | [incident-runbook.hu.md](./incident-runbook.hu.md) | [incident-runbook.md](./incident-runbook.md) |
+| Supply-chain artifacts (on `main` via [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205)) | — | [supply-chain.md](./supply-chain.md) |
 
 Live stack listing (`docker compose ps` / `images` / ports):
 
@@ -44,19 +46,27 @@ This pack **does not quote or invent** 7/2024 MK rendelet control IDs. Controls 
 | GDPR (EU) 2016/679 | Security of processing, processor status — [EUR-Lex](https://eur-lex.europa.eu/eli/reg/2016/679/oj) |
 | EiR guides (NBSZ NKI) | Practical help for the MK decree — [nki.gov.hu](https://nki.gov.hu/it-biztonsag/kiadvanyok/segedletek/eir-utmutato/) |
 
-Related operations guide: [`public/docs/self-hosting.md`](../../public/docs/self-hosting.md). Short website summary: [`public/docs/security.md`](../../public/docs/security.md) / [`public/docs/security.hu.md`](../../public/docs/security.hu.md).
+Related operations guide: [`public/docs/self-hosting.md`](../../public/docs/self-hosting.md). Self-hosted mTLS: [`public/docs/self-hosted-mtls.md`](../../public/docs/self-hosted-mtls.md). Vulnerability policy: [`SECURITY.md`](../../SECURITY.md). Short website summary: [`public/docs/security.md`](../../public/docs/security.md) / [`public/docs/security.hu.md`](../../public/docs/security.hu.md).
+
+## Done on `main` (merged)
+
+These gaps closed on `main`. Whitepaper rows keep the merged PR links.
+
+| Gap | Done on `main` |
+|-----|----------------|
+| 10 self-host mTLS via trusted proxy (`MTLS_MODE=proxy`) | [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201) |
+| 11 build-time Google Fonts (`next/font/local`) | [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200) |
+| 7 `SECURITY.md` / incident runbook; 9 CodeQL, CycloneDX SBOM, cosign of SBOM blobs | [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205) |
 
 ## Parallel PRs (not on `main`)
 
-Code claims follow `main`. These gaps are being closed on open PRs; after they merge, flip the whitepaper gap rows.
+Code claims follow `main`. These gaps are still open; after they merge, flip the whitepaper gap rows.
 
 | Gap | Folyamatban / In progress |
 |-----|---------------------------|
 | 4 auditor role; 6 audit export / syslog / SIEM / retention / hash chain | [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202) |
-| 10 self-host mTLS via trusted proxy | [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201) |
-| 11 build-time Google Fonts | [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200) |
 | 11 no-egress CI evidence | [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204) |
-| 7 `SECURITY.md` / incident runbook; 8 backup/DR; 9 SAST / SBOM / image signing | separate PRs being opened; no link yet |
+| 8 backup/DR runbook | a separate PR is being opened; no link yet |
 
 ## What this pack does not claim
 

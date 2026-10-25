@@ -57,9 +57,11 @@ describe("security documentation pack", () => {
     expect(whitepaper).toMatch(/No application-level MFA/);
     expect(whitepaper).toMatch(/Auditor role: not in the codebase/);
     expect(whitepaper).toMatch(/Folyamatban \/ In progress/);
+    expect(whitepaper).toMatch(/Done on `main`/);
     expect(whitepaper).toMatch(/pull\/202/);
     expect(whitepaper).toMatch(/pull\/201/);
     expect(whitepaper).toMatch(/pull\/200/);
     expect(whitepaper).toMatch(/pull\/204/);
+    expect(whitepaper).toMatch(/pull\/205/);
   });
 });

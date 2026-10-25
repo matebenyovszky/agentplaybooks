@@ -1,6 +1,6 @@
 # AgentPlaybooks biztonsági fehérkönyv
 
-**Verzió:** 2026-10-25 · **Forrás:** a repó `main` ágának akkor aktuális kódja. Párhuzamos PR-ek: **Folyamatban / In progress**, merge előtt nem számítanak késznek.  
+**Verzió:** 2026-10-25 · **Forrás:** a repó `main` ágának akkor aktuális kódja (benne a merge-elt [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200), [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201), [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205)). A maradék párhuzamos PR-ek: **Folyamatban / In progress**, merge előtt nem számítanak késznek.  
 **Elsődleges nyelv:** magyar. Angol: [whitepaper.md](./whitepaper.md).
 
 > **Jogi ellenőrzés szükséges.** Az alábbi hatály-, NIS2-, MK rendeleti, GDPR- és gyártói-státusz értelmezések nem minősülnek jogi tanácsnak. Éles bevezetés előtt az ügyfél jogászának és IBF-jének kell jóváhagynia.
@@ -53,7 +53,7 @@ Forrás: [`public/docs/architecture.md`](../../public/docs/architecture.md), [`R
 | TB-1 Alkalmazásfolyamat | Next.js a `Dockerfile` non-root `nextjs` userrel, port 3000 | A folyamat tartja a mesterkulcsot és a service role kulcsot; kompromittálása a széf plaintextjét jelenti |
 | TB-2 Supabase | Auth + Postgres + Data API, ügyfél hálózata | Az alkalmazás service_role-lal hív; az RLS a böngészős/anon utakat védi, **nem** a service_role-t |
 | TB-3 Kimenő proxy | `use_secret` és federált eszközök | Az ügynök nem látja a titkot, de a célt ő választja; `allowed_hosts` + privát IP tiltás |
-| TB-4 Cloudflare mTLS (csak hosted) | `cf.tlsClientAuth` | Self-host Node/Next-en **fail-closed**; lásd hiányosságok |
+| TB-4 mTLS | Hosted: `cf.tlsClientAuth`. Self-host: `MTLS_MODE=proxy` megbízható terminátor mögött | A Node nem terminál TLS-t. Terminátor nélkül az alapértelmezés fail-closed. **Kész a `main`-en:** [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201) |
 
 A compose **nem** indít adatbázist. `docker-compose.yml` ezt kimondja; a bare Postgres nem elég, mert minden útvonal a Supabase Data API-t és Auth-ot hívja. Lásd [`public/docs/self-hosting.md`](../../public/docs/self-hosting.md), [`docker-compose.yml`](../../docker-compose.yml).
 
@@ -89,10 +89,11 @@ A service_role megkerüli az RLS-t. Az engedélyezés az alkalmazáskódban van:
 | v1 kompatibilitás | A régi ciphertext még visszafejthető | [`src/lib/crypto.test.ts`](../../src/lib/crypto.test.ts) |
 | API-kulcs at rest | SHA-256 | [`src/lib/utils.ts`](../../src/lib/utils.ts) `hashApiKey` |
 | TLS (hosted) | Cloudflare edge | [`public/docs/architecture.md`](../../public/docs/architecture.md) |
-| mTLS (hosted) | Csak `cf.tlsClientAuth`; HTTP tanúsítványfejléc **nem** megbízható; `certRevoked !== "0"` elutasítva | [`src/lib/mtls.ts`](../../src/lib/mtls.ts) |
+| mTLS (hosted) | `cf.tlsClientAuth`; HTTP tanúsítványfejléc **nem** megbízható; `certRevoked !== "0"` elutasítva | [`src/lib/mtls.ts`](../../src/lib/mtls.ts) |
+| mTLS (self-host) | `MTLS_MODE=cloudflare\|proxy\|off`; `proxy` a `MTLS_TRUSTED_PROXIES` terminátorát bízza | [`src/lib/mtls.ts`](../../src/lib/mtls.ts), [`public/docs/self-hosted-mtls.md`](../../public/docs/self-hosted-mtls.md). **Kész a `main`-en:** [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201) |
 | mTLS kliensnyilvántartás | `secret_clients.certificate_sha256`, `is_active`, `expires_at`, név szerinti titoklista | [`supabase/migrations/20261010081252_secret_clients.sql`](../../supabase/migrations/20261010081252_secret_clients.sql) |
 
-A Docker-image a `main`-en **nem** terminál mTLS-t. A Python loader self-host Node/Next-en fail-closed. **Folyamatban / In progress** (trusted proxy adapter): [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201). Mai viselkedés: [`packages/python-secrets/README.md`](../../packages/python-secrets/README.md).
+A Docker `app` image a `main`-en **nem** terminál TLS-t. Self-host tanúsítványklienshez terminátor (nginx/Caddy/Traefik) és `MTLS_MODE=proxy` kell. Enélkül a Python loader fail-closed marad (`MTLS_MODE=cloudflare`). **Kész a `main`-en:** [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201). Üzemeltetési útmutató: [`public/docs/self-hosted-mtls.md`](../../public/docs/self-hosted-mtls.md), [`packages/python-secrets/README.md`](../../packages/python-secrets/README.md).
 
 **Amit nem állítunk:** KMS, HSM, kulcscsomagolás, mesterkulcs-forgatás újratitkosítással. A compose kommentje: a `SECRETS_ENCRYPTION_KEY` cseréje a meglévő titkokat olvashatatlanná teszi.
 
@@ -151,11 +152,11 @@ Tesztek: [`tests/api/secrets-expiry.test.ts`](../../tests/api/secrets-expiry.tes
 **Amit nem állíthatunk „air-gapped / no-egress” termékként.**
 
 1. A compose nem tartalmazza a Supabase stacket.
-2. Build: `next/font/google` Geist / Geist Mono — [`src/app/layout.tsx`](../../src/app/layout.tsx). A Next a fontot a build után self-hostolja, de **a buildnek kimenő hálózatra van szüksége**, hacsak a font nincs előcache-elve. Offline fontcsomag nincs a `main`-en. **Folyamatban / In progress:** [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200) (`next/font/local`).
+2. Build-fontok: `next/font/local` Geist / Geist Mono woff2 — [`src/app/layout.tsx`](../../src/app/layout.tsx), [`src/app/fonts/Geist-Variable.woff2`](../../src/app/fonts/Geist-Variable.woff2). **Kész a `main`-en:** [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200). A build már nem tölt le Google Fonts-ot.
 3. Nincs izolált-hálózati E2E teszt a `main`-en, amely 0 kimenő csomagot bizonyítana. **Folyamatban / In progress:** [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204).
 4. A CSP Report-Only `connect-src` `https://*.supabase.co`-t tartalmaz ([`src/lib/security-headers.ts`](../../src/lib/security-headers.ts)); saját Auth-hostnál ez nem fedi a self-hostot, és nem enforcing.
 5. A `use_secret` / federáció **szándékosan** kimenő HTTP-t indít az ügyfél által választott célokra.
-6. mTLS a sima Docker/Node self-hoston fail-closed. **Folyamatban / In progress** (trusted proxy, `MTLS_MODE=proxy`): [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201).
+6. mTLS sima Docker/Node-on, terminátor nélkül fail-closed marad. A trusted-proxy mód (`MTLS_MODE=proxy`) a `main`-en van. **Kész a `main`-en:** [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201).
 
 Az ügyfél no-egress célja: saját hálózati izoláció, saját font-cache, `SECRETS_REQUIRE_ALLOWED_HOSTS=true`, kimenő proxy tiltása, ha a széf nem kell. A termék ezt nem méri.
 
@@ -169,17 +170,17 @@ HTTP-fejlécek (HSTS, `X-Frame-Options: DENY`, nosniff, Permissions-Policy): [`s
 | `npm audit --omit=dev --audit-level=high` a CI-ban | Igen | [`scripts/audit-production.mjs`](../../scripts/audit-production.mjs), [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) |
 | CI: lint, teszt, `tsc`, worker build, wrangler dry-run | Igen | ugyanaz a workflow |
 | CLI npm trusted publishing / OIDC provenance | Igen | [`.github/workflows/publish-cli.yml`](../../.github/workflows/publish-cli.yml) (`id-token: write`; a `--provenance` flag szándékosan nincs, az npm automatikusan tanúsít) |
-| SAST (CodeQL / Semgrep) | Nem a `main`-en | **Folyamatban / In progress** (külön PR nyitás alatt; link még nincs) |
-| CycloneDX / SPDX SBOM | Nem a `main`-en | **Folyamatban / In progress** (külön PR nyitás alatt; link még nincs) |
-| Konténer-aláírás (cosign) | Nem a `main`-en | **Folyamatban / In progress** (külön PR nyitás alatt; link még nincs) |
-| `SECURITY.md`, PSIRT, incidens-runbook | Nem a `main`-en | **Folyamatban / In progress** (külön PR nyitás alatt; link még nincs) |
+| SAST (CodeQL) | Igen, a `main`-en | [`.github/workflows/codeql.yml`](../../.github/workflows/codeql.yml). **Kész a `main`-en:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205). Semgrep nincs |
+| CycloneDX SBOM | Igen, a `main`-en | [`.github/workflows/sbom.yml`](../../.github/workflows/sbom.yml), [`docs/security/supply-chain.md`](./supply-chain.md). **Kész a `main`-en:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205) |
+| SBOM-blob cosign `cli-v*` tageken | Igen, a `main`-en | [`docs/security/supply-chain.md`](./supply-chain.md). Nincs aláírt konténer-**registry** publikálás |
+| `SECURITY.md`, incidens-runbook | Igen, a `main`-en | [`SECURITY.md`](../../SECURITY.md), [`docs/security/incident-runbook.md`](./incident-runbook.md). **Kész a `main`-en:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205). A PSIRT postaláda még helyőrző |
 | Automatizált titkosított DB-mentés / DR-runbook | Nem a `main`-en (`supabase db dump` egy sora) | **Folyamatban / In progress** (külön PR nyitás alatt; link még nincs) |
 
 A lockfile (`package-lock.json`, `packages/cli/package-lock.json`) a reprodukálható telepítés bemenete.
 
 ## 11. Ismert hiányosságok
 
-Őszinte lista a beszállítói értékeléshez. Státusz a `main` 2026-10-25-i kódja szerint. A **Folyamatban / In progress** sorok nyitott PR-ek; merge után ezt a listát kell átbillenteni.
+Őszinte lista a beszállítói értékeléshez. Státusz a `main` 2026-10-25-i kódja szerint. A **Folyamatban / In progress** sorok még nyitott PR-ek; a **Kész a `main`-en** sorok a merge-elt PR-re hivatkoznak.
 
 1. **Nincs KMS / HSM.** A mesterkulcs folyamat-környezeti változó.
 2. **Nincs kulcsrotáció újratitkosítással.** A mesterkulcs cseréje adatvesztés a széfben.
@@ -187,11 +188,11 @@ A lockfile (`package-lock.json`, `packages/cli/package-lock.json`) a reprodukál
 4. **Nincs auditor szerepkör a kódban.** Human RBAC: owner \| editor. Az audit olvasása tulajdonos-szintű. **Folyamatban / In progress:** [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202).
 5. **Nincs SAML SSO.** OIDC/OAuth a GoTrue-n keresztül, ha az ügyfél bekapcsolja.
 6. **Audit: nincs export, megőrzés, hash-lánc a `main`-en.** Skills / memória / vászon írások nincsenek naplózva. **Folyamatban / In progress** (export, syslog/SIEM, megőrzés, hash-lánc): [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202).
-7. **Nincs `SECURITY.md`, PSIRT, 24/72 óra / 1 hónap incidens-runbook.** Az ügyfél NKI-bejelentése (418/2024. 77. §) saját rend — **jogi ellenőrzés szükséges**. **Folyamatban / In progress:** külön PR nyitás alatt; link még nincs.
+7. **A `SECURITY.md` és a 24/72 óra / 1 hónap incidens-runbook a `main`-en van.** **Kész a `main`-en:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205) — [`SECURITY.md`](../../SECURITY.md), [`docs/security/incident-runbook.md`](./incident-runbook.md). A PSIRT postaláda még helyőrző. Az ügyfél NKI-bejelentése (418/2024. 77. §) saját rend — **jogi ellenőrzés szükséges**.
 8. **Nincs mentés- és DR-runbook.** `supabase db dump`; playbook snapshotok nem tartalmazzák a titokértékeket. **Folyamatban / In progress:** külön PR nyitás alatt; link még nincs.
-9. **Nincs SAST, SBOM, image-aláírás.** Dependabot + production npm audit + CLI provenance van. **Folyamatban / In progress:** külön PR nyitás alatt; link még nincs.
-10. **mTLS csak Cloudflare-en a `main`-en.** Self-host Node/Next: fail-closed. **Folyamatban / In progress** (trusted proxy): [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201).
-11. **Nincs no-egress bizonyíték a `main`-en.** Build-kori Google Fonts; a compose nem self-contained. **Folyamatban / In progress:** fontok [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200); izolált CI [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204).
+9. **A CodeQL, a CycloneDX SBOM és az SBOM-blob cosign a `main`-en van.** **Kész a `main`-en:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205) — [`.github/workflows/codeql.yml`](../../.github/workflows/codeql.yml), [`.github/workflows/sbom.yml`](../../.github/workflows/sbom.yml), [`docs/security/supply-chain.md`](./supply-chain.md). Dependabot + production npm audit + CLI provenance megmarad. Aláírt konténer-**registry** publikálás továbbra sincs.
+10. **A self-host mTLS trusted proxy-n a `main`-en van.** **Kész a `main`-en:** [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201) — `MTLS_MODE=proxy`, [`public/docs/self-hosted-mtls.md`](../../public/docs/self-hosted-mtls.md), [`deploy/self-host/docker-compose.mtls.yml`](../../deploy/self-host/docker-compose.mtls.yml). A Node továbbra sem terminál TLS-t; terminátor nélkül az alapértelmezés fail-closed.
+11. **Nincs no-egress bizonyíték a `main`-en.** A build-kori Google Fonts zárva. **Kész a `main`-en:** fontok [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200) (`next/font/local`). A compose továbbra sem self-contained. Izolált CI: **Folyamatban / In progress:** [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204).
 12. **Rate limiting nincs** (ROADMAP).
 13. **Nincs külső pentest** ebben a csomagban.
 14. **CSP Report-Only**, `connect-src` hardcoded `*.supabase.co`.
@@ -204,7 +205,7 @@ A lockfile (`package-lock.json`, `packages/cli/package-lock.json`) a reprodukál
 | Kód, kripto, RBAC, vault, audit API | Igen | — |
 | Osztályba sorolás, kockázatelemzés, MK intézkedésválasztás | Sablon | IBF — **jogi ellenőrzés szükséges** |
 | Entra SSO + MFA, hálózat, TLS-terminálás, fizikai védelem | Konfigpontok | Üzemeltetés |
-| Naplómegőrzés, SIEM, incidensbejelentés NKI felé | API a kivonathoz | 24 / 72 óra / 1 hónap rend |
+| Naplómegőrzés, SIEM, incidensbejelentés NKI felé | Audit API + [`docs/security/incident-runbook.md`](./incident-runbook.md) | 24 / 72 óra / 1 hónap rend |
 | Mentés, RPO/RTO | `db dump` + snapshotok | Restore drill |
 | GDPR adatkezelő / adatfeldolgozó | Self-hoston általában az ügyfél a kezelő — **jogi ellenőrzés szükséges** | DPIA, ha kell |
 
@@ -215,10 +216,10 @@ Részletes leképezés: [risk-assessment.hu.md](./risk-assessment.hu.md).
 | Téma | Fájlok |
 |------|--------|
 | Kripto | `src/lib/crypto.ts`, `src/lib/crypto.test.ts` |
-| mTLS | `src/lib/mtls.ts`, `src/lib/mtls.test.ts`, `supabase/migrations/20261010081252_secret_clients.sql` |
+| mTLS | `src/lib/mtls.ts`, `src/lib/mtls.test.ts`, `supabase/migrations/20261010081252_secret_clients.sql`, `public/docs/self-hosted-mtls.md`, `deploy/self-host/docker-compose.mtls.yml` |
 | Authz | `src/app/api/_shared/guards.ts`, `src/app/api/_shared/permissions.ts`, `src/app/api/_shared/auth.ts`, `permissions.md` |
 | Audit | `src/app/api/_shared/audit.ts`, `src/app/api/playbooks/[guid]/audit/app.ts`, `supabase/migrations/20260819_audit_logs_secrets.sql` |
 | Lejárat / SSRF | `src/lib/secret-expiry.ts`, `src/lib/secret-destinations.ts`, `src/lib/mcp/federation.ts` |
-| Self-host | `docker-compose.yml`, `Dockerfile`, `public/docs/self-hosting.md` |
-| SDLC | `.github/dependabot.yml`, `.github/workflows/ci.yml`, `.github/workflows/publish-cli.yml`, `scripts/audit-production.mjs` |
+| Self-host | `docker-compose.yml`, `Dockerfile`, `public/docs/self-hosting.md`, `src/app/fonts/Geist-Variable.woff2` |
+| SDLC | `.github/dependabot.yml`, `.github/workflows/ci.yml`, `.github/workflows/publish-cli.yml`, `.github/workflows/codeql.yml`, `.github/workflows/sbom.yml`, `scripts/audit-production.mjs`, `SECURITY.md`, `docs/security/incident-runbook.md`, `docs/security/supply-chain.md` |
 | Élő leltár | `scripts/list-self-host-stack.mjs` |

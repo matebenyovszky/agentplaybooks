@@ -58,6 +58,9 @@ Schema: [`supabase/schema.sql`](../../supabase/schema.sql) (new project), [`supa
 | `NEXT_PUBLIC_APP_URL` | Build + runtime | Own origin; unset falls back to the hosted domain | Rebuild |
 | `ALLOWED_ORIGINS` | Runtime, optional | Replaces the CORS allow-list | Restart |
 | `SECRETS_REQUIRE_ALLOWED_HOSTS` | Runtime, optional | `true` = mandatory `allowed_hosts` | Restart |
+| `MTLS_MODE` | Runtime, optional | `cloudflare` (default), `proxy`, or `off`. Unknown values fail closed. **Done on `main`:** [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201) | Restart |
+| `MTLS_PROXY_FINGERPRINT_HEADER` | Runtime, with `proxy` | Header the terminator sets after verifying the client cert | Restart |
+| `MTLS_TRUSTED_PROXIES` | Runtime, with `proxy` | IPs/CIDRs of the TLS terminator | Restart |
 | `GOTRUE_EXTERNAL_AZURE_*` | GoTrue env | Entra SSO | GoTrue restart |
 | Playbook API keys | `api_keys.key_hash` | SHA-256; plaintext once | `is_active` / `expires_at` |
 | User API keys | `user_api_keys` | Same | Same |
@@ -72,7 +75,7 @@ There is no root `.env.example`; the canonical list is compose plus the self-hos
 |-----------|---------|------------------|
 | App HTTP | 3000 | `docker-compose.yml` |
 | App HTTPS | not in compose | Customer reverse proxy / TLS |
-| mTLS | not on self-host Node (`main`) | Cloudflare (hosted). **Folyamatban / In progress:** trusted proxy [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201) |
+| mTLS | Node does not terminate TLS; `MTLS_MODE=proxy` behind a terminator | Cloudflare (hosted) or trusted proxy. **Done on `main`:** [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201) — [`public/docs/self-hosted-mtls.md`](../../public/docs/self-hosted-mtls.md) |
 | Supabase Kong | 8000 / 8443 | Customer Supabase compose |
 | Postgres | 5432 — **must not be on the internet** | Customer |
 
@@ -83,7 +86,7 @@ There is no root `.env.example`; the canonical list is compose plus the self-hos
 | Dependency | Why | Egress? |
 |------------|-----|---------|
 | npm registry | `npm ci` | Yes, at build |
-| `next/font/google` Geist / Geist Mono | [`src/app/layout.tsx`](../../src/app/layout.tsx) | Yes, **at build** on `main`. **Folyamatban / In progress:** [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200) |
+| `next/font/local` Geist / Geist Mono woff2 | [`src/app/layout.tsx`](../../src/app/layout.tsx), [`src/app/fonts/Geist-Variable.woff2`](../../src/app/fonts/Geist-Variable.woff2) | No Google Fonts fetch at build. **Done on `main`:** [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200) |
 | GitHub Actions | CI, Dependabot, CLI publish | SaaS CI, not the on-prem instance |
 | npm trusted publishing | `@agentplaybooks/cli` provenance | At release, not on the instance |
 
@@ -94,11 +97,11 @@ There is no root `.env.example`; the canonical list is compose plus the self-hos
 | Self-hosted Supabase | Yes | Data API + Auth |
 | Entra / Google / GitHub / LinkedIn | No | Only if the customer enables OAuth |
 | Agent-chosen HTTPS destinations | When the vault proxy is used | `allowed_hosts` + SSRF |
-| Cloudflare | Not on self-host | Hosted path; mTLS only there |
+| Cloudflare | Not on self-host | Hosted path; self-host mTLS uses a local terminator |
 
 Production npm audit: [`scripts/audit-production.mjs`](../../scripts/audit-production.mjs). Lockfiles: [`package-lock.json`](../../package-lock.json), [`packages/cli/package-lock.json`](../../packages/cli/package-lock.json).
 
-There is **no** SBOM attached to a release on `main`; the lockfile is the substitute evidence. **Folyamatban / In progress:** a separate PR is being opened; no link yet. Isolated no-egress CI is also not on `main` (**Folyamatban / In progress:** [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204)).
+CycloneDX SBOMs and cosign of SBOM blobs on `cli-v*` tags are on `main`. **Done on `main`:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205) — [`docs/security/supply-chain.md`](./supply-chain.md), [`.github/workflows/sbom.yml`](../../.github/workflows/sbom.yml). Lockfiles remain the reproducible-install input. There is still no signed container registry publish. Isolated no-egress CI is not on `main` (**Folyamatban / In progress:** [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204)).
 
 ## 6. Data stores (logical assets)
 

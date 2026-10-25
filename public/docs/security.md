@@ -20,12 +20,12 @@ Verified in source; details and file links are in the whitepaper.
 | Area | Present | Not present |
 |------|---------|-------------|
 | Crypto | AES-256-GCM, HKDF-SHA-256 per-user keys, AAD-bound v2 ciphertext | KMS/HSM, re-encryption rotation |
-| TLS / mTLS | Platform TLS on hosted Cloudflare; mTLS via `cf.tlsClientAuth` only | mTLS on self-hosted Node/Next (fails closed on `main`). **Folyamatban / In progress:** [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201) |
+| TLS / mTLS | Platform TLS on hosted Cloudflare; hosted mTLS via `cf.tlsClientAuth`; self-host `MTLS_MODE=proxy` behind a trusted terminator. **Done on `main`:** [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201) | Node does not terminate TLS; without a terminator certificate auth stays fail-closed |
 | AuthN / AuthZ | Supabase Auth; Entra/Google/GitHub/LinkedIn OIDC if enabled; owner\|editor; API-key roles including proposer | App-level MFA; SAML; **auditor role** on `main`. **Folyamatban / In progress:** [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202) |
 | Audit | `audit_logs` for federation and `secret.*`; owner read API | SIEM/syslog export, retention job, hash chain, skills/memory/canvas writes. **Folyamatban / In progress:** [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202) |
 | Expiry | Enforced secret `expires_at`; API-key expiry; mTLS client revoke | Background purge job |
-| Self-host | Docker `app` on port 3000; separate Supabase stack required | Air-gapped / no-egress proof and offline fonts not on `main`. **Folyamatban / In progress:** fonts [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200); CI [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204) |
-| SDLC | Dependabot, `npm audit:production` in CI, CLI npm provenance | SAST, SBOM, image signing, `SECURITY.md`, incident runbook, backup/DR runbook — not on `main`. **Folyamatban / In progress:** separate PRs being opened; no link yet |
+| Self-host | Docker `app` on port 3000; separate Supabase stack required; local Geist woff2 (`next/font/local`). **Done on `main`:** fonts [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200) | Air-gapped / no-egress proof not on `main`. **Folyamatban / In progress:** CI [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204) |
+| SDLC | Dependabot, `npm audit:production` in CI, CLI npm provenance, CodeQL, CycloneDX SBOM, cosign of SBOM blobs, `SECURITY.md`, incident runbook. **Done on `main`:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205) | Signed container registry publish; backup/DR runbook — not on `main`. **Folyamatban / In progress** (backup/DR): a separate PR is being opened; no link yet |
 
 Operations checklist: [Self-Hosting](./self-hosting.md). Architecture: [Architecture](./architecture.md).
 

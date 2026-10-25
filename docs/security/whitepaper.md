@@ -1,6 +1,6 @@
 # AgentPlaybooks security whitepaper
 
-**Version:** 2026-10-25 · **Source:** the `main` branch as of that date. Parallel PRs are **Folyamatban / In progress** and do not count as shipped until they merge.  
+**Version:** 2026-10-25 · **Source:** the `main` branch as of that date (includes merged [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200), [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201), [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205)). Remaining parallel PRs are **Folyamatban / In progress** and do not count as shipped until they merge.  
 **Language of record for the assessment:** Hungarian ([whitepaper.hu.md](./whitepaper.hu.md)).
 
 > **jogi ellenőrzés szükséges.** Notes below on legal scope, NIS2, the MK decree, GDPR, and manufacturer status are not legal advice. The customer's counsel and IBF must approve them before production use.
@@ -53,7 +53,7 @@ Customer agents / CLI / Python loader / browser
 | TB-1 App process | Next.js as non-root `nextjs` in `Dockerfile`, port 3000 | Holds the master key and service-role key; compromise means vault plaintext |
 | TB-2 Supabase | Auth + Postgres + Data API on the customer network | App calls with service_role; RLS protects browser/anon paths, **not** service_role |
 | TB-3 Outbound proxy | `use_secret` and federated tools | The agent never sees the secret but chooses the destination; `allowed_hosts` + private-IP deny |
-| TB-4 Cloudflare mTLS (hosted only) | `cf.tlsClientAuth` | **Fails closed** on self-hosted Node/Next; see gaps |
+| TB-4 mTLS | Hosted: `cf.tlsClientAuth`. Self-host: `MTLS_MODE=proxy` behind a trusted terminator | Node does not terminate TLS. Default without a terminator is fail-closed. **Done on `main`:** [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201) |
 
 Compose **does not** start a database. `docker-compose.yml` says so; bare Postgres is not enough because every route uses the Supabase Data API and Auth. See [`public/docs/self-hosting.md`](../../public/docs/self-hosting.md), [`docker-compose.yml`](../../docker-compose.yml).
 
@@ -89,10 +89,11 @@ The service role bypasses RLS. Authorization lives in application code: [`src/ap
 | v1 compatibility | Legacy ciphertext still decrypts | [`src/lib/crypto.test.ts`](../../src/lib/crypto.test.ts) |
 | API keys at rest | SHA-256 | [`src/lib/utils.ts`](../../src/lib/utils.ts) `hashApiKey` |
 | TLS (hosted) | Cloudflare edge | [`public/docs/architecture.md`](../../public/docs/architecture.md) |
-| mTLS (hosted) | `cf.tlsClientAuth` only; HTTP cert headers are **not** trusted; `certRevoked !== "0"` rejected | [`src/lib/mtls.ts`](../../src/lib/mtls.ts) |
+| mTLS (hosted) | `cf.tlsClientAuth`; HTTP cert headers are **not** trusted; `certRevoked !== "0"` rejected | [`src/lib/mtls.ts`](../../src/lib/mtls.ts) |
+| mTLS (self-host) | `MTLS_MODE=cloudflare\|proxy\|off`; `proxy` trusts a terminator in `MTLS_TRUSTED_PROXIES` | [`src/lib/mtls.ts`](../../src/lib/mtls.ts), [`public/docs/self-hosted-mtls.md`](../../public/docs/self-hosted-mtls.md). **Done on `main`:** [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201) |
 | mTLS registry | `secret_clients.certificate_sha256`, `is_active`, `expires_at`, named secrets | [`supabase/migrations/20261010081252_secret_clients.sql`](../../supabase/migrations/20261010081252_secret_clients.sql) |
 
-The Docker image on `main` **does not** terminate mTLS. The Python loader fails closed on self-hosted Node/Next. **Folyamatban / In progress** (trusted proxy adapter): [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201). Current behaviour: [`packages/python-secrets/README.md`](../../packages/python-secrets/README.md).
+The Docker `app` image on `main` **does not** terminate TLS. Certificate clients on self-host need a terminator (nginx/Caddy/Traefik) and `MTLS_MODE=proxy`. Without that, the Python loader stays fail-closed (`MTLS_MODE=cloudflare`). **Done on `main`:** [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201). Operator guide: [`public/docs/self-hosted-mtls.md`](../../public/docs/self-hosted-mtls.md), [`packages/python-secrets/README.md`](../../packages/python-secrets/README.md).
 
 **We do not claim:** KMS, HSM, key wrapping, or master-key rotation with re-encryption. The compose comment: rotating `SECRETS_ENCRYPTION_KEY` makes existing secrets undecryptable.
 
@@ -151,11 +152,11 @@ Tests: [`tests/api/secrets-expiry.test.ts`](../../tests/api/secrets-expiry.test.
 **What we cannot claim as an “air-gapped / no-egress” product.**
 
 1. Compose does not include the Supabase stack.
-2. Build: `next/font/google` Geist / Geist Mono — [`src/app/layout.tsx`](../../src/app/layout.tsx). Next self-hosts the font after the build, but **the build needs egress** unless the font is pre-cached. There is no offline font pack on `main`. **Folyamatban / In progress:** [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200) (`next/font/local`).
+2. Build fonts: `next/font/local` Geist / Geist Mono woff2 — [`src/app/layout.tsx`](../../src/app/layout.tsx), [`src/app/fonts/Geist-Variable.woff2`](../../src/app/fonts/Geist-Variable.woff2). **Done on `main`:** [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200). The build no longer fetches Google Fonts.
 3. There is no isolated-network E2E test on `main` proving zero outbound packets. **Folyamatban / In progress:** [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204).
 4. CSP Report-Only `connect-src` includes `https://*.supabase.co` ([`src/lib/security-headers.ts`](../../src/lib/security-headers.ts)); that does not cover a custom Auth host and is not enforcing.
 5. `use_secret` / federation **intentionally** make outbound HTTP to customer-chosen destinations.
-6. mTLS fails closed on plain Docker/Node self-host. **Folyamatban / In progress** (trusted proxy, `MTLS_MODE=proxy`): [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201).
+6. mTLS on plain Docker/Node without a terminator stays fail-closed. Trusted-proxy mode (`MTLS_MODE=proxy`) is on `main`. **Done on `main`:** [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201).
 
 A customer no-egress goal is their network isolation, font cache, `SECRETS_REQUIRE_ALLOWED_HOSTS=true`, and disabling the outbound proxy if the vault is unused. The product does not measure this.
 
@@ -169,17 +170,17 @@ HTTP headers (HSTS, `X-Frame-Options: DENY`, nosniff, Permissions-Policy): [`src
 | `npm audit --omit=dev --audit-level=high` in CI | Yes | [`scripts/audit-production.mjs`](../../scripts/audit-production.mjs), [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) |
 | CI: lint, tests, `tsc`, worker build, wrangler dry-run | Yes | same workflow |
 | CLI npm trusted publishing / OIDC provenance | Yes | [`.github/workflows/publish-cli.yml`](../../.github/workflows/publish-cli.yml) (`id-token: write`; `--provenance` is intentionally omitted, npm attests automatically) |
-| SAST (CodeQL / Semgrep) | Not on `main` | **Folyamatban / In progress** (separate PR being opened; no link yet) |
-| CycloneDX / SPDX SBOM | Not on `main` | **Folyamatban / In progress** (separate PR being opened; no link yet) |
-| Container signing (cosign) | Not on `main` | **Folyamatban / In progress** (separate PR being opened; no link yet) |
-| `SECURITY.md`, PSIRT, incident runbook | Not on `main` | **Folyamatban / In progress** (separate PR being opened; no link yet) |
-| Automated encrypted DB backup / DR runbook | Not on `main` (one-liner `supabase db dump`) | **Folyamatban / In progress** (separate PR being opened; no link yet)
+| SAST (CodeQL) | Yes on `main` | [`.github/workflows/codeql.yml`](../../.github/workflows/codeql.yml). **Done on `main`:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205). No Semgrep |
+| CycloneDX SBOM | Yes on `main` | [`.github/workflows/sbom.yml`](../../.github/workflows/sbom.yml), [`docs/security/supply-chain.md`](./supply-chain.md). **Done on `main`:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205) |
+| Cosign of SBOM blobs on `cli-v*` tags | Yes on `main` | [`docs/security/supply-chain.md`](./supply-chain.md). No signed container **registry** publish |
+| `SECURITY.md`, incident runbook | Yes on `main` | [`SECURITY.md`](../../SECURITY.md), [`docs/security/incident-runbook.md`](./incident-runbook.md). **Done on `main`:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205). PSIRT mailbox is still a placeholder |
+| Automated encrypted DB backup / DR runbook | Not on `main` (one-liner `supabase db dump`) | **Folyamatban / In progress** (separate PR being opened; no link yet) |
 
 Lockfiles (`package-lock.json`, `packages/cli/package-lock.json`) are the reproducible-install input.
 
 ## 11. Known gaps
 
-Honest list for the supplier assessment. Status follows `main` as of 2026-10-25. **Folyamatban / In progress** rows are open PRs; flip them after merge.
+Honest list for the supplier assessment. Status follows `main` as of 2026-10-25. **Folyamatban / In progress** rows are still-open PRs; **Done on `main`** rows keep the merged PR link.
 
 1. **No KMS / HSM.** The master key is a process environment variable.
 2. **No key rotation with re-encryption.** Changing the master key is vault data loss.
@@ -187,11 +188,11 @@ Honest list for the supplier assessment. Status follows `main` as of 2026-10-25.
 4. **No auditor role in code.** Human RBAC: owner \| editor. Audit read is owner-level. **Folyamatban / In progress:** [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202).
 5. **No SAML SSO.** OIDC/OAuth via GoTrue if the customer enables it.
 6. **Audit: no export, retention, or hash chain on `main`.** Skills / memory / canvas writes are not logged. **Folyamatban / In progress** (export, syslog/SIEM, retention, hash chain): [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202).
-7. **No `SECURITY.md`, PSIRT, 24/72h / 1-month incident runbook.** NKI notification (418/2024. § 77) is the customer's process — **jogi ellenőrzés szükséges**. **Folyamatban / In progress:** a separate PR is being opened; no link yet.
+7. **`SECURITY.md` and 24/72h / 1-month incident runbook are on `main`.** **Done on `main`:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205) — [`SECURITY.md`](../../SECURITY.md), [`docs/security/incident-runbook.md`](./incident-runbook.md). The PSIRT mailbox is still a placeholder. NKI notification (418/2024. § 77) remains the customer's process — **jogi ellenőrzés szükséges**.
 8. **No backup and DR runbook.** `supabase db dump`; playbook snapshots do not include secret values. **Folyamatban / In progress:** a separate PR is being opened; no link yet.
-9. **No SAST, SBOM, or image signing.** Dependabot + production npm audit + CLI provenance exist. **Folyamatban / In progress:** a separate PR is being opened; no link yet.
-10. **mTLS only on Cloudflare on `main`.** Self-host Node/Next: fail-closed. **Folyamatban / In progress** (trusted proxy): [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201).
-11. **No no-egress evidence on `main`.** Build-time Google Fonts; compose is not self-contained. **Folyamatban / In progress:** fonts [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200); isolated CI [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204).
+9. **CodeQL, CycloneDX SBOMs, and cosign of SBOM blobs are on `main`.** **Done on `main`:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205) — [`.github/workflows/codeql.yml`](../../.github/workflows/codeql.yml), [`.github/workflows/sbom.yml`](../../.github/workflows/sbom.yml), [`docs/security/supply-chain.md`](./supply-chain.md). Dependabot + production npm audit + CLI provenance remain. There is still no signed container **registry** publish.
+10. **Self-host mTLS via trusted proxy is on `main`.** **Done on `main`:** [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201) — `MTLS_MODE=proxy`, [`public/docs/self-hosted-mtls.md`](../../public/docs/self-hosted-mtls.md), [`deploy/self-host/docker-compose.mtls.yml`](../../deploy/self-host/docker-compose.mtls.yml). Node still does not terminate TLS; without a terminator the default stays fail-closed.
+11. **No no-egress evidence on `main`.** Build-time Google Fonts are closed. **Done on `main`:** fonts [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200) (`next/font/local`). Compose is still not self-contained. Isolated CI: **Folyamatban / In progress:** [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204).
 12. **No rate limiting** (ROADMAP).
 13. **No external pentest** in this pack.
 14. **CSP Report-Only**, `connect-src` hardcoded to `*.supabase.co`.
@@ -204,7 +205,7 @@ Honest list for the supplier assessment. Status follows `main` as of 2026-10-25.
 | Code, crypto, RBAC, vault, audit API | Yes | — |
 | Classification, risk analysis, MK control selection | Template | IBF — **jogi ellenőrzés szükséges** |
 | Entra SSO + MFA, network, TLS termination, physical protection | Config hooks | Operations |
-| Log retention, SIEM, NKI incident reporting | API for extracts | 24 / 72 h / 1 month process |
+| Log retention, SIEM, NKI incident reporting | Audit API + [`docs/security/incident-runbook.md`](./incident-runbook.md) | 24 / 72 h / 1 month process |
 | Backup, RPO/RTO | `db dump` + snapshots | Restore drill |
 | GDPR controller / processor | On self-host the customer is generally the controller — **jogi ellenőrzés szükséges** | DPIA if required |
 
@@ -215,10 +216,10 @@ Detailed mapping: [risk-assessment.md](./risk-assessment.md).
 | Topic | Files |
 |-------|-------|
 | Crypto | `src/lib/crypto.ts`, `src/lib/crypto.test.ts` |
-| mTLS | `src/lib/mtls.ts`, `src/lib/mtls.test.ts`, `supabase/migrations/20261010081252_secret_clients.sql` |
+| mTLS | `src/lib/mtls.ts`, `src/lib/mtls.test.ts`, `supabase/migrations/20261010081252_secret_clients.sql`, `public/docs/self-hosted-mtls.md`, `deploy/self-host/docker-compose.mtls.yml` |
 | Authz | `src/app/api/_shared/guards.ts`, `src/app/api/_shared/permissions.ts`, `src/app/api/_shared/auth.ts`, `permissions.md` |
 | Audit | `src/app/api/_shared/audit.ts`, `src/app/api/playbooks/[guid]/audit/app.ts`, `supabase/migrations/20260819_audit_logs_secrets.sql` |
 | Expiry / SSRF | `src/lib/secret-expiry.ts`, `src/lib/secret-destinations.ts`, `src/lib/mcp/federation.ts` |
-| Self-host | `docker-compose.yml`, `Dockerfile`, `public/docs/self-hosting.md` |
-| SDLC | `.github/dependabot.yml`, `.github/workflows/ci.yml`, `.github/workflows/publish-cli.yml`, `scripts/audit-production.mjs` |
+| Self-host | `docker-compose.yml`, `Dockerfile`, `public/docs/self-hosting.md`, `src/app/fonts/Geist-Variable.woff2` |
+| SDLC | `.github/dependabot.yml`, `.github/workflows/ci.yml`, `.github/workflows/publish-cli.yml`, `.github/workflows/codeql.yml`, `.github/workflows/sbom.yml`, `scripts/audit-production.mjs`, `SECURITY.md`, `docs/security/incident-runbook.md`, `docs/security/supply-chain.md` |
 | Live inventory | `scripts/list-self-host-stack.mjs` |

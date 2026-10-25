@@ -53,6 +53,7 @@ const ROOT_FILES = new Set([
   "wrangler.jsonc",
   "open-next.config.ts",
   "LICENSE",
+  "SECURITY.md",
 ]);
 
 const PATH_PREFIXES = [
@@ -64,6 +65,7 @@ const PATH_PREFIXES = [
   "tests/",
   "docs/",
   "public/",
+  "deploy/",
   ".github/",
 ];
 

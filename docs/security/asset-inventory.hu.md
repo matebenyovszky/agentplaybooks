@@ -58,6 +58,9 @@ Séma: [`supabase/schema.sql`](../../supabase/schema.sql) (új projekt), [`supab
 | `NEXT_PUBLIC_APP_URL` | Build + runtime | Saját origin; üresen a hosted domainre esik | Újraépítés |
 | `ALLOWED_ORIGINS` | Runtime, opcionális | CORS allow-list csere | Restart |
 | `SECRETS_REQUIRE_ALLOWED_HOSTS` | Runtime, opcionális | `true` = kötelező `allowed_hosts` | Restart |
+| `MTLS_MODE` | Runtime, opcionális | `cloudflare` (alapértelmezés), `proxy` vagy `off`. Ismeretlen érték fail-closed. **Kész a `main`-en:** [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201) | Restart |
+| `MTLS_PROXY_FINGERPRINT_HEADER` | Runtime, `proxy` módban | A terminátor által, a kliens tanúsítvány ellenőrzése után beállított fejléc | Restart |
+| `MTLS_TRUSTED_PROXIES` | Runtime, `proxy` módban | A TLS-terminátor IP-i/CIDR-jei | Restart |
 | `GOTRUE_EXTERNAL_AZURE_*` | GoTrue env | Entra SSO | GoTrue restart |
 | Playbook API-kulcsok | `api_keys.key_hash` | SHA-256; plaintext egyszer | `is_active` / `expires_at` |
 | User API-kulcsok | `user_api_keys` | Ugyanaz | Ugyanaz |
@@ -72,7 +75,7 @@ Nincs `.env.example` a gyökérben; a kanonikus lista a compose és a self-hosti
 |---------|----------------|---------------|
 | Alkalmazás HTTP | 3000 | `docker-compose.yml` |
 | Alkalmazás HTTPS | nincs a compose-ban | Ügyfél reverse proxy / TLS |
-| mTLS | nincs self-host Node-on (`main`) | Cloudflare (hosted). **Folyamatban / In progress:** trusted proxy [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201) |
+| mTLS | A Node nem terminál TLS-t; `MTLS_MODE=proxy` terminátor mögött | Cloudflare (hosted) vagy trusted proxy. **Kész a `main`-en:** [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201) — [`public/docs/self-hosted-mtls.md`](../../public/docs/self-hosted-mtls.md) |
 | Supabase Kong | 8000 / 8443 | Ügyfél Supabase compose |
 | Postgres | 5432 — **ne legyen internetre nyitva** | Ügyfél |
 
@@ -83,7 +86,7 @@ Nincs `.env.example` a gyökérben; a kanonikus lista a compose és a self-hosti
 | Függőség | Miért | Egress? |
 |----------|-------|---------|
 | npm registry | `npm ci` | Igen, buildkor |
-| `next/font/google` Geist / Geist Mono | [`src/app/layout.tsx`](../../src/app/layout.tsx) | Igen, **buildkor** a `main`-en. **Folyamatban / In progress:** [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200) |
+| `next/font/local` Geist / Geist Mono woff2 | [`src/app/layout.tsx`](../../src/app/layout.tsx), [`src/app/fonts/Geist-Variable.woff2`](../../src/app/fonts/Geist-Variable.woff2) | Buildkor nincs Google Fonts letöltés. **Kész a `main`-en:** [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200) |
 | GitHub Actions | CI, Dependabot, CLI publish | SaaS CI, nem az on-prem instance |
 | npm trusted publishing | `@agentplaybooks/cli` provenance | Kiadáskor, nem az instance |
 
@@ -94,11 +97,11 @@ Nincs `.env.example` a gyökérben; a kanonikus lista a compose és a self-hosti
 | Self-hosted Supabase | Igen | Data API + Auth |
 | Entra / Google / GitHub / LinkedIn | Nem | Csak ha az ügyfél bekapcsolja az OAuth-ot |
 | Ügynök által választott HTTPS célok | A vault proxy használatakor | `allowed_hosts` + SSRF |
-| Cloudflare | Nem self-hoston | Hosted útvonal; mTLS csak itt |
+| Cloudflare | Nem self-hoston | Hosted útvonal; self-host mTLS helyi terminátort használ |
 
 Produkciós npm audit: [`scripts/audit-production.mjs`](../../scripts/audit-production.mjs). Lockfile: [`package-lock.json`](../../package-lock.json), [`packages/cli/package-lock.json`](../../packages/cli/package-lock.json).
 
-**Nincs** a kiadáshoz csatolt SBOM a `main`-en; a lockfile a helyettesítő bizonyíték. **Folyamatban / In progress:** külön PR nyitás alatt; link még nincs. Izolált no-egress CI sincs a `main`-en (**Folyamatban / In progress:** [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204)).
+CycloneDX SBOM és SBOM-blob cosign `cli-v*` tageken a `main`-en van. **Kész a `main`-en:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205) — [`docs/security/supply-chain.md`](./supply-chain.md), [`.github/workflows/sbom.yml`](../../.github/workflows/sbom.yml). A lockfile továbbra is a reprodukálható telepítés bemenete. Aláírt konténer-registry publikálás továbbra sincs. Izolált no-egress CI nincs a `main`-en (**Folyamatban / In progress:** [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204)).
 
 ## 6. Adattárolók (logikai eszközök)
 
