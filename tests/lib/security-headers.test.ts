@@ -30,7 +30,19 @@ describe("security headers", () => {
   });
 
   it("ignores an unparseable Auth URL", () => {
-    expect(connectSrcFor("not a url")).toBe("'self' https://*.supabase.co wss://*.supabase.co");
+    expect(connectSrcFor("not a url")).toBe(
+      "'self' https://*.supabase.co wss://*.supabase.co https://cloudflareinsights.com",
+    );
+  });
+
+  it("allows the Cloudflare Web Analytics beacon host in script-src and connect-src", () => {
+    const policy = contentSecurityPolicy();
+    const scriptSrc = policy.split("; ").find((directive) => directive.startsWith("script-src "));
+    const connectSrc = connectSrcFor();
+    expect(scriptSrc?.split(" ")).toContain("https://static.cloudflareinsights.com");
+    expect(connectSrc.split(" ")).toContain("https://cloudflareinsights.com");
+    expect(scriptSrc).not.toMatch(/\*\.cloudflareinsights/);
+    expect(connectSrc).not.toMatch(/\*\.cloudflareinsights/);
   });
 
   it("keeps frame denial and nosniff on every generated list", () => {
