@@ -237,3 +237,5 @@ GitHub Actions (CI/CD)
 ```
 
 The entire application could be deployed to Cloudflare's edge network.
+
+Self-host trust boundaries, cryptography claims (only what the code does), and known gaps are in the [security documentation pack](./security.md) (`docs/security/` in the repository; Hungarian `*.hu.md` is the supplier-assessment original).

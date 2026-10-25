@@ -1,8 +1,11 @@
 // @worker-native
-import { normalizeRegistryResponse, type OfficialRegistryResponse } from "@/lib/mcp-registry";
+import {
+  normalizeRegistryResponse,
+  resolveMcpRegistryServersUrl,
+  type OfficialRegistryResponse,
+} from "@/lib/mcp-registry";
 import { cachedSingleFlight, type SingleFlightEntry } from "@/lib/cache/single-flight";
 
-const REGISTRY_SERVERS_URL = "https://registry.modelcontextprotocol.io/v0.1/servers";
 const searches = new Map<string, SingleFlightEntry<string>>();
 const MAX_BYTES = 2 * 1024 * 1024;
 
@@ -50,7 +53,14 @@ export async function GET(request: Request) {
   const limit = Number.isFinite(requestedLimit)
     ? Math.min(100, Math.max(1, Math.floor(requestedLimit)))
     : 50;
-  const registryUrl = new URL(REGISTRY_SERVERS_URL);
+  const registryBase = resolveMcpRegistryServersUrl();
+  if (!registryBase) {
+    return Response.json(
+      { error: "MCP Registry access is disabled on this instance." },
+      { status: 503 },
+    );
+  }
+  const registryUrl = new URL(registryBase);
   registryUrl.searchParams.set("version", "latest");
   registryUrl.searchParams.set("limit", String(limit));
   if (search) registryUrl.searchParams.set("search", search);

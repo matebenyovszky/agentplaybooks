@@ -15,10 +15,31 @@ psql $DATABASE_URL -f scripts/seed-full.sql
 psql $DATABASE_URL -f scripts/reset-and-seed.sql
 ```
 
+## Self-host backup and restore
+
+On-prem backup of Postgres (including vault tables), object storage, and
+redacted config. The encryption master key is stored separately. See
+`docs/self-host/backup-restore.md`.
+
+| Script | Description |
+|--------|-------------|
+| `self-host/backup.sh` | Encrypted dump of the self-host data plane |
+| `self-host/restore.sh` | Restore onto empty volumes; prints RTO |
+| `self-host/restore-drill.sh` | Empty-machine drill (also run in CI) |
+
+```bash
+export BACKUP_ENCRYPTION_PASSPHRASE='…'   # not the vault master key
+./scripts/self-host/backup.sh
+./scripts/self-host/restore.sh --archive backups/agentplaybooks-backup-….tar.gz.enc
+./scripts/self-host/restore-drill.sh
+```
+
 ## Available Scripts
 
 | Script | Description |
 |--------|-------------|
+| `list-self-host-stack.mjs` | List declared and running Docker Compose services, images, and ports (`npm run inventory:self-host`) |
+| `check-security-docs.mjs` | Link and cited-path check for `docs/security/` (`npm run docs:check`) |
 | `seed-data.ts` | TypeScript seed script (fetches from GitHub) |
 | `seed-full.sql` | Complete SQL seed (standalone, no GitHub) |
 | `reset-and-seed.sql` | Delete all data and reseed |

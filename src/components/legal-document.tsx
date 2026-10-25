@@ -5,16 +5,15 @@ import type { LegalSection } from "@/lib/legal-copy";
 
 const LINK_CLASS = "text-indigo-600 dark:text-indigo-400 underline underline-offset-2";
 
-// URLs and email addresses in the copy become links; everything else stays
-// plain text, so the copy file remains the single place the wording lives.
-const LINKABLE = /(https:\/\/[^\s)]*[^\s).,]|[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/g;
+// https URLs in the copy become links; everything else stays plain text.
+// Contact is GitHub, not email — do not mint mailto: links.
+const LINKABLE = /(https:\/\/[^\s)]*[^\s).,])/g;
 
 function linkify(text: string): ReactNode[] {
   return text.split(LINKABLE).map((part, index) => {
     if (index % 2 === 0) return part;
-    const href = part.startsWith("https://") ? part : `mailto:${part}`;
     return (
-      <a key={`${part}-${index}`} href={href} className={LINK_CLASS}>
+      <a key={`${part}-${index}`} href={part} className={LINK_CLASS}>
         {part}
       </a>
     );
