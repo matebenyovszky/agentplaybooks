@@ -140,7 +140,7 @@ describe("MCP federation", () => {
       },
     });
     const fetchMock = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
-      if (String(url).includes("auth.example.com")) return jsonResponse({ access_token: "oauth-token", expires_in: 300 });
+      if (new URL(String(url)).hostname === "auth.example.com") return jsonResponse({ access_token: "oauth-token", expires_in: 300 });
       expect(new Headers(init?.headers).get("Authorization")).toBe("Bearer oauth-token");
       return jsonResponse({ jsonrpc: "2.0", id: "1", result: { tools: [] } });
     });
@@ -169,7 +169,7 @@ describe("MCP federation", () => {
     });
     let tokenRequestBody = "";
     const fetchMock = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
-      if (String(url).includes("auth.example.com")) {
+      if (new URL(String(url)).hostname === "auth.example.com") {
         tokenRequestBody = String(init?.body);
         return jsonResponse({ access_token: "renewed-token", expires_in: 3600 });
       }

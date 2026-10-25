@@ -22,6 +22,7 @@
  * inside it is replaced. The user's own profiles are only ever added to.
  */
 import { spawnSync } from "node:child_process";
+import { trimEndCharacters } from "./text.js";
 import { createHash } from "node:crypto";
 import { access, chmod, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -311,7 +312,7 @@ export function recordedSource(manifest) {
 function sameSource(recorded, source) {
   if (!recorded) return false;
   const normalize = (value) => {
-    const resolved = path.resolve(value).replace(/[\\/]+$/, "");
+    const resolved = trimEndCharacters(path.resolve(value), "\\/");
     return process.platform === "win32" ? resolved.toLowerCase() : resolved;
   };
   return normalize(recorded) === normalize(source);

@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { createBrowserClient } from "@/lib/supabase/client";
 import { ArrowLeft, Mail, Lock, Loader2 } from "lucide-react";
 import { fetchAuthSettings, type AuthSettings, type OAuthProvider, type OAuthProviderId } from "@/lib/auth-providers";
+import { postAuthPath } from "@/lib/auth-redirect";
 
 const PROVIDER_ICONS: Record<OAuthProviderId, React.ReactNode> = {
   azure: (
@@ -71,7 +72,7 @@ export default function LoginPage() {
 
   const getPostAuthPath = () => {
     const requested = new URLSearchParams(window.location.search).get("next");
-    return requested?.startsWith("/") && !requested.startsWith("//") ? requested : "/dashboard";
+    return postAuthPath(requested, window.location.origin);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

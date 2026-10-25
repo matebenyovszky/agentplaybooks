@@ -143,7 +143,7 @@ export async function planHermesExport(root, destination, { name, version } = {}
   const profileName = (name ?? link?.name ?? path.basename(root))
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+    .replace(/^-|-$/g, "");
 
   if (!SAFE_PROFILE_NAME.test(profileName)) {
     throw new Error(`'${profileName}' is not a usable Hermes profile name. Pass --name with a lowercase, hyphenated one.`);
