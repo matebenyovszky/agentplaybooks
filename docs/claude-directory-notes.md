@@ -181,8 +181,10 @@ lockfile and bundled CLI would be held for manual review.
 the portal runs more checks. What it will see:
 
 - `.claude-plugin/plugin.json` with `name`, `displayName`, `version`,
-  `description`, `author`, `license`, and the account connector as a remote
-  `http` server with a fixed `https://` URL and no credential;
+  `description`, `author`, `license`, the account connector as a remote
+  `http` server with a fixed `https://` URL and no credential, and the local
+  `agentplaybooks-servers` server as `node ${CLAUDE_PLUGIN_ROOT}/server/servers.mjs`
+  with plain arguments;
 - `README.md` well over 40 words, with what the plugin runs and connects to and
   a privacy section; `LICENSE`;
 - two skills and two commands, plain markdown with valid front matter;
@@ -191,6 +193,16 @@ the portal runs more checks. What it will see:
   that is an instruction to Claude, not a hook or MCP server command, so the
   launcher rules do not apply to it. `release:check` keeps every pin equal to
   the CLI version.
+
+**Expected holds** — the local server makes every version reviewable by a
+person, which is a hold, not a rejection: the plugin folder is a subfolder of
+the repository, so a non-shell file run by an MCP server command is held
+(*Scripts the validator couldn’t follow*), and the server sends the key the
+CLI stored on the user's machine to the server it was stored for, which may
+read as *Uses a credential from the user’s machine*. The README's "What the
+plugin runs" section is written for that reviewer. If the holds become a
+burden, the directory can follow a lean folder without the local server
+instead, at the cost of a second plugin folder.
 
 **Listing details** — read from `plugin.json` and the README, so edit those,
 not the portal.

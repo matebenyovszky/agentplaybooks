@@ -59,7 +59,8 @@ Séma: [`supabase/schema.sql`](../../supabase/schema.sql) (új projekt), [`supab
 | `NEXT_PUBLIC_SUPABASE_URL` | Build + runtime | Böngészőből elérhető URL | Újraépítés |
 | `NEXT_PUBLIC_APP_URL` | Build + runtime | Saját origin; üresen a hosted domainre esik | Újraépítés |
 | `ALLOWED_ORIGINS` | Runtime, opcionális | CORS allow-list csere | Restart |
-| `SECRETS_REQUIRE_ALLOWED_HOSTS` | Runtime, opcionális | `true` = kötelező `allowed_hosts` | Restart |
+| `SECRETS_REQUIRE_ALLOWED_HOSTS` | Runtime, opcionális | `true` = kötelező `allowed_hosts`. **Kész a `main`-en:** [#216](https://github.com/matebenyovszky/agentplaybooks/pull/216) — a mellékelt `docker-compose.yml` alapértelmezése `true`; `false` engedi a nem pinelt titkot bármely nyilvános hostra | Restart |
+| `OUTBOUND_DNS_CHECK` | Runtime, opcionális | Node-ban alapból bekapcsolva: titok küldése előtt feloldja a célnevet, és elutasítja, ha bármely címe belső. `false` csak hálózati szintű egress-szabály mellett. **Kész a `main`-en:** [#216](https://github.com/matebenyovszky/agentplaybooks/pull/216), [`src/lib/outbound-destination.ts`](../../src/lib/outbound-destination.ts) | Restart |
 | `NO_EGRESS` | Runtime, opcionális | `true` kikapcsolja az opcionális kimenő hívásokat (MCP-registry keresés), hacsak a `MCP_REGISTRY_URL` belső tükör. **Kész a `main`-en:** [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204) | Restart |
 | `MCP_REGISTRY_URL` | Runtime, opcionális | Hivatalos MCP-registry keresés felülírása / tiltása | Restart |
 | `MTLS_MODE` | Runtime, opcionális | `cloudflare` (alapértelmezés), `proxy` vagy `off`. Ismeretlen érték fail-closed. **Kész a `main`-en:** [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201) | Restart |
