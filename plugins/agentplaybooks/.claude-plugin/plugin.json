@@ -15,6 +15,10 @@
     "agentplaybooks-account": {
       "type": "http",
       "url": "https://agentplaybooks.ai/api/mcp/manage"
+    },
+    "agentplaybooks-servers": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/server/servers.mjs"]
     }
   }
 }

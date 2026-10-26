@@ -12,16 +12,31 @@ vault. The same playbook follows the user into Claude, Cursor, Codex, Hermes,
 and other clients, so what you write into it is visible there too — and to
 anyone the playbook is shared with.
 
-This plugin connects the **account** endpoint. Every playbook the signed-in
-account owns or has been given is reachable from one connection, and each
-playbook tool takes a `playbook_id` (its UUID or GUID). If the tools are
-missing, the connector has not finished signing in: ask the user to open the
-AgentPlaybooks connector and select **Connect**.
+The plugin has two connections with the same tools:
+
+- **agentplaybooks-account** reaches agentplaybooks.ai and signs in with
+  OAuth. It works in every Claude app.
+- **agentplaybooks-servers** runs on the user's machine, in Claude Code, and
+  reaches every AgentPlaybooks server the user has logged in to with the CLI —
+  the hosted one, their organisation's own, or several. With more than one,
+  `list_playbooks` marks each playbook's `server`, a playbook tool goes to the
+  server that has its `playbook_id`, and `create_playbook` needs `server`.
+
+Through either, one connection reaches every playbook the account owns or has
+been given, and each playbook tool takes a `playbook_id` (its UUID or GUID).
+Use whichever has tools; when both reach a playbook, either works. If neither
+has tools, nothing is signed in yet. In a Claude app, ask the user to open the
+AgentPlaybooks connector and select **Connect**. In Claude Code, `/mcp` shows
+each connection's state; a server is added by running the CLI's
+`login --url=<server>` in the user's own terminal and reconnecting
+`agentplaybooks-servers` from `/mcp` (see the agentplaybooks-cli skill).
 
 ## Start of a task
 
 1. `list_playbooks` to see what exists. Pick by name with the user if more
-   than one fits; do not guess between similar names.
+   than one fits; do not guess between similar names. A project the CLI has
+   linked to a playbook names it in `.agentplaybooks/remote.json`; prefer that
+   one.
 2. `get_playbook` for the chosen one. It returns the persona, instructions,
    skills, connected servers, and a memory summary.
 3. If the user wants Claude to *be* that playbook, follow its persona and
@@ -66,7 +81,7 @@ while editing a section someone else might also edit.
   secret injected server-side. `use_secret_write` does the same for writes.
   Name the host and the effect to the user before a write.
 - Never ask the user to paste a credential into the chat. To add one, point
-  them to the playbook's **Secrets** tab on agentplaybooks.ai.
+  them to the playbook's **Secrets** tab in the AgentPlaybooks web app.
 
 ## Boundaries
 
