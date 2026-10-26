@@ -1061,6 +1061,24 @@ app.delete("/user/account", async (c) => {
   return c.json({ deleted: true, playbooks_deleted: playbooksDeleted });
 });
 
+// POST /api/user/credentials/revoke-all - Deactivate every credential of the
+// signed-in account: its user API keys, and the API keys and certificate
+// clients of the playbooks it owns. For a lost laptop or a leaked config file;
+// an operator offboarding someone uses scripts/self-host/offboard-user.sh.
+// Session only: a key cannot revoke the keys that might have been stolen with it.
+app.post("/user/credentials/revoke-all", async (c) => {
+  const user = await requireAuth(c);
+  if (!user) {
+    return c.json({ error: "Sign in to revoke your credentials. API keys cannot do this." }, 401);
+  }
+  const { data, error } = await getServiceSupabase().rpc("revoke_account_credentials", { p_user_id: user.id });
+  if (error) {
+    console.error("revoke_account_credentials failed", { message: error.message });
+    return c.json({ error: "The credentials could not be revoked. Nothing was changed." }, 500);
+  }
+  return c.json({ revoked: data });
+});
+
 // ============================================
 // MANAGEMENT API (User API Key supported)
 // These endpoints can be called with User API key for AI automation

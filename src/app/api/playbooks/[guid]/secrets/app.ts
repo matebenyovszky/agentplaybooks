@@ -19,6 +19,7 @@ import {
 import {
   destinationHostOf,
   recordSecretAudit,
+  AUDIT_UNAVAILABLE,
   auditActor,
   type AuditContext,
 } from "@/app/api/_shared/audit";
@@ -349,11 +350,13 @@ app.get("/reveal/:name", async (c) => {
       })
       .eq("id", secret.id);
 
-    await recordSecretAudit(audit, {
+    // Fail closed: no plaintext leaves without its audit row.
+    const recorded = await recordSecretAudit(audit, {
       operation: "secret.reveal",
       status: "success",
       secretName: secret.name,
     });
+    if (!recorded) return c.json({ error: AUDIT_UNAVAILABLE }, 503);
 
     return c.json({
       name: secret.name,

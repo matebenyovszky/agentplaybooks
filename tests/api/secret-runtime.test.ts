@@ -13,6 +13,10 @@ vi.mock("@/lib/mtls", async importOriginal => ({
   ...await importOriginal<typeof import("@/lib/mtls")>(), verifiedClientFingerprint: tls,
 }));
 vi.mock("@/lib/crypto", () => ({ decryptSecret: decrypt }));
+const activeAccounts = new Set<string>();
+vi.mock("@/app/api/_shared/account-status", () => ({
+  accountIsActive: async (_request: Request, userId: string) => activeAccounts.has(userId),
+}));
 import { app } from "@/app/api/playbooks/[guid]/secrets/resolve/app";
 import { app as management } from "@/app/api/playbooks/[guid]/secret-clients/app";
 
@@ -45,7 +49,9 @@ function query(table: string) {
 beforeEach(() => {
   vi.clearAllMocks();
   rows = [record("DATABASE_URL"), record("TOKEN")];
-  certificateClient = { id: clientId, certificate_sha256: fingerprint, secret_names: ["DATABASE_URL", "TOKEN"], expires_at: null, is_active: true };
+  certificateClient = { id: clientId, certificate_sha256: fingerprint, secret_names: ["DATABASE_URL", "TOKEN"], expires_at: null, is_active: true, owner: { user_id: ownerId } };
+  activeAccounts.clear();
+  activeAccounts.add(ownerId);
   dbPlaybook = { id: "pb", user_id: ownerId };
   createError = null;
   queries = {};
@@ -104,6 +110,20 @@ describe("runtime secret loading", () => {
     certificateClient = { id: clientId, expires_at: "2000-01-01T00:00:00Z" };
     expect((await resolve({ names: ["TOKEN"], auth_mode: "mtls" }, {})).status).toBe(401);
     expect(decrypt).not.toHaveBeenCalled();
+  });
+  it("withholds every value when a reveal cannot be recorded", async () => {
+    createError = { code: "57P01" };
+    const response = await resolve({ names: ["DATABASE_URL", "TOKEN"], auth_mode: "mtls" }, {});
+    expect(response.status).toBe(503);
+    expect(await response.text()).not.toContain("values");
+  });
+  it("refuses a certificate once the playbook owner's account is disabled", async () => {
+    activeAccounts.delete(ownerId);
+    expect((await resolve({ names: ["TOKEN"], auth_mode: "mtls" }, {})).status).toBe(401);
+    expect(decrypt).not.toHaveBeenCalled();
+    expect(queries.audit_logs.insert).toHaveBeenCalledWith(expect.objectContaining({
+      operation: "secret.reveal", status: "denied", error_code: "account_disabled", actor_id: clientId,
+    }));
   });
   it("refuses names outside the certificate scope, including optional ones", async () => {
     certificateClient!.secret_names = ["DATABASE_URL"];

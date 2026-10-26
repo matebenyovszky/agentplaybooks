@@ -3,6 +3,10 @@ import { resolvePrivatePlaybookActor, actorMayRead } from "@/app/api/_shared/aut
 import { getServiceSupabase, getSupabase } from "@/app/api/_shared/supabase";
 
 vi.mock("@/app/api/_shared/supabase", () => ({ getServiceSupabase: vi.fn(), getSupabase: vi.fn() }));
+const activeAccounts = new Set<string>();
+vi.mock("@/app/api/_shared/account-status", () => ({
+  accountIsActive: vi.fn(async (_request: Request, userId: string) => activeAccounts.has(userId)),
+}));
 
 let keyRow: Record<string, unknown> | null;
 const calls: { table: string; operation: string; filters: [string, unknown][] }[] = [];
@@ -27,7 +31,10 @@ const request = () => new Request("https://example.com/api/mcp/private", {
 beforeEach(() => {
   calls.length = 0;
   keyRow = { id: "key-1", playbook_id: "playbook-1", role: "editor", permissions: ["skills:read"],
-    key_prefix: "apb_test", last_used_at: new Date().toISOString(), expires_at: null };
+    key_prefix: "apb_test", last_used_at: new Date().toISOString(), expires_at: null,
+    owner: { user_id: "owner-1" } };
+  activeAccounts.clear();
+  activeAccounts.add("owner-1");
   vi.mocked(getServiceSupabase).mockReturnValue(database() as never);
   vi.mocked(getSupabase).mockReturnValue({ auth: { getUser: vi.fn() } } as never);
 });
@@ -60,5 +67,19 @@ describe("fresh MCP key lookup for an already resolved playbook", () => {
     expect(calls.filter(call => call.operation === "update")).toEqual([
       { table: "api_keys", operation: "update", filters: [["id", "key-1"]] },
     ]);
+  });
+});
+
+describe("offboarding", () => {
+  it("refuses a playbook key once the playbook's owner is banned or deleted", async () => {
+    expect(await resolvePrivatePlaybookActor(request(), "playbook-1")).not.toBeNull();
+    activeAccounts.delete("owner-1");
+    expect(await resolvePrivatePlaybookActor(request(), "playbook-1")).toBeNull();
+    expect(calls.filter(call => call.operation === "update")).toEqual([]);
+  });
+
+  it("refuses a key whose playbook owner cannot be established", async () => {
+    keyRow!.owner = null;
+    expect(await resolvePrivatePlaybookActor(request(), "playbook-1")).toBeNull();
   });
 });

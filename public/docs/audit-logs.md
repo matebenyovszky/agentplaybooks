@@ -99,3 +99,8 @@ not fail the vault or federated call.
 Syslog uses Node sockets (self-hosted Node). The HTTPS webhook works on
 Cloudflare Workers as well. Forwarding is best-effort; pull export if you need
 a guaranteed copy.
+
+Writing the row itself is best-effort too — an audit outage must not take the
+vault down — with one exception: a successful `secret.reveal`. The secrets
+reveal endpoint and the runtime loader (`/secrets/resolve`) release plaintext
+only after its audit row is written, and answer `503` otherwise.

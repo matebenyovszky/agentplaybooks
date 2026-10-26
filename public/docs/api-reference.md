@@ -1064,6 +1064,20 @@ Content-Type: application/json
 DELETE /api/user/api-keys/:kid
 ```
 
+### Revoke All Credentials
+
+```http
+POST /api/user/credentials/revoke-all
+```
+
+Signed-in session only. Deactivates every user API key of the account and every API key and certificate client of the playbooks it owns, for a lost device or a leaked configuration file. Returns the counts:
+
+```json
+{ "revoked": { "user_api_keys": 2, "playbook_api_keys": 5, "secret_clients": 1 } }
+```
+
+Credentials of a banned or deleted account are refused anyway, from their next request on.
+
 ---
 
 ## Management API (User API Key)

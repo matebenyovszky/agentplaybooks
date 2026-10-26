@@ -72,3 +72,46 @@ describe("backup preflight", () => {
     expect(result.stderr).toContain("Unsafe archive member");
   });
 });
+
+describe("encrypted archive authentication (encrypt-then-MAC)", () => {
+  const run = (mode: string, path: string, passphrase = "correct horse battery staple") =>
+    spawnSync(python, [helper, mode, path], {
+      encoding: "utf8", env: { ...process.env, BACKUP_ENCRYPTION_PASSPHRASE: passphrase },
+    });
+  const sealed = () => {
+    const root = fixture(); const file = join(root, "archive.tar.gz.enc");
+    writeFileSync(file, Buffer.from("pretend ciphertext ".repeat(1000)));
+    expect(run("seal", file).status).toBe(0);
+    return file;
+  };
+
+  it("verifies a sealed archive and reports how many bytes are ciphertext", () => {
+    const file = sealed();
+    const result = run("verify", file);
+    expect(result.status, result.stderr).toBe(0);
+    expect(Number(result.stdout.trim())).toBe("pretend ciphertext ".length * 1000);
+  });
+  it("refuses an archive altered by one byte", () => {
+    const file = sealed();
+    const bytes = readFileSync(file); bytes[100] ^= 1; writeFileSync(file, bytes);
+    const result = run("verify", file);
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("authentication failed");
+  });
+  it("refuses the wrong passphrase", () => {
+    const result = run("verify", sealed(), "wrong passphrase");
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("authentication failed");
+  });
+  it("names an archive made before sealing, so restore can require an explicit opt-in", () => {
+    const root = fixture(); const file = join(root, "legacy.tar.gz.enc");
+    writeFileSync(file, Buffer.from("legacy ciphertext without a tag ".repeat(10)));
+    const result = run("verify", file);
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("no authentication tag");
+  });
+  it("keeps the passphrase off the command line", () => {
+    expect(readFileSync(resolve("scripts/self-host/backup.sh"), "utf8")).toContain('archive.py" seal "${FINAL_ARCHIVE}"');
+    expect(readFileSync(resolve("scripts/self-host/restore.sh"), "utf8")).toContain("BACKUP_ALLOW_UNSEALED");
+  });
+});

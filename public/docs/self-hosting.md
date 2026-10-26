@@ -326,6 +326,27 @@ is internal. A name whose DNS answer changes between that check and the
 connection is not covered; run the application container without a route to
 internal networks it does not need, so egress policy covers it too.
 
+### Offboarding a user
+
+When someone leaves, disable the account and revoke what it stands behind in
+one step:
+
+```bash
+SUPABASE_URL=https://supabase.example.org SUPABASE_SERVICE_ROLE_KEY=...   python3 scripts/self-host/offboard-user.py person@example.org
+```
+
+It bans the account in Supabase Auth and deactivates the account's user API
+keys and the API keys and certificate clients of the playbooks it owns. The API
+also refuses a banned or deleted account's remaining credentials and unexpired
+session tokens from their next request on, so banning in the Auth dashboard
+alone already stops them; the script makes the revocation durable and visible
+in the audit trail (`api_key.revoke`). Playbooks and the audit trail stay;
+reassign or delete the playbooks separately. With an external IdP (Entra ID),
+also remove the person there.
+
+A user who lost a device can revoke their own credentials with
+`POST /api/user/credentials/revoke-all` from a signed-in session.
+
 ## Custom Domain
 
 ### Cloudflare Pages

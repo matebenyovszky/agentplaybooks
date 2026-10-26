@@ -169,7 +169,7 @@ describe("recordSecretAudit", () => {
 
     await expect(
       recordSecretAudit(context, { operation: "secret.delete", status: "success", secretName: "X" }),
-    ).resolves.toBeUndefined();
+    ).resolves.toBe(false);
     expect(consoleError).toHaveBeenCalled();
     consoleError.mockRestore();
   });
@@ -182,7 +182,7 @@ describe("recordSecretAudit", () => {
 
     await expect(
       recordSecretAudit(context, { operation: "secret.reveal", status: "denied", secretName: "X" }),
-    ).resolves.toBeUndefined();
+    ).resolves.toBe(false);
     expect(consoleError).toHaveBeenCalled();
     consoleError.mockRestore();
   });

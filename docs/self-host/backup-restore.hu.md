@@ -59,7 +59,7 @@ A `scripts/self-host/backup.env.example` tartalmát `/etc/agentplaybooks/backup.
 
 ## A mentések titkosítása
 
-Az archívumok nyugalmi állapotban **AES-256-CBC, PBKDF2, 310 000 iteráció** mellett, OpenSSL-lel, a `BACKUP_ENCRYPTION_PASSPHRASE` használatával titkosítottak.
+Az archívumok nyugalmi állapotban **AES-256-CBC, PBKDF2, 310 000 iteráció** mellett, OpenSSL-lel, a `BACKUP_ENCRYPTION_PASSPHRASE` használatával titkosítottak, és **hitelesítettek**: a fájl végére HMAC-SHA256 tag kerül (encrypt-then-MAC; a MAC-kulcs ugyanabból a jelmondatból, külön van levezetve). A `restore.sh` a visszafejtés előtt, konstans idejű összehasonlítással ellenőrzi a taget, és elutasítja a módosított archívumot vagy a rossz jelmondatot. A tag bevezetése előtt készült archívum csak `BACKUP_ALLOW_UNSEALED=1` mellett állítható vissza, figyelmeztetéssel, hogy az integritása nem ellenőrzött.
 
 - Ez a jelszó **nem** lehet a `SECRETS_ENCRYPTION_KEY`
 - A fájlok módja `0600`, a `BACKUP_DIR` (alapértelmezés `./backups`) módja `0700`
