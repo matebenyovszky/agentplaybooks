@@ -1,9 +1,19 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { POST } from "@/app/api/mcp/[guid]/route";
+import { POST as managementPost } from "@/app/api/mcp/manage/route";
 import { getServiceSupabase, getSupabase } from "@/app/api/_shared/supabase";
 import { skillReferenceWindow } from "@/lib/repositories/skill-context";
 
 vi.mock("@/app/api/_shared/supabase", () => ({ getServiceSupabase: vi.fn(), getSupabase: vi.fn() }));
+vi.mock("@/app/api/_shared/auth", async original => ({
+  ...await original<typeof import("@/app/api/_shared/auth")>(),
+  validateUserApiKey: vi.fn().mockResolvedValue({ user_id: "owner", permissions: ["full"] }),
+  getAuthenticatedUser: vi.fn().mockResolvedValue(null),
+}));
+vi.mock("@/app/api/_shared/guards", async original => ({
+  ...await original<typeof import("@/app/api/_shared/guards")>(),
+  getPlaybookAccessRole: vi.fn().mockResolvedValue("owner"),
+}));
 const own = "11111111-1111-4111-8111-111111111111";
 const foreign = "22222222-2222-4222-8222-222222222222";
 const body = "# Instructions\nUse references only when needed.";
@@ -18,6 +28,8 @@ const rows: Record<string, Record<string, unknown>[]> = {
   skills: [{ id: own, playbook_id: "pb", name: "operations", content: body, priority: 50 },
     { id: foreign, playbook_id: "private-pb", name: "foreign", content: privateBody }],
   skill_attachments: attachments,
+  memories: [{ playbook_id: "pb", key: "fact", summary: "Short summary", value: "FULL_MEMORY_VALUE", is_archived: false }],
+  mcp_servers: [{ playbook_id: "pb", id: "server", name: "Demo", transport_config: { detail: "SERVER_CONFIGURATION_DETAIL" } }],
 };
 function database() {
   return { from(table: string) {
@@ -90,4 +102,28 @@ it("refuses another playbook's files through both tools and legacy resource URIs
   const resource = await rpc("resources/read", { uri: `playbook://lean-context/skills/${foreign}/attachments/a2` });
   expect(resource.error).toBeDefined();
   expect(JSON.stringify(resource)).not.toContain(privateBody);
+});
+
+it("keeps account summaries compact and restores complete records explicitly", async () => {
+  async function read(includeContent: boolean) {
+    const response = await managementPost(new Request("http://localhost/api/mcp/manage", {
+      method: "POST", headers: { "Content-Type": "application/json", "X-API-Key": "test-key" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: {
+        name: "get_playbook", arguments: { playbook_id: "pb", include_content: includeContent },
+      } }),
+    }));
+    const payload = await response.json();
+    expect(payload.error).toBeUndefined();
+    return JSON.parse(payload.result.content[0].text);
+  }
+  const small = await read(false);
+  expect(small.skills[0].content).toBeUndefined();
+  expect(small.memories[0].summary).toBe("Short summary");
+  expect(small.memories[0].value).toBeUndefined();
+  expect(small.mcp_servers[0].transport_config).toBeUndefined();
+  const full = await read(true);
+  expect(full.skills[0].content).toBe(body);
+  expect(full.memories[0].value).toBe("FULL_MEMORY_VALUE");
+  expect(full.mcp_servers[0].transport_config.detail).toBe("SERVER_CONFIGURATION_DETAIL");
+  expect(full.persona).toEqual(small.persona);
 });
