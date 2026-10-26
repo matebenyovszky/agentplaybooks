@@ -32,11 +32,11 @@ more; describe OAuth as the default.
 
 ## Tool surface (do not shrink)
 
-`tools/list` on `/api/mcp/manage` advertises **50** tools:
+`tools/list` on `/api/mcp/manage` advertises **51** tools:
 
 - 7 account tools
-- 43 playbook tools, including `find_tools`, `use_secret_write` and
-  `get_memory_history`
+- 44 playbook tools, including `find_tools`, `use_secret_write`,
+  `get_memory_history` and `get_skill_reference`
 
 Playbook tools on the manage endpoint require `playbook_id`.
 
