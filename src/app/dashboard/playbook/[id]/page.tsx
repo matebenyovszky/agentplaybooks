@@ -5,13 +5,11 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import JSZip from "jszip";
 import { createBrowserClient } from "@/lib/supabase/client";
 import { authFetch } from "@/lib/auth-fetch";
 import { cn } from "@/lib/utils";
 import { createSupabaseAdapter } from "@/lib/storage";
 import { isSafeSkillFile, skillMarkdown } from "@/lib/skill-markdown";
-import { buildPlaybookPluginZip } from "@/lib/playbook-plugin-export";
 import {
   CLAUDE_CODE_MARKETPLACE_COMMAND,
   CLAUDE_CONNECTORS_URL,
@@ -633,6 +631,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
 
     setExporting(true);
     try {
+      const { default: JSZip } = await import("jszip");
       const baseUrl = getBaseUrl();
       const zip = new JSZip();
 
@@ -794,6 +793,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
     if (!playbook || exportingPlugin) return;
     setExportingPlugin(true);
     try {
+      const { buildPlaybookPluginZip } = await import("@/lib/playbook-plugin-export");
       const attachmentsBySkill = new Map<string, SkillAttachment[]>();
       for (const skill of skills) {
         const response = await authFetch(`/api/manage/skills/${skill.id}/attachments`);

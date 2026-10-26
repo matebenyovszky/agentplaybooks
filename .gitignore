@@ -65,9 +65,8 @@ scripts/self-host/tmp/
 # typescript
 *.tsbuildinfo
 
-# cloudflare
-.open-next/
-.wrangler/
+# Supabase CLI local state
+/supabase/.temp/
 
 # auto-generated
 src/lib/blog-slugs.generated.ts

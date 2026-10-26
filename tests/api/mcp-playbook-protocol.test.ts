@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import * as database from "@/app/api/_shared/supabase";
 import { GET, POST } from "@/app/api/mcp/[guid]/route";
 import { isHandshakeMethod, privateAccessRefusal } from "@/app/api/_shared/mcp-protocol";
 
@@ -44,13 +45,30 @@ describe("AgentPlaybooks playbook MCP transport", () => {
     expect(await response.text()).toBe("");
   });
 
-  it("still answers a request that carries an explicit null id", async () => {
+  it("answers legacy pings including null ids, while modern ping remains unsupported", async () => {
     // The spec forbids `id: null` in a request, but a client sending it is
     // waiting for an answer, so it must not be silently swallowed as a
     // notification.
-    const response = await POST(mcpRequest({ id: null, method: "ping" }));
-
-    expect(response.status).not.toBe(202);
+    const query = {
+      select: () => query,
+      eq: () => query,
+      maybeSingle: async () => ({ data: { id: "public", name: "Public playbook" }, error: null }),
+    };
+    const client = vi.spyOn(database, "getSupabase").mockReturnValue({ from: () => query } as never);
+    try {
+      for (const id of [1, null]) {
+        const response = await POST(mcpRequest({ id, method: "ping" }));
+        expect(response.status).toBe(200);
+        expect(await response.json()).toEqual({ jsonrpc: "2.0", id, result: {} });
+      }
+      const modern = await POST(mcpRequest({ id: 2, method: "ping", params: {
+        _meta: { "io.modelcontextprotocol/protocolVersion": "2026-07-28" },
+      } }, { "MCP-Protocol-Version": "2026-07-28", "Mcp-Method": "ping" }));
+      expect(modern.status).toBe(404);
+      expect((await modern.json()).error.code).toBe(-32601);
+    } finally {
+      client.mockRestore();
+    }
   });
 
   it("does not reject a protocol revision it has never heard of", async () => {

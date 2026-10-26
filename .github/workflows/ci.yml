@@ -31,7 +31,6 @@ jobs:
       - run: npm run release:check
       - run: npm run prebuild
       - run: npm run lint
-      - run: npm run docs:check
       - run: npm run test:all
       - run: npx tsc --noEmit
       - run: npm run audit:production

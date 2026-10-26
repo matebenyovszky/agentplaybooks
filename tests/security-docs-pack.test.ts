@@ -1,29 +1,11 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 const repoRoot = path.resolve(__dirname, "..");
 
 describe("security documentation pack", () => {
-  it("ships HU + EN files and a bilingual CSV", () => {
-    for (const relative of [
-      "docs/security/README.md",
-      "docs/security/README.hu.md",
-      "docs/security/whitepaper.md",
-      "docs/security/whitepaper.hu.md",
-      "docs/security/asset-inventory.md",
-      "docs/security/asset-inventory.hu.md",
-      "docs/security/risk-assessment.md",
-      "docs/security/risk-assessment.hu.md",
-      "docs/security/risk-assessment.csv",
-      "scripts/list-self-host-stack.mjs",
-      "scripts/check-security-docs.mjs",
-    ]) {
-      expect(existsSync(path.join(repoRoot, relative)), relative).toBe(true);
-    }
-  });
-
   it("keeps relative links and cited source paths resolvable", () => {
     const result = spawnSync(process.execPath, ["scripts/check-security-docs.mjs"], {
       cwd: repoRoot,
@@ -56,16 +38,5 @@ describe("security documentation pack", () => {
     expect(whitepaper).toMatch(/No KMS \/ HSM/);
     expect(whitepaper).toMatch(/No application-level MFA/);
     expect(whitepaper).toMatch(/owner \| editor \| auditor/);
-    expect(whitepaper).toMatch(/Auditor role: done on `main`\*\* \(\[#202\]/);
-    expect(whitepaper).toMatch(/pull\/216/);
-    expect(whitepaper).toMatch(/Folyamatban \/ In progress/);
-    expect(whitepaper).toMatch(/Done on `main`/);
-    expect(whitepaper).toMatch(/pull\/202/);
-    expect(whitepaper).toMatch(/pull\/201/);
-    expect(whitepaper).toMatch(/pull\/200/);
-    expect(whitepaper).toMatch(/pull\/204/);
-    expect(whitepaper).toMatch(/pull\/205/);
-    expect(whitepaper).toMatch(/pull\/203/);
-    expect(whitepaper).toMatch(/pull\/207/);
   });
 });

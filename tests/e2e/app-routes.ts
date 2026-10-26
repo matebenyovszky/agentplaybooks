@@ -5,6 +5,7 @@ import {
   assertNoHorizontalOverflow,
   assertNoVisibleElementPastRightEdge,
   assertPlaybookHeaderControlsFit,
+  assertPrimaryColumnWidth,
   assertTableLayout,
   attachCspListeners,
 } from "./overflow-harness";
@@ -128,6 +129,9 @@ export async function assertPageFits(page: Page, label: string, viewport: Viewpo
   await assertNoHorizontalOverflow(page);
   await assertNoVisibleElementPastRightEdge(page);
   await assertTableLayout(page);
+  if (label === "playbook") {
+    await assertPrimaryColumnWidth(page, '[data-testid="playbook-description"]', viewport.width);
+  }
   if (label === "playbook" && viewport.width < 768) {
     await assertPlaybookHeaderControlsFit(page);
   }

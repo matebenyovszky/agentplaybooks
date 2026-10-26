@@ -1,15 +1,6 @@
-import path from "node:path";
-
 import { expect, type Page } from "@playwright/test";
 
 import { orientationsOf, type ViewportCase } from "./viewports";
-
-const fixturesDir = path.join(__dirname, "fixtures");
-
-export const FIXTURES = {
-  playbook: path.join(fixturesDir, "playbook-shell.html"),
-  publicPages: path.join(fixturesDir, "public-shells.html"),
-};
 
 export async function assertNoHorizontalOverflow(page: Page) {
   const { scrollWidth, clientWidth } = await page.evaluate(() => ({
@@ -53,11 +44,6 @@ export async function assertPlaybookHeaderControlsFit(page: Page) {
     expect(right, `tab ${index} right ${right} > innerWidth ${innerWidth}`).toBeLessThanOrEqual(innerWidth);
     expect(box!.x, `tab ${index} left ${box!.x}`).toBeGreaterThanOrEqual(0);
   }
-}
-
-export async function openFixture(page: Page, file: string, viewport: ViewportCase) {
-  await page.setViewportSize({ width: viewport.width, height: viewport.height });
-  await page.goto(`file://${file}`);
 }
 
 export function eachOrientation(viewports: ViewportCase[]): ViewportCase[] {

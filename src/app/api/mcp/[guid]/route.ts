@@ -575,6 +575,13 @@ app.post("/", async (c) => {
 
   // Handle MCP methods
   switch (method) {
+    case "ping":
+      // Handshake-era clients use this for liveness. MCP 2026-07-28 removed
+      // ping; keep the modern MethodNotFound response instead of widening it.
+      return modern
+        ? c.json({ jsonrpc: "2.0", id, error: { code: METHOD_NOT_FOUND, message: "Method not found: ping" } }, 404)
+        : c.json({ jsonrpc: "2.0", id, result: {} });
+
     case "server/discover":
       // Mandatory for a modern client, and the only thing it can call before
       // it knows anything about us.
