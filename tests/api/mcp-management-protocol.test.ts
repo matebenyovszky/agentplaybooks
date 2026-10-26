@@ -139,7 +139,7 @@ describe("AgentPlaybooks management MCP transport", () => {
     const names = tools.map((tool) => tool.name);
 
     expect(new Set(names).size).toBe(names.length);
-    expect(names).toHaveLength(50);
+    expect(names).toHaveLength(51);
     expect(names).toEqual(expect.arrayContaining([
       "list_playbooks",
       "create_playbook",

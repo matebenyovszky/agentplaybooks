@@ -82,6 +82,7 @@ export const skillListOutputSchema: Record<string, unknown> = {
           licence: stringOrNull,
           publisher_id: stringOrNull,
           priority: { type: ["number", "null"] },
+          created_at: { type: "string" },
         },
       },
     },

@@ -21,6 +21,8 @@ This document outlines the development roadmap for AgentPlaybooks — the open s
 - [x] **Atomic private forks** - Copy skills, their attachments and MCP records with fresh IDs and preserved publisher attribution; vault values, API keys and runtime history are excluded. See [API Reference](./api-reference.md) and [#185](https://github.com/matebenyovszky/agentplaybooks/pull/185).
 - [x] **Personas** - System prompts that define AI personality
 - [x] **Skills** - Structured capabilities (Anthropic format)
+- [x] **Selective context reads** - Metadata-first skill discovery, attachment manifests, bounded file/Markdown-section reads and compact playbook summaries across MCP/OpenAPI/stdio. Full exports remain opt-in. See [Management API](./management-api.md#read-only-the-context-a-task-needs).
+- [ ] **Context efficiency follow-up** - Stable revisions covering skill and attachment writes before adding local content caches; task-scoped context budgets; client-manifest coverage for discovered memory/file tools; upload-limit preflight and response-size/latency/retry/success measurements on the same tasks. Character counts are not token or billing estimates.
 - [x] **MCP Servers** - Model Context Protocol configurations
 - [x] **Memory** - Key-value storage for AI agents
 - [x] **Canvas** - Working documents for ongoing context

@@ -43,11 +43,12 @@ export const ACCOUNT_TOOLS: McpTool[] = [
   {
     name: "get_playbook",
     title: "Get playbook",
-    description: "Get a playbook with its singleton persona, skills, connected MCP servers, and memory. This is the only persona retrieval tool; there is no get_persona. Read-only. Requires playbooks:read or full permission. Use list_playbooks to discover IDs first, and get_skill when you need one skill's full content rather than the playbook summary.",
+    description: "Get a playbook with its singleton persona and compact skill, connected-server and memory metadata. Skill bodies, memory values and server configurations are omitted unless include_content=true. This is the only persona retrieval tool; there is no get_persona. Read-only; requires playbooks:read or full. Use list_playbooks for IDs, get_skill / get_skill_reference for selected instructions and search_memory / read_memory for selected facts.",
     inputSchema: {
       type: "object",
       properties: {
         playbook_id: { type: "string", description: "UUID of the playbook" },
+        include_content: { type: "boolean", default: false, description: "Restore the full skill, memory and server payload; prefer targeted reads" },
       },
       required: ["playbook_id"],
     },

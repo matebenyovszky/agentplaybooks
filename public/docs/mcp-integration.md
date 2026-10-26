@@ -245,7 +245,7 @@ The MCP server exposes built-in tools for interacting with the playbook. Skills 
 
 | Category | Tools |
 |----------|-------|
-| **Skills** | `list_skills`, `get_skill`, `create_skill`, `update_skill`, `delete_skill`, `list_skill_versions`, `rollback_skill` |
+| **Skills** | `list_skills` (metadata), `get_skill` (main document and file manifest), `get_skill_reference` (one file/section), `create_skill`, `update_skill`, `delete_skill`, `list_skill_versions`, `rollback_skill` |
 | **Memory** | `read_memory`, `write_memory`, `search_memory`, `delete_memory`, `consolidate_memories`, `promote_memory`, `get_memory_context`, `archive_memories`, `get_memory_tree`, `create_task_graph`, `update_task_status` |
 | **Canvas** | `list_canvas`, `read_canvas`, `write_canvas`, `patch_canvas_section`, `get_canvas_toc`, `lock_canvas_section`, `unlock_canvas_section` |
 | **Workflow runs** | `list_runs`, `create_run`, `update_run`, `delete_run` |

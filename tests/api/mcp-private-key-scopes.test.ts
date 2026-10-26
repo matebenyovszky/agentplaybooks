@@ -68,7 +68,7 @@ describe("private playbook MCP with a key that has no read permission", () => {
   it("cannot read memory, skills or canvas through tools", async () => {
     asKey(["proposals:write"], "proposer");
     for (const [name, permission] of [["read_memory", "memory:read"], ["search_memory", "memory:read"],
-      ["list_skills", "skills:read"], ["get_skill", "skills:read"], ["read_canvas", "canvas:read"], ["list_mcp_servers", "playbooks:read"]]) {
+      ["list_skills", "skills:read"], ["get_skill", "skills:read"], ["get_skill_reference", "skills:read"], ["read_canvas", "canvas:read"], ["list_mcp_servers", "playbooks:read"]]) {
       const body = await (await rpc("tools/call", { name, arguments: { key: "x", skill_id: "x", slug: "x" } })).json();
       const text = JSON.stringify(body);
       expect(text, name).toContain(`${permission} permission required`);

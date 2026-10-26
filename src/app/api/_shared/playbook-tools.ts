@@ -36,23 +36,54 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   {
     name: "list_skills",
     title: "List skills",
-    description: "List every skill currently attached to this playbook, returning id, name, description, content, licence, and priority ordered by priority descending. Read-only; it does not create or change skills. Use this to discover skill_id values before get_skill, update_skill, or delete_skill. Do not use list_skill_versions, which lists historical revisions of a single skill, or get_playbook, which only summarizes skills.",
-    inputSchema: { type: "object", properties: {} },
+    description: "List every skill currently attached to this playbook as metadata: id, name, description (up to 512 characters), licence, priority and created_at. Content and attachment bodies are omitted by default. Use get_skill for one definition, then get_skill_reference for one file or Markdown section. Set include_content=true only for an explicit full-content listing. Read-only. Do not use list_skill_versions, which lists historical revisions of one skill.",
+    inputSchema: { type: "object", properties: {
+      include_content: { type: "boolean", default: false, description: "Include full SKILL.md contents; omitted by default to keep discovery small" },
+    } },
     outputSchema: skillListOutputSchema,
     annotations: READ_CLOSED,
   },
   {
     name: "get_skill",
     title: "Get skill",
-    description: "Return the full definition of one skill in this playbook, including name, description, content, priority, and attachments. Identify the skill with skill_id, which may be a UUID or the skill's kebab-case name. When the skill's frontmatter declares demonstrations, they come back as a resolved list with a link per recording and per timestamped segment, in the order they are performed. This lookup does not modify the skill. Use list_skills first to discover IDs and names. Do not use list_skill_versions (historical revisions) or get_playbook (persona and summaries, not full skill content).",
+    description: "Return the full definition of one skill: SKILL.md content, metadata, and an attachment manifest with filenames and sizes. For only the manifest set include_content=false. Attachment bodies are omitted by default; read one with get_skill_reference, or set include_attachments=true for a complete export. skill_id accepts a UUID or kebab-case name. Declared demonstrations include resolved recording and segment links. Read-only. Use list_skills to discover IDs; list_skill_versions is historical data, not the current definition.",
     inputSchema: {
       type: "object",
       properties: {
         skill_id: { type: "string", description: "Skill ID or name" },
+        include_content: { type: "boolean", default: true, description: "Set false for metadata and attachment manifest only" },
+        include_attachments: { type: "boolean", default: false, description: "Include every attachment body; prefer get_skill_reference for one file" },
       },
       required: ["skill_id"],
     },
     outputSchema: skillRecordOutputSchema,
+    annotations: READ_CLOSED,
+  },
+  {
+    name: "get_skill_reference",
+    title: "Read skill reference",
+    description: "Read exactly one skill file, optionally just one Markdown heading and its subsections. Use a filename from get_skill's attachment manifest, or SKILL.md for the main instructions. section matches the first exact ATX heading (without #, case-insensitive); code-fence headings are ignored. Returns at most max_chars (default 12000, maximum 32000), with next_offset for continuation within the selected text. Offsets count UTF-16 string units. Read-only; the parent skill must belong to this playbook.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        skill_id: { type: "string", description: "Skill UUID or name" },
+        filename: { type: "string", description: "Exact attachment filename, including its folder, or SKILL.md" },
+        section: { type: "string", description: "Optional exact Markdown heading without # prefixes" },
+        offset: { type: "integer", minimum: 0, default: 0 },
+        max_chars: { type: "integer", minimum: 1, maximum: 32000, default: 12000 },
+      },
+      required: ["skill_id", "filename"],
+    },
+    outputSchema: {
+      type: "object",
+      properties: {
+        skill_id: { type: "string" }, filename: { type: "string" }, content: { type: "string" },
+        offset: { type: "integer" }, next_offset: { type: ["integer", "null"] },
+        total_chars: { type: "integer" }, truncated: { type: "boolean" },
+        section_start_line: { type: "integer" }, section: { type: "string" },
+      },
+      required: ["skill_id", "filename", "content", "offset", "next_offset", "truncated", "total_chars"],
+    },
     annotations: READ_CLOSED,
   },
   {

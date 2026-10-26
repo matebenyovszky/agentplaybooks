@@ -23,6 +23,7 @@ import {
   getPlaybookAccessRole,
 } from "@/app/api/_shared/guards";
 import { playbookViewForRole } from "@/lib/audit-access";
+import { listSkillSummaries } from "@/lib/repositories/skill-context";
 import {
   oauthBearerChallenge,
   oauthResourceUrl,
@@ -360,11 +361,19 @@ async function executeManagementTool(
 
       if (error || !playbook) throw new Error("Playbook not found");
 
+      const includeContent = args.include_content === true;
       const [skills, mcpServers, memories] = await Promise.all([
-        supabase.from("skills").select("*").eq("playbook_id", playbook.id),
-        supabase.from("mcp_servers").select("*").eq("playbook_id", playbook.id),
-        supabase.from("memories").select("*").eq("playbook_id", playbook.id).eq("is_archived", false),
+        includeContent
+          ? supabase.from("skills").select("*").eq("playbook_id", playbook.id).then(({ data, error }) => {
+            if (error) throw error;
+            return data || [];
+          })
+          : listSkillSummaries(supabase, playbook.id),
+        supabase.from("mcp_servers").select(includeContent ? "*" : "id, name, description, transport_type, created_at").eq("playbook_id", playbook.id),
+        supabase.from("memories").select(includeContent ? "*" : "key, summary, tier, priority, tags, memory_at, updated_at").eq("playbook_id", playbook.id).eq("is_archived", false),
       ]);
+      if (mcpServers.error) throw mcpServers.error;
+      if (memories.error) throw memories.error;
 
       return {
         ...playbook,
@@ -372,7 +381,7 @@ async function executeManagementTool(
         // 1 playbook = 1 persona
         persona: playbookToPersona(playbook),
         personas: [playbookToPersona(playbook)], // backward-compatible shape
-        skills: skills.data || [],
+        skills,
         mcp_servers: mcpServers.data || [],
         memories: memories.data || [],
       };

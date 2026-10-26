@@ -366,7 +366,7 @@ without that argument.
 |------|-------------|
 | `list_playbooks` | List all playbooks owned by the user |
 | `create_playbook` | Create a new playbook (with embedded persona) |
-| `get_playbook` | Get playbook with persona, skills, and memory |
+| `get_playbook` | Get persona and compact skill/server/memory metadata; `include_content=true` requests full contents |
 | `update_playbook` | Update playbook (incl. persona fields) |
 | `delete_playbook` | Delete a playbook (cannot be undone!) |
 | `list_skills` | List all skills in a playbook |
@@ -560,14 +560,62 @@ Each public playbook has its own MCP server at `/api/mcp/:guid`. This allows AI 
 
 | Tool | Description | Auth |
 |------|-------------|------|
-| `list_skills` | List all skills | None |
-| `get_skill` | Get skill details with attachments | None |
+| `list_skills` | List metadata; full skill bodies only with `include_content=true` | None |
+| `get_skill` | Read SKILL.md and attachment metadata; bodies only with `include_attachments=true` | None |
+| `get_skill_reference` | Read one file or Markdown section, with a bounded, resumable response | None |
 | `read_memory` | Read specific memory by key | None |
 | `search_memory` | Search memories by text/tags | None |
 | `write_memory` | Write memory entry | API Key |
 | `delete_memory` | Delete memory entry | API Key |
 
 > **Note:** Persona is embedded in the playbook and returned with `GET /api/playbooks/:guid`
+
+### Read only the context a task needs
+
+`list_skills` and the Skills resource omit content by default. Descriptions in
+the list are limited to 512 characters. `get_skill` returns the main SKILL.md
+and an attachment manifest (filename, size, type and timestamps), without
+reading attachment bodies. Set `include_content=false` on `get_skill` when
+you only need that manifest.
+
+For a cron question, discover the skill, inspect its manifest, then request
+just the operations section:
+
+```json
+{"name":"get_skill_reference","arguments":{"skill_id":"operations","filename":"references/operations.md","section":"Cron","max_chars":8000}}
+```
+
+Use `filename="SKILL.md"` to read a section of the main instructions. Section
+matching uses the first exact ATX heading without its `#` prefix,
+case-insensitively. Descendant headings are included, sibling headings are
+excluded, and headings inside fenced code blocks are ignored. Setext headings
+are not section selectors.
+
+The response includes `content`, `offset`, `next_offset`, `total_chars`,
+`truncated` and `section_start_line`. Continue with the same skill, filename
+and section plus the returned `next_offset`. The default limit is 12,000
+UTF-16 string units, maximum 32,000; these are character limits, not tokenizer
+or billing estimates. A missing file or section is an error, never a fallback
+to the complete package.
+
+These tools are shared by playbook MCP, account MCP, local stdio and the
+generated OpenAPI operations. Account calls also require `playbook_id`.
+Public playbooks permit anonymous reads; private playbooks still require
+`skills:read` (or the existing equivalent write/full access).
+
+**Compatibility:** callers that intentionally need the previous large payload
+must opt in: `list_skills(include_content=true)`,
+`get_skill(include_attachments=true)`, or
+`get_playbook(include_content=true)`. The latter otherwise returns memory
+summaries without values, and server metadata without configurations. The
+persona and project fields remain available. Full REST exports and portable
+CLI backups retain their existing content. Refresh a client's tool catalog to
+discover the new operation and parameters; server discovery alone cannot add
+a callable function to an already fixed client tool manifest.
+
+Skill `created_at` is not a content version. Attachment `updated_at` applies
+only to that file. Do not treat either as a cache validator for an entire skill
+tree; a reliable cross-write revision marker is a separate follow-up.
 
 ### Resources (Playbook MCP)
 
