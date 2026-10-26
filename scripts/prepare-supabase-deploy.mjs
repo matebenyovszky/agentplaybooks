@@ -2,7 +2,7 @@ import { appendFileSync, copyFileSync, mkdtempSync, mkdirSync, readFileSync, rea
 import { tmpdir } from "node:os";
 import { basename, join, resolve } from "node:path";
 
-const projectRef = "bydcjwxfiiolmnddzbpy";
+const projectRef = "zcphxfospbvqplonkvco";
 const root = resolve(import.meta.dirname, "..");
 const versions = readFileSync(join(root, "supabase", "deploy-baseline-versions.txt"), "utf8")
   .split(/\r?\n/)
@@ -17,10 +17,27 @@ if (new Set(versions).size !== versions.length || versions.some((version, index)
 }
 
 const cutoff = versions.at(-1);
+// This SQL was deployed through Dashboard under a different timestamp.
+// Its normalized SQL matched the heap project's recorded statement on 2026-10-25.
+const recordedVersionAliases = new Map([["20261002120000", "20261009220418"]]);
+// Newest version already in production schema_migrations (PR #185).
+// `supabase db push --dry-run` refuses any other local file older than this
+// with "rerun with --include-all". Do not pass that flag; rename the file.
+const lastRemoteProductionVersion = "20261025123000";
+const recordedForwardVersions = new Set([
+  "20260922213700",
+  "20261009220418",
+  "20261010081252",
+  "20261010115900",
+  "20261010120000",
+  "20261024120000",
+  lastRemoteProductionVersion,
+]);
 const migrationDir = join(root, "supabase", "migrations");
 const forwardFiles = readdirSync(migrationDir)
   .filter((file) => file.endsWith(".sql"))
   .map((file) => ({ file, version: /^([0-9]{14})/.exec(file)?.[1] }))
+  .map(({ file, version }) => ({ file, version: recordedVersionAliases.get(version) || version }))
   .filter(({ version }) => version && version > cutoff)
   .sort((a, b) => a.version.localeCompare(b.version));
 
@@ -29,6 +46,16 @@ if (forwardFiles.some(({ file }) => !/^[0-9]{14}_[a-z0-9_]+\.sql$/.test(file))) 
 }
 if (forwardFiles.some((entry, index) => index > 0 && entry.version === forwardFiles[index - 1].version)) {
   throw new Error("Two forward migrations have the same version.");
+}
+const insertedBeforeLastRemote = forwardFiles.filter(
+  ({ version }) => version < lastRemoteProductionVersion && !recordedForwardVersions.has(version),
+);
+if (insertedBeforeLastRemote.length) {
+  throw new Error(
+    `Found local migration files to be inserted before the last migration on production (${lastRemoteProductionVersion}):\n` +
+      insertedBeforeLastRemote.map(({ file }) => `  supabase/migrations/${file}`).join("\n") +
+      `\nRename them to a version after ${lastRemoteProductionVersion}. Do not pass --include-all.`,
+  );
 }
 
 const databaseUrl = process.env.SUPABASE_DB_URL;
@@ -42,6 +69,9 @@ if (databaseUrl) {
   if (!direct && !pooler) {
     throw new Error(`SUPABASE_DB_URL does not identify production project ${projectRef}.`);
   }
+  if (url.port && url.port !== "5432") {
+    throw new Error("Production migrations require a direct or session connection on port 5432.");
+  }
 }
 
 const workdir = mkdtempSync(join(tmpdir(), "agentplaybooks-supabase-deploy-"));
@@ -52,8 +82,16 @@ for (const version of versions) {
   writeFileSync(join(stagedMigrations, `${version}_already_applied.sql`),
     `-- Version ${version} is already in this production project's migration history.\n`);
 }
-for (const { file } of forwardFiles) {
-  copyFileSync(join(migrationDir, file), join(stagedMigrations, basename(file)));
+for (const { file, version } of forwardFiles) {
+  const source = join(migrationDir, file);
+  const destination = join(stagedMigrations, `${version}_${basename(file).slice(15)}`);
+  if (/^-- @manual-production-migration\s*$/m.test(readFileSync(source, "utf8"))) {
+    // Applied/recorded versions are skipped by db push. If an operator has not
+    // completed this migration, fail before running any of its production DDL.
+    writeFileSync(destination, `DO $$ BEGIN RAISE EXCEPTION 'Migration ${version} requires its verified operator runbook and recorded version before deployment'; END $$;\n`);
+  } else {
+    copyFileSync(source, destination);
+  }
 }
 
 if (process.env.GITHUB_OUTPUT) {
@@ -61,3 +99,4 @@ if (process.env.GITHUB_OUTPUT) {
 }
 console.log(`Prepared ${versions.length} historical versions and ${forwardFiles.length} forward migrations in ${workdir}.`);
 console.log(`Forward migrations: ${forwardFiles.map(({ file }) => file).join(", ") || "none"}`);
+

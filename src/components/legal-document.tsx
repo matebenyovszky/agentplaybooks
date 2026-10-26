@@ -3,18 +3,17 @@ import type { ReactNode } from "react";
 import { FloatingNav } from "@/components/ui/floating-navbar";
 import type { LegalSection } from "@/lib/legal-copy";
 
-const LINK_CLASS = "text-indigo-600 dark:text-indigo-400 underline underline-offset-2";
+const LINK_CLASS = "break-words wrap-anywhere text-indigo-600 underline underline-offset-2 dark:text-indigo-400";
 
-// URLs and email addresses in the copy become links; everything else stays
-// plain text, so the copy file remains the single place the wording lives.
-const LINKABLE = /(https:\/\/[^\s)]*[^\s).,]|[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/g;
+// https URLs in the copy become links; everything else stays plain text.
+// Contact is GitHub, not email — do not mint mailto: links.
+const LINKABLE = /(https:\/\/[^\s)]*[^\s).,])/g;
 
 function linkify(text: string): ReactNode[] {
   return text.split(LINKABLE).map((part, index) => {
     if (index % 2 === 0) return part;
-    const href = part.startsWith("https://") ? part : `mailto:${part}`;
     return (
-      <a key={`${part}-${index}`} href={href} className={LINK_CLASS}>
+      <a key={`${part}-${index}`} href={part} className={LINK_CLASS}>
         {part}
       </a>
     );
@@ -35,7 +34,7 @@ export function LegalDocument({
   return (
     <div className="min-h-screen bg-background text-foreground">
       <FloatingNav />
-      <main className="max-w-3xl mx-auto px-6 pt-32 pb-20">
+      <main className="mx-auto w-full min-w-0 max-w-3xl px-6 pb-20 pt-32">
         <h1 className="text-4xl font-bold mb-8 text-neutral-900 dark:text-white">{title}</h1>
         <article className="space-y-10">
           {allSections.map((section, sectionIndex) => (

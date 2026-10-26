@@ -1,3 +1,6 @@
+import { runWithAuditRequest } from "@/lib/audit-context";
+import { publicTransportConfig } from "@/lib/mcp/public-transport-config";
+import { configReferencesSecrets, SECRET_ROUTING_DENIED, userMayRouteSecrets } from "@/app/api/_shared/federation-secrets";
 import { Hono } from "hono";
 import type { Context } from "hono";
 import { handle } from "hono/vercel";
@@ -30,11 +33,18 @@ import { getServiceSupabase, getSupabase } from "@/app/api/_shared/supabase";
 import { resolveAllowedOrigins } from "@/app/api/_shared/hono";
 import { checkPlaybookWriteAccess, getPlaybookAccessRole, resolvePlaybookId } from "@/app/api/_shared/guards";
 import { buildPlaybookUpdate } from "@/lib/playbook-access";
+import { playbookViewForRole, roleMayWrite } from "@/lib/audit-access";
 import { validateAgentSkillDescription, validateAgentSkillName } from "@/lib/agent-skills";
 import { demonstrationsError, recordingError } from "@/lib/demonstrations";
 import { DEFAULT_USER_API_KEY_PERMISSIONS } from "@/lib/user-api-key-permissions";
 import {
+  PLAYBOOK_API_KEY_ROLES,
+  playbookApiKeyPermissionsForRole,
+} from "@/lib/playbook-api-key-roles";
+import {
   createPlaybook,
+  forkPlaybook,
+  getPublisherIdForAuthUser,
   listAccessiblePlaybooks,
   parseCreatePlaybookInput,
 } from "@/lib/repositories/playbooks";
@@ -49,7 +59,7 @@ import { MEMORY_SEARCH_PARAMETERS, memoryWriteFields, parseMemorySearch } from "
  * constraint. Kept here so an unknown role is refused with a clear 400 rather
  * than reaching the database as a constraint violation.
  */
-const API_KEY_ROLES = ["viewer", "coworker", "proposer", "admin"] as const;
+const API_KEY_ROLES = PLAYBOOK_API_KEY_ROLES;
 
 // Types
 type Bindings = {
@@ -93,6 +103,10 @@ type MCPServerWithPlaybook = MCPServer & {
 type StarredPlaybookRow = { playbooks?: Playbook | null };
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>().basePath("/api");
+
+// Database writes made while handling this request are attributed to the
+// caller the handler authenticates (see src/lib/audit-context.ts).
+app.use("*", (c, next) => runWithAuditRequest(c.req.raw, next));
 
 // CORS middleware. Same allow-list as the other API apps, so a self-hosted
 // instance's ALLOWED_ORIGINS also governs this catch-all route.
@@ -544,10 +558,11 @@ app.get("/playbooks/:id/api-keys", async (c) => {
 
   const playbookId = await resolvePlaybookId(c.req.param("id"));
 
-  if (!(await checkPlaybookOwnership(user.id, playbookId))) {
+  if (!(await checkPlaybookWriteAccess(user.id, playbookId))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
+  c.header("Cache-Control", "no-store");
   const supabase = getServiceSupabase();
 
   const { data, error } = await supabase
@@ -604,7 +619,7 @@ app.post("/playbooks/:id/api-keys", async (c) => {
       key_prefix: keyPrefix,
       name: name || null,
       role: role || "viewer",
-      permissions: permissions || ["memory:read", "memory:write"],
+      permissions: permissions || playbookApiKeyPermissionsForRole(role || "viewer"),
       expires_at: expires_at || null,
       is_active: true,
     })
@@ -1088,6 +1103,47 @@ app.post("/manage/playbooks", async (c) => {
   }
 });
 
+// POST /api/manage/playbooks/:id/fork - Copy a readable playbook, retaining its publisher attribution
+app.post("/manage/playbooks/:id/fork", async (c) => {
+  const user = await getUserFromAuthOrApiKey(c, "playbooks:write");
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const sourceId = c.req.param("id");
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sourceId);
+  const supabase = getServiceSupabase();
+  let sourceQuery = supabase
+    .from("playbooks")
+    .select("id, user_id, publisher_id, visibility");
+  sourceQuery = isUuid ? sourceQuery.eq("id", sourceId) : sourceQuery.eq("guid", sourceId);
+  const { data: source, error: sourceError } = await sourceQuery.maybeSingle();
+
+  if (sourceError) {
+    return c.json({ error: sourceError.message }, 500);
+  }
+  if (!source) {
+    return c.json({ error: "Playbook not found" }, 404);
+  }
+
+  const accessRole = await getPlaybookAccessRole(user.id, source.id);
+  const hasAccess = accessRole !== "auditor" && (source.visibility === "public"
+    || source.visibility === "unlisted"
+    || roleMayWrite(accessRole));
+  if (!hasAccess) {
+    return c.json({ error: "Playbook not found" }, 404);
+  }
+
+  try {
+    if (!source.publisher_id) await getPublisherIdForAuthUser(source.user_id);
+    const fork = await forkPlaybook(user.id, source.id);
+    return c.json(fork, 201);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to fork playbook";
+    return c.json({ error: message }, message === "Playbook not found" ? 404 : 500);
+  }
+});
+
 // GET /api/manage/playbooks/:id - Get playbook details (User API key supported)
 app.get("/manage/playbooks/:id", async (c) => {
   const user = await getUserFromAuthOrApiKey(c, "playbooks:read");
@@ -1100,6 +1156,15 @@ app.get("/manage/playbooks/:id", async (c) => {
 
   const accessRole = await getPlaybookAccessRole(user.id, playbookId);
   if (!accessRole) return c.json({ error: "Playbook not found" }, 404);
+  if (accessRole === "auditor") {
+    const { data: playbook, error } = await supabase
+      .from("playbooks")
+      .select("id, guid, name, description, visibility, created_at, updated_at, user_id, tags")
+      .eq("id", playbookId)
+      .single();
+    if (error || !playbook) return c.json({ error: "Playbook not found" }, 404);
+    return c.json(playbookViewForRole({ ...playbook, current_user_role: "auditor" }, "auditor"));
+  }
 
   const { data: playbook, error } = await supabase
     .from("playbooks")
@@ -1158,7 +1223,7 @@ app.put("/manage/playbooks/:id", async (c) => {
   const playbookId = await resolvePlaybookId(c.req.param("id"));
 
   const accessRole = await getPlaybookAccessRole(user.id, playbookId);
-  if (!accessRole) {
+  if (!roleMayWrite(accessRole)) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -1167,6 +1232,33 @@ app.put("/manage/playbooks/:id", async (c) => {
   const supabase = getServiceSupabase();
 
   const updateData = buildPlaybookUpdate(body, accessRole);
+
+  // Older playbooks may predate publisher profiles. Do not let publishing one
+  // preserve a missing publisher association; resolve profiles.id from auth.uid.
+  if (updateData.visibility === "public" || updateData.visibility === "unlisted") {
+    const { data: currentPlaybook, error: lookupError } = await supabase
+      .from("playbooks")
+      .select("user_id, publisher_id")
+      .eq("id", playbookId)
+      .maybeSingle();
+
+    if (lookupError) {
+      return c.json({ error: lookupError.message }, 500);
+    }
+
+    if (!currentPlaybook) {
+      return c.json({ error: "Playbook not found" }, 404);
+    }
+
+    if (!currentPlaybook.publisher_id) {
+      try {
+        updateData.publisher_id = await getPublisherIdForAuthUser(currentPlaybook.user_id);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Publisher profile not found";
+        return c.json({ error: message }, 500);
+      }
+    }
+  }
 
   if (Object.keys(updateData).length === 0) {
     return c.json({ error: "No valid fields to update" }, 400);
@@ -1510,6 +1602,9 @@ app.post("/manage/playbooks/:id/mcp-servers", async (c) => {
   if (transport_config !== undefined && (typeof transport_config !== "object" || transport_config === null || Array.isArray(transport_config))) {
     return c.json({ error: "Transport configuration must be an object" }, 400);
   }
+  if (configReferencesSecrets(transport_config) && !(await userMayRouteSecrets(c.req.raw, user.id, playbookId))) {
+    return c.json({ error: SECRET_ROUTING_DENIED }, 403);
+  }
 
   const insertData = {
     playbook_id: playbookId,
@@ -1555,6 +1650,9 @@ app.put("/manage/playbooks/:id/mcp-servers/:mid", async (c) => {
   }
   if (body.transport_config !== undefined && (typeof body.transport_config !== "object" || body.transport_config === null || Array.isArray(body.transport_config))) {
     return c.json({ error: "Transport configuration must be an object" }, 400);
+  }
+  if (configReferencesSecrets(body.transport_config) && !(await userMayRouteSecrets(c.req.raw, user.id, playbookId))) {
+    return c.json({ error: SECRET_ROUTING_DENIED }, 403);
   }
 
   // Whitelist allowed fields to prevent mass-assignment
@@ -2804,6 +2902,7 @@ app.get("/public/mcp", async (c) => {
     const profile = server.publisher;
     return {
       ...server,
+      transport_config: publicTransportConfig(server.transport_config),
       playbook_guid: server.playbook?.guid,
       playbook_name: server.playbook?.name,
       publisher: profile ? {
@@ -2837,11 +2936,9 @@ app.get("/public/mcp/:id", async (c) => {
   // shared server arrives as a template: it states which credential it needs,
   // and the copier supplies their own.
   //
-  // `headers`, however, is free-form and nothing validates it against literals.
-  // A token typed directly into a header on a *public* playbook would be
-  // published by this endpoint. The editor steers people to vault references
-  // for exactly that reason; if that ever needs enforcing, it belongs here in
-  // the projection, not in a comment.
+  // `headers`, however, is free-form, and a URL can carry `?api_key=...`; both
+  // can hold a literal token. publicTransportConfig withholds header values and
+  // query strings in the response, keeping the names a copier needs.
   //
   // (This used to say credentials "live in `mcp_server_secrets`, which is
   // service-role only". That table was dropped — there is one vault now.)
@@ -2863,6 +2960,7 @@ app.get("/public/mcp/:id", async (c) => {
   const server = data as MCPServerWithPlaybook;
   return c.json({
     ...server,
+    transport_config: publicTransportConfig(server.transport_config),
     playbook_guid: server.playbook?.guid,
     playbook_name: server.playbook?.name,
     playbook: undefined,

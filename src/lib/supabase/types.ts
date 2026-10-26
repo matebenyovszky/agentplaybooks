@@ -100,6 +100,8 @@ export type PlaybookCollaboratorsRow = {
   invite_expires_at: string;
   accepted_at: string | null;
   created_at: string;
+  /** `editor` (default) or `auditor`. Missing on rows written before the compliance migration. */
+  role: "editor" | "auditor";
 };
 
 export type PlaybookCollaboratorsInsert = Partial<PlaybookCollaboratorsRow>;
@@ -170,12 +172,26 @@ export type AuditLogRow = {
   latency_ms: number;
   /** A short code, never a message. */
   error_code: string | null;
-  actor_type: "owner" | "api_key" | "mtls" | "anonymous" | null;
+  actor_type: "owner" | "api_key" | "mtls" | "anonymous" | "system" | "auditor" | null;
   /** A user id, or an API key prefix. */
   actor_id: string | null;
   /** Which secret a `secret.*` row is about; by name, so a delete survives. */
   secret_name: string | null;
   request_id: string | null;
+  created_at: string;
+  /** SHA-256 hex of the previous row in this playbook's chain, or 64 zeros. */
+  prev_hash: string | null;
+  /** SHA-256 hex of the canonical JSON of this row (including prev_hash). */
+  hash: string | null;
+};
+
+export type AuditChainCheckpointRow = {
+  id: string;
+  playbook_id: string;
+  anchor_hash: string;
+  purged_through: string;
+  purged_through_id: string | null;
+  purged_count: number;
   created_at: string;
 };
 
@@ -263,7 +279,7 @@ export type ApiKeysRow = {
   key_prefix: string;
 
   name: string | null;
-  role: 'viewer' | 'coworker' | 'proposer' | 'admin';
+  role: 'viewer' | 'coworker' | 'proposer' | 'admin' | 'auditor';
   permissions: string[];
   last_used_at: string | null;
   expires_at: string | null;
@@ -484,12 +500,16 @@ export const SECRET_AUDIT_OPERATIONS = [
   'secret.oauth_exchange',
 ] as const;
 
+export const AUDIT_TRAIL_OPERATIONS = [
+  'audit.retention_purge',
+] as const;
+
 export type SecretAuditOperation = typeof SECRET_AUDIT_OPERATIONS[number];
 
 /** `denied` is a refused attempt; `error` is an authorized one that failed. */
 export type AuditStatus = 'success' | 'denied' | 'error';
 
-export type AuditActorType = 'owner' | 'api_key' | 'mtls' | 'anonymous';
+export type AuditActorType = 'owner' | 'api_key' | 'mtls' | 'anonymous' | 'system' | 'auditor';
 
 // Known publisher IDs
 export const PUBLISHER_IDS = {
@@ -540,6 +560,12 @@ export interface Database {
         Row: AuditLogRow;
         Insert: Partial<AuditLogRow> & Pick<AuditLogRow, "playbook_id" | "operation" | "status">;
         Update: Partial<Omit<AuditLogRow, "id" | "created_at">>;
+        Relationships: [];
+      };
+      audit_chain_checkpoints: {
+        Row: AuditChainCheckpointRow;
+        Insert: Omit<AuditChainCheckpointRow, "id" | "created_at">;
+        Update: never;
         Relationships: [];
       };
       canvas: {

@@ -341,7 +341,7 @@ async function ensureAnthropicPublisher(supabase: SupabaseClient): Promise<strin
   return CONFIG.anthropic_publisher_id;
 }
 
-async function createOrUpdatePlaybook(supabase: SupabaseClient): Promise<string> {
+async function createOrUpdatePlaybook(supabase: SupabaseClient, publisherId: string): Promise<string> {
   console.log('📦 Creating/updating Anthropic Skills playbook...');
   
   const guid = 'anthropic-official-skills';
@@ -349,7 +349,7 @@ async function createOrUpdatePlaybook(supabase: SupabaseClient): Promise<string>
   // Check if playbook exists by guid (more reliable)
   const { data: existing, error: selectError } = await supabase
     .from('playbooks')
-    .select('id')
+    .select('id, publisher_id')
     .eq('guid', guid)
     .maybeSingle();
   
@@ -358,6 +358,15 @@ async function createOrUpdatePlaybook(supabase: SupabaseClient): Promise<string>
   }
   
   if (existing) {
+    if (!existing.publisher_id) {
+      const { error: publisherError } = await supabase
+        .from('playbooks')
+        .update({ publisher_id: publisherId })
+        .eq('id', existing.id);
+      if (publisherError) {
+        throw new Error(`Failed to set Anthropic playbook publisher: ${publisherError.message}`);
+      }
+    }
     console.log(`  ✓ Playbook already exists: ${existing.id}`);
     return existing.id;
   }
@@ -370,6 +379,7 @@ async function createOrUpdatePlaybook(supabase: SupabaseClient): Promise<string>
     .from('playbooks')
     .upsert({
       user_id: systemUserId,
+      publisher_id: publisherId,
       guid: guid,
       name: CONFIG.playbook_name,
       description: CONFIG.playbook_description,
@@ -522,10 +532,10 @@ async function main() {
   });
   
   // Ensure publisher exists
-  await ensureAnthropicPublisher(supabase);
+  const publisherId = await ensureAnthropicPublisher(supabase);
   
   // Create or get playbook
-  const playbookId = await createOrUpdatePlaybook(supabase);
+  const playbookId = await createOrUpdatePlaybook(supabase, publisherId);
   
   console.log('\n📂 Phase 1: Fetching skills from GitHub...\n');
   

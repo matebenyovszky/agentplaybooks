@@ -1,5 +1,6 @@
 import { readFile, readdir } from "node:fs/promises";
 import { resolve } from "node:path";
+import { parse } from "yaml";
 
 const root = resolve(import.meta.dirname, "..");
 const read = async path => readFile(resolve(root, path), "utf8");
@@ -87,6 +88,31 @@ if (cli.version !== "0.6.0") {
   ]) {
     check(!warning.test((await read(file)).replace(/\s+/g, " ")), `${file} still says the login prompt shows the key; past 0.6.0 it does not.`);
   }
+}
+
+// Hermes packages and installer instructions must describe the same release.
+const memoryManifest = await read("packages/hermes-memory/agentplaybooks/plugin.yaml");
+const memoryProject = await read("packages/hermes-memory/pyproject.toml");
+const memoryVersion = memoryManifest.match(/^version: (.+)$/m)?.[1];
+check(memoryVersion === memoryProject.match(/^version = "(.+)"$/m)?.[1], "Hermes memory package versions differ.");
+check(memoryManifest.includes('name: agentplaybooks-memory'), "Hermes memory install name differs.");
+check(memoryManifest.includes('requires_hermes: ">=0.22.4"'), "Hermes memory requires the previous_content contract (0.22.4+).");
+for (const file of [
+  "public/docs/hermes-portable-agents.md", "public/docs/hermes-portable-agents.hu.md",
+  "packages/hermes-portable/agentplaybooks-tools/README.md",
+  "packages/hermes-portable/agentplaybooks-tools/skills/agentplaybooks-tools/SKILL.md",
+]) {
+  const pins = [...(await read(file)).matchAll(/@agentplaybooks\/cli@([0-9A-Za-z.+-]+)/g)].map(match => match[1]);
+  check(pins.length > 0 && pins.every(pin => pin === cli.version), `${file} must pin the current CLI.`);
+}
+for (const file of ["packages/cli/src/hermes-memory.js", "packages/cli/scripts/build.mjs"]) {
+  check((await read(file)).includes('"recall.py"'), `${file} must include the memory recall module.`);
+}
+for (const name of ["hermes-memory", "hermes-tools"]) {
+  const workflow = await read(`.github/workflows/${name}.yml`);
+  check(workflow.includes(`.github/workflows/${name}.yml`), `${name} workflow must trigger on its own changes.`);
+  const hermesRefs = parse(workflow).jobs.compatibility.strategy.matrix.hermes;
+  check(["v0.22.4", "v0.22.5", "main"].every(ref => hermesRefs.includes(ref)), `${name} workflow must check the minimum supported version, current stable and upstream main.`);
 }
 
 const skillNames = await readdir(resolve(root, "packages/cli/skills"));

@@ -74,7 +74,9 @@ export const Sidebar = ({
 export const SidebarBody = (props: React.ComponentProps<typeof motion.div>) => {
   return (
     <>
-      <DesktopSidebar {...props} />
+      <div className="hidden md:contents">
+        <DesktopSidebar {...props} />
+      </div>
       <MobileSidebar {...(props as React.ComponentProps<"div">)} />
     </>
   );
@@ -114,9 +116,7 @@ export const MobileSidebar = ({
   return (
     <>
       <div
-        className={cn(
-          "h-10 px-4 py-4 flex flex-row md:hidden items-center justify-between bg-white dark:bg-[#070b14] border-b border-neutral-200 dark:border-blue-900/30 w-full"
-        )}
+        className="flex h-10 w-full shrink-0 flex-row items-center justify-between border-b border-neutral-200 bg-white px-4 py-4 dark:border-blue-900/30 dark:bg-[#070b14] md:hidden"
         {...props}
       >
         <div className="flex justify-end z-20 w-full">

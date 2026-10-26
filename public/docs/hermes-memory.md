@@ -10,7 +10,7 @@ the separate [AgentPlaybooks Tools plugin](./hermes-portable-agents.md).
 
 ## Install and configure
 
-Use Hermes **0.21.4 or later**. Compatibility is tested against the upstream
+Use Hermes **0.22.4 or later**. Compatibility is tested against the upstream
 revision pinned in our [compatibility workflow](https://github.com/matebenyovszky/agentplaybooks/blob/main/.github/workflows/hermes-memory.yml).
 
 1. Create a **private playbook for this Hermes profile** in AgentPlaybooks.
@@ -44,24 +44,21 @@ installations may need a catalog refresh or update to see the new entry.
 
 ### Install through the AgentPlaybooks CLI
 
-The repository includes `apb memory setup`. Until you use a CLI release containing
-this command, build it from a source checkout instead of assuming the installed
-npm version includes it. From the AgentPlaybooks repository root:
+Install CLI 0.7.0, then preview and apply the profile-scoped setup:
 
 ```bash
-npm --prefix packages/cli install
-npm --prefix packages/cli run build
-node packages/cli/bin/agentplaybooks.js memory setup PRIVATE_PLAYBOOK_GUID --target=hermes
-node packages/cli/bin/agentplaybooks.js memory setup PRIVATE_PLAYBOOK_GUID --target=hermes --apply
-hermes memory setup
-hermes memory status
+npm install -g @agentplaybooks/cli@0.7.0
+apb memory setup PRIVATE_PLAYBOOK_GUID --target=hermes --profile=work
+apb memory setup PRIVATE_PLAYBOOK_GUID --target=hermes --profile=work --apply
+HERMES_HOME=~/.hermes/profiles/work hermes memory setup
+HERMES_HOME=~/.hermes/profiles/work hermes memory status
 ```
 
-The first setup command previews the plan; `--apply` installs the bundled plugin
-and selects the provider. It honors `HERMES_HOME` or `--hermes-home=<directory>`,
-preserves unrelated settings, reports conflicting plugin files or another
-selected provider, and never copies credentials. This is an alternative to
-catalog installation. Existing local memory is not imported.
+`--hermes-home` selects the installation home; `--profile` selects its named
+profile. Existing differing plugin files must be updated through Hermes or
+reconciled explicitly. Setup never overwrites them or migrates existing memory.
+Memory 0.3.0 uses Hermes's exact `previous_content` for mirrored replacement and
+removal. Ambiguous/missing identity fails closed and requires reconciliation.
 
 ## Daily use
 
@@ -99,7 +96,7 @@ Use separate profiles and private playbooks when users need isolated memories.
 
 Optional `shared_playbooks` in setup accepts comma-separated playbook GUIDs.
 These sources are read-only and selected through a tool's `source` argument;
-automatic recall searches only the personal playbook. The CLI equivalent is
+automatic recall searches personal and configured team playbooks; read-only sources are queried explicitly. The CLI equivalent is
 `--shared=<guid>,<guid>`.
 
 Public shared sources require no key. For a private shared source, configure a
@@ -122,7 +119,7 @@ key with `memory:read` and `memory:write` works.
 
 - Write, archive and delete reach it with `source` set to the team GUID.
   Without `source`, writes still go to personal memory.
-- Automatic recall searches personal memory and every team playbook. Team
+- Automatic recall searches personal memory and up to seven configured team playbooks. Team
   results are labelled with the team GUID.
 - Team writes are refused if the playbook is public or unlisted, like personal
   ones. A source listed as shared stays read-only. A GUID listed both as shared
@@ -134,10 +131,13 @@ from `team_playbooks`.
 
 ## Search and current limits
 
-Automatic recall uses the existing **literal text search** with the full query,
-returning at most 20 matches. A whole question may not occur in any stored memory;
-use `apb_memory_search` with short terms, or read a known key directly. This version
-does not add semantic search or relevance ranking.
+Automatic recall extracts up to four keywords, searches personal and team
+sources concurrently (up to eight sources, four workers, a four-second budget),
+and ranks/deduplicates matches. It injects at most eight short records and 8,000
+characters; use `apb_memory_read` for full content. Slow sources do not suppress
+completed results. English and Hungarian stopwords are filtered; this is lexical
+matching, not embeddings or morphological/semantic search. Explicit
+`apb_memory_search` remains literal and unchanged.
 
 The plugin does not upload full conversations, extract facts automatically,
 bulk-import existing local memories, or add a cache, offline queue, retries, or

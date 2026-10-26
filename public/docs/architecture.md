@@ -212,7 +212,7 @@ CREATE POLICY "Owner access memories" ON memories
 - Human editor membership is stored separately from bearer API keys in `playbook_collaborators`
 - Invite links contain 256 bits of randomness; only their SHA-256 digests are stored
 - Links are single-use, expire after 72 hours, and are atomically bound to the accepting account
-- Editors may change content, while secrets, API keys, visibility, sharing, ownership, and deletion remain owner-only
+- Editors may edit content, manage secrets and inspect API-key metadata; API-key creation/rotation/revocation, visibility, sharing, ownership and deletion remain owner-only
 - Removing a membership immediately revokes account-based access without rotating integration keys
 
 ### Secrets Encryption
@@ -237,3 +237,5 @@ GitHub Actions (CI/CD)
 ```
 
 The entire application could be deployed to Cloudflare's edge network.
+
+Self-host trust boundaries, cryptography claims (only what the code does), and known gaps are in the [security documentation pack](./security.md) (`docs/security/` in the repository; Hungarian `*.hu.md` is the supplier-assessment original).

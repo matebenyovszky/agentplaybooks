@@ -1,6 +1,8 @@
 name: Hermes memory plugin
 
 on:
+  schedule:
+    - cron: "23 7 * * 1"
   pull_request:
     paths: ["packages/hermes-memory/**", "packages/cli/**", ".github/workflows/hermes-memory.yml"]
   push:
@@ -13,20 +15,34 @@ permissions:
 
 jobs:
   compatibility:
+    strategy:
+      fail-fast: false
+      matrix:
+        hermes: ["v0.22.4", "v0.22.5", "main"]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: "3.12"
+          python-version: "3.14"
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: NousResearch/hermes-agent
-          ref: 71a2fe399bbd7a219c71f9d9fca2b313b01f2057
+          ref: ${{ matrix.hermes }}
           path: .tmp/hermes-upstream
-      - run: pip install -e .tmp/hermes-upstream
-      - run: pip install ./packages/hermes-memory
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          version: "0.13.5"
+          enable-cache: false
+      - name: Install Hermes from its committed lockfile
+        run: |
+          # pip ignores the upstream [tool.uv] security overrides (e.g. Pillow).
+          # Frozen sync installs their reviewed resolution without rewriting it.
+          uv sync --project .tmp/hermes-upstream --frozen --no-dev --python "$(command -v python)"
+          echo "$GITHUB_WORKSPACE/.tmp/hermes-upstream/.venv/bin" >> "$GITHUB_PATH"
+      - name: Install the memory provider in the same environment
+        run: uv pip install --python "$GITHUB_WORKSPACE/.tmp/hermes-upstream/.venv/bin/python" ./packages/hermes-memory
       - name: Provider behavior and real Hermes integration
         env:
           HERMES_SOURCE: ${{ github.workspace }}/.tmp/hermes-upstream

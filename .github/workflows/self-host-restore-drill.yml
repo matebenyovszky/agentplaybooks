@@ -1,0 +1,63 @@
+name: Self-host restore drill
+
+# NIS2 21(2)(c) / restore-onto-empty-machine drill. Independent of the main
+# verify job so that job's lint, tests, and production audit are unchanged.
+
+on:
+  pull_request:
+    paths:
+      - "scripts/self-host/**"
+      - "docs/self-host/**"
+      - "public/docs/backup-restore.md"
+      - "public/docs/backup-restore.hu.md"
+      - "public/docs/self-hosting.md"
+      - "docker-compose.yml"
+      - "supabase/schema.sql"
+      - "src/lib/crypto.ts"
+      - ".github/workflows/self-host-restore-drill.yml"
+  push:
+    branches: [main]
+    paths:
+      - "scripts/self-host/**"
+      - "docs/self-host/**"
+      - "public/docs/backup-restore.md"
+      - "public/docs/backup-restore.hu.md"
+      - "public/docs/self-hosting.md"
+      - "docker-compose.yml"
+      - "supabase/schema.sql"
+      - "src/lib/crypto.ts"
+      - ".github/workflows/self-host-restore-drill.yml"
+  schedule:
+    # Weekly empty-machine drill so RTO does not silently regress.
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: self-host-restore-drill-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  restore-drill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SECRETS_ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      BACKUP_ENCRYPTION_PASSPHRASE: restore-drill-ci-passphrase
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Rehearse migration, postflight and lossless rollback on local Postgres
+        if: hashFiles('scripts/ops/audit-migration/test-local.sh') != ''
+        run: |
+          sudo systemctl start postgresql
+          sudo -u postgres createuser --superuser "$(whoami)"
+          PGUSER="$(whoami)" bash scripts/ops/audit-migration/test-local.sh
+      - name: Restore from backup onto empty volumes
+        run: bash scripts/self-host/restore-drill.sh

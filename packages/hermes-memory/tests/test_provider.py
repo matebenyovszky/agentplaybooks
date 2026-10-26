@@ -7,6 +7,8 @@ from pathlib import Path
 import sys
 import tempfile
 import types
+import threading
+import contextvars
 import unittest
 from unittest.mock import patch
 from urllib.error import HTTPError, URLError
@@ -25,6 +27,7 @@ else:
     for name in ("agent", "agent.memory_provider", "agent.secret_scope", "hermes_constants", "utils"):
         sys.modules[name] = types.ModuleType(name)
     sys.modules["agent.memory_provider"].MemoryProvider = Base
+    sys.modules["agent.memory_provider"].spawn_context_thread = lambda fn, **kw: threading.Thread(target=contextvars.copy_context().run, args=(fn,), daemon=True, **kw)
     sys.modules["agent.secret_scope"].get_secret = lambda key, default="": os.environ.get(key, default)
     sys.modules["hermes_constants"].get_hermes_home = lambda: Path(os.environ["HERMES_HOME"])
     sys.modules["utils"].read_json_or_empty = lambda p: json.loads(p.read_text()) if p.exists() else {}
@@ -139,26 +142,26 @@ class ProviderTests(unittest.TestCase):
         self.assertIn("error", self.call(q, "read", key="coffee"))
         self.assertEqual(self.call(q, "history", key="coffee"), [])
 
-    def test_mirror_replace_and_remove_use_substring_and_stable_key(self):
+    def test_mirror_replace_and_remove_use_previous_content_and_stable_key(self):
         p = self.provider(user_id="alice")
         p.on_memory_write("add", "user", "Coffee without sugar")
         key = next(iter(self.service.books[A]["entries"]))
         p.on_session_switch("session-2")
         p.on_turn_start(2, "correction", author_id="bob")
-        p.on_memory_write("replace", "user", "Coffee with milk", {"old_text": "without sugar"})
+        p.on_memory_write("replace", "user", "Coffee with milk", {"old_text": "without sugar", "previous_content": "Coffee without sugar"})
         entry = self.service.books[A]["entries"][key]
         self.assertEqual(entry["value"], "Coffee with milk")
         self.assertEqual(entry["metadata"]["session_id"], "session-2")
         self.assertEqual(entry["metadata"]["author_id"], "bob")
         self.call(p, "archive", key=key)
-        p.on_memory_write("remove", "user", "", {"old_text": "with milk"})
+        p.on_memory_write("remove", "user", "", {"old_text": "with milk", "previous_content": "Coffee with milk"})
         self.assertFalse(self.service.books[A]["entries"])
         self.assertFalse(self.service.books[A]["history"])
 
     def test_readding_original_text_after_replacement_keeps_both_entries(self):
         p = self.provider()
         p.on_memory_write("add", "memory", "Coffee hot")
-        p.on_memory_write("replace", "memory", "Coffee cold", {"old_text": "Coffee hot"})
+        p.on_memory_write("replace", "memory", "Coffee cold", {"previous_content": "Coffee hot"})
         p.on_memory_write("add", "memory", "Coffee hot")
         values = {e["value"] for e in self.service.books[A]["entries"].values()}
         self.assertEqual(values, {"Coffee hot", "Coffee cold"})
@@ -190,7 +193,7 @@ class ProviderTests(unittest.TestCase):
         self.assertNotIn("note", self.service.books[C]["entries"])
         self.assertEqual(self.call(p, "read", key="case/lead", source=C)["value"], "Company X is the lead tenderer")
         self.assertIn("tenderer", p.prefetch("tenderer"))
-        self.assertIn("Team memory " + C, p.prefetch("tenderer"))
+        self.assertIn(C, p.prefetch("tenderer"))
         self.call(p, "archive", key="case/lead", source=C)
         self.assertTrue(self.service.books[C]["entries"]["case/lead"]["is_archived"])
         self.call(p, "delete", key="case/lead", source=C)
@@ -246,9 +249,9 @@ class ProviderTests(unittest.TestCase):
     def test_ambiguous_mirror_does_not_delete_multiple_entries(self):
         p = self.provider()
         p.on_memory_write("add", "memory", "Coffee hot")
-        p.on_memory_write("add", "memory", "Coffee cold")
+        p.on_memory_write("add", "memory", "Coffee hot")
         with self.assertRaisesRegex(ValueError, "uniquely"):
-            p.on_memory_write("remove", "memory", "", {"old_text": "Coffee"})
+            p.on_memory_write("remove", "memory", "", {"previous_content": "Coffee hot"})
         self.assertEqual(len(self.service.books[A]["entries"]), 2)
 
     def test_network_errors_are_visible_without_secret_or_success_claim(self):
@@ -265,6 +268,64 @@ class ProviderTests(unittest.TestCase):
         self.assertEqual(len(self.call(p, "search", query="100%_literal")), 1)
         self.assertEqual(self.call(p, "search", query="unrelated question"), [])
         self.assertEqual(self.call(p, "read", key="space / unicode árvíz")["value"], "100%_literal")
+
+    def test_mirror_never_uses_partial_registry_substrings_as_identity(self):
+        p = self.provider()
+        p.on_memory_write("add", "memory", "Coffee cold")
+        with self.assertRaisesRegex(ValueError, "uniquely"):
+            p.on_memory_write("remove", "memory", "", {"old_text": "Coffee", "previous_content": "Coffee hot"})
+        self.assertEqual(len(self.service.books[A]["entries"]), 1)
+        with self.assertRaisesRegex(ValueError, "previous_content"):
+            p.on_memory_write("remove", "memory", "", {"old_text": "Coffee cold"})
+        self.assertEqual(len(self.service.books[A]["entries"]), 1)
+        p.on_memory_write("remove", "memory", "", {"old_text": "irrelevant", "previous_content": "Coffee cold"})
+        self.assertFalse(self.service.books[A]["entries"])
+
+    def test_natural_question_recall_is_bounded_and_deduplicated(self):
+        p = self.provider()
+        self.call(p, "write", key="coffee", value="Coffee without sugar")
+        self.assertIn("without sugar", p.prefetch("How do I like my coffee?"))
+        self.assertEqual(p.prefetch("please tell me"), "")
+        with patch.object(p.client, "search", return_value=[{"key": str(i), "value": "coffee " + "x" * 20000,
+            "metadata": {"private_internal": "excluded"}} for i in range(20)]):
+            recalled = p.prefetch("coffee coffee")
+        self.assertLessEqual(len(recalled), 8000)
+        self.assertNotIn("private_internal", recalled)
+        self.assertLessEqual(len(recalled.splitlines()) - 1, 8)
+        self.assertIn('"key": "0"', recalled)
+
+    def test_recall_keeps_team_results_when_personal_source_is_slow(self):
+        self.config(A, team=C)
+        self.secrets[f"AGENTPLAYBOOKS_TEAM_{C.upper()}_API_KEY"] = f"key-{C}"
+        p = self.provider()
+        self.call(p, "write", key="coffee", value="coffee team preference", source=C)
+        p.recall.budget = 0.1
+        release = threading.Event()
+        def slow(**kwargs):
+            release.wait(2)
+            return []
+        try:
+            with patch.object(p.client, "search", side_effect=slow):
+                recalled = p.prefetch("coffee")
+                self.assertIn("team preference", recalled)
+        finally:
+            release.set()
+
+    def test_recall_workers_inherit_context_and_limit_calls(self):
+        p = self.provider()
+        marker = contextvars.ContextVar("profile_test", default="wrong")
+        token = marker.set("right")
+        seen = []
+        def search(**kwargs):
+            seen.append((marker.get(), kwargs))
+            return []
+        try:
+            with patch.object(p.client, "search", side_effect=search):
+                p.prefetch("one two three four five six")
+        finally:
+            marker.reset(token)
+        self.assertEqual(len(seen), 4)
+        self.assertTrue(all(value == "right" and 0 < args["timeout"] <= 2.5 for value, args in seen))
 
     def test_invalid_config_urls_and_redirects(self):
         for url in ("http://external.example", "https://user:secret@example.com", "https://example.com?key=secret", "file:///tmp"):

@@ -8,6 +8,9 @@
 /packages/hermes-memory/build/
 /packages/hermes-memory/*.egg-info/
 /packages/hermes-memory/dist/
+/packages/python-secrets/build/
+/packages/python-secrets/*.egg-info/
+/packages/python-secrets/dist/
 /.pnp
 .pnp.*
 .yarn/*
@@ -18,6 +21,8 @@
 
 # testing
 /coverage
+/test-results/
+/playwright-report/
 
 # next.js
 /.next/
@@ -31,6 +36,7 @@
 
 # production
 /build
+/dist/sbom/
 
 # misc
 .DS_Store
@@ -41,6 +47,10 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+
+# Self-host backup archives (vault ciphertext + database dumps)
+/backups/
+scripts/self-host/tmp/
 
 # env files
 .env

@@ -82,3 +82,19 @@ export function checkSecretDestination(
       `Destination '${hostname}' is not in this secret's allowed_hosts (${patterns.join(", ")}).`,
   };
 }
+
+/**
+ * Does `next` only narrow where a secret may be sent?
+ *
+ * An API key may tighten a secret's allow-list but not widen or clear it:
+ * otherwise a key that may write secrets could redirect a credential it can
+ * never read to a host of its own. An empty current list means "any host", so
+ * any non-empty list narrows it.
+ */
+export function narrowsAllowedHosts(current: unknown, next: unknown): boolean {
+  const before = normalizeAllowedHosts(current);
+  const after = normalizeAllowedHosts(next);
+  if (after.length === 0) return before.length === 0;
+  if (before.length === 0) return true;
+  return after.every((host) => before.includes(host));
+}

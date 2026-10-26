@@ -4,6 +4,8 @@ import { getServiceSupabase, getSupabase } from "./supabase";
 import type { ApiKey, UserApiKeysRow } from "@/lib/supabase/types";
 import { getPlaybookAccessRole } from "./guards";
 import { grantsPermission } from "./permissions";
+import { roleMayPerform } from "@/lib/audit-access";
+import { noteAuditActor } from "@/lib/audit-context";
 
 type ApiKeyWithPlaybook = ApiKey & {
   playbooks: { id: string; guid: string };
@@ -66,10 +68,27 @@ function lookupPlaybookKey(request: Request): Promise<ApiKey | null> {
     const { data, error } = await getServiceSupabase().from("api_keys")
       .select("*").eq("key_hash", keyHash).eq("is_active", true).maybeSingle();
     if (error || !data || (data.expires_at && Date.parse(data.expires_at) <= Date.now())) return null;
+    noteAuditActor(request, { type: "api_key", id: data.key_prefix || null });
     return data as ApiKey;
   })();
   playbookKeyLookups.set(request, lookup);
   return lookup;
+}
+
+/**
+ * Display prefix from the stored `key_prefix` column (written at issuance).
+ * Looks up the row by key hash; does not slice the presented bearer token.
+ * Named so it is not a CodeQL password source (`api.?key` / `oauth`).
+ */
+export async function storedDisplayPrefix(request: Request): Promise<string | null> {
+  const playbookRow = await lookupPlaybookKey(request);
+  if (typeof playbookRow?.key_prefix === "string" && playbookRow.key_prefix) {
+    return playbookRow.key_prefix;
+  }
+  const userRow = await lookupUserKey(request);
+  return typeof userRow?.key_prefix === "string" && userRow.key_prefix
+    ? userRow.key_prefix
+    : null;
 }
 
 function lookupUserKey(request: Request): Promise<UserApiKeyData | null> {
@@ -81,6 +100,7 @@ function lookupUserKey(request: Request): Promise<UserApiKeyData | null> {
     const { data, error } = await getServiceSupabase().from("user_api_keys")
       .select("*").eq("key_hash", keyHash).eq("is_active", true).maybeSingle();
     if (error || !data || (data.expires_at && Date.parse(data.expires_at) <= Date.now())) return null;
+    noteAuditActor(request, { type: "api_key", id: data.key_prefix || null });
     return data as UserApiKeyData;
   })();
   userKeyLookups.set(request, lookup);
@@ -117,7 +137,9 @@ export async function getAuthenticatedUser(request?: Request): Promise<{ id: str
     if (!authHeader?.startsWith("Bearer ") || authHeader.startsWith("Bearer apb_")) return null;
     const token = authHeader.slice("Bearer ".length);
     const { data: { user }, error } = await getSupabase().auth.getUser(token);
-    return !error && user ? { id: user.id } : null;
+    if (error || !user) return null;
+    noteAuditActor(request, { type: "owner", id: user.id });
+    return { id: user.id };
   })();
   userLookups.set(request, lookup);
   return lookup;
@@ -144,7 +166,9 @@ export async function validateApiKey(
   const apiKeyData = await lookupPlaybookKey(request);
   if (!apiKeyData) return null;
 
-  if (apiKeyData.role === 'admin' || requiredPermission === null) {
+  if (apiKeyData.role === "auditor") {
+    if (requiredPermission && !roleMayPerform("auditor", requiredPermission)) return null;
+  } else if (apiKeyData.role === 'admin' || requiredPermission === null) {
     // Admin has full access; a null permission is an identity check only.
   } else if (!grantsPermission(apiKeyData.permissions, requiredPermission)) {
     return null;
@@ -215,32 +239,40 @@ export async function authorizePlaybookRequest(
 ): Promise<PlaybookRequestActor | null> {
   const playbookKey = await validateApiKey(request, requiredPermission);
   if (playbookKey?.playbooks.id === playbookId) {
-    return {
-      kind: "playbook_key",
-      playbookId,
-      userId: null,
-      keyPrefix: playbookKey.key_prefix,
-    };
+    if (playbookKey.role !== "auditor" || roleMayPerform("auditor", requiredPermission)) {
+      return {
+        kind: "playbook_key",
+        playbookId,
+        userId: null,
+        keyPrefix: playbookKey.key_prefix,
+      };
+    }
   }
 
   const userKey = await validateUserApiKey(request, requiredPermission);
-  if (userKey && await getPlaybookAccessRole(userKey.user_id, playbookId)) {
-    return {
-      kind: "user_key",
-      playbookId,
-      userId: userKey.user_id,
-      keyPrefix: userKey.key_prefix,
-    };
+  if (userKey) {
+    const role = await getPlaybookAccessRole(userKey.user_id, playbookId);
+    if (roleMayPerform(role, requiredPermission)) {
+      return {
+        kind: "user_key",
+        playbookId,
+        userId: userKey.user_id,
+        keyPrefix: userKey.key_prefix,
+      };
+    }
   }
 
   const user = await getAuthenticatedUser(request);
-  if (user && await getPlaybookAccessRole(user.id, playbookId)) {
-    return {
-      kind: "session",
-      playbookId,
-      userId: user.id,
-      keyPrefix: null,
-    };
+  if (user) {
+    const role = await getPlaybookAccessRole(user.id, playbookId);
+    if (roleMayPerform(role, requiredPermission)) {
+      return {
+        kind: "session",
+        playbookId,
+        userId: user.id,
+        keyPrefix: null,
+      };
+    }
   }
 
   return null;
@@ -295,7 +327,7 @@ export async function canAccessPrivatePlaybook(
  * may then read is decided per tool and resource by actorMayRead.
  */
 export type PrivatePlaybookActor =
-  | { kind: "member" }
+  | { kind: "member"; role?: "owner" | "editor" | "auditor" }
   | { kind: "playbook_key"; role: string; permissions: string[]; keyPrefix?: string };
 
 export async function resolvePrivatePlaybookActor(
@@ -312,10 +344,16 @@ export async function resolvePrivatePlaybookActor(
   }
 
   const userKey = await validateUserApiKey(request, "playbooks:read");
-  if (userKey && await getPlaybookAccessRole(userKey.user_id, playbookId)) return { kind: "member" };
+  if (userKey) {
+    const role = await getPlaybookAccessRole(userKey.user_id, playbookId);
+    if (role) return { kind: "member", role };
+  }
 
   const user = await getAuthenticatedUser(request);
-  if (user && await getPlaybookAccessRole(user.id, playbookId)) return { kind: "member" };
+  if (user) {
+    const role = await getPlaybookAccessRole(user.id, playbookId);
+    if (role) return { kind: "member", role };
+  }
   return null;
 }
 
@@ -327,7 +365,14 @@ export async function resolvePrivatePlaybookActor(
  * the access it had when that permission was the gate for every private read.
  */
 export function actorMayRead(actor: PrivatePlaybookActor | null, permission: string): boolean {
-  if (!actor || actor.kind === "member" || actor.role === "admin") return true;
+  if (!actor) return true;
+  if (actor.kind === "member") {
+    return actor.role !== "auditor";
+  }
+  if (actor.role === "auditor") {
+    return permission === "playbooks:read" || permission === "audit:read";
+  }
+  if (actor.role === "admin") return true;
   return grantsPermission(actor.permissions, permission)
     || actor.permissions.includes("memory:read");
 }

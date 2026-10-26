@@ -63,10 +63,12 @@ separate certificate for each application/environment. Revocation in this panel
 blocks the next load, but cannot remove credentials already held by running apps.
 Rotate vault secrets and restart consumers when previously delivered values must change.
 
-This server implementation takes identity only from Cloudflare/OpenNext's trusted
-TLS context. Certificate forwarding headers are not trusted. Self-hosted Node/Next
-deployments can use API keys; mTLS there requires an additional trusted termination
-adapter. Local Python and Docker clients can both connect to the Cloudflare deployment.
+Hosted deployments take identity only from Cloudflare/OpenNext's trusted TLS
+context and never from client-supplied `Client-Cert` / `Cf-Cert-*` headers.
+Self-hosted Node/Docker origins enable certificate clients with `MTLS_MODE=proxy`
+behind nginx, Caddy, or Traefik — see [Self-hosted mTLS](./self-hosted-mtls.md).
+Local Python and Docker clients can connect to either a Cloudflare deployment or
+that trusted terminator.
 
 ## Docker and existing CI
 
@@ -98,10 +100,12 @@ automatic refresh or disk cache; rotation affects the next load/restart.
 ## Server rollout
 
 Apply the `secret_clients` migration through the existing Supabase deployment,
-then deploy the runtime API. API-key mode can now be used. For mTLS, additionally
-enable Cloudflare client certificate verification on the chosen API hostname,
-register each application identity, and test from its actual runtime. Existing
-browser and API-key traffic does not need to be forced behind an mTLS-only rule.
+then deploy the runtime API. API-key mode can now be used. For mTLS on Cloudflare,
+enable client certificate verification on the chosen API hostname, register each
+application identity, and test from its actual runtime. For Docker/local, set
+`MTLS_MODE=proxy` behind a terminator as in [Self-hosted mTLS](./self-hosted-mtls.md).
+Existing browser and API-key traffic does not need to be forced behind an
+mTLS-only rule.
 
 Runtime endpoint: `POST /api/playbooks/:guid/secrets/resolve`, with `names`, optional
 `optional_names`, and `auth_mode` (`api_key` or `mtls`). At most 100 distinct names

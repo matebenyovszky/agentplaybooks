@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { db, apiKey, playbook, user, tls, decrypt } = vi.hoisted(() => ({
-  db: vi.fn(), apiKey: vi.fn(), playbook: vi.fn(), user: vi.fn(), tls: vi.fn(), decrypt: vi.fn(),
+const { db, apiKey, user, tls, decrypt } = vi.hoisted(() => ({
+  db: vi.fn(), apiKey: vi.fn(), user: vi.fn(), tls: vi.fn(), decrypt: vi.fn(),
 }));
 vi.mock("@/app/api/_shared/supabase", () => ({ getServiceSupabase: db }));
 vi.mock("@/app/api/_shared/auth", () => ({
   validateApiKey: apiKey, getAuthenticatedUser: user,
+  storedDisplayPrefix: async () => "apb_live_abc",
   presentedApiKey: (request: Request) => request.headers.get("Authorization") || request.headers.get("X-API-Key"),
 }));
-vi.mock("@/app/api/_shared/guards", () => ({ getPlaybookByGuid: playbook }));
 vi.mock("@/lib/mtls", async importOriginal => ({
   ...await importOriginal<typeof import("@/lib/mtls")>(), verifiedClientFingerprint: tls,
 }));
@@ -51,7 +51,6 @@ beforeEach(() => {
   queries = {};
   db.mockReturnValue({ from: (table: string) => queries[table] ??= query(table) });
   apiKey.mockResolvedValue({ id: "key", playbooks: { id: "pb" }, key_prefix: "apb_prefix" });
-  playbook.mockResolvedValue({ id: "pb", user_id: ownerId });
   user.mockResolvedValue({ id: ownerId });
   tls.mockReturnValue(fingerprint);
   decrypt.mockImplementation(async (row: Row) => `value-for-${row.name}`);
@@ -75,7 +74,7 @@ describe("runtime secret loading", () => {
     expect(queries.audit_logs.insert.mock.calls).toHaveLength(2);
   });
   it("rejects wrong-playbook and missing API credentials before reading secrets", async () => {
-    playbook.mockResolvedValue({ id: "other", user_id: ownerId });
+    apiKey.mockResolvedValue({ id: "key", playbooks: { id: "other" }, key_prefix: "apb_prefix" });
     expect((await resolve()).status).toBe(401);
     expect(queries.secrets).toBeUndefined();
     apiKey.mockResolvedValue(null);

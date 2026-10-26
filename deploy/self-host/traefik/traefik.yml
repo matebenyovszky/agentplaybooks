@@ -1,0 +1,12 @@
+# Traefik does not emit a SHA-256 fingerprint. Pass the verified client PEM
+# (X-Forwarded-Tls-Client-Cert); the origin hashes the DER. Traefik overwrites
+# that header when passTLSClientCert is enabled — do not also forward a
+# client-supplied copy.
+
+entryPoints:
+  websecure:
+    address: ":443"
+
+providers:
+  file:
+    filename: /etc/traefik/dynamic.yml

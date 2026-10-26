@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { app } from "@/app/api/playbooks/[guid]/secrets/app";
-import { getAuthenticatedUser, validateApiKey } from "@/app/api/_shared/auth";
+import { getAuthenticatedUser, storedDisplayPrefix, validateApiKey } from "@/app/api/_shared/auth";
 import { getPlaybookByGuid } from "@/app/api/_shared/guards";
 import { getServiceSupabase } from "@/app/api/_shared/supabase";
 import { recordSecretAudit } from "@/app/api/_shared/audit";
 import { decryptSecret } from "@/lib/crypto";
 
-vi.mock("@/app/api/_shared/auth", () => ({ getAuthenticatedUser: vi.fn(), validateApiKey: vi.fn() }));
+vi.mock("@/app/api/_shared/auth", () => ({ getAuthenticatedUser: vi.fn(), validateApiKey: vi.fn(), storedDisplayPrefix: vi.fn() }));
 vi.mock("@/app/api/_shared/guards", () => ({ getPlaybookByGuid: vi.fn() }));
 vi.mock("@/app/api/_shared/supabase", () => ({ getServiceSupabase: vi.fn() }));
 vi.mock("@/lib/crypto", () => ({ encryptSecret: vi.fn(), decryptSecret: vi.fn() }));
@@ -36,6 +36,7 @@ beforeEach(() => {
   vi.stubGlobal("fetch", fetchMock);
   vi.mocked(getAuthenticatedUser).mockResolvedValue(null);
   vi.mocked(validateApiKey).mockResolvedValue({ playbooks: { id: "pb1" }, key_prefix: "apb_live" } as never);
+  vi.mocked(storedDisplayPrefix).mockResolvedValue("apb_live");
   vi.mocked(getPlaybookByGuid).mockResolvedValue({ id: "pb1", user_id: "owner1" } as never);
   vi.mocked(decryptSecret).mockResolvedValue("vault-provider-key");
   secret = { id: "sec1", name: "MODEL_KEY", allowed_hosts: ["api.example.com"], use_count: 2 };

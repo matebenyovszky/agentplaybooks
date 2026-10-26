@@ -252,6 +252,9 @@ Keep the written summary either way. It is what the full-text index searches and
 4. **Consolidate when context grows** — Use `consolidate_memories` to merge
 5. **Set summaries** — Enables efficient `get_memory_context` views
 6. **Use task graphs for complex work** — `create_task_graph` manages the structure
+7. **Keep entries concise and actionable** — Save durable facts, decisions and useful next steps, with a short summary. Link to detailed sources rather than copying transcripts or repeating information already stored.
+8. **Refresh outdated facts as you work** — When current evidence corrects a memory you encounter, update its existing key with `write_memory` and refresh its summary. Avoid adding a contradictory duplicate; previous contents remain in history.
+9. **Archive obsolete entries** — When an entry is confirmed obsolete or superseded, archive its specific key with `archive_memories` to keep it out of normal context while retaining history. Prefer this to permanent deletion for routine cleanup. Age alone does not make a memory obsolete: retain still-valid knowledge, and mark uncertainty when you cannot verify a fact. Keep this maintenance focused on memories relevant to the current work.
 
 ## Security
 

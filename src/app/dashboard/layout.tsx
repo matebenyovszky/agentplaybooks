@@ -93,7 +93,7 @@ export default function DashboardLayout({
 
   return (
     <DashboardAuthProvider value={{ supabase, user, loading }}>
-      <div className="min-h-screen bg-background text-foreground flex">
+      <div className="flex min-h-screen min-w-0 flex-col bg-background text-foreground md:flex-row">
         <Sidebar open={sidebarOpen} setOpen={setSidebarOpen}>
           <SidebarBody className="justify-between gap-10 border-r border-blue-900/30">
             <div className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
@@ -199,8 +199,8 @@ export default function DashboardLayout({
         </Sidebar>
 
         {/* Main content */}
-        <main className="flex-1 p-8 overflow-auto">
-          <div className="max-w-6xl mx-auto">
+        <main className="min-w-0 w-full flex-1 overflow-y-auto p-4 md:p-8">
+          <div className="mx-auto w-full min-w-0 max-w-6xl">
             {children}
           </div>
         </main>

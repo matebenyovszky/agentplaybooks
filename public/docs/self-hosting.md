@@ -169,6 +169,16 @@ This records `"allow_insecure_http": true` in the profile's
 `agentplaybooks/config.json`. Put the instance behind HTTPS before production
 use.
 
+### Client-certificate (mTLS) secret loading
+
+API keys work against the Node/Docker origin unchanged. Certificate clients do
+not: the origin only trusts Cloudflare's TLS context by default, so mTLS fails
+closed until a terminator verifies client certs and `MTLS_MODE=proxy` is set.
+
+The [self-hosted mTLS guide](./self-hosted-mtls.md) covers nginx, Caddy, and
+Traefik, a `deploy/self-host/docker-compose.mtls.yml` example, and openssl
+commands for a test CA. Hungarian: [Önhosztolt mTLS](./self-hosted-mtls.hu.md).
+
 ### Run
 
 ```bash
@@ -212,7 +222,73 @@ an empty database: the incremental history cannot create the core tables.
 | `NEXT_PUBLIC_APP_URL` | Yes for self-hosting | This instance's own origin. Baked in at build time; unset, OAuth metadata and generated links point at `https://agentplaybooks.ai`. |
 | `SECRETS_ENCRYPTION_KEY` | Yes for the secrets vault | 64 hexadecimal characters. Rotating it makes existing secrets undecryptable — there is no re-encryption tooling yet. |
 | `ALLOWED_ORIGINS` | No | Comma-separated origins allowed to make credentialed cross-origin API calls. Setting it **replaces** the default list, which is what a self-hosted instance wants — otherwise the project's own domains stay trusted. Unset keeps the previous behaviour. |
-| `SECRETS_REQUIRE_ALLOWED_HOSTS` | No | Set to `true` to refuse outbound use of any secret that has not declared `allowed_hosts`. Off by default. |
+| `SECRETS_REQUIRE_ALLOWED_HOSTS` | No | `true` refuses outbound use of any secret that has not declared `allowed_hosts`. The bundled `docker-compose.yml` defaults it to `true`; the hosted service leaves it off. |
+| `OUTBOUND_DNS_CHECK` | No | On by default in a Node process: before a credential is sent, the destination's name is resolved and refused if any address is internal. Set `false` only when egress is enforced at the network layer instead. |
+| `AUDIT_RETENTION_DAYS` | No | Positive integer of days to keep `audit_logs`. Unset, `0`, or `forever` keeps every row. Deleting a playbook, server or account does not remove its trail. Requires a scheduler hitting `POST /api/cron/audit-purge`. |
+| `AUDIT_CRON_SECRET` | No | Bearer token for the instance purge endpoint. Unset hides the endpoint. `CRON_SECRET` is also accepted. |
+| `AUDIT_SYSLOG_URL` | No | Optional RFC 5424 forwarder: `udp://host:514`, `tcp://host:514`, or `tls://host:6514`. Off by default. |
+| `AUDIT_SIEM_WEBHOOK_URL` | No | Optional HTTPS POST of each audit event. Off by default. Requires `AUDIT_SIEM_WEBHOOK_SECRET` (≥32 random bytes, not a password) for an HMAC `X-Audit-Signature` header. |
+| `NO_EGRESS` | No | Set to `true` on an air-gapped instance to disable optional outbound calls (today: MCP registry search) unless `MCP_REGISTRY_URL` points at an internal mirror. Unset keeps the hosted default. |
+| `MCP_REGISTRY_URL` | No | Override for `GET /api/mcp-registry/search`. Unset uses the official registry. Empty disables it. An internal URL is used even when `NO_EGRESS=true`. |
+| `MTLS_MODE` | No | Secret-client certificate auth. Default `cloudflare` (hosted production). Set `proxy` behind a TLS terminator that verifies client certs; `off` disables certificate auth. Unknown values fail closed. See [Self-hosted mTLS](./self-hosted-mtls.md). |
+| `MTLS_PROXY_FINGERPRINT_HEADER` | No | Required when `MTLS_MODE=proxy`. Header the terminator sets after verifying the client cert (hex SHA-256 or PEM). |
+| `MTLS_PROXY_VERIFY_HEADER` | No | Required in proxy mode. That header must equal `SUCCESS` or mTLS is rejected. |
+| `MTLS_TRUSTED_PROXIES` | No | Required when `MTLS_MODE=proxy`. Comma-separated IPs/CIDRs of the terminator. The authenticated X-APB-Proxy-Address must match; also requires MTLS_PROXY_SHARED_SECRET. |
+
+Existing databases need `20261024120000_audit_logs_compliance.sql` (hash chain backfill, auditor role, retention checkpoints). That migration rewrites every `audit_logs` row and **must not be applied to production without approval and a backup**. Follow [`scripts/ops/audit-migration/RUNBOOK.md`](https://github.com/matebenyovszky/agentplaybooks/blob/main/scripts/ops/audit-migration/RUNBOOK.md). Apply it **before** merging/deploying the app change; the previously deployed app tolerates the additive schema. See [Audit Logs](./audit-logs.md).
+
+Three later migrations rewrite no rows and apply in the normal way:
+
+- `20261025124500_audit_logs_tamper_resistance.sql` — the trail no longer has foreign keys, so deleting a playbook, MCP server or account keeps its rows and its hash chain; DELETE and TRUNCATE are refused except by the retention function; checkpoints are immutable.
+- `20261025130000_audit_config_changes.sql` — changes to playbooks (including visibility), skills, MCP servers, API keys and collaborators are recorded by triggers, whichever API path made them, with the actor the application authenticated.
+- `20261025140000_private_instance.sql` — the private-instance switch below.
+
+### Private instance
+
+An instance for one organisation usually has nothing to publish. Turn on the
+private-instance switch and no playbook can be public or unlisted, so the
+public listings, a public playbook's MCP endpoint, and reading an unlisted
+playbook by its GUID have nothing to serve without a sign-in. Setting a
+database parameter needs a superuser; on the official self-hosted Supabase
+image that is `supabase_admin`, not `postgres`:
+
+```bash
+docker exec -i supabase-db psql -U supabase_admin -d postgres <<'SQL'
+ALTER DATABASE postgres SET agentplaybooks.private_instance = 'on';
+UPDATE public.playbooks SET visibility = 'private' WHERE visibility <> 'private';
+SQL
+docker restart supabase-rest
+```
+
+The restart makes the Data API's pooled connections pick up the setting; until
+then, connections opened before it do not enforce it. Independently of the switch, a playbook-scoped API key — an
+agent's credential — cannot make a playbook public or unlisted.
+
+### Air-gapped / no-egress
+
+A local or government deploy should not open a path out of the operator's
+network. The production Dockerfile already sets `NEXT_TELEMETRY_DISABLED=1`.
+Set `NO_EGRESS=true` (and `SECRETS_REQUIRE_ALLOWED_HOSTS=true` if agents must
+not pick arbitrary `use_secret` destinations). The **No egress** GitHub Actions
+workflow (`deploy/airgap/`) is the automated proof: the stack runs on a Docker
+network with `internal: true`, a DNS sink allow-lists only compose service
+names, and the job fails if any external lookup or outbound packet is
+attempted.
+
+| Call | When | Disable / pin |
+| --- | --- | --- |
+| Geist fonts (`next/font/local`) | **Build time.** Committed variable fonts in `src/app/fonts/` (merged in #200). `next build` does not fetch Google Fonts. | Nothing to disable. `npm ci` still needs a registry (or an offline cache). |
+| Next.js telemetry | Disabled in the production image (`NEXT_TELEMETRY_DISABLED=1`). | Keep that env set. |
+| Official MCP registry (`registry.modelcontextprotocol.io`) | `GET /api/mcp-registry/search` only, when someone uses the dashboard search. | `NO_EGRESS=true`, or `MCP_REGISTRY_URL=` to disable, or `MCP_REGISTRY_URL=http://…` for an internal mirror. |
+| `use_secret` / secrets proxy | Whenever an agent or API client names a URL. That is the feature. | Pin each secret with `allowed_hosts`; set `SECRETS_REQUIRE_ALLOWED_HOSTS=true` so unpinned secrets cannot leave. |
+| OAuth token exchange (Google, Microsoft, LinkedIn, X) | Only if you configure those providers and complete a consent flow. | Leave the providers disabled (the self-hosted default). |
+| Entra ID / other SSO | Login redirects to the IdP. | Do not enable external IdPs on an air-gapped instance; use email auth against local GoTrue, or an internal IdP. |
+| Seed / import scripts | Manual tooling (`scripts/seed-data.ts` talks to GitHub). | Do not run them on the air-gapped host. |
+| Hosted product URLs in generated text (`agentplaybooks.ai` in OAuth metadata, plugin export, docs links) | String construction, not a network call. | Set `NEXT_PUBLIC_APP_URL` to this instance at **build** time. |
+
+The air-gap CI job still builds and pulls images **before** isolating the
+network (`npm ci` and base-image pulls need it). Fonts no longer do. Runtime of
+that image, with `NO_EGRESS=true`, is what the observer measures.
 
 ### Pinning a secret to specific destinations
 
@@ -234,7 +310,21 @@ curl -X PUT 'https://your-domain.com/api/playbooks/GUID/secrets/GITHUB_TOKEN' \
 Entries are case-insensitive hostnames. A leading `*.` matches subdomains but
 not the bare domain, so list both if you need both. An unset or empty list means
 any destination, which keeps existing secrets working unchanged; set
-`SECRETS_REQUIRE_ALLOWED_HOSTS=true` to make pinning mandatory on your instance.
+`SECRETS_REQUIRE_ALLOWED_HOSTS=true` to make pinning mandatory on your instance
+(the bundled `docker-compose.yml` does).
+
+An API key may narrow a secret's list but not widen or clear it, and cannot
+turn on API-key reveal: those are the owner's decisions. Pointing an MCP server
+configuration at vault secrets likewise needs the owner or a key with
+`secrets:read`, because the configuration decides where they are sent.
+
+Destinations are refused when they are internal: loopback, private,
+link-local and carrier-grade NAT addresses in any IPv4 or IPv6 spelling,
+single-label names such as a Docker service, and `*.local` / `*.internal`
+names. The name is also resolved, and refused if any address it resolves to
+is internal. A name whose DNS answer changes between that check and the
+connection is not covered; run the application container without a route to
+internal networks it does not need, so egress policy covers it too.
 
 ## Custom Domain
 
@@ -274,14 +364,24 @@ Monitor database usage, auth events, and API calls.
 
 ## Backup
 
-### Database
+On-prem backup of the database (including vault tables), object storage, and
+config — with the encryption master key stored separately — is documented in
+[On-prem backup and restore](./backup-restore.md). That runbook covers
+scheduling, archive encryption, retention, offsite copy, RPO/RTO, the empty-machine
+restore procedure, and the automated restore drill (`scripts/self-host/backup.sh`,
+`restore.sh`, `restore-drill.sh`).
+
+Hosted Supabase projects can still use the dashboard or CLI as a complement:
 
 ```bash
-# Using Supabase CLI
+# Using Supabase CLI (hosted project)
 supabase db dump > backup.sql
 
 # Or use Supabase Dashboard > Database > Backups
 ```
+
+A `supabase db dump` of SQL is not a substitute for the encrypted, offsite
+archive in the runbook, and it does not include `SECRETS_ENCRYPTION_KEY`.
 
 ## Troubleshooting
 
@@ -311,3 +411,10 @@ supabase db dump > backup.sql
 - [ ] RLS is enabled on all tables
 - [ ] Auth providers configured with correct redirect URLs
 - [ ] Custom domain uses HTTPS
+- [ ] Encrypted database and storage backups run on a schedule, with an offsite copy
+- [ ] `SECRETS_ENCRYPTION_KEY` is stored separately from the backup archive
+- [ ] Empty-machine restore drill has been run and RTO recorded
+- [ ] Vulnerability reports follow [SECURITY.md](https://github.com/matebenyovszky/agentplaybooks/blob/main/SECURITY.md); incident filing uses the [incident runbook](https://github.com/matebenyovszky/agentplaybooks/blob/main/docs/security/incident-runbook.md) (the operator is the reporting entity)
+- [ ] Release SBOMs are verified with [`cosign verify-blob`](https://github.com/matebenyovszky/agentplaybooks/blob/main/docs/security/supply-chain.md) before production deploy
+
+The supplier-assessment pack (architecture, crypto claims, asset inventory, 7/2024 MK r. / NIST risk template, known gaps) is in [`docs/security/`](../../docs/security/README.md). Hungarian is the language of record (`*.hu.md`). After a compose change, refresh the live inventory with `npm run inventory:self-host`. Short website summary: [Security documentation pack](./security.md).

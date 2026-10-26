@@ -11,7 +11,7 @@ lásd az [AgentPlaybooks Tools plugint](./hermes-portable-agents.md).
 
 ## Telepítés és beállítás
 
-Használj **Hermes 0.21.4 vagy újabb** verziót. A kompatibilitási teszt a
+Használj **Hermes 0.22.4 vagy újabb** verziót. A kompatibilitási teszt a
 [workflow-ban rögzített upstream verzióval](https://github.com/matebenyovszky/agentplaybooks/blob/main/.github/workflows/hermes-memory.yml)
 fut.
 
@@ -47,21 +47,19 @@ telepítésnél katalógusfrissítés vagy programfrissítés kellhet a megjelen
 
 ### Telepítés az AgentPlaybooks CLI-vel
 
-A repó forráskódja már tartalmazza az `apb memory setup` parancsot. Amíg nem
-olyan CLI-kiadást használsz, amelyben ez szerepel, építsd forrásból; ne
-feltételezd, hogy a korábban telepített npm-verzió már tudja. A repó gyökerében:
+A CLI 0.7.0 a memória plugint is tartalmazza. A gateway gépén vagy
+konténerében, a Hermest futtató felhasználóval futtasd:
 
 ```bash
-npm --prefix packages/cli install
-npm --prefix packages/cli run build
-node packages/cli/bin/agentplaybooks.js memory setup PRIVATE_PLAYBOOK_GUID --target=hermes
-node packages/cli/bin/agentplaybooks.js memory setup PRIVATE_PLAYBOOK_GUID --target=hermes --apply
-hermes memory setup
-hermes memory status
+npm install -g @agentplaybooks/cli@0.7.0
+apb memory setup PRIVATE_PLAYBOOK_GUID --target=hermes --profile=work
+apb memory setup PRIVATE_PLAYBOOK_GUID --target=hermes --profile=work --apply
+HERMES_HOME="$HOME/.hermes/profiles/work" hermes memory setup
+HERMES_HOME="$HOME/.hermes/profiles/work" hermes memory status
 ```
 
 Az első setup parancs csak tervet készít; az `--apply` telepíti a csomagolt
-plugint és kiválasztja a providert. A profil a `HERMES_HOME` vagy a
+plugint és kiválasztja a providert. A névvel választott profil a `--profile=work` kapcsolóval adható meg. A profilgyökér a `HERMES_HOME` vagy a
 `--hermes-home=<directory>` segítségével adható meg. A parancs megőrzi a többi
 beállítást, jelzi az ütköző pluginfájlokat vagy a már kiválasztott másik
 providert, és nem másol hitelesítő adatokat. Ez a katalógustelepítés
@@ -104,8 +102,8 @@ Felhasználók elkülönítéséhez külön profilok és külön privát playboo
 
 A beállító opcionális `shared_playbooks` mezője vesszővel elválasztott
 GUID-okat fogad. Ezek csak olvasható források, amelyeket az eszközök `source`
-paraméterével választhatsz ki. Az automatikus visszakeresés csak a személyes
-playbookot használja. A CLI megfelelő kapcsolója: `--shared=<guid>,<guid>`.
+paraméterével választhatsz ki. Az automatikus felidézés a személyes és a beállított csapatplaybookokat
+használja; a csak olvasható forrásokat explicit eszközhívással kérdezheted le. A CLI megfelelő kapcsolója: `--shared=<guid>,<guid>`.
 
 Nyilvános megosztott forráshoz nem kell kulcs. Privát forráshoz adj meg külön,
 csak olvasási jogosultságú kulcsot a profil titokkörnyezetében:
@@ -127,7 +125,7 @@ playbookot a csapatnak. Vedd fel a `team_playbooks` mezőbe (CLI:
 
 - Írni, archiválni és törölni a `source` paraméterrel lehet benne, ennek értéke
   a csapat GUID-ja. `source` nélkül az írás továbbra is a személyes memóriába megy.
-- Az automatikus visszakeresés a személyes memóriában és minden csapatmemóriában
+- Az automatikus visszakeresés a személyes memóriában és legfeljebb hét csapatmemóriában
   keres. A csapat találatait a csapat GUID-ja jelöli.
 - Nyilvános vagy nem listázott csapat-playbookba az írást a provider visszautasítja,
   ugyanúgy, mint a személyesnél. A megosztottként felvett forrás csak olvasható
@@ -139,11 +137,18 @@ Az ügy lezárásakor archiváld vagy töröld a csapat-playbookot, és vedd ki 
 
 ## Keresés és jelenlegi korlátok
 
-Az automatikus visszakeresés a teljes kérdéssel futó **szó szerinti
-szövegkeresést** használja, legfeljebb 20 találattal. Ha a teljes kérdés nem
-szerepel a mentett szövegben, használj rövid kifejezéseket az
-`apb_memory_search` eszközzel, vagy olvass ismert kulcsot. Ez a verzió nem ad
-szemantikus keresést vagy relevancia szerinti rangsorolást.
+Az automatikus felidézés legfeljebb négy kulcsszóval, párhuzamosan keres a
+személyes és csapatmemóriában. Legfeljebb nyolc forrást és négy párhuzamos
+lekérést használ, négy másodperces időkerettel. A találatokat rangsorolja és
+összevonja; legfeljebb nyolc rövid bejegyzést, összesen 8000 karaktert ad át.
+A teljes tartalom `apb_memory_read` hívással olvasható. Angol és magyar gyakori
+szavakat szűr; a keresés nem szemantikus és nem végez szótövezést. Az explicit
+`apb_memory_search` továbbra is szó szerinti keresés.
+
+A 0.3.0-s plugin tükrözéskor a Hermes pontos `previous_content` mezőjét
+használja. Hiányzó vagy többértelmű egyezésnél nem módosít távoli emléket;
+ilyenkor kézi egyeztetés kell. A `memory setup --profile=work` ugyanúgy választ
+profilt, mint a `connect` és az új `hermes setup`. A CLI kiadása 0.7.0.
 
 A plugin nem tölti fel a teljes beszélgetéseket, nem nyer ki automatikusan
 tényeket, nem importálja tömegesen a helyi memóriát, és nem ad gyorsítótárat,

@@ -197,7 +197,7 @@ const STATIC_TOKEN_APIS: ConnectionTemplate[] = [
  * token obtained once with that person's consent. Federation renews it from then
  * on; see `oauth2_refresh_token` in public/docs/mcp-federation.md.
  */
-const USER_SCOPED_OAUTH: ConnectionTemplate[] = [
+const USER_DELEGATED_APIS: ConnectionTemplate[] = [
   {
     id: "gmail",
     name: "Gmail",
@@ -352,7 +352,7 @@ const USER_SCOPED_OAUTH: ConnectionTemplate[] = [
 export const CONNECTION_TEMPLATES: ConnectionTemplate[] = [
   ...REMOTE_MCP,
   ...STATIC_TOKEN_APIS,
-  ...USER_SCOPED_OAUTH,
+  ...USER_DELEGATED_APIS,
 ];
 
 export function connectionTemplate(id: string): ConnectionTemplate | undefined {

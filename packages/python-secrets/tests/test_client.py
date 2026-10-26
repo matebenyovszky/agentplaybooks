@@ -153,6 +153,7 @@ class RealTLSTests(unittest.TestCase):
     def setUp(self):
         self.server = ThreadingHTTPServer(("127.0.0.1", 0), TLSHandler)
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        context.minimum_version = ssl.TLSVersion.TLSv1_2
         context.load_cert_chain(self.root / "server.crt", self.root / "server.key")
         context.load_verify_locations(self.root / "ca.crt")
         context.verify_mode = ssl.CERT_REQUIRED

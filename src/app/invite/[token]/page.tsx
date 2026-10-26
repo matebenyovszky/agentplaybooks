@@ -11,6 +11,7 @@ export default function CollaborationInvitePage({ params }: { params: Promise<{ 
   const { token } = use(params);
   const router = useRouter();
   const [playbookName, setPlaybookName] = useState<string | null>(null);
+  const [inviteRole, setInviteRole] = useState<"editor" | "auditor">("editor");
   const [signedIn, setSignedIn] = useState(false);
   const [loading, setLoading] = useState(true);
   const [accepting, setAccepting] = useState(false);
@@ -23,7 +24,10 @@ export default function CollaborationInvitePage({ params }: { params: Promise<{ 
         createBrowserClient().auth.getUser(),
       ]);
       const data = await preview.json().catch(() => null);
-      if (preview.ok) setPlaybookName(data.playbook_name);
+      if (preview.ok) {
+        setPlaybookName(data.playbook_name);
+        if (data.role === "auditor") setInviteRole("auditor");
+      }
       else setError(typeof data?.error === "string" ? data.error : "Invite is invalid or expired");
       setSignedIn(Boolean(auth.data.user));
       setLoading(false);
@@ -59,7 +63,9 @@ export default function CollaborationInvitePage({ params }: { params: Promise<{ 
           <>
             <h1 className="text-2xl font-bold mb-2">Join “{playbookName}”</h1>
             <p className="text-sm text-neutral-600 dark:text-slate-400 mb-6">
-              You will be able to edit its content. The owner keeps control of secrets, API keys, visibility, sharing, and deletion.
+              {inviteRole === "auditor"
+                ? "You will be able to read and export the audit trail and playbook metadata. You will not see secret values or be able to change the playbook."
+                : "You will be able to edit content, manage secrets and view API-key metadata. The owner keeps control of key creation, rotation and revocation, visibility, sharing and deletion."}
             </p>
             {signedIn ? (
               <button onClick={accept} disabled={accepting} className="w-full py-3 bg-amber-500 text-slate-950 rounded-lg font-semibold flex items-center justify-center gap-2 disabled:opacity-50">

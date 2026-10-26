@@ -22,6 +22,7 @@ import {
   checkPlaybookWriteAccess,
   getPlaybookAccessRole,
 } from "@/app/api/_shared/guards";
+import { playbookViewForRole } from "@/lib/audit-access";
 import {
   oauthBearerChallenge,
   oauthResourceUrl,
@@ -341,6 +342,15 @@ async function executeManagementTool(
 
       const accessRole = await getPlaybookAccessRole(userId, playbook_id);
       if (!accessRole) throw new Error("Playbook not found");
+      if (accessRole === "auditor") {
+        const { data: playbook, error } = await supabase
+          .from("playbooks")
+          .select("id, guid, name, description, visibility, created_at, updated_at, user_id, tags")
+          .eq("id", playbook_id)
+          .single();
+        if (error || !playbook) throw new Error("Playbook not found");
+        return playbookViewForRole({ ...playbook, current_user_role: "auditor" }, "auditor");
+      }
 
       const { data: playbook, error } = await supabase
         .from("playbooks")

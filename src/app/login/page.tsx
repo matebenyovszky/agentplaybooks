@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { createBrowserClient } from "@/lib/supabase/client";
 import { ArrowLeft, Mail, Lock, Loader2 } from "lucide-react";
 import { fetchAuthSettings, type AuthSettings, type OAuthProvider, type OAuthProviderId } from "@/lib/auth-providers";
+import { postAuthPath } from "@/lib/auth-redirect";
 
 const PROVIDER_ICONS: Record<OAuthProviderId, React.ReactNode> = {
   azure: (
@@ -71,7 +72,7 @@ export default function LoginPage() {
 
   const getPostAuthPath = () => {
     const requested = new URLSearchParams(window.location.search).get("next");
-    return requested?.startsWith("/") && !requested.startsWith("//") ? requested : "/dashboard";
+    return postAuthPath(requested, window.location.origin);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -128,7 +129,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background p-4 text-foreground">
       {/* Background effects */}
       <div className="absolute inset-0 bg-gradient-to-br from-blue-900/20 via-transparent to-amber-500/10" />
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl" />

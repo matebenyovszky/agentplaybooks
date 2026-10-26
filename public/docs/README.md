@@ -12,7 +12,8 @@ Welcome to the AgentPlaybooks documentation.
 - [Hermes Memory Provider](./hermes-memory.md) - Native memory setup, profile boundaries, and shared knowledge
 - [AgentPlaybooks Tools in Hermes](./hermes-portable-agents.md) - Connect playbook skills, MCP/OpenAPI tools, and credentials
 - [Team Collaboration](./team-collaboration.md) - Share playbooks securely with human editors
-- [Roadmap](./ROADMAP.md) - Development roadmap and future plans
+- [Audit Logs](./audit-logs.md) - Export, retention, hash chain, and the auditor role
+- [Roadmap](./roadmap.md) - Development roadmap and future plans
 
 ### Core Concepts
 - [Playbooks](./playbooks.md) - Complete agent operating environment
@@ -28,7 +29,10 @@ Welcome to the AgentPlaybooks documentation.
 - [Management API & MCP](./management-api.md) - AI-driven playbook management
 - [Developer Guide](./developer-guide.md) - Contributing and development
 - [Self-Hosting](./self-hosting.md) - Deploy your own instance
+- [On-prem backup and restore](./backup-restore.md) - NIS2 21(2)(c) backup, restore drill, RPO/RTO
+- [Self-hosted mTLS](./self-hosted-mtls.md) - Client-certificate secret loading on Docker/local (nginx, Caddy, Traefik)
 - [Architecture](./architecture.md) - System design and components
+- [Security documentation pack](./security.md) - Supplier assessment, asset inventory, MK r. / NIST risk template (Hungarian original in `docs/security/`)
 
 ## What is AgentPlaybooks?
 

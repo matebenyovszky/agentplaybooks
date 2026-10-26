@@ -10,13 +10,12 @@ the [AgentPlaybooks Tools plugin](https://agentplaybooks.ai/docs/hermes-portable
 
 ## Install
 
-From a checkout of the AgentPlaybooks repository:
+On the gateway host/container, as the user running Hermes:
 
 ```bash
-npm --prefix packages/cli install
-npm --prefix packages/cli run build
-node packages/cli/bin/agentplaybooks.js memory setup PRIVATE_PLAYBOOK_GUID --target=hermes
-node packages/cli/bin/agentplaybooks.js memory setup PRIVATE_PLAYBOOK_GUID --target=hermes --apply
+npm install -g @agentplaybooks/cli@0.7.0
+apb memory setup PRIVATE_PLAYBOOK_GUID --target=hermes
+apb memory setup PRIVATE_PLAYBOOK_GUID --target=hermes --apply
 hermes memory setup
 hermes memory status
 ```
@@ -28,7 +27,8 @@ tab. Supply the key through Hermes's secret setup or the profile-scoped
 copies a credential. An account-management key is not a substitute for this key.
 
 The CLI command is `apb memory setup <guid> --target=hermes` in a CLI release that
-includes this provider. It honors `HERMES_HOME`; `--hermes-home=<directory>` selects
+includes this provider. `--profile=work` selects a named profile; `--profile=default`
+returns to the installation root even from another active profile. It honors `HERMES_HOME`; `--hermes-home=<directory>` selects
 an explicit profile. Existing settings and different plugin files are reported as
 conflicts. No existing memory is imported or overwritten.
 
@@ -49,17 +49,20 @@ Hermes discovers its `hermes_agent.memory_providers` entry point. The
 [catalog entry](https://github.com/NousResearch/hermes-agent/pull/119450) was
 merged and is present in the live plugin catalog.
 
-Requires Hermes **0.21.4 or later**, with `agent.memory_provider.MemoryProvider`, profile-scoped
-`agent.secret_scope.get_secret`, and memory-write provenance (`old_text`). Tested
+Requires Hermes **0.22.4 or later**, with `agent.memory_provider.MemoryProvider`, profile-scoped
+`agent.secret_scope.get_secret`, and authoritative memory-write provenance (`previous_content`). Tested
 against the upstream revision recorded in this repository's compatibility workflow.
 Hermes Desktop also presents native configuration fields for this provider. CLI
 and Desktop share `$HERMES_HOME/agentplaybooks/config.json` and the profile's secret store.
 
 ## What it does
 
-- Automatically recalls current memories using AgentPlaybooks' existing **literal
-  text search**. Search is not semantic: the exact query must occur in a memory.
-  Use `apb_memory_search` with short terms when automatic recall returns nothing.
+- Recalls with up to four keywords across personal and team sources in parallel.
+  Four workers, a four-second deadline and an 8,000-character/eight-record limit
+  bound latency and context. Up to eight sources are searched; explicit tools
+  remain available for every configured source. Matching is lexical, not semantic.
+- Mirrored replacement/removal uses exact Hermes `previous_content`. Missing or
+  ambiguous identity requires reconciliation and never mutates another entry.
 - Exposes `apb_memory_search`, `apb_memory_read`, `apb_memory_write`,
   `apb_memory_archive`, `apb_memory_delete`, and `apb_memory_history`.
 - Mirrors explicit built-in Hermes memory additions, replacements and removals.
@@ -71,7 +74,7 @@ and Desktop share `$HERMES_HOME/agentplaybooks/config.json` and the profile's se
   deletes remote history. Archive retains content and is not forgetting.
 
 The provider does **not** upload conversation transcripts, run automatic fact
-extraction, import existing local memory, add embeddings/ranking, or implement a
+extraction, import existing local memory, add embeddings, or implement a
 local cache, offline queue, retries or circuit breaker. A failed API operation is
 reported, not queued for later delivery. The HTTP transport has a finite timeout;
 Hermes itself supplies its normal external-provider execution deadline.
@@ -86,7 +89,7 @@ memory**. Use separate profiles and private playbooks for users needing isolatio
 Set `shared_playbooks` to comma-separated GUIDs in `hermes memory setup`, or pass
 `--shared=<guid>,<guid>` to the AgentPlaybooks setup command. These are read-only
 sources selectable with the memory tools' `source` argument; automatic recall
-uses the personal playbook only.
+uses personal and configured team playbooks; read-only sources are queried explicitly.
 
 For a private shared playbook, supply a read-only key using
 `AGENTPLAYBOOKS_SHARED_<GUID_WITHOUT_HYPHENS_UPPERCASE>_API_KEY` in the profile's

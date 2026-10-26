@@ -98,10 +98,13 @@ plain SHA-256 fingerprints. Access can have its own expiry and can be revoked in
 the same panel. Certificate rotation uses a newly registered certificate; revoke
 the old registration after switching the application.
 
-This release uses trusted Cloudflare/OpenNext TLS context on the server. It never
-trusts `Client-Cert`, `Cf-Cert-*`, or other client-supplied certificate headers.
-Self-hosted Node/Next servers support API keys; certificate mode fails closed there
-until a separately authenticated TLS-termination adapter is implemented.
+Hosted servers use trusted Cloudflare/OpenNext TLS context. They never trust
+`Client-Cert`, `Cf-Cert-*`, or other client-supplied certificate headers.
+Self-hosted Node/Docker servers keep that fail-closed default (`MTLS_MODE=cloudflare`).
+Set `MTLS_MODE=proxy` behind nginx, Caddy, or Traefik that verifies client
+certificates against a CA, overwrites the fingerprint header, and is listed in
+`MTLS_TRUSTED_PROXIES`. See `public/docs/self-hosted-mtls.md` and
+`deploy/self-host/docker-compose.mtls.yml`.
 
 Client keys are unattended PEM files (no interactive password prompt). A file key
 can be copied; this is application identity, not hardware attestation. Protect its
@@ -192,21 +195,29 @@ image layers, or the application source.
    Supabase deployment workflow. It creates a service-role-only registry with RLS.
 2. Deploy the APBKS server containing `POST /api/playbooks/:guid/secrets/resolve`.
    API-key loading is available at this point; existing API/CLI behavior is retained.
-3. Enable client certificate validation for the chosen proxied hostname in
+3. Hosted: enable client certificate validation for the chosen proxied hostname in
    Cloudflare. Issue a client certificate using Cloudflare's CA, or configure your
    trusted CA. This must be **client → Cloudflare** mTLS, not Authenticated Origin Pulls.
+   Self-hosted: terminate TLS on nginx, Caddy, or Traefik, set `MTLS_MODE=proxy`,
+   and allowlist the terminator in `MTLS_TRUSTED_PROXIES`. See
+   `public/docs/self-hosted-mtls.md`.
 4. Register the certificate in the playbook's API Keys panel and enable reveal for
-   its allowed secrets. Activate API Shield rules on a dedicated runtime hostname
-   if certificate presentation must be mandatory for all requests to that hostname;
-   do not accidentally block browser/legacy API-key traffic on a shared hostname.
+   its allowed secrets. Activate API Shield rules (or `ssl_verify_client on`) on a
+   dedicated runtime hostname if certificate presentation must be mandatory for all
+   requests to that hostname; do not accidentally block browser/legacy API-key
+   traffic on a shared hostname.
 5. Test from the actual machine/container. Cloudflare must report
-   `certPresented=1`, `certVerified=SUCCESS`, `certRevoked=0`. The application checks
-   the exact fingerprint, active registration, playbook, access expiry, secret
-   names, secret expiry, and reveal permission on every load.
+   `certPresented=1`, `certVerified=SUCCESS`, `certRevoked=0`. A self-hosted proxy
+   must send `SUCCESS` (or omit the verify header) and the SHA-256 fingerprint from
+   a trusted address. The application checks the exact fingerprint, active
+   registration, playbook, access expiry, secret names, secret expiry, and reveal
+   permission on every load.
 
 Cloudflare mTLS setup is infrastructure configuration, not performed by this package.
-For BYO CAs, enforce your revocation policy as Cloudflare does not automatically check
-all custom CA revocation lists; the APBKS registration can always be revoked locally.
+Self-hosted mTLS is the same: the origin only consumes a fingerprint the terminator
+already verified. For BYO CAs, enforce your revocation policy as Cloudflare does not
+automatically check all custom CA revocation lists; the APBKS registration can always
+be revoked locally.
 
 Owner management endpoints (session authentication, GUID or playbook UUID):
 

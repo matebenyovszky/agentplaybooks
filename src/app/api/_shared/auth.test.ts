@@ -21,7 +21,7 @@ vi.mock("./supabase", () => ({
   getSupabase: vi.fn(),
 }));
 
-import { validateApiKey, validateUserApiKey } from "./auth";
+import { storedDisplayPrefix, validateApiKey, validateUserApiKey } from "./auth";
 
 type QueryResult = {
   data: Record<string, unknown> | null;
@@ -88,6 +88,7 @@ describe("API key authentication", () => {
     expect(apiKeyQuery.update).toHaveBeenCalledWith({
       last_used_at: expect.any(String),
     });
+    await expect(storedDisplayPrefix(request)).resolves.toBe("apb_test");
   });
 
   it("shares a request's key lookup without sharing permissions or later requests", async () => {

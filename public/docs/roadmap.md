@@ -18,6 +18,7 @@ This document outlines the development roadmap for AgentPlaybooks — the open s
 ### Core Platform ✅
 
 - [x] **Playbook CRUD** - Create, read, update, delete playbooks
+- [x] **Atomic private forks** - Copy skills, their attachments and MCP records with fresh IDs and preserved publisher attribution; vault values, API keys and runtime history are excluded. See [API Reference](./api-reference.md) and [#185](https://github.com/matebenyovszky/agentplaybooks/pull/185).
 - [x] **Personas** - System prompts that define AI personality
 - [x] **Skills** - Structured capabilities (Anthropic format)
 - [x] **MCP Servers** - Model Context Protocol configurations
@@ -31,6 +32,7 @@ This document outlines the development roadmap for AgentPlaybooks — the open s
 - [x] **API Keys** - Bearer token authentication for agents
 - [x] **Row Level Security** - Database-level access control
 - [x] **Public/Private Playbooks** - Visibility control
+- [x] **Owner / editor / auditor policy** - Editors manage content and secrets and inspect API-key metadata. Auditors read audit evidence and playbook metadata, without secrets or content-fork access. Key mutation and sharing stay owner-only. See [Team Collaboration](./team-collaboration.md).
 
 ### Public Features ✅
 
@@ -64,16 +66,15 @@ This document outlines the development roadmap for AgentPlaybooks — the open s
 - [x] **Self-service account deletion** - Settings → Delete account, in one transaction; also fixed playbook deletion
 - [x] **Complete privacy notice** - collection, processors, retention, rights, contact
 - [x] **Tool annotations** - every tool has a title and read-only / destructive hints, enforced by tests
-- [ ] **OAuth sign-in on OrioleDB** ← *continue here* - the endpoints advertise OAuth (protected-resource metadata, dynamic client registration), but sign-in fails while the database runs on OrioleDB; being fixed separately. Then test the connector from claude.ai and Claude Code
+- [x] **Production heap cutover** - Production now uses the heap project checked by `scripts/prepare-supabase-deploy.mjs`; the previous OrioleDB deployment is no longer the production target.
+- [ ] **OAuth connector acceptance on current production** ← *continue here* - Verify sign-in, private-playbook access and revocation from claude.ai and Claude Code before directory submission. The heap cutover alone does not demonstrate client-specific sign-in success.
 - [ ] **Reviewer account** - populated with `npm run seed:reviewer`
 - [ ] **Directory submissions** - MCP connector, then plugin bundle, at claude.ai/directory/manage
-- [ ] **Profile name editing** - a UI for the public display name, which starts as the local part of the email address
+- [ ] **Profile editing consistency** - verify the public display-name workflow across dashboard and API-first signup; automatically initialized publisher profiles start as `User`.
 
 ### API Security Enhancements 📋
 
-- [ ] **Read API Authentication** - Optional auth for read endpoints
-  - Configurable per-playbook (public read vs. authenticated read)
-  - Useful for sensitive playbooks that shouldn't be publicly accessible
+- [x] **Private read authorization** - Visibility, accepted human roles and scoped API-key permissions gate private reads; auditors receive metadata rather than private content. See [Team Collaboration](./team-collaboration.md).
   
 - [ ] **API Key Auto-Revocation** - Automatic expiration
   - Set expiration time when creating API key
@@ -84,14 +85,18 @@ This document outlines the development roadmap for AgentPlaybooks — the open s
   - Per-key rate limits
   - Configurable limits per plan tier
 
+- [ ] **CPU and invocation regression budgets** - Measure cold and warm page/API/MCP requests, CPU p50/p95/p99, cache revalidation and repeated discovery calls under representative traffic. Define measured budgets and alerts; a short successful smoke run does not establish behavior under load.
+
 - [ ] **Audit Logging** - Track all API access
   - Who accessed what, when
   - Export logs for compliance
   - Done for the two surfaces that handle credentials: federated MCP calls and
     the secrets vault (`secret.*`), both in one `audit_logs` table read at
-    `GET /api/playbooks/:guid/audit`. Skills, memory and canvas writes are still
-    unrecorded — they add an `operation` namespace, not a table — and there is
-    no export or retention policy yet.
+    `GET /api/playbooks/:guid/audit`. JSONL/CSV export, optional syslog/SIEM
+    forwarding, configurable retention with chain checkpoints, a per-playbook
+    hash chain (`apb audit verify`), and a read-only auditor role are in
+    [Audit Logs](./audit-logs.md). Skills, memory and canvas writes are still
+    unrecorded — they add an `operation` namespace, not a table.
 
 - [ ] **Secrets for local stdio MCP servers** - The last gap in "pull and it works"
   - A locally spawned MCP server (`npx some-mcp` with `env.API_KEY`) runs on the
@@ -214,7 +219,7 @@ Open, in rough order of value:
   - Contributing guidelines (CONTRIBUTING.md)
   - Code of conduct
   - ~~License review (MIT)~~ — done, relicensed to MIT
-  - Security policy (SECURITY.md)
+  - ~~Security policy (SECURITY.md)~~ — done, see repository root and `docs/security/`
   - Issue templates
   - PR templates
 
@@ -459,13 +464,9 @@ vault holds the credential.**
   - Push notifications for memory updates
   - Voice input for quick edits
 
-### CLI Tool
+### CLI Tool ✅
 
-- [ ] **Command Line Interface**
-  - `agentplaybooks init` - Create new playbook
-  - `agentplaybooks push` - Deploy changes
-  - `agentplaybooks pull` - Sync local copy
-  - CI/CD integration
+- [x] **Published command-line client** - `doctor`, `sync`, `push`, `pull`, plugin import/export, encrypted-secret workflows and audit export/verify are implemented. See the [CLI Reference](./cli.md) for supported commands and the [release distribution guide](./release-distribution.md) for publication workflows.
 
 ---
 
@@ -508,8 +509,7 @@ Have ideas? Found something missing?
 
 - 💬 [GitHub Discussions](https://github.com/matebenyovszky/agentplaybooks/discussions)
 - 🐛 [Report Issues](https://github.com/matebenyovszky/agentplaybooks/issues)
-- 📧 [Email](mailto:hello@agentplaybooks.ai)
 
 ---
 
-*Last updated: October 2026*
+*Last reviewed: 2026-10-25*

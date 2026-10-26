@@ -1,9 +1,9 @@
 name: agentplaybooks-memory
-version: 0.2.0
+version: 0.3.0
 description: "AgentPlaybooks memory for Hermes: recall, explicit memory writes, archive and history in a private playbook."
 author: Mate Benyovszky
 kind: exclusive
-requires_hermes: ">=0.21.4"
+requires_hermes: ">=0.22.4"
 license: MIT
 homepage: https://agentplaybooks.ai
 # MemoryManager injects the six provider schemas only when selected. No general

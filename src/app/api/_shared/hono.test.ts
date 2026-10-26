@@ -8,10 +8,16 @@ describe("resolveAllowedOrigins", () => {
     expect(origins).toContain("https://apbks.com");
   });
 
-  it("puts NEXT_PUBLIC_APP_URL first in the fallback list", () => {
-    // The CORS handler uses the first entry for requests without an Origin.
-    expect(resolveAllowedOrigins(undefined, "https://example.test")[0])
-      .toBe("https://example.test");
+  it("trusts only a self-hosted APP_URL, not the project's public sites", () => {
+    const origins = resolveAllowedOrigins(undefined, "https://example.test");
+    expect(origins).toEqual(["https://example.test"]);
+    expect(origins).not.toContain("https://agentplaybooks.ai");
+  });
+
+  it("keeps the hosted list when APP_URL is one of this project's sites", () => {
+    const origins = resolveAllowedOrigins(undefined, "https://agentplaybooks.ai");
+    expect(origins[0]).toBe("https://agentplaybooks.ai");
+    expect(origins).toContain("https://apbks.com");
   });
 
   it("replaces the list entirely when ALLOWED_ORIGINS is set", () => {

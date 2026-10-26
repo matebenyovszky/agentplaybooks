@@ -374,6 +374,10 @@ DELETE /api/playbooks/:guid/memory/:key
 
 ### MCP endpoints
 
+For clients that require a local stdio process, see the [local MCP transport](docs/mcp-stdio.md).
+It uses the same account tools and authorization handlers; protocol discovery
+starts without credentials, while data operations require your instance configuration.
+
 ```
 GET  /api/mcp/:guid                    # MCP manifest
 POST /api/mcp/:guid                    # MCP JSON-RPC
@@ -493,6 +497,7 @@ agentplaybooks/
     agentplaybooks/        # Claude plugin (claude.ai, Cowork, Claude Code)
   .claude-plugin/          # Plugin marketplace manifest
   docs/                    # Contributor-facing notes
+    security/              # Supplier-assessment pack (HU + EN)
   examples/                # Starter playbooks (fork/clone/sync)
   public/
     blog/  docs/           # Markdown served to the client
@@ -546,6 +551,16 @@ those policies breaks the endpoints rather than merely relaxing them.
 Policies written against `auth.uid()` are currently inert, because no
 JWT-bearing client performs table queries — the browser talks only to
 `/api/*`, never to Postgres directly.
+
+## Security
+
+Report vulnerabilities privately — see [SECURITY.md](SECURITY.md). Do not open
+a public issue for a security defect.
+
+Self-hosted operators assembling a NIS2 / 418/2024. 77. § filing can start from
+the [incident runbook](docs/security/incident-runbook.md)
+([HU](docs/security/incident-runbook.hu.md)). Release SBOMs and `cosign verify`
+are in [docs/security/supply-chain.md](docs/security/supply-chain.md).
 
 ## Contributing
 

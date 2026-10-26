@@ -1,0 +1,48 @@
+http:
+  routers:
+    app:
+      rule: "PathPrefix(`/`)"
+      entryPoints:
+        - websecure
+      service: app
+      middlewares:
+        - strip-client-cert
+        - pass-client-cert
+        - mtls-verify
+      tls:
+        options: default
+
+  middlewares:
+    strip-client-cert:
+      headers:
+        customRequestHeaders:
+          X-Forwarded-Tls-Client-Cert: ""
+          X-Forwarded-Tls-Client-Cert-Info: ""
+    pass-client-cert:
+      passTLSClientCert:
+        pem: true
+    mtls-verify:
+      headers:
+        customRequestHeaders:
+          X-SSL-Client-Verify: "SUCCESS"
+          # Render this template from the private proxy environment before use.
+          X-APB-Proxy-Token: "${MTLS_PROXY_SHARED_SECRET}"
+          X-APB-Proxy-Address: "172.28.0.10"
+
+  services:
+    app:
+      loadBalancer:
+        servers:
+          - url: "http://app:3000"
+
+tls:
+  certificates:
+    - certFile: /certs/server.crt
+      keyFile: /certs/server.key
+  options:
+    default:
+      minVersion: VersionTLS12
+      clientAuth:
+        caFiles:
+          - /certs/ca.crt
+        clientAuthType: VerifyClientCertIfGiven

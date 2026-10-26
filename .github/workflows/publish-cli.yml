@@ -15,6 +15,9 @@ name: Publish CLI
 # Trusted publishing is configured per package, so the very first release has to
 # be pushed by a human (`npm publish ./packages/cli --access public --tag alpha
 # --otp=<code>`). Every release after that runs here.
+#
+# CycloneDX SBOMs and cosign signatures are produced by sbom.yml on the same
+# cli-v* tags. They do not gate this job; provenance here is unchanged.
 on:
   workflow_dispatch:
     inputs:

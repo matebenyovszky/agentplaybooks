@@ -59,7 +59,7 @@ export const docsEntries: DocEntry[] = [
   {
     slug: "python-secrets",
     title: "Python Secrets",
-    description: "Startup secret loading with API keys or mTLS, locally and in Docker",
+    description: "Startup secret loading with API keys or mTLS, including self-hosted proxy mode",
     section: "guides",
   },
   {
@@ -90,6 +90,12 @@ export const docsEntries: DocEntry[] = [
     slug: "team-collaboration",
     title: "Team Collaboration",
     description: "Securely share playbooks with editors",
+    section: "guides",
+  },
+  {
+    slug: "audit-logs",
+    title: "Audit Logs",
+    description: "Export, retention, hash chain, and the read-only auditor role",
     section: "guides",
   },
   {
@@ -144,6 +150,24 @@ export const docsEntries: DocEntry[] = [
     slug: "self-hosting",
     title: "Self-Hosting",
     description: "Deploy your own instance",
+    section: "reference",
+  },
+  {
+    slug: "security",
+    title: "Security documentation pack",
+    description: "Supplier assessment and EIR classification: whitepaper, asset inventory, MK r. / NIST risk template",
+    section: "reference",
+  },
+  {
+    slug: "backup-restore",
+    title: "On-prem Backup and Restore",
+    description: "NIS2 21(2)(c) backup, empty-machine restore drill, RPO/RTO",
+    section: "reference",
+  },
+  {
+    slug: "self-hosted-mtls",
+    title: "Self-hosted mTLS",
+    description: "Client-certificate secret loading on Docker and local installs",
     section: "reference",
   },
   {

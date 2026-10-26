@@ -74,6 +74,30 @@ insecure MCP URLs, cross-platform drift, and a 0-100 health score.
    and skipped — never overwritten. Replaced files are backed up under
    `.agentplaybooks/backups/`.
 
+## Hermes 0.7.0 workflow
+
+Run on the host/container serving the Hermes profile:
+
+```bash
+apb login
+apb hermes setup PLAYBOOK_GUID . --profile=work
+apb hermes setup PLAYBOOK_GUID . --profile=work --apply
+apb hermes doctor PLAYBOOK_GUID . --profile=work --check
+```
+
+Setup restores full skill trees, registers them in the chosen profile and connects
+its hosted MCP/OpenAPI tools. `--tools-only` skips the skill download/account login.
+The connection references `APBKS_KEY_AGENTPLAYBOOKS`; configure that scoped key in
+the profile secret environment. A profile `.env` declaration is distinct from a
+key loaded in this process. Apply probes MCP without calling tools; exit code 2
+can mean files installed but the key/check still needs attention. Restart the
+profile after changing its configuration or secrets.
+
+`connect`, `sync` and `memory setup` all accept `--profile` and `--hermes-home`.
+Memory 0.3.0 requires Hermes 0.22.4+ and supports exact mirroring, bounded lexical
+recall and team playbooks. Existing plugin files are upgraded through Hermes;
+CLI memory setup refuses differing files to preserve local edits.
+
 ## Agent Plugins 1.0
 
 The npm package itself ships a portable root `plugin.json`, `mcp.json`, its
