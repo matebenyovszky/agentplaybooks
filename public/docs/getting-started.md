@@ -151,7 +151,7 @@ Body: {"value": {...}}
 ## Next Steps
 
 - [Platform Integrations](./platform-integrations.md) - Detailed guide for ChatGPT, Claude, Gemini, Grok, and API integrations
-- [Explore the public repository](/explore) for pre-built skills
+- [Explore practical use cases](/explore) and copy an AgentPlaybooks starter into your own private playbook
 - Read the [API Reference](./api-reference.md) for all endpoints
 - Learn about [MCP Integration](./mcp-integration.md) for Claude
 - Share safely with people using [Team Collaboration](./team-collaboration.md)

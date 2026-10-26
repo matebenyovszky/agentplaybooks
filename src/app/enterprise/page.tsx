@@ -166,7 +166,7 @@ export default function EnterprisePage() {
                 href="/explore"
                 className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-amber-600 to-amber-400 text-slate-900 hover:opacity-90 rounded-full font-semibold transition-colors shadow-lg shadow-amber-500/25"
               >
-                Explore Public Skills
+                Explore Use Cases
                 <ArrowRight className="w-5 h-5" />
               </Link>
               <a

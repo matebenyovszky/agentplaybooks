@@ -1,1050 +1,123 @@
-"use client";
-
-import { useEffect, useState, useMemo, useCallback, useRef } from "react";
-import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { ArrowDown, ArrowRight, BookOpen, Check, FileText, GitBranch, Layers, Lightbulb, Link2, MessageSquare, Search, ShieldCheck } from "lucide-react";
 import { FloatingNav } from "@/components/ui/floating-navbar";
-import { createBrowserClient } from "@/lib/supabase/client";
-import { authFetch } from "@/lib/auth-fetch";
-import { LatestRequest } from "@/lib/latest-request";
-import { cn } from "@/lib/utils";
-import {
-  Search,
-  BookOpen,
-  Globe,
-  Star,
-  Brain,
-  Zap,
-  Server,
-  Wrench,
-  FolderOpen,
-  Filter,
-  Clock,
-  User,
-  ExternalLink,
-  Sparkles,
-  Copy,
-  Check,
-  ChevronDown,
-  ChevronUp
-} from "lucide-react";
-import type { Skill, MCPServer } from "@/lib/supabase/types";
 
-// Extended types from API that include publisher info
-interface Publisher {
-  id: string;
-  name: string;
-  avatar_svg?: string;
-  website_url?: string;
-  is_verified?: boolean;
-  is_virtual?: boolean;
-}
+// Curated first-party examples, not a live catalog. Canonical links also work
+// for self-hosted installs with a separate database.
+const starters = [
+  { key: "handoff", guid: "7df83339bbdf4a71", icon: GitBranch },
+  { key: "research", guid: "5db1054925da4244", icon: Search },
+  { key: "review", guid: "334cd3082c2a4d1b", icon: ShieldCheck },
+] as const;
 
-function PublisherAvatar({ value }: { value: string }) {
-  const trimmed = value.trim();
-  const src = trimmed.startsWith("<svg")
-    ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(trimmed)}`
-    : trimmed;
+const primaryLink = "inline-flex items-center justify-center gap-2 rounded-full bg-amber-400 px-6 py-3 font-semibold text-slate-950 transition-colors hover:bg-amber-300 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-500";
+const secondaryLink = "inline-flex items-center justify-center gap-2 rounded-full border border-slate-300 px-6 py-3 font-medium text-slate-800 transition-colors hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-500";
 
-  // SVG is intentionally loaded as an isolated image, never inserted into the DOM as active markup.
-  // eslint-disable-next-line @next/next/no-img-element
-  return <img src={src} alt="" className="h-full w-full object-cover" />;
-}
-
-interface PublicPlaybook {
-  id: string;
-  guid: string;
-  name: string;
-  description?: string;
-  config?: Record<string, unknown>;
-  star_count: number;
-  tags?: string[];
-  created_at: string;
-  updated_at?: string;
-  user_id: string;
-  personas_count: number;
-  skills_count: number;
-  mcp_servers_count: number;
-  publisher?: Publisher;
-}
-
-type TabType = "playbooks" | "skills" | "mcp";
-type SortType = "stars" | "recent" | "name";
-
-import { FileText, Link as LinkIcon } from "lucide-react"; // Import missing icons
-
-export default function ExplorePage() {
-  const t = useTranslations();
-  const router = useRouter();
-  const [activeTab, setActiveTab] = useState<TabType>("playbooks");
-
-  // Playbooks state
-  const [playbooks, setPlaybooks] = useState<PublicPlaybook[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [sortBy, setSortBy] = useState<SortType>("stars");
-  const [loading, setLoading] = useState(true);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [starredIds, setStarredIds] = useState<Set<string>>(new Set());
-
-  // Skills & MCP state
-  const [skills, setSkills] = useState<Skill[]>([]);
-  const [mcpServers, setMcpServers] = useState<MCPServer[]>([]);
-  const [skillsLoading, setSkillsLoading] = useState(false);
-  const [mcpLoading, setMcpLoading] = useState(false);
-  const [skillSearch, setSkillSearch] = useState("");
-  const [mcpSearch, setMcpSearch] = useState("");
-
-  const loadUserStars = useCallback(async () => {
-    const response = await authFetch("/api/user/starred");
-
-    if (!response.ok) {
-      setStarredIds(new Set());
-      return;
-    }
-
-    const data = await response.json().catch(() => null);
-    if (Array.isArray(data)) {
-      setStarredIds(new Set((data as PublicPlaybook[]).map((playbook) => playbook.id)));
-    }
-  }, []);
-
-  const checkAuth = useCallback(async () => {
-    const supabase = createBrowserClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      setUserId(user.id);
-      loadUserStars();
-    }
-  }, [loadUserStars]);
-
-  const playbookRequests = useRef(new LatestRequest());
-  useEffect(() => {
-    if (activeTab !== "playbooks") return;
-    return playbookRequests.current.schedule(async ticket => {
-      setLoading(true);
-      try {
-        const params = new URLSearchParams();
-        if (searchQuery) params.set("search", searchQuery);
-        if (selectedTags.length) params.set("tags", selectedTags.join(","));
-        params.set("sort", sortBy);
-
-        const res = await authFetch(`/api/public/playbooks?${params}`, { signal: ticket.signal });
-        if (!res.ok) throw new Error("Playbook search failed");
-        const data = await res.json();
-        if (ticket.isCurrent()) setPlaybooks(Array.isArray(data) ? data : []);
-      } catch (error) {
-        if (!ticket.isCurrent()) return;
-        console.error("Failed to load playbooks:", error);
-        setPlaybooks([]);
-      } finally {
-        if (ticket.isCurrent()) setLoading(false);
-      }
-    }, searchQuery ? 300 : 0);
-  }, [activeTab, searchQuery, selectedTags, sortBy]);
-
-  const loadSkills = useCallback(async () => {
-    setSkillsLoading(true);
-    try {
-      const res = await authFetch("/api/public/skills");
-      const data = await res.json();
-      setSkills(Array.isArray(data) ? data : []);
-    } catch (e) {
-      console.error("Failed to load skills:", e);
-      setSkills([]);
-    }
-    setSkillsLoading(false);
-  }, []);
-
-  const loadMCPServers = useCallback(async () => {
-    setMcpLoading(true);
-    try {
-      const res = await authFetch("/api/public/mcp");
-      const data = await res.json();
-      setMcpServers(Array.isArray(data) ? data : []);
-    } catch (e) {
-      console.error("Failed to load MCP servers:", e);
-      setMcpServers([]);
-    }
-    setMcpLoading(false);
-  }, []);
-
-  useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
-
-  useEffect(() => {
-    if (activeTab === "skills" && skills.length === 0) {
-      loadSkills();
-    } else if (activeTab === "mcp" && mcpServers.length === 0) {
-      loadMCPServers();
-    }
-  }, [activeTab, loadSkills, loadMCPServers, skills.length, mcpServers.length]);
-
-  const toggleStar = async (playbookId: string) => {
-    if (!userId) {
-      router.push("/login?redirect=/explore");
-      return;
-    }
-
-    const isStarred = starredIds.has(playbookId);
-
-    if (isStarred) {
-      const response = await authFetch(`/api/playbooks/${playbookId}/star`, {
-        method: "POST",
-      });
-
-      if (!response.ok) {
-        return;
-      }
-
-      setStarredIds(prev => {
-        const next = new Set(prev);
-        next.delete(playbookId);
-        return next;
-      });
-
-      setPlaybooks(prev => prev.map(p =>
-        p.id === playbookId ? { ...p, star_count: Math.max(0, p.star_count - 1) } : p
-      ));
-    } else {
-      const response = await authFetch(`/api/playbooks/${playbookId}/star`, {
-        method: "POST",
-      });
-
-      if (!response.ok) {
-        return;
-      }
-
-      setStarredIds(prev => new Set(prev).add(playbookId));
-
-      setPlaybooks(prev => prev.map(p =>
-        p.id === playbookId ? { ...p, star_count: p.star_count + 1 } : p
-      ));
-    }
-  };
-
-  // Extract unique tags from all playbooks
-  const allTags = useMemo(() => {
-    const tagCounts: Record<string, number> = {};
-    playbooks.forEach(p => {
-      (p.tags || []).forEach(tag => {
-        tagCounts[tag] = (tagCounts[tag] || 0) + 1;
-      });
-    });
-    return Object.entries(tagCounts)
-      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-      .map(([tag]) => tag)
-      .slice(0, 15);
-  }, [playbooks]);
-
-  const toggleTag = (tag: string) => {
-    if (selectedTags.includes(tag)) {
-      setSelectedTags(selectedTags.filter(t => t !== tag));
-    } else {
-      setSelectedTags([...selectedTags, tag]);
-    }
-  };
-
-  // Filtered skills and MCP servers
-  const filteredSkills = skills.filter(s =>
-    s.name.toLowerCase().includes(skillSearch.toLowerCase()) ||
-    (s.description || "").toLowerCase().includes(skillSearch.toLowerCase())
-  );
-
-  const filteredMCPs = mcpServers.filter(m =>
-    m.name.toLowerCase().includes(mcpSearch.toLowerCase()) ||
-    (m.description || "").toLowerCase().includes(mcpSearch.toLowerCase())
-  );
-
-  const tabs = [
-    { id: "playbooks" as TabType, label: t("explore.tabPlaybooks"), icon: BookOpen, count: playbooks.length },
-    { id: "skills" as TabType, label: t("explore.tabSkills"), icon: Zap, count: skills.length },
-    { id: "mcp" as TabType, label: t("explore.tabMCP"), icon: Server, count: mcpServers.length },
-  ];
+export default async function ExplorePage() {
+  const t = await getTranslations("explore");
 
   return (
-    <div className="min-h-screen min-w-0 overflow-x-clip bg-background text-foreground">
+    <div className="min-h-screen bg-[#faf9f6] text-slate-900 dark:bg-[#080e1b] dark:text-slate-100">
       <FloatingNav />
+      <main id="main-content" className="mx-auto max-w-7xl px-5 pb-12 pt-36 sm:px-8 lg:px-12">
+        <section aria-labelledby="explore-title" className="grid items-center gap-12 pb-20 lg:grid-cols-[1.1fr_1fr] lg:gap-16 lg:pb-28">
+          <div>
+            <p className="mb-5 flex items-center gap-2 text-sm font-semibold uppercase tracking-widest text-amber-700 dark:text-amber-400">
+              <span className="h-2 w-2 rounded-full bg-amber-500" aria-hidden="true" />{t("eyebrow")}
+            </p>
+            <h1 id="explore-title" className="max-w-2xl text-4xl font-semibold leading-[1.12] tracking-tight sm:text-5xl lg:text-6xl">{t("title")}</h1>
+            <p className="mt-6 max-w-xl text-lg leading-relaxed text-slate-600 dark:text-slate-400">{t("subtitle")}</p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link href="/dashboard" prefetch={false} className={primaryLink}>{t("create")}<ArrowRight aria-hidden="true" className="h-4 w-4 shrink-0" /></Link>
+              <a href="#how-it-works" className={secondaryLink}>{t("howLink")}<ArrowDown aria-hidden="true" className="h-4 w-4 shrink-0" /></a>
+            </div>
+            <p className="mt-5 text-sm text-slate-500 dark:text-slate-400">{t("clients")}</p>
+          </div>
+          <figure className="relative min-w-0 rounded-3xl border border-slate-200 bg-white p-5 shadow-xl shadow-slate-900/5 sm:p-7 dark:border-slate-800 dark:bg-slate-900/60">
+            <figcaption className="mb-6 flex items-center gap-2 text-sm font-medium text-slate-500 dark:text-slate-400"><Lightbulb aria-hidden="true" className="h-4 w-4 text-amber-500" />{t("exampleLabel")}</figcaption>
+            <div className="rounded-2xl bg-slate-100 p-5 dark:bg-slate-800">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t("exampleAskLabel")}</p>
+              <p className="text-lg font-medium leading-relaxed">{t("exampleAsk")}</p>
+            </div>
+            <div className="flex justify-center py-4"><ArrowDown aria-hidden="true" className="h-5 w-5 text-slate-400" /></div>
+            <div className="rounded-2xl border border-amber-300 bg-amber-50 p-5 dark:border-amber-500/30 dark:bg-amber-500/5">
+              <div className="mb-4 flex items-center gap-2 font-semibold"><BookOpen aria-hidden="true" className="h-5 w-5 text-amber-600 dark:text-amber-400" />{t("examplePlaybook")}</div>
+              <ul className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
+                {["rules", "skill", "memory"].map((key) => <li key={key} className="flex items-start gap-2"><Check aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />{t(`example.${key}`)}</li>)}
+              </ul>
+            </div>
+            <div className="flex justify-center py-4"><ArrowDown aria-hidden="true" className="h-5 w-5 text-slate-400" /></div>
+            <p className="flex items-start gap-3 text-sm leading-relaxed"><MessageSquare aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />{t("exampleResult")}</p>
+          </figure>
+        </section>
 
-      {/* Hero */}
-      <section className="pt-32 pb-8 px-4">
-        <div className="max-w-4xl mx-auto text-center">
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-4xl md:text-5xl font-bold mb-4 gradient-text"
-          >
-            {t("explore.title")}
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-xl text-neutral-600 dark:text-slate-400"
-          >
-            {t("explore.subtitle")}
-          </motion.p>
-        </div>
-      </section>
-
-      {/* Tabs */}
-      <section className="px-4 pb-4">
-        <div className="max-w-5xl mx-auto">
-          <div className="flex min-w-0 gap-2 overflow-x-auto border-b border-neutral-200 dark:border-blue-900/30">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={cn(
-                  "flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition-all",
-                  activeTab === tab.id
-                    ? "border-amber-500 text-neutral-900 dark:text-white"
-                    : "border-transparent text-neutral-500 dark:text-slate-400 hover:text-neutral-900 dark:hover:text-white hover:border-neutral-300 dark:hover:border-slate-700"
-                )}
-              >
-                <tab.icon className="h-4 w-4" />
-                {tab.label}
-                {tab.count > 0 && (
-                  <span className={cn(
-                    "px-2 py-0.5 rounded-full text-xs",
-                    activeTab === tab.id ? "bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400" : "bg-neutral-100 dark:bg-slate-800 text-neutral-500 dark:text-slate-500"
-                  )}>
-                    {tab.count}
-                  </span>
-                )}
-              </button>
+        <section id="use-cases" aria-labelledby="use-cases-title" className="scroll-mt-28 border-t border-slate-200 py-16 dark:border-slate-800 sm:py-20">
+          <div className="mb-10 max-w-2xl">
+            <p className="mb-3 text-sm font-semibold uppercase tracking-widest text-amber-700 dark:text-amber-400">{t("casesEyebrow")}</p>
+            <h2 id="use-cases-title" className="text-3xl font-semibold tracking-tight sm:text-4xl">{t("casesTitle")}</h2>
+            <p className="mt-4 leading-relaxed text-slate-600 dark:text-slate-400">{t("casesIntro")}</p>
+          </div>
+          <div className="grid gap-5 md:grid-cols-3">
+            {starters.map(({ key, guid, icon: Icon }, index) => (
+              <article key={key} className="flex min-w-0 flex-col rounded-3xl border border-slate-200 bg-white p-6 sm:p-7 dark:border-slate-800 dark:bg-slate-900/40">
+                <div className="mb-7 flex items-center justify-between"><Icon aria-hidden="true" className="h-7 w-7 text-amber-600 dark:text-amber-400" /><span className="font-mono text-sm text-slate-400">0{index + 1}</span></div>
+                <h3 className="text-xl font-semibold">{t(`cases.${key}.title`)}</h3>
+                <p className="mt-3 leading-relaxed text-slate-600 dark:text-slate-400">{t(`cases.${key}.description`)}</p>
+                <blockquote className="my-6 border-l-2 border-amber-400 pl-4 text-sm leading-relaxed text-slate-600 dark:text-slate-300">{t(`cases.${key}.prompt`)}</blockquote>
+                <a href={`https://agentplaybooks.ai/dashboard/playbook/${guid}`} className="mt-auto inline-flex items-center gap-2 pt-3 text-sm font-semibold text-amber-800 underline-offset-4 hover:underline dark:text-amber-400">{t("openStarter")}<ArrowRight aria-hidden="true" className="h-4 w-4 shrink-0" /></a>
+              </article>
             ))}
           </div>
-        </div>
-      </section>
+          <p className="mt-5 max-w-3xl text-sm leading-relaxed text-slate-500 dark:text-slate-400">{t("starterNote")}</p>
+        </section>
 
-      <AnimatePresence mode="wait">
-        {/* Playbooks Tab */}
-        {activeTab === "playbooks" && (
-          <motion.div
-            key="playbooks"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-          >
-            {/* Search & Filters */}
-            <section className="px-4 pb-8">
-              <div className="max-w-5xl mx-auto">
-                <div className="relative mb-6">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder={t("explore.searchPlaybooks")}
-                    className={cn(
-                      "w-full pl-12 pr-4 py-4 rounded-xl text-lg",
-                      "bg-white dark:bg-blue-950/30 border border-neutral-200 dark:border-blue-900/50",
-                      "focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20",
-                      "placeholder:text-neutral-400 dark:placeholder:text-slate-600",
-                      "text-neutral-900 dark:text-white"
-                    )}
-                  />
-                </div>
+        <section id="how-it-works" aria-labelledby="how-title" className="scroll-mt-28 rounded-3xl bg-slate-900 px-6 py-12 text-white sm:px-10 sm:py-14 dark:border dark:border-slate-800 dark:bg-slate-900/60">
+          <p className="mb-3 text-sm font-semibold uppercase tracking-widest text-amber-400">{t("howEyebrow")}</p>
+          <h2 id="how-title" className="max-w-2xl text-3xl font-semibold tracking-tight sm:text-4xl">{t("howTitle")}</h2>
+          <ol className="mt-10 grid gap-9 md:grid-cols-3 md:gap-8">
+            {["start", "connect", "continue"].map((key, index) => (
+              <li key={key}>
+                <span className="mb-5 inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-600 font-mono text-sm text-amber-300">{index + 1}</span>
+                <h3 className="mb-3 text-lg font-semibold">{t(`steps.${key}.title`)}</h3>
+                <p className="leading-relaxed text-slate-300">{t(`steps.${key}.description`)}</p>
+              </li>
+            ))}
+          </ol>
+          <Link href="/docs/getting-started" prefetch={false} className="mt-9 inline-flex items-center gap-2 text-sm font-semibold text-amber-300 underline-offset-4 hover:underline">{t("setupGuide")}<ArrowRight aria-hidden="true" className="h-4 w-4" /></Link>
+        </section>
 
-                {/* Tags */}
-                <div className="flex flex-wrap gap-2 mb-6">
-                  <span className="flex items-center gap-1 text-sm text-neutral-500 dark:text-slate-500 mr-2">
-                    <Filter className="h-4 w-4" />
-                    {t("explore.tags")}:
-                  </span>
-                  {allTags.map((tag) => (
-                    <button
-                      key={tag}
-                      onClick={() => toggleTag(tag)}
-                      className={cn(
-                        "px-3 py-1.5 rounded-full text-sm transition-colors",
-                        selectedTags.includes(tag)
-                          ? "bg-amber-500 text-slate-900 font-medium"
-                          : "bg-white dark:bg-blue-950/50 text-neutral-600 dark:text-slate-400 hover:bg-neutral-100 dark:hover:bg-blue-900/50 border border-neutral-200 dark:border-blue-800/30"
-                      )}
-                    >
-                      {tag}
-                    </button>
-                  ))}
-                </div>
+        <section aria-labelledby="anatomy-title" className="grid gap-8 py-16 sm:py-20 lg:grid-cols-[1fr_2fr] lg:gap-16">
+          <div><h2 id="anatomy-title" className="text-3xl font-semibold tracking-tight">{t("anatomyTitle")}</h2><p className="mt-4 leading-relaxed text-slate-600 dark:text-slate-400">{t("anatomyIntro")}</p></div>
+          <dl className="grid gap-7 sm:grid-cols-2">
+            {[{ key: "instructions", icon: FileText }, { key: "skills", icon: Layers }, { key: "memory", icon: BookOpen }, { key: "tools", icon: Link2 }].map(({ key, icon: Icon }) => (
+              <div key={key}><dt className="mb-2 flex items-center gap-2 font-semibold"><Icon aria-hidden="true" className="h-4 w-4 text-amber-600 dark:text-amber-400" />{t(`anatomy.${key}.title`)}</dt><dd className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">{t(`anatomy.${key}.description`)}</dd></div>
+            ))}
+          </dl>
+        </section>
 
-                {/* Sort */}
-                <div className="flex items-center justify-between mb-8">
-                  <div className="flex items-center gap-2 text-sm text-neutral-500 dark:text-slate-400">
-                    <span>{playbooks.length} {t("explore.playbooks")}</span>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-neutral-500 dark:text-slate-400">{t("explore.sortBy")}:</span>
-                    <select
-                      value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value as SortType)}
-                      className={cn(
-                        "px-3 py-2 rounded-lg text-sm cursor-pointer",
-                        "bg-white dark:bg-slate-800 border border-neutral-200 dark:border-slate-600",
-                        "text-neutral-900 dark:text-white focus:outline-none focus:border-amber-500",
-                        "[&>option]:bg-white [&>option]:text-neutral-900 dark:[&>option]:bg-slate-800 dark:[&>option]:text-white"
-                      )}
-                    >
-                      <option value="stars">{t("explore.mostStarred")}</option>
-                      <option value="recent">{t("explore.mostRecent")}</option>
-                      <option value="name">{t("explore.alphabetical")}</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            {/* Results */}
-            <section className="px-4 pb-24">
-              <div className="max-w-6xl mx-auto">
-                {loading ? (
-                  <div className="flex justify-center py-12">
-                    <div className="animate-spin h-8 w-8 border-2 border-amber-500 border-t-transparent rounded-full" />
-                  </div>
-                ) : playbooks.length === 0 ? (
-                  <EmptyState type="playbooks" />
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {playbooks.map((playbook, idx) => (
-                      <PlaybookCard
-                        key={playbook.id}
-                        playbook={playbook}
-                        index={idx}
-                        isStarred={starredIds.has(playbook.id)}
-                        onToggleStar={() => toggleStar(playbook.id)}
-                        isLoggedIn={!!userId}
-                        isOwner={playbook.user_id === userId}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            </section>
-          </motion.div>
-        )}
-
-        {/* Skills Tab */}
-        {activeTab === "skills" && (
-          <motion.div
-            key="skills"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-          >
-            <section className="px-4 pb-8">
-              <div className="max-w-5xl mx-auto">
-                <div className="relative mb-6">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-neutral-400 dark:text-slate-500" />
-                  <input
-                    type="text"
-                    value={skillSearch}
-                    onChange={(e) => setSkillSearch(e.target.value)}
-                    placeholder={t("explore.searchSkills")}
-                    className={cn(
-                      "w-full pl-12 pr-4 py-4 rounded-xl text-lg",
-                      "bg-white dark:bg-blue-950/30 border border-neutral-200 dark:border-blue-900/50",
-                      "focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20",
-                      "placeholder:text-neutral-400 dark:placeholder:text-slate-600",
-                      "text-neutral-900 dark:text-white"
-                    )}
-                  />
-                </div>
-                <p className="text-sm text-neutral-600 dark:text-slate-400 mb-4">
-                  {filteredSkills.length} {t("explore.skillsAvailable")}
-                </p>
-              </div>
-            </section>
-
-            <section className="px-4 pb-24">
-              <div className="max-w-6xl mx-auto">
-                {skillsLoading ? (
-                  <div className="flex justify-center py-12">
-                    <div className="animate-spin h-8 w-8 border-2 border-purple-500 border-t-transparent rounded-full" />
-                  </div>
-                ) : filteredSkills.length === 0 ? (
-                  <EmptyState type="skills" />
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {filteredSkills.map((skill, idx) => (
-                      <SkillCard key={skill.id} skill={skill} index={idx} />
-                    ))}
-                  </div>
-                )}
-              </div>
-            </section>
-          </motion.div>
-        )}
-
-        {/* MCP Tab */}
-        {activeTab === "mcp" && (
-          <motion.div
-            key="mcp"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-          >
-            <section className="px-4 pb-8">
-              <div className="max-w-5xl mx-auto">
-                <div className="relative mb-6">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-neutral-400 dark:text-slate-500" />
-                  <input
-                    type="text"
-                    value={mcpSearch}
-                    onChange={(e) => setMcpSearch(e.target.value)}
-                    placeholder={t("explore.searchMCP")}
-                    className={cn(
-                      "w-full pl-12 pr-4 py-4 rounded-xl text-lg",
-                      "bg-white dark:bg-blue-950/30 border border-neutral-200 dark:border-blue-900/50",
-                      "focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20",
-                      "placeholder:text-neutral-400 dark:placeholder:text-slate-600",
-                      "text-neutral-900 dark:text-white"
-                    )}
-                  />
-                </div>
-                <p className="text-sm text-neutral-600 dark:text-slate-400 mb-4">
-                  {filteredMCPs.length} {t("explore.mcpAvailable")}
-                </p>
-              </div>
-            </section>
-
-            <section className="px-4 pb-24">
-              <div className="max-w-6xl mx-auto">
-                {mcpLoading ? (
-                  <div className="flex justify-center py-12">
-                    <div className="animate-spin h-8 w-8 border-2 border-pink-500 border-t-transparent rounded-full" />
-                  </div>
-                ) : filteredMCPs.length === 0 ? (
-                  <EmptyState type="mcp" />
-                ) : (
-                  <div className="space-y-4">
-                    {filteredMCPs.map((mcp, idx) => (
-                      <MCPCard key={mcp.id} mcp={mcp} index={idx} />
-                    ))}
-                  </div>
-                )}
-              </div>
-            </section>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* CTA */}
-      <section className="px-4 pb-24">
-        <div className="max-w-2xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className={cn(
-              "p-8 rounded-2xl text-center",
-              "bg-gradient-to-br from-amber-900/20 to-orange-900/20",
-              "border border-amber-500/30"
-            )}
-          >
-            <Sparkles className="h-10 w-10 text-amber-400 mx-auto mb-4" />
-            <h3 className="text-2xl font-bold mb-2">{t("explore.createOwn")}</h3>
-            <p className="text-slate-400 mb-6">{t("explore.createOwnDesc")}</p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Link
-                href="/login"
-                className={cn(
-                  "px-6 py-3 rounded-lg font-medium flex items-center justify-center gap-2",
-                  "bg-amber-500 text-slate-900 hover:bg-amber-400 transition-colors"
-                )}
-              >
-                {t("common.getStarted")}
-              </Link>
-            </div>
-          </motion.div>
-        </div>
-      </section>
-    </div>
-  );
-}
-
-function EmptyState({ type }: { type: "playbooks" | "skills" | "mcp" }) {
-  const t = useTranslations();
-
-  const config = {
-    playbooks: { icon: Globe, color: "text-blue-700", title: t("explore.noPlaybooks"), desc: t("explore.noPlaybooksDesc") },
-    skills: { icon: Zap, color: "text-purple-700", title: t("explore.noSkills"), desc: t("explore.noSkillsDesc") },
-    mcp: { icon: Server, color: "text-pink-700", title: t("explore.noMCP"), desc: t("explore.noMCPDesc") },
-  };
-
-  const { icon: Icon, color, title, desc } = config[type];
-
-  return (
-    <div className="text-center py-16">
-      <div className="w-16 h-16 mx-auto mb-4 bg-blue-900/30 rounded-full flex items-center justify-center">
-        <Icon className={cn("h-8 w-8", color)} />
-      </div>
-      <h3 className="text-xl font-semibold text-slate-400 mb-2">{title}</h3>
-      <p className="text-slate-500 mb-6">{desc}</p>
-      <Link
-        href="/login"
-        className={cn(
-          "inline-flex items-center gap-2 px-6 py-3 rounded-lg",
-          "bg-amber-500 text-slate-900 font-medium",
-          "hover:bg-amber-400 transition-colors"
-        )}
-      >
-        <Sparkles className="h-5 w-5" />
-        {t("common.getStarted")}
-      </Link>
-    </div>
-  );
-}
-
-interface PlaybookCardProps {
-  playbook: PublicPlaybook;
-  index: number;
-  isStarred: boolean;
-  onToggleStar: () => void;
-  isLoggedIn: boolean;
-  isOwner: boolean;
-}
-
-function PlaybookCard({ playbook, index, isStarred, onToggleStar, isLoggedIn, isOwner }: PlaybookCardProps) {
-  const t = useTranslations();
-  const playbookUrl = `/dashboard/playbook/${playbook.id}`;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05 }}
-      className={cn(
-        "rounded-xl overflow-hidden group cursor-pointer flex flex-col",
-        "bg-white dark:bg-gradient-to-br dark:from-slate-900/80 dark:to-slate-800/80",
-        "border border-neutral-200 dark:border-blue-900/30 hover:border-amber-500/30",
-        "transition-all duration-300 hover:shadow-lg hover:shadow-amber-500/5 shadow-sm dark:shadow-none"
-      )}
-    >
-      <Link href={playbookUrl} className="block flex-1">
-        <div className="p-5">
-          <div className="flex items-start justify-between mb-3">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <h3 className="font-semibold text-lg truncate text-neutral-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
-                  {playbook.name}
-                </h3>
-                {isOwner && (
-                  <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs rounded-full font-medium shrink-0">
-                    {t("explore.yours")}
-                  </span>
-                )}
-              </div>
-              {/* Publisher profile */}
-              {playbook.publisher && (
-                <div className="flex items-center gap-2">
-                  {playbook.publisher.avatar_svg ? (
-                    <div className="w-5 h-5 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
-                      <PublisherAvatar value={playbook.publisher.avatar_svg} />
-                    </div>
-                  ) : (
-                    <div className="w-5 h-5 rounded-full bg-neutral-100 dark:bg-slate-700 flex items-center justify-center">
-                      <User className="h-3 w-3 text-neutral-400 dark:text-slate-400" />
-                    </div>
-                  )}
-                  <span className="text-xs text-neutral-500 dark:text-slate-400 flex items-center gap-1">
-                    {playbook.publisher.name}
-                    {playbook.publisher.is_verified && (
-                      <span className="text-blue-500 dark:text-blue-400" title="Verified">✓</span>
-                    )}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onToggleStar();
-              }}
-              className={cn(
-                "flex items-center gap-1 px-3 py-1.5 rounded-lg transition-all",
-                isStarred
-                  ? "bg-amber-500/20 text-amber-600 dark:text-amber-400"
-                  : "bg-neutral-100 dark:bg-slate-800/50 text-neutral-500 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-500/10"
-              )}
-              title={isLoggedIn ? (isStarred ? "Unstar" : "Star") : "Sign in to star"}
-            >
-              <Star className={cn("h-4 w-4", isStarred && "fill-current")} />
-              <span className="text-sm font-medium">{playbook.star_count}</span>
-            </button>
-          </div>
-
-          {playbook.description && (
-            <p className="text-sm text-neutral-600 dark:text-slate-400 mb-4 line-clamp-2">{playbook.description}</p>
-          )}
-
-          <div className="flex flex-wrap gap-3 mb-4">
-            <span className="flex items-center gap-1 text-xs text-neutral-500 dark:text-slate-500">
-              <Brain className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
-              {playbook.personas_count} {t("explore.personas")}
-            </span>
-            <span className="flex items-center gap-1 text-xs text-neutral-500 dark:text-slate-500">
-              <Zap className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
-              {playbook.skills_count} {t("explore.skills")}
-            </span>
-            <span className="flex items-center gap-1 text-xs text-neutral-500 dark:text-slate-500">
-              <Server className="h-3.5 w-3.5 text-pink-600 dark:text-pink-400" />
-              {playbook.mcp_servers_count} MCP
-            </span>
-          </div>
-
-          {playbook.tags && playbook.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {playbook.tags.slice(0, 4).map((tag) => (
-                <span key={tag} className="px-2 py-0.5 bg-neutral-100 dark:bg-blue-900/30 rounded text-xs text-neutral-500 dark:text-slate-400">
-                  {tag}
-                </span>
-              ))}
-              {playbook.tags.length > 4 && (
-                <span className="px-2 py-0.5 text-xs text-neutral-500 dark:text-slate-500">+{playbook.tags.length - 4}</span>
-              )}
-            </div>
-          )}
-        </div>
-      </Link>
-
-      <div className="px-5 py-3 border-t border-neutral-100 dark:border-slate-700/30 bg-neutral-50 dark:bg-slate-900/30">
-        <div className="flex items-center justify-between">
-          <Link
-            href={playbookUrl}
-            className={cn(
-              "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm",
-              "bg-amber-100 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-500/20",
-              "transition-colors"
-            )}
-          >
-            <ExternalLink className="h-4 w-4" />
-            {t("explore.view")}
-          </Link>
-          <span className="text-xs text-neutral-500 dark:text-slate-500 flex items-center gap-1">
-            <Clock className="h-3 w-3" />
-            {new Date(playbook.created_at).toLocaleDateString()}
-          </span>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
-// Extended skill type from API
-interface SkillWithPublisher extends Skill {
-  playbook_name?: string;
-  playbook_guid?: string;
-  publisher?: {
-    id: string;
-    name: string;
-    avatar_svg?: string;
-    is_verified?: boolean;
-    is_virtual?: boolean;
-  };
-  skill_attachments?: SkillAttachment[];
-}
-
-interface SkillAttachment {
-  type: 'file' | 'link';
-  url?: string;
-  filename?: string;
-}
-
-function SkillCard({ skill, index }: { skill: SkillWithPublisher; index: number }) {
-  const [copied, setCopied] = useState(false);
-  const isMarkdownSkill = !!(skill.content && skill.content.length > 0);
-
-  const copyToClipboard = async () => {
-    // Copy skill content or basic info as JSON
-    const content = skill.content || JSON.stringify({ name: skill.name, description: skill.description, licence: skill.licence }, null, 2);
-    await navigator.clipboard.writeText(content);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.03 }}
-      className={cn(
-        "p-4 rounded-xl shadow-sm dark:shadow-none flex flex-col",
-        isMarkdownSkill
-          ? "bg-white dark:bg-emerald-950/30 border-emerald-500/20 hover:border-emerald-500/40"
-          : "bg-white dark:bg-purple-950/30 border-purple-500/20 hover:border-purple-500/40",
-        "border transition-all"
-      )}
-    >
-      <div className="flex-1">
-        <div className="flex items-start justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <Zap className={cn("h-4 w-4", isMarkdownSkill ? "text-emerald-600 dark:text-emerald-400" : "text-purple-600 dark:text-purple-400")} />
-            <h4 className="min-w-0 wrap-anywhere font-medium text-neutral-900 dark:text-white">{skill.name}</h4>
-            {isMarkdownSkill && (
-              <span className="px-1.5 py-0.5 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-[10px] rounded font-medium">
-                SKILL
-              </span>
-            )}
-          </div>
-          <button
-            onClick={copyToClipboard}
-            className={cn(
-              "p-1.5 rounded-lg transition-colors",
-              isMarkdownSkill
-                ? "text-neutral-400 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10"
-                : "text-neutral-400 dark:text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-500/10"
-            )}
-            title="Copy skill content"
-          >
-            {copied ? <Check className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4" />}
-          </button>
-        </div>
-
-        {skill.description && (
-          <p className="text-sm text-neutral-600 dark:text-slate-400 mb-3 line-clamp-2">{skill.description}</p>
-        )}
-
-        {/* Show token count for skills with content, or licence info */}
-        {isMarkdownSkill ? (
-          <div className="text-xs text-neutral-500 dark:text-slate-500 mb-2">
-            ~{Math.round((skill.content?.length || 0) / 4).toLocaleString()} tokens
-          </div>
-        ) : skill.licence && (
-          <div className="text-xs text-neutral-500 dark:text-slate-500 mb-2">
-            Licence: {skill.licence}
-          </div>
-        )}
-
-        {/* Attachments */}
-        {skill.skill_attachments && skill.skill_attachments.length > 0 && (
-          <div className="mb-3 flex flex-wrap gap-2">
-            {skill.skill_attachments.map((att: SkillAttachment, i: number) => (
-              <div
-                key={i}
-                className="flex items-center gap-1.5 px-2 py-1 bg-neutral-100 dark:bg-slate-800/50 border border-neutral-200 dark:border-slate-700/50 rounded text-xs text-neutral-600 dark:text-slate-300 max-w-full"
-              >
-                {att.type === 'file' ? <FileText className="h-3 w-3" /> : <LinkIcon className="h-3 w-3" />}
-                <span className="truncate max-w-[150px]">{att.url || att.filename}</span>
-              </div>
+        <section aria-labelledby="questions-title" className="border-t border-slate-200 py-12 dark:border-slate-800 sm:py-16">
+          <h2 id="questions-title" className="mb-7 text-2xl font-semibold">{t("questionsTitle")}</h2>
+          <div className="max-w-3xl divide-y divide-slate-200 dark:divide-slate-800">
+            {["clients", "privacy", "tools"].map((key) => (
+              <details key={key} className="py-5"><summary className="cursor-pointer font-medium marker:text-amber-500">{t(`faq.${key}.question`)}</summary><p className="mt-3 pl-4 text-sm leading-relaxed text-slate-600 dark:text-slate-400">{t(`faq.${key}.answer`)}</p></details>
             ))}
           </div>
-        )}
-      </div>
+        </section>
 
-      {/* Publisher info */}
-      <div className="flex items-center justify-between mt-2 pt-2 border-t border-neutral-100 dark:border-slate-700/30">
-        {skill.publisher ? (
-          <div className="flex items-center gap-2">
-            {skill.publisher.avatar_svg ? (
-              <div className="w-5 h-5 rounded-full overflow-hidden bg-neutral-100 dark:bg-slate-700 flex items-center justify-center">
-                <PublisherAvatar value={skill.publisher.avatar_svg} />
-              </div>
-            ) : (
-              <div className="w-5 h-5 rounded-full bg-neutral-100 dark:bg-slate-700 flex items-center justify-center">
-                <User className="h-3 w-3 text-neutral-400 dark:text-slate-400" />
-              </div>
-            )}
-            <span className="text-xs text-neutral-500 dark:text-slate-400 flex items-center gap-1">
-              {skill.publisher.name}
-              {skill.publisher.is_verified && (
-                <span className="text-blue-500 dark:text-blue-400" title="Verified">✓</span>
-              )}
-            </span>
+        <section aria-labelledby="start-title" className="rounded-3xl border border-amber-200 bg-amber-50 px-6 py-10 sm:px-10 dark:border-amber-500/20 dark:bg-amber-500/5">
+          <h2 id="start-title" className="text-2xl font-semibold sm:text-3xl">{t("startTitle")}</h2>
+          <p className="mt-3 max-w-2xl leading-relaxed text-slate-600 dark:text-slate-400">{t("startDescription")}</p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link href="/dashboard" prefetch={false} className={primaryLink}>{t("create")}<ArrowRight aria-hidden="true" className="h-4 w-4 shrink-0" /></Link>
+            <a href="#use-cases" className={secondaryLink}>{t("browseExamples")}</a>
           </div>
-        ) : skill.playbook_name && (
-          <span className="text-xs text-neutral-500 dark:text-slate-500 flex items-center gap-1">
-            <BookOpen className="h-3 w-3" />
-            {skill.playbook_name}
-          </span>
-        )}
-      </div>
-    </motion.div>
-  );
-}
-
-// Extended MCP type from API
-interface MCPWithPublisher extends MCPServer {
-  playbook_name?: string;
-  playbook_guid?: string;
-  publisher?: {
-    id: string;
-    name: string;
-    avatar_svg?: string;
-    is_verified?: boolean;
-    is_virtual?: boolean;
-  };
-}
-
-function MCPCard({ mcp, index }: { mcp: MCPWithPublisher; index: number }) {
-  const [copied, setCopied] = useState(false);
-  const [expanded, setExpanded] = useState(false);
-  const tools = Array.isArray(mcp.tools) ? mcp.tools : [];
-  const resources = Array.isArray(mcp.resources) ? mcp.resources : [];
-  const toolCount = tools.length;
-  const resourceCount = resources.length;
-  const hasDetails = toolCount > 0 || resourceCount > 0;
-
-  const copyConfig = async () => {
-    const config = JSON.stringify(mcp.transport_config || {}, null, 2);
-    await navigator.clipboard.writeText(config);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.03 }}
-      className={cn(
-        "rounded-xl overflow-hidden shadow-sm dark:shadow-none flex flex-col",
-        "bg-white dark:bg-pink-950/30",
-        "border border-pink-500/20 hover:border-pink-500/40",
-        "transition-all"
-      )}
-    >
-      <div
-        className={cn(
-          "flex items-start justify-between gap-4 p-4 flex-1",
-          hasDetails ? "cursor-pointer" : "cursor-default"
-        )}
-        onClick={() => {
-          if (!hasDetails) return;
-          setExpanded((prev) => !prev);
-        }}
-      >
-        <div className="flex items-start gap-3 flex-1 min-w-0">
-          <div className="p-2 rounded-lg bg-pink-100 dark:bg-pink-500/10 border border-pink-200 dark:border-pink-500/20">
-            <Server className="h-4 w-4 text-pink-600 dark:text-pink-400" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <h4 className="font-medium text-neutral-900 dark:text-white truncate">{mcp.name}</h4>
-            </div>
-            {mcp.description && (
-              <p className="text-sm text-neutral-600 dark:text-slate-400 line-clamp-2">{mcp.description}</p>
-            )}
-            <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-neutral-500 dark:text-slate-500">
-              <span className="flex items-center gap-1">
-                <Wrench className="h-3 w-3 text-pink-600 dark:text-pink-400" />
-                {toolCount} tools
-              </span>
-              <span className="flex items-center gap-1">
-                <FolderOpen className="h-3 w-3 text-purple-600 dark:text-purple-400" />
-                {resourceCount} resources
-              </span>
-              {mcp.transport_type && (
-                <span className="px-2 py-0.5 rounded bg-neutral-100 dark:bg-slate-700/30 text-neutral-500 dark:text-slate-500">
-                  {mcp.transport_type}
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              copyConfig();
-            }}
-            className="p-1.5 text-neutral-400 dark:text-slate-400 hover:text-pink-600 dark:hover:text-pink-400 hover:bg-pink-50 dark:hover:bg-pink-500/10 rounded-lg transition-colors"
-            title="Copy MCP config"
-          >
-            {copied ? <Check className="h-4 w-4 text-green-500 dark:text-green-400" /> : <Copy className="h-4 w-4" />}
-          </button>
-          {hasDetails && (
-            <div className="text-neutral-400 dark:text-slate-500">
-              {expanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Expanded tools/resources */}
-      <AnimatePresence>
-        {expanded && hasDetails && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="overflow-hidden border-t border-neutral-100 dark:border-slate-800/60"
-          >
-            <div className="px-4 pb-4 pt-3 space-y-4">
-              {toolCount > 0 && (
-                <div className="space-y-2">
-                  <div className="text-xs uppercase tracking-wide text-neutral-500 dark:text-slate-500">Tools</div>
-                  <div className="space-y-2">
-                    {tools.map((tool, toolIndex) => (
-                      <div
-                        key={`${tool.name}-${toolIndex}`}
-                        className="rounded-lg border border-pink-200 dark:border-pink-500/10 bg-neutral-50 dark:bg-slate-900/40 px-3 py-2"
-                      >
-                        <div className="text-sm font-mono text-pink-700 dark:text-pink-300">{tool.name}</div>
-                        {tool.description && (
-                          <div className="text-xs text-neutral-600 dark:text-slate-400 mt-1">{tool.description}</div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {resourceCount > 0 && (
-                <div className="space-y-2">
-                  <div className="text-xs uppercase tracking-wide text-neutral-500 dark:text-slate-500">Resources</div>
-                  <div className="space-y-2">
-                    {resources.map((resource, resourceIndex) => (
-                      <div
-                        key={`${resource.name}-${resourceIndex}`}
-                        className="rounded-lg border border-purple-200 dark:border-purple-500/10 bg-neutral-50 dark:bg-slate-900/40 px-3 py-2"
-                      >
-                        <div className="text-sm text-purple-700 dark:text-purple-200">{resource.name}</div>
-                        <div className="text-xs text-neutral-500 dark:text-slate-500 mt-1 break-all">{resource.uri}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Publisher info */}
-      <div className="flex items-center justify-between px-4 py-3 border-t border-neutral-100 dark:border-slate-700/30 bg-neutral-50 dark:bg-slate-900/30 mt-auto">
-        {mcp.publisher ? (
-          <div className="flex items-center gap-2">
-            {mcp.publisher.avatar_svg ? (
-              <div className="w-5 h-5 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
-                <PublisherAvatar value={mcp.publisher.avatar_svg} />
-              </div>
-            ) : (
-              <div className="w-5 h-5 rounded-full bg-neutral-100 dark:bg-slate-700 flex items-center justify-center">
-                <User className="h-3 w-3 text-neutral-400 dark:text-slate-400" />
-              </div>
-            )}
-            <span className="text-xs text-neutral-500 dark:text-slate-400 flex items-center gap-1">
-              {mcp.publisher.name}
-              {mcp.publisher.is_verified && (
-                <span className="text-blue-500 dark:text-blue-400" title="Verified">✓</span>
-              )}
-            </span>
-          </div>
-        ) : mcp.playbook_name && (
-          <span className="text-xs text-neutral-500 dark:text-slate-500 flex items-center gap-1">
-            <BookOpen className="h-3 w-3" />
-            {mcp.playbook_name}
-          </span>
-        )}
-      </div>
-    </motion.div>
+        </section>
+        <footer className="mt-12 flex flex-wrap items-center justify-between gap-4 text-sm text-slate-500 dark:text-slate-400">
+          <Link href="/" prefetch={false} className="font-semibold text-slate-800 dark:text-slate-200">AgentPlaybooks</Link>
+          <div className="flex flex-wrap gap-6"><Link href="/docs" prefetch={false} className="hover:underline">{t("docs")}</Link><Link href="/privacy" prefetch={false} className="hover:underline">{t("privacy")}</Link></div>
+        </footer>
+      </main>
+    </div>
   );
 }

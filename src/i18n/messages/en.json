@@ -18,8 +18,8 @@
   "landing": {
     "hero": {
       "title": "One playbook. Every agent.",
-      "subtitle": "Not another skill store: one vendor-neutral playbook for the whole job — skills, MCP servers, instructions, memory, and credentials your agent uses without seeing — deployed to Claude Code, Cursor, Codex, Antigravity, and Hermes in one command.",
-      "cta": "Explore Playbooks",
+      "subtitle": "One vendor-neutral playbook for the whole job — skills, MCP servers, instructions, memory, and credentials your agent uses without seeing — deployed to Claude Code, Cursor, Codex, Antigravity, and Hermes in one command.",
+      "cta": "Explore use cases",
       "tryDemo": "Try Demo"
     },
     "whatIsPlaybook": {
@@ -103,10 +103,12 @@
       }
     },
     "publicRepo": {
-      "title": "Community Repository",
-      "description": "Browse and add pre-built skills and MCP servers created by the community",
-      "browseSkills": "Browse Skills",
-      "browseMCP": "Browse MCP Servers"
+      "title": "See what your playbook can do",
+      "description": "Explore practical workflows for project handoffs, research, and change reviews. Start with a small playbook and make it your own.",
+      "badge": "Ideas for your next workflow",
+      "cta": "Explore use cases",
+      "featureTitle": "Reusable knowledge",
+      "featureDescription": "Turn useful working methods into skills you can adapt and carry between agents."
     },
     "useCases": {
       "title": "Sound Familiar?",
@@ -261,40 +263,101 @@
     }
   },
   "explore": {
-    "title": "Explore",
-    "subtitle": "Discover AI skills, playbooks, and MCP servers shared by the community.",
-    "tabPlaybooks": "Playbooks",
-    "tabSkills": "Skills",
-    "tabMCP": "MCP Servers",
-    "skills": "Skills",
-    "personas": "personas",
-    "mcp": "MCP Servers",
-    "search": "Search...",
-    "searchPlaybooks": "Search playbooks by name or description...",
-    "searchSkills": "Search skills by name or description...",
-    "searchMCP": "Search MCP servers by name or description...",
-    "skillsAvailable": "skills available",
-    "mcpAvailable": "MCP servers available",
-    "tags": "Tags",
-    "verified": "Verified",
-    "addToPlaybook": "Add to Playbook",
-    "usageCount": "Used {count} times",
-    "playbooks": "playbooks found",
-    "sortBy": "Sort by",
-    "mostStarred": "Most Starred",
-    "mostRecent": "Most Recent",
-    "alphabetical": "Alphabetical",
-    "download": "Download",
-    "noPlaybooks": "No public playbooks found",
-    "noPlaybooksDesc": "Be the first to share a playbook with the community!",
-    "noSkills": "No public skills found",
-    "noSkillsDesc": "Skills from public playbooks will appear here.",
-    "noMCP": "No public MCP servers found",
-    "noMCPDesc": "MCP servers from public playbooks will appear here.",
-    "createFirst": "Create Your First Playbook",
-    "createOwn": "Create Your Own Playbook",
-    "createOwnDesc": "Build and share your AI configuration with the world. Sign up to create and save your own playbooks.",
-    "view": "View",
-    "yours": "Yours"
+    "eyebrow": "AgentPlaybooks in practice",
+    "title": "Your project knowledge. Ready for the next conversation.",
+    "subtitle": "Keep instructions, skills, and useful memory in one playbook. Give your agent the context it needs, wherever you pick up the work.",
+    "create": "Create a playbook",
+    "howLink": "See how it works",
+    "clients": "Use with ChatGPT, Codex, Claude, Cursor, Hermes, and more.",
+    "exampleLabel": "An example workflow",
+    "exampleAskLabel": "You ask",
+    "exampleAsk": "“Where did we leave off, and what should we do next?”",
+    "examplePlaybook": "Your project playbook",
+    "example": {
+      "rules": "Instructions: project goals and working agreements",
+      "skill": "Skill: a short, structured project handoff",
+      "memory": "Memory: verified decisions and open questions"
+    },
+    "exampleResult": "Your agent uses the relevant context to suggest the next steps. You keep working without retelling the whole project.",
+    "casesEyebrow": "Start with a real task",
+    "casesTitle": "What will you use your playbook for?",
+    "casesIntro": "Try one of these small AgentPlaybooks starters, then shape it around your own work.",
+    "cases": {
+      "handoff": {
+        "title": "Pick up a project",
+        "description": "Move between sessions or agents with the goal, decisions, and next actions close at hand.",
+        "prompt": "“Make a handoff: what is done, what is uncertain, and what are the next three actions?”"
+      },
+      "research": {
+        "title": "Turn research into a decision",
+        "description": "Keep the question, source links, and useful findings together so the next answer builds on the evidence.",
+        "prompt": "“Compare these options, link the evidence, and tell me what still needs checking.”"
+      },
+      "review": {
+        "title": "Review a change with care",
+        "description": "Give your agent a repeatable way to inspect a change, identify meaningful risks, and verify the result.",
+        "prompt": "“Review this change for bugs and access risks. Explain what you checked and what remains uncertain.”"
+      }
+    },
+    "openStarter": "Open starter playbook",
+    "starterNote": "These public starters are authored by AgentPlaybooks and contain generic guidance in English. Make your own private copy before adding project details. Your agent performs the work using the tools available in your client.",
+    "howEyebrow": "How it works",
+    "howTitle": "One playbook. A useful place to start every time.",
+    "steps": {
+      "start": {
+        "title": "Make it yours",
+        "description": "Create a private playbook or copy a starter. Add a clear goal, working rules, and one useful skill."
+      },
+      "connect": {
+        "title": "Connect your agent",
+        "description": "Use the plugin, an MCP connection, or API/CLI access supported by your client. Choose the route that fits your workflow."
+      },
+      "continue": {
+        "title": "Work, then keep what matters",
+        "description": "Ask for the relevant skill or context. Save useful decisions to your private project memory and return to them next time."
+      }
+    },
+    "setupGuide": "Read the setup guide",
+    "anatomyTitle": "What goes into a playbook?",
+    "anatomyIntro": "Start small. Add only the context and connections your workflow needs.",
+    "anatomy": {
+      "instructions": {
+        "title": "Instructions",
+        "description": "Project goals, preferences, and rules your agent should follow."
+      },
+      "skills": {
+        "title": "Skills",
+        "description": "Reusable guidance for a particular task, with references loaded when needed."
+      },
+      "memory": {
+        "title": "Memory",
+        "description": "Decisions, observations, and open questions worth carrying into the next session."
+      },
+      "tools": {
+        "title": "Connected tools",
+        "description": "Configure MCP servers and other tool connections inside your playbook dashboard when the task needs them."
+      }
+    },
+    "questionsTitle": "A few useful details",
+    "faq": {
+      "clients": {
+        "question": "Can I switch between agents?",
+        "answer": "A playbook keeps your guidance and project context together. Connect it from supported clients, or export compatible files. Each client's tools and capabilities can differ."
+      },
+      "privacy": {
+        "question": "Where do my project details belong?",
+        "answer": "In your own private playbook. The public starters are examples to copy and adapt. Review visibility before sharing anything, and keep credentials out of instructions and memory."
+      },
+      "tools": {
+        "question": "Do I need to choose MCP, API, or CLI now?",
+        "answer": "Start with the connection your client supports. MCP exposes tools to your agent; the API and CLI also support scripts and local workflows. They can use the same playbook. Request only the context the task needs."
+      }
+    },
+    "startTitle": "Start with one workflow.",
+    "startDescription": "Pick a task you repeat, give it a little context, and use the playbook in your next conversation.",
+    "browseExamples": "Choose a starter",
+    "docs": "Documentation",
+    "privacy": "Privacy",
+    "metaTitle": "Explore use cases and starter playbooks"
   }
 }

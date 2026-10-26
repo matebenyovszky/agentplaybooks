@@ -18,8 +18,8 @@
   "landing": {
     "hero": {
       "title": "Egy playbook. Minden agent.",
-      "subtitle": "Nem újabb skill store: egyetlen, vendorfüggetlen playbook a teljes munkához — skillek, MCP szerverek, utasítások, memória, és titkok, amelyeket az agented úgy használ, hogy sosem látja őket — egy paranccsal kitelepítve Claude Code-ba, Cursorba, Codexbe, Antigravitybe és Hermesbe.",
-      "cta": "Playbook-ok felfedezése",
+      "subtitle": "Egyetlen, vendorfüggetlen playbook a teljes munkához — skillek, MCP szerverek, utasítások, memória, és titkok, amelyeket az agented úgy használ, hogy sosem látja őket — egy paranccsal kitelepítve Claude Code-ba, Cursorba, Codexbe, Antigravitybe és Hermesbe.",
+      "cta": "Felhasználási példák",
       "tryDemo": "Próbáld ki"
     },
     "whatIsPlaybook": {
@@ -103,10 +103,12 @@
       }
     },
     "publicRepo": {
-      "title": "Közösségi készlet",
-      "description": "Böngéssz és adj hozzá előre elkészített skilleket és MCP szervereket a közösségtől",
-      "browseSkills": "Skillek böngészése",
-      "browseMCP": "MCP szerverek böngészése"
+      "title": "Nézd meg, mire jó egy playbook",
+      "description": "Ismerj meg gyakorlati példákat projektátadásra, kutatásra és változtatások ellenőrzésére. Kezdj egy kis playbookkal, és alakítsd a saját munkádhoz.",
+      "badge": "Ötletek a következő feladatodhoz",
+      "cta": "Felhasználási példák",
+      "featureTitle": "Újrahasználható tudás",
+      "featureDescription": "Alakítsd a bevált munkamódszereket skillekké, amelyeket továbbvihetsz az ügynökeid között."
     },
     "useCases": {
       "title": "Ismerős?",
@@ -261,40 +263,101 @@
     }
   },
   "explore": {
-    "title": "Felfedezés",
-    "subtitle": "Fedezd fel a közösség által megosztott AI skilleket, playbookokat és MCP szervereket.",
-    "tabPlaybooks": "Playbookok",
-    "tabSkills": "Skillek",
-    "tabMCP": "MCP Szerverek",
-    "skills": "Skillek",
-    "personas": "persona",
-    "mcp": "MCP Szerverek",
-    "search": "Keresés...",
-    "searchPlaybooks": "Keresés név vagy leírás alapján...",
-    "searchSkills": "Skillek keresése név vagy leírás alapján...",
-    "searchMCP": "MCP szerverek keresése név vagy leírás alapján...",
-    "skillsAvailable": "elérhető skill",
-    "mcpAvailable": "elérhető MCP szerver",
-    "tags": "Címkék",
-    "verified": "Ellenőrzött",
-    "addToPlaybook": "Hozzáadás Playbookhoz",
-    "usageCount": "{count} alkalommal használva",
-    "playbooks": "playbook találat",
-    "sortBy": "Rendezés",
-    "mostStarred": "Legtöbb Csillag",
-    "mostRecent": "Legújabb",
-    "alphabetical": "Betűrend",
-    "download": "Letöltés",
-    "noPlaybooks": "Nem található publikus playbook",
-    "noPlaybooksDesc": "Légy te az első, aki megoszt egy playbookot a közösséggel!",
-    "noSkills": "Nem található publikus skill",
-    "noSkillsDesc": "A publikus playbookok skilljei itt fognak megjelenni.",
-    "noMCP": "Nem található publikus MCP szerver",
-    "noMCPDesc": "A publikus playbookok MCP szerverei itt fognak megjelenni.",
-    "createFirst": "Első Playbook Létrehozása",
-    "createOwn": "Hozz Létre Saját Playbookot",
-    "createOwnDesc": "Építsd és oszd meg AI konfigurációdat a világgal. Regisztrálj, hogy létrehozhasd és elmenthesd saját playbook-jaidat.",
-    "view": "Megtekintés",
-    "yours": "Saját"
+    "eyebrow": "AgentPlaybooks a gyakorlatban",
+    "title": "A projekted tudása. Készen a következő beszélgetésre.",
+    "subtitle": "Tartsd egy playbookban az instrukciókat, skilleket és a hasznos emlékeket. Az ügynököd megkapja a szükséges kontextust, bárhol folytatod a munkát.",
+    "create": "Playbook létrehozása",
+    "howLink": "Hogyan működik?",
+    "clients": "Használd ChatGPT-ben, Codexben, Claude-ban, Cursorban, Hermesben és más kliensekkel.",
+    "exampleLabel": "Egy lehetséges munkafolyamat",
+    "exampleAskLabel": "Ezt kéred",
+    "exampleAsk": "„Hol tartottunk, és mi legyen a következő lépés?”",
+    "examplePlaybook": "A projekted playbookja",
+    "example": {
+      "rules": "Instrukciók: projektcélok és közös munkaszabályok",
+      "skill": "Skill: rövid, strukturált projektátadás",
+      "memory": "Memória: ellenőrzött döntések és nyitott kérdések"
+    },
+    "exampleResult": "Az ügynököd a releváns kontextusból javasol következő lépéseket. Folytathatod a munkát a teljes projekt újramesélése nélkül.",
+    "casesEyebrow": "Indulj egy valódi feladatból",
+    "casesTitle": "Mire használod majd a playbookodat?",
+    "casesIntro": "Próbáld ki az AgentPlaybooks valamelyik rövid kezdőmintáját, és alakítsd a saját munkádhoz.",
+    "cases": {
+      "handoff": {
+        "title": "Folytass egy projektet",
+        "description": "Válts munkamenetet vagy ügynököt úgy, hogy kéznél legyen a cél, a döntések és a következő teendők.",
+        "prompt": "„Készíts projektátadást: mi készült el, mi bizonytalan, és mi a következő három teendő?”"
+      },
+      "research": {
+        "title": "Hozz döntést a kutatásból",
+        "description": "Tartsd együtt a kérdést, a forráshivatkozásokat és a hasznos eredményeket, hogy a következő válasz ezekre épülhessen.",
+        "prompt": "„Hasonlítsd össze a lehetőségeket, hivatkozd a bizonyítékokat, és jelezd, mit kell még ellenőrizni.”"
+      },
+      "review": {
+        "title": "Ellenőrizz egy változtatást",
+        "description": "Adj az ügynöködnek követhető módszert a változtatás átnézésére, a lényeges kockázatok feltárására és az eredmény ellenőrzésére.",
+        "prompt": "„Nézd át ezt a változtatást hibák és hozzáférési kockázatok szempontjából. Írd le, mit ellenőriztél, és mi bizonytalan.”"
+      }
+    },
+    "openStarter": "Kezdő playbook megnyitása",
+    "starterNote": "Ezek az AgentPlaybooks saját, nyilvános kezdőmintái, általános, angol nyelvű útmutatókkal. Készíts privát másolatot, mielőtt projektadatokat adnál hozzá. A munkát az ügynököd végzi a kliensedben elérhető eszközökkel.",
+    "howEyebrow": "Hogyan működik?",
+    "howTitle": "Egy playbook. Hasznos kiindulópont minden alkalommal.",
+    "steps": {
+      "start": {
+        "title": "Alakítsd magadhoz",
+        "description": "Hozz létre egy privát playbookot, vagy másolj egy kezdőmintát. Adj hozzá egyértelmű célt, munkaszabályokat és egy hasznos skillt."
+      },
+      "connect": {
+        "title": "Kapcsold össze az ügynököddel",
+        "description": "Használd a plugint, MCP-kapcsolatot vagy a kliensed által támogatott API- és CLI-elérést. Válaszd a munkádhoz illő utat."
+      },
+      "continue": {
+        "title": "Dolgozz, és őrizd meg a lényeget",
+        "description": "Kérd le a releváns skillt vagy kontextust. Mentsd a hasznos döntéseket a privát projektmemóriába, és térj vissza hozzájuk legközelebb."
+      }
+    },
+    "setupGuide": "Beállítási útmutató",
+    "anatomyTitle": "Mi kerül egy playbookba?",
+    "anatomyIntro": "Kezdd kicsiben. Csak a feladatodhoz szükséges tudást és kapcsolatokat add hozzá.",
+    "anatomy": {
+      "instructions": {
+        "title": "Instrukciók",
+        "description": "Projektcélok, szokások és szabályok, amelyeket az ügynököd kövessen."
+      },
+      "skills": {
+        "title": "Skillek",
+        "description": "Újrahasználható útmutatók konkrét feladatokhoz, szükség szerint betöltött referenciákkal."
+      },
+      "memory": {
+        "title": "Memória",
+        "description": "Döntések, megfigyelések és nyitott kérdések, amelyeket érdemes átvinni a következő munkamenetbe."
+      },
+      "tools": {
+        "title": "Kapcsolt eszközök",
+        "description": "MCP-szervereket és más eszközkapcsolatokat a playbook dashboardján állíthatsz be, amikor szükség van rájuk."
+      }
+    },
+    "questionsTitle": "Néhány hasznos részlet",
+    "faq": {
+      "clients": {
+        "question": "Válthatok az ügynökök között?",
+        "answer": "A playbook együtt tartja az útmutatókat és a projekt kontextusát. Kapcsolódj támogatott kliensből, vagy exportálj kompatibilis fájlokat. Az egyes kliensek eszközei és képességei eltérhetnek."
+      },
+      "privacy": {
+        "question": "Hová kerüljenek a projektadataim?",
+        "answer": "A saját privát playbookodba. A nyilvános kezdőmintákat másolhatod és átalakíthatod. Megosztás előtt ellenőrizd a láthatóságot, a hitelesítő adatokat pedig tartsd távol az instrukcióktól és a memóriától."
+      },
+      "tools": {
+        "question": "Már most választanom kell MCP, API vagy CLI között?",
+        "answer": "Kezdd a kliensed által támogatott kapcsolattal. Az MCP eszközöket ad az ügynöknek; az API és a CLI scriptekhez és helyi munkafolyamatokhoz is használható. Ugyanazt a playbookot érhetik el. Csak a feladathoz szükséges kontextust kérd le."
+      }
+    },
+    "startTitle": "Kezdd egyetlen munkafolyamattal.",
+    "startDescription": "Válassz egy visszatérő feladatot, adj hozzá némi kontextust, és használd a playbookot a következő beszélgetésben.",
+    "browseExamples": "Kezdőminta választása",
+    "docs": "Dokumentáció",
+    "privacy": "Adatvédelem",
+    "metaTitle": "Felhasználási példák és kezdő playbookok"
   }
 }

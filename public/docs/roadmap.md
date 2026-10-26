@@ -149,6 +149,12 @@ Shipped as a first pass:
   sent contradictory signals. Retired Anthropic crawler names replaced with
   `ClaudeBot` / `Claude-User` / `Claude-SearchBot`, and `OAI-SearchBot` added.
 
+- [x] **Use-case-led, server-rendered Explore** — `/explore` explains workflows,
+  playbook components, and setup, with three curated AgentPlaybooks starters.
+  Its content is present in the initial HTML in all four UI languages, without
+  catalog or star lookups. Skill and MCP discovery belongs in the playbook
+  dashboard; a public marketplace is not the direction for this page.
+
 Open, in rough order of value:
 
 - [ ] **Locale-prefixed routing** — the highest-value item, because the content
@@ -161,15 +167,6 @@ Open, in rough order of value:
   routing change — `src/app/[locale]/`, middleware, and a link-based language
   switcher replacing the cookie-based one — which makes this the most expensive
   item as well as the most valuable.
-
-- [ ] **Server-rendered marketplace with a URL per skill** — `/explore` is a
-  client component that fetches in `useEffect`, so a crawler sees an empty shell
-  and none of the marketplace is indexable. This is the only content asset that
-  grows without anyone writing prose: every public skill is a page somebody
-  searches for. `src/lib/skill-markdown.ts` and the `/.well-known/skills/` route
-  already have the data-fetch shape; what is missing is a server-rendered
-  listing plus `/skills/<name>` detail pages with their own metadata, in the
-  sitemap.
 
 - [ ] **Comparison pages (`/compare/...`)** — "X vs Y" and "X alternative" are
   the highest-intent, lowest-competition queries for a new developer tool, and
@@ -479,7 +476,7 @@ We welcome contributions! See our [Developer Guide](./developer-guide.md) for ho
 ### Priority Areas
 
 1. **Security enhancements** - API key management, rate limiting
-2. **Discoverability** - Locale-prefixed routing, indexable marketplace, comparison pages
+2. **Discoverability** - Locale-prefixed routing, practical use cases, comparison pages
 3. **Documentation** - More examples, tutorials, video content
 4. **Platform integrations** - New AI platforms and tools
 5. **RAG implementation** - Document storage and retrieval
