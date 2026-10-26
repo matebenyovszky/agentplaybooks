@@ -41,7 +41,7 @@
     "@opennextjs/cloudflare": "1.20.13",
     "@supabase/supabase-js": "2.118.0",
     "clsx": "^2.1.1",
-    "framer-motion": "^14.5.0",
+    "framer-motion": "^14.6.0",
     "hono": "^4.13.13",
     "jszip": "^3.10.2",
     "lucide-react": "^1.61.0",
@@ -53,7 +53,7 @@
     "yaml": "2.9.1"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "5.20261021.1",
+    "@cloudflare/workers-types": "5.20261023.1",
     "@electric-sql/pglite": "0.5.11",
     "@eslint/js": "^9.39.2",
     "@swc/helpers": "^0.5.23",
@@ -68,7 +68,7 @@
     "tsx": "^4.23.15",
     "typescript": "^5",
     "vitest": "^5.0.5",
-    "wrangler": "4.151.3"
+    "wrangler": "4.152.0"
   },
   "overrides": {
     "nanoid": "3.3.18",
