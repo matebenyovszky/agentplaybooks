@@ -59,7 +59,8 @@ Schema: [`supabase/schema.sql`](../../supabase/schema.sql) (new project), [`supa
 | `NEXT_PUBLIC_SUPABASE_URL` | Build + runtime | Browser-reachable URL | Rebuild |
 | `NEXT_PUBLIC_APP_URL` | Build + runtime | Own origin; unset falls back to the hosted domain | Rebuild |
 | `ALLOWED_ORIGINS` | Runtime, optional | Replaces the CORS allow-list | Restart |
-| `SECRETS_REQUIRE_ALLOWED_HOSTS` | Runtime, optional | `true` = mandatory `allowed_hosts` | Restart |
+| `SECRETS_REQUIRE_ALLOWED_HOSTS` | Runtime, optional | `true` = mandatory `allowed_hosts`. **Done on `main`:** [#216](https://github.com/matebenyovszky/agentplaybooks/pull/216) — the bundled `docker-compose.yml` defaults it to `true`; `false` lets unpinned secrets go to any public host | Restart |
+| `OUTBOUND_DNS_CHECK` | Runtime, optional | On by default in Node: before a secret is sent, the destination name is resolved and refused if any address is internal. `false` only when egress is enforced at the network layer. **Done on `main`:** [#216](https://github.com/matebenyovszky/agentplaybooks/pull/216), [`src/lib/outbound-destination.ts`](../../src/lib/outbound-destination.ts) | Restart |
 | `NO_EGRESS` | Runtime, optional | `true` disables optional outbound calls (MCP registry search) unless `MCP_REGISTRY_URL` is an internal mirror. **Done on `main`:** [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204) | Restart |
 | `MCP_REGISTRY_URL` | Runtime, optional | Override / disable official MCP registry search | Restart |
 | `MTLS_MODE` | Runtime, optional | `cloudflare` (default), `proxy`, or `off`. Unknown values fail closed. **Done on `main`:** [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201) | Restart |
