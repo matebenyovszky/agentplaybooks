@@ -16,6 +16,7 @@ export const READ_TOOL_PERMISSIONS: Record<string, string> = {
   get_memory_context: "memory:read",
   list_skills: "skills:read",
   get_skill: "skills:read",
+  get_skill_reference: "skills:read",
   list_skill_versions: "skills:read",
   list_canvas: "canvas:read",
   read_canvas: "canvas:read",

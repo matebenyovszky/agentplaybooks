@@ -21,9 +21,11 @@ export async function findPlaybookSkill<Row extends { id: string } = { id: strin
 ): Promise<Row | null> {
   let query = supabase.from("skills").select(columns).eq("playbook_id", playbookId);
   query = UUID_PATTERN.test(idOrName) ? query.eq("id", idOrName) : query.ilike("name", idOrName);
-  const { data } = await query
+  const { data, error } = await query
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
+
+  if (error) throw error;
   return (data as Row | null) ?? null;
 }

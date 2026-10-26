@@ -73,6 +73,7 @@ import { searchMemories } from "@/app/api/_shared/memory";
 import { proposeMemory, proposeSkill } from "@/app/api/_shared/proposals";
 import { memoryTimestamp, memoryWriteFields } from "@/lib/memory";
 import { findPlaybookSkill } from "@/lib/repositories/skills";
+import { getSkillDefinition, getSkillReference, listSkillSummaries, skillReferenceWindow } from "@/lib/repositories/skill-context";
 import { serveSkill, skillResourceUri, type ServedSkill } from "@/lib/mcp/skill-extension";
 import { getPublisherIdForAuthUser } from "@/lib/repositories/playbooks";
 import { cachedSingleFlight, type SingleFlightEntry } from "@/lib/cache/single-flight";
@@ -986,11 +987,7 @@ use_secret_write({
 
       // Skills resource
       if (uri?.match(/\/skills$/)) {
-        const { data: skills } = await serviceSupabase
-          .from("skills")
-          .select("id, name, description, content, licence, publisher_id, priority")
-          .eq("playbook_id", playbook.id)
-          .order("priority", { ascending: false });
+        const skills = await listSkillSummaries(serviceSupabase, playbook.id);
 
         return c.json({
           jsonrpc: "2.0",
@@ -1012,11 +1009,16 @@ use_secret_write({
       if (attachmentMatch) {
         const [, skillId, attachmentId] = attachmentMatch;
 
+        const parent = await findPlaybookSkill(serviceSupabase, playbook.id, skillId);
+        if (!parent) {
+          return c.json({ jsonrpc: "2.0", id, error: { code: -32002, message: "Attachment not found" } });
+        }
+
         const { data: attachment } = await serviceSupabase
           .from("skill_attachments")
           .select("*")
           .eq("id", attachmentId)
-          .eq("skill_id", skillId)
+          .eq("skill_id", parent.id)
           .single();
 
         if (!attachment) {
@@ -1233,37 +1235,12 @@ use_secret_write({
           }
 
           case "list_skills": {
-            const { data } = await serviceSupabase
-              .from("skills")
-              .select("id, name, description, content, licence, publisher_id, priority")
-              .eq("playbook_id", playbook.id)
-              .order("priority", { ascending: false });
-            result = data || [];
+            result = await listSkillSummaries(serviceSupabase, playbook.id, args.include_content === true);
             break;
           }
 
           case "get_skill": {
-            const skillId = args.skill_id as string;
-            const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(skillId);
-
-            let query = serviceSupabase
-              .from("skills")
-              .select("*, skill_attachments(*)")
-              .eq("playbook_id", playbook.id);
-
-            if (isUuid) {
-              query = query.eq("id", skillId);
-            } else {
-              query = query.ilike("name", skillId);
-            }
-
-            const { data, error } = await query
-              .order("created_at", { ascending: false })
-              .limit(1)
-              .maybeSingle();
-
-            if (error) throw new Error(error.message);
-            if (!data) throw new Error("Skill not found");
+            const data = await getSkillDefinition(serviceSupabase, playbook.id, args.skill_id as string, args.include_attachments === true, args.include_content !== false);
 
             // The document already carries these as frontmatter, but resolved
             // here the caller gets normalized ids, filled-in defaults and a
@@ -1272,6 +1249,14 @@ use_secret_write({
             result = demonstrations.length > 0
               ? { ...data, demonstrations: demonstrations.map(resolveDemonstration) }
               : data;
+            break;
+          }
+
+          case "get_skill_reference": {
+            // Validate the range before querying a potentially large document.
+            skillReferenceWindow("", { offset: 0, max_chars: args.max_chars });
+            const file = await getSkillReference(serviceSupabase, playbook.id, args.skill_id as string, args.filename as string);
+            result = { ...file, ...skillReferenceWindow(file.content, args) };
             break;
           }
 

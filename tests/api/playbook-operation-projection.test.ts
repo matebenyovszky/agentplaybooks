@@ -99,12 +99,12 @@ describe("playbook operation projections", () => {
 describe("hosted MCP tool definition quality", () => {
   const manageTools = [...ACCOUNT_TOOLS, ...projectPlaybookToolsForUser()];
 
-  it("keeps the 50-tool control-plane surface", () => {
-    // The 43rd playbook tool reads the previous versions of one memory.
+  it("keeps the 51-tool control-plane surface", () => {
+    // The 44th playbook tool reads one bounded skill reference.
     expect(ACCOUNT_TOOLS).toHaveLength(7);
-    expect(PLAYBOOK_TOOLS).toHaveLength(43);
-    expect(manageTools).toHaveLength(50);
-    expect(new Set(manageTools.map((tool) => tool.name)).size).toBe(50);
+    expect(PLAYBOOK_TOOLS).toHaveLength(44);
+    expect(manageTools).toHaveLength(51);
+    expect(new Set(manageTools.map((tool) => tool.name)).size).toBe(51);
   });
 
   it("declares MCP annotations on every manage tool", () => {
