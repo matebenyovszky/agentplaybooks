@@ -37,4 +37,4 @@ Un Playbook es un archivo portátil que contiene:
 
 ¿Listo para construir tu primer agente transferible?
 
-[Explora la Comunidad](/explore) o [Crea tu primer Playbook](/dashboard).
+[Explora casos de uso](/explore) o [Crea tu primer Playbook](/dashboard).

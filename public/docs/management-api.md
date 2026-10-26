@@ -543,7 +543,9 @@ Use `read_memory` when you know the exact key:
 
 ### 5. Make Playbooks Public Carefully
 
-Only make playbooks public if they're meant to be shared. Public playbooks appear in the marketplace.
+Only make playbooks public if their content is intended for anyone to read.
+Public visibility does not automatically feature a playbook on Explore, which
+contains curated first-party starters. Use a private copy for project details.
 
 ---
 

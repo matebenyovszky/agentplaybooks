@@ -58,7 +58,8 @@ It is not another skill store or MCP registry. Skills and MCP connections are pa
 
 - API keys: role-based access control (Viewer, Coworker, Admin)
 - Team collaboration: one-time editor invites without sharing human credentials or agent API keys
-- Marketplace: Public and Unlisted playbooks, skills, MCP servers
+- Explore: practical use cases, setup guidance, and curated AgentPlaybooks starters
+- Sharing: public or unlisted playbooks; keep project context in private copies
 - Theme: system-aware Light and Dark modes
 
 ## Tech Stack
@@ -350,7 +351,11 @@ POST   /api/user/api-keys
 DELETE /api/user/api-keys/:kid
 ```
 
-### Marketplace and stars
+### Public discovery and saved favorites
+
+These APIs support public reads, dashboard skill/MCP discovery, and existing
+favorites. Explore is a server-rendered use-case guide with curated first-party
+starter links; it does not load these catalogs or automatically feature public playbooks.
 
 ```
 GET /api/public/playbooks
@@ -477,7 +482,7 @@ agentplaybooks/
         playbooks/         # Per-playbook routes (secrets, canvas, audit, …)
       dashboard/           # Authenticated UI
       enterprise/          # Self-hosting landing page
-      explore/             # Marketplace
+      explore/             # Use cases, setup guidance, curated starters
       login/               # Auth pages
       page.tsx             # Marketing home
     components/
@@ -525,7 +530,7 @@ agentplaybooks/
 - user_api_keys: user-scoped API keys
 - playbook_collaborators: accepted human editor memberships and hashed one-time invites
 - profiles: public user profile data
-- playbook_stars: marketplace stars
+- playbook_stars: saved playbook favorites
 
 There is deliberately **no second credential store**. Federated MCP and OpenAPI
 servers used to keep their own encrypted secrets in `mcp_server_secrets`; that

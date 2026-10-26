@@ -53,7 +53,7 @@ agentplaybooks/
 │   │   ├── dashboard/              # Authenticated user area
 │   │   │   ├── page.tsx            # Playbook list
 │   │   │   └── playbook/[id]/      # Playbook editor
-│   │   ├── explore/                # Public repository
+│   │   ├── explore/                # Server-rendered use cases and curated starters
 │   │   │   └── page.tsx            # Browse skills/MCPs
 │   │   ├── enterprise/             # Enterprise landing
 │   │   │   └── page.tsx            # B2B features

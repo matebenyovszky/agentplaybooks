@@ -1,4 +1,4 @@
-import { expect, type Page } from "@playwright/test";
+import { expect, type Page, type Request } from "@playwright/test";
 
 import {
   assertNoCspViolations,
@@ -169,6 +169,9 @@ export async function visitAndAssert(
   if (route.waitFor) {
     await expect(page.locator(route.waitFor).first()).toBeVisible();
   }
+  if (route.name === "explore") {
+    expect(await response!.text(), "Explore content should be in the initial HTML").toContain("What will you use your playbook for?");
+  }
   if (route.locale === "hu") {
     await expect(page.locator("h1").first()).toContainText("Egy playbook");
   }
@@ -182,13 +185,24 @@ export async function runLiveOverflowSuite(page: Page, viewport: ViewportCase) {
   await installPublicReadMocks(page);
 
   for (const route of APP_ROUTES) {
+    const catalogRequests: string[] = [];
+    const recordCatalogRequest = (request: Request) => {
+      if (/\/api\/(public\/(playbooks|skills|mcp)|user\/starred)([/?]|$)/.test(new URL(request.url()).pathname)) {
+        catalogRequests.push(request.url());
+      }
+    };
+    if (route.name === "explore") page.on("request", recordCatalogRequest);
     await visitAndAssert(page, route, viewport, cspErrors);
     if (route.name === "explore") {
-      await page.getByRole("button", { name: /Skills/i }).click();
-      await assertPageFits(page, "explore-skills", viewport);
-      await page.getByRole("button", { name: /MCP/i }).click();
-      await assertPageFits(page, "explore-mcp", viewport);
+      await page.getByRole("link", { name: "See how it works" }).click();
+      await expect(page.locator("#how-it-works")).toBeInViewport();
+      await page.getByText("Where do my project details belong?", { exact: true }).click();
+      await expect(page.getByText("In your own private playbook.", { exact: false })).toBeVisible();
+      await expect(page.getByRole("link", { name: "Open starter playbook" })).toHaveCount(3);
+      await assertPageFits(page, "explore-guide", viewport);
       await assertNoCspViolations(page, cspErrors);
+      page.off("request", recordCatalogRequest);
+      expect(catalogRequests, "Explore should not load catalogs or star lists").toEqual([]);
     }
   }
 }

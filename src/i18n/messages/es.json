@@ -18,8 +18,8 @@
   "landing": {
     "hero": {
       "title": "Un playbook. Todos tus agentes.",
-      "subtitle": "No es otra tienda de habilidades: un único playbook independiente del proveedor para todo el trabajo — habilidades, servidores MCP, instrucciones, memoria y credenciales que tu agente usa sin verlas nunca — desplegado a Claude Code, Cursor, Codex, Antigravity y Hermes con un solo comando.",
-      "cta": "Empieza Gratis",
+      "subtitle": "Un único playbook independiente del proveedor para todo el trabajo — habilidades, servidores MCP, instrucciones, memoria y credenciales que tu agente usa sin verlas nunca — desplegado a Claude Code, Cursor, Codex, Antigravity y Hermes con un solo comando.",
+      "cta": "Explorar casos de uso",
       "tryDemo": "Probar Demo"
     },
     "features": {
@@ -70,10 +70,12 @@
       }
     },
     "publicRepo": {
-      "title": "Repositorio Comunitario",
-      "description": "Explora y añade habilidades pre-construidas y servidores MCP creados por la comunidad",
-      "browseSkills": "Explorar Habilidades",
-      "browseMCP": "Explorar Servidores MCP"
+      "title": "Descubre qué puede hacer tu playbook",
+      "description": "Flujos prácticos para traspasos de proyectos, investigación y revisión de cambios. Empieza con un pequeño playbook y hazlo tuyo.",
+      "badge": "Ideas para tu próximo flujo",
+      "cta": "Explorar casos de uso",
+      "featureTitle": "Conocimiento reutilizable",
+      "featureDescription": "Convierte métodos útiles en habilidades que puedes adaptar y llevar de un agente a otro."
     },
     "whatIsPlaybook": {
       "title": "¿Qué es un Playbook?",
@@ -252,41 +254,102 @@
     }
   },
   "explore": {
-    "title": "Explorar",
-    "subtitle": "Descubre habilidades de IA, playbooks y servidores MCP compartidos por la comunidad.",
-    "tabPlaybooks": "Playbooks",
-    "tabSkills": "Habilidades",
-    "tabMCP": "Servidores MCP",
-    "skills": "Habilidades",
-    "personas": "personas",
-    "mcp": "Servidores MCP",
-    "search": "Buscar...",
-    "searchPlaybooks": "Buscar playbooks por nombre o descripción...",
-    "searchSkills": "Buscar habilidades por nombre o descripción...",
-    "searchMCP": "Buscar servidores MCP por nombre o descripción...",
-    "skillsAvailable": "habilidades disponibles",
-    "mcpAvailable": "servidores MCP disponibles",
-    "tags": "Etiquetas",
-    "verified": "Verificado",
-    "addToPlaybook": "Añadir a Playbook",
-    "usageCount": "Usado {count} veces",
-    "playbooks": "playbooks encontrados",
-    "sortBy": "Ordenar por",
-    "mostStarred": "Más Destacados",
-    "mostRecent": "Más Recientes",
-    "alphabetical": "Alfabético",
-    "download": "Descargar",
-    "noPlaybooks": "No se encontraron playbooks públicos",
-    "noPlaybooksDesc": "¡Sé el primero en compartir un playbook con la comunidad!",
-    "noSkills": "No se encontraron habilidades públicas",
-    "noSkillsDesc": "Las habilidades de playbooks públicos aparecerán aquí.",
-    "noMCP": "No se encontraron servidores MCP públicos",
-    "noMCPDesc": "Los servidores MCP de playbooks públicos aparecerán aquí.",
-    "createFirst": "Crea Tu Primer Playbook",
-    "createOwn": "Crea Tu Propio Playbook",
-    "createOwnDesc": "Construye y comparte tu configuración de IA con el mundo. Regístrate para crear y guardar tus propios playbooks.",
-    "view": "Ver",
-    "yours": "Tuyo"
+    "eyebrow": "AgentPlaybooks en la práctica",
+    "title": "El conocimiento de tu proyecto. Listo para la próxima conversación.",
+    "subtitle": "Reúne instrucciones, habilidades y memoria útil en un playbook. Dale a tu agente el contexto que necesita, donde sea que retomes el trabajo.",
+    "create": "Crear un playbook",
+    "howLink": "Cómo funciona",
+    "clients": "Úsalo con ChatGPT, Codex, Claude, Cursor, Hermes y otros clientes.",
+    "exampleLabel": "Un flujo de ejemplo",
+    "exampleAskLabel": "Tu pregunta",
+    "exampleAsk": "«¿Dónde nos quedamos y cuál es el siguiente paso?»",
+    "examplePlaybook": "El playbook de tu proyecto",
+    "example": {
+      "rules": "Instrucciones: objetivos del proyecto y acuerdos de trabajo",
+      "skill": "Habilidad: un traspaso breve y estructurado del proyecto",
+      "memory": "Memoria: decisiones verificadas y preguntas abiertas"
+    },
+    "exampleResult": "Tu agente usa el contexto relevante para proponer los siguientes pasos. Continúas sin volver a explicar todo el proyecto.",
+    "casesEyebrow": "Empieza con una tarea real",
+    "casesTitle": "¿Para qué usarás tu playbook?",
+    "casesIntro": "Prueba una de estas pequeñas plantillas de AgentPlaybooks y adáptala a tu trabajo.",
+    "cases": {
+      "handoff": {
+        "title": "Retoma un proyecto",
+        "description": "Cambia de sesión o de agente con el objetivo, las decisiones y las próximas acciones a mano.",
+        "prompt": "«Prepara un traspaso: qué está hecho, qué es incierto y cuáles son las tres próximas acciones.»"
+      },
+      "research": {
+        "title": "Convierte la investigación en una decisión",
+        "description": "Reúne la pregunta, los enlaces a las fuentes y los hallazgos para que la próxima respuesta se base en la evidencia.",
+        "prompt": "«Compara estas opciones, enlaza las pruebas e indica qué falta por comprobar.»"
+      },
+      "review": {
+        "title": "Revisa un cambio con cuidado",
+        "description": "Dale a tu agente un método repetible para revisar cambios, detectar riesgos importantes y verificar el resultado.",
+        "prompt": "«Revisa este cambio en busca de errores y riesgos de acceso. Explica qué comprobaste y qué sigue siendo incierto.»"
+      }
+    },
+    "openStarter": "Abrir playbook de ejemplo",
+    "starterNote": "Estas plantillas públicas son de AgentPlaybooks y contienen instrucciones generales en inglés. Crea tu propia copia privada antes de añadir datos del proyecto. Tu agente realiza el trabajo con las herramientas disponibles en tu cliente.",
+    "howEyebrow": "Cómo funciona",
+    "howTitle": "Un playbook. Un punto de partida útil en cada ocasión.",
+    "steps": {
+      "start": {
+        "title": "Hazlo tuyo",
+        "description": "Crea un playbook privado o copia una plantilla. Añade un objetivo claro, reglas de trabajo y una habilidad útil."
+      },
+      "connect": {
+        "title": "Conecta tu agente",
+        "description": "Usa el plugin, una conexión MCP o el acceso por API o CLI de tu cliente. Elige la opción que encaje con tu trabajo."
+      },
+      "continue": {
+        "title": "Trabaja y conserva lo importante",
+        "description": "Consulta la habilidad o el contexto relevante. Guarda decisiones útiles en la memoria privada del proyecto y recupéralas la próxima vez."
+      }
+    },
+    "setupGuide": "Leer la guía de configuración",
+    "anatomyTitle": "¿Qué contiene un playbook?",
+    "anatomyIntro": "Empieza con poco. Añade solo el contexto y las conexiones que necesita tu tarea.",
+    "anatomy": {
+      "instructions": {
+        "title": "Instrucciones",
+        "description": "Objetivos, preferencias y reglas que tu agente debe seguir."
+      },
+      "skills": {
+        "title": "Habilidades",
+        "description": "Guías reutilizables para tareas concretas, con referencias que se cargan cuando hacen falta."
+      },
+      "memory": {
+        "title": "Memoria",
+        "description": "Decisiones, observaciones y preguntas abiertas para la próxima sesión."
+      },
+      "tools": {
+        "title": "Herramientas conectadas",
+        "description": "Configura servidores MCP y otras conexiones desde el panel de tu playbook cuando la tarea los necesite."
+      }
+    },
+    "questionsTitle": "Algunos detalles útiles",
+    "faq": {
+      "clients": {
+        "question": "¿Puedo cambiar de agente?",
+        "answer": "El playbook mantiene juntas tus instrucciones y el contexto del proyecto. Conéctalo desde clientes compatibles o exporta archivos compatibles. Las herramientas y capacidades pueden variar entre clientes."
+      },
+      "privacy": {
+        "question": "¿Dónde debo guardar los datos de mi proyecto?",
+        "answer": "En tu propio playbook privado. Las plantillas públicas son ejemplos que puedes copiar y adaptar. Revisa la visibilidad antes de compartir y no incluyas credenciales en las instrucciones ni en la memoria."
+      },
+      "tools": {
+        "question": "¿Tengo que elegir ya entre MCP, API o CLI?",
+        "answer": "Empieza con la conexión que admite tu cliente. MCP ofrece herramientas al agente; la API y la CLI también sirven para scripts y flujos locales. Pueden usar el mismo playbook. Solicita solo el contexto necesario."
+      }
+    },
+    "startTitle": "Empieza con un solo flujo de trabajo.",
+    "startDescription": "Elige una tarea que repitas, añade algo de contexto y usa el playbook en tu próxima conversación.",
+    "browseExamples": "Elegir una plantilla",
+    "docs": "Documentación",
+    "privacy": "Privacidad",
+    "metaTitle": "Casos de uso y playbooks de ejemplo"
   },
   "canvas": {
     "title": "Documentos Canvas",

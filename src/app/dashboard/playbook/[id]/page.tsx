@@ -2033,7 +2033,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                   </label>
                   {canEdit && (
                     <p className="text-xs text-neutral-500 dark:text-slate-500 mb-3">
-                      Add tags to help others find your playbook in the Explore page
+                      Add tags to organize your playbook by topic or workflow
                     </p>
                   )}
 

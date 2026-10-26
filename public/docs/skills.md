@@ -123,15 +123,17 @@ GET /api/playbooks/:guid?format=openapi
 
 This returns an OpenAPI 3.0 specification that can be used as a GPT Action.
 
-## Public Skill Repository
+## Start with a workflow
 
-Browse community-contributed skills at [apbks.com/explore](https://apbks.com/explore):
+Visit [Explore](/explore) for practical use cases and small, first-party starter playbooks:
 
-- **Coding** - Code search, refactoring, documentation
-- **Writing** - Grammar check, summarization, translation
-- **Data** - Data analysis, visualization, conversion
-- **Automation** - Task scheduling, notifications, integrations
-- **Research** - Web search, fact-checking, citations
+- **Project handoff** — carry verified decisions and next actions into another session.
+- **Research brief** — answer a focused question with sources and explicit uncertainties.
+- **Change review** — inspect a change, prioritize meaningful risks, and verify the outcome.
+
+Copy a starter to a private playbook before adding project details. Add or import
+skills and configure MCP connections from the playbook dashboard. Explore explains
+the workflows; it does not list a skill or MCP marketplace.
 
 ## Best Practices
 
