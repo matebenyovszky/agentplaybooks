@@ -7,6 +7,7 @@ import { callFederatedTool, federatedCallPrefixes } from "@/lib/mcp/federation";
 import { federationAuditWriter } from "@/app/api/_shared/audit";
 import type { ApiKey, MCPServer } from "@/lib/supabase/types";
 import { matchesPlaybook, playbookIdentifierColumn } from "@/lib/playbook-identifier";
+import { isAnonymousPublicRequest, isPublicMcpServer } from "@/app/api/_shared/public-mcp-tools";
 
 type AuthenticatedPlaybookKey = ApiKey & { playbooks: { id: string; guid: string } };
 
@@ -23,6 +24,7 @@ app.post("/", async (c) => {
     .eq(playbookIdentifierColumn(guid), guid)
     .eq("visibility", "public")
     .single();
+  const isPublicPlaybook = Boolean(playbook);
   let authenticatedKey: AuthenticatedPlaybookKey | null = null;
   if (!playbook) {
     authenticatedKey = await validateApiKey(c.req.raw, "tools:call");
@@ -38,6 +40,8 @@ app.post("/", async (c) => {
   const server = ((rows || []) as MCPServer[]).find((item) =>
     federatedCallPrefixes(item).some((prefix) => toolName.startsWith(prefix)));
   if (!server) return c.json({ error: "Federated tool not found" }, 404);
+  const anonymousPublic = await isAnonymousPublicRequest(c.req.raw, playbook.id, isPublicPlaybook);
+  if (anonymousPublic && !isPublicMcpServer(server)) return c.json({ error: "tools:call permission required" }, 401);
   // "public" covers keyless upstreams only; see anonymousMayCall.
   if (!anonymousMayCall(server as MCPServer)) {
     const key = authenticatedKey || await validateApiKey(c.req.raw, "tools:call");
@@ -48,7 +52,7 @@ app.post("/", async (c) => {
   const audit = federationAuditWriter(playbook.id, requestId);
   try {
     const args = await c.req.json<Record<string, unknown>>().catch(() => ({}));
-    const result = await callFederatedTool(server, toolName, args, { secrets, audit });
+    const result = await callFederatedTool(server, toolName, args, { secrets, audit, readOnly: anonymousPublic });
     return c.json({ tool: toolName, result });
   } catch (error) {
     return c.json({ error: error instanceof Error ? error.message : "Federated tool call failed", request_id: requestId }, 502);

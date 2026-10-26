@@ -9,6 +9,7 @@ import {
   validateApiKey,
   validatePlaybookCredential,
   validateUserApiKey,
+  resolvePrivatePlaybookActor,
 } from "@/app/api/_shared/auth";
 import { checkPlaybookWriteAccess } from "@/app/api/_shared/guards";
 
@@ -28,6 +29,7 @@ vi.mock("@/app/api/_shared/auth", async (importOriginal) => ({
   validateUserApiKey: vi.fn(async () => null),
   getAuthenticatedUser: vi.fn(async () => null),
   requireAuth: vi.fn(async () => null),
+  resolvePrivatePlaybookActor: vi.fn(),
 }));
 vi.mock("@/app/api/_shared/guards", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/app/api/_shared/guards")>()),
@@ -103,6 +105,7 @@ beforeEach(() => {
   vi.mocked(validateUserApiKey).mockResolvedValue(null);
   vi.mocked(getAuthenticatedUser).mockResolvedValue(null);
   vi.mocked(checkPlaybookWriteAccess).mockResolvedValue(false);
+  vi.mocked(resolvePrivatePlaybookActor).mockResolvedValue({ kind: "playbook_key", role: "coworker", permissions: [] });
 });
 
 describe("MCP writes with a propose-only key", () => {
