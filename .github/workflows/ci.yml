@@ -40,6 +40,11 @@ jobs:
   playbook-mobile-layout:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    container:
+      # Keep this image and the @playwright/test package below on the same version.
+      # Browsers / OS libraries are preinstalled; no per-run apt download is needed.
+      image: mcr.microsoft.com/playwright:v1.56.1-noble@sha256:f1e7e01021efd65dd1a2c56064be399f3e4de00fd021ac561325f2bfbb2b837a
+      options: --user 1001 --shm-size=1gb
     env:
       NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-anon-key
@@ -55,5 +60,4 @@ jobs:
       - run: npm run prebuild
       - run: npm run build
       - run: npm install --no-package-lock --no-save @playwright/test@1.56.1
-      - run: npx playwright install --with-deps chromium webkit
       - run: npx playwright test
