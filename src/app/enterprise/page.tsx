@@ -11,7 +11,7 @@ import {
   GitFork,
   Cpu,
   Boxes,
-  ShoppingBag,
+  BookOpen,
   Sparkles,
   Code2,
   RefreshCw,
@@ -102,24 +102,24 @@ const forWho = [
   },
 ];
 
-const marketplaceFeatures = [
+const workflowFeatures = [
   {
-    icon: ShoppingBag,
-    title: "Skills Marketplace",
+    icon: BookOpen,
+    title: "Reusable Skills",
     description:
-      "Browse, share, and discover community-created skills. The first online store for AI agent capabilities.",
+      "Turn your team's working methods into focused skills that agents can use across projects and clients.",
   },
   {
     icon: Boxes,
-    title: "MCP Server Registry",
+    title: "Connected Tools",
     description:
-      "Find and deploy Model Context Protocol servers. Extend your agents with tools, resources, and integrations.",
+      "Configure MCP connections inside the playbook dashboard when a workflow needs external tools or data.",
   },
   {
     icon: Sparkles,
-    title: "Persona Templates",
+    title: "Starter Playbooks",
     description:
-      "Pre-built AI personalities for common use cases. Customize and deploy in minutes, not hours.",
+      "Try a small AgentPlaybooks example, make a private copy, and adapt its guidance to your own work.",
   },
 ];
 
@@ -281,7 +281,7 @@ export default function EnterprisePage() {
         </div>
       </section>
 
-      {/* Skills Marketplace */}
+      {/* Reusable workflows */}
       <section className="py-20 border-t border-blue-900/30">
         <div className="max-w-7xl mx-auto px-6">
           <motion.div
@@ -291,18 +291,18 @@ export default function EnterprisePage() {
             className="text-center mb-16"
           >
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/10 border border-amber-500/20 mb-6">
-              <ShoppingBag className="w-4 h-4 text-amber-400" />
-              <span className="text-sm text-amber-300">The Agent App Store</span>
+              <BookOpen className="w-4 h-4 text-amber-400" />
+              <span className="text-sm text-amber-700 dark:text-amber-300">Knowledge for your next workflow</span>
             </div>
-            <h2 className="text-4xl font-bold mb-4">Skills Marketplace</h2>
+            <h2 className="text-4xl font-bold mb-4">Build on what works</h2>
             <p className="text-neutral-600 dark:text-neutral-400 text-lg max-w-2xl mx-auto">
-              Like an app store, but for AI capabilities. Browse, share, and discover
-              what your agents can learn.
+              Keep your working methods, project context, and tool connections together.
+              Start with a practical example, then adapt it to your team.
             </p>
           </motion.div>
 
           <div className="grid md:grid-cols-3 gap-8">
-            {marketplaceFeatures.map((item, index) => (
+            {workflowFeatures.map((item, index) => (
               <motion.div
                 key={item.title}
                 initial={{ opacity: 0, y: 20 }}
@@ -330,7 +330,7 @@ export default function EnterprisePage() {
               href="/explore"
               className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-amber-600 to-amber-400 text-slate-900 hover:opacity-90 rounded-full font-semibold transition-colors shadow-lg shadow-amber-500/25"
             >
-              Browse the Marketplace
+              Explore Use Cases
               <ArrowRight className="w-5 h-5" />
             </Link>
           </motion.div>
@@ -370,7 +370,7 @@ export default function EnterprisePage() {
                 step: "03",
                 title: "Share & Evolve",
                 description:
-                  "Publish to the marketplace or keep private. Fork community skills, contribute improvements, build on others' work.",
+                  "Keep project context private, share selected playbooks deliberately, and improve your skills as you learn what works.",
               },
             ].map((item, index) => (
               <motion.div

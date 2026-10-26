@@ -37,4 +37,4 @@ Ein Playbook ist eine portable Datei, die Folgendes enthält:
 
 Bereit, Ihren ersten übertragbaren Agenten zu bauen?
 
-[Community erkunden](/explore) oder [Erstes Playbook erstellen](/dashboard).
+[Anwendungsfälle entdecken](/explore) oder [Erstes Playbook erstellen](/dashboard).
