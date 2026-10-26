@@ -131,3 +131,55 @@ BEGIN
   END IF;
 END
 $verify_playbook_fork$;
+
+DO $verify_rls_performance$
+DECLARE
+  expected record;
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM supabase_migrations.schema_migrations
+    WHERE version = '20261026212458'
+  ) THEN
+    RAISE EXCEPTION 'RLS / foreign-key index optimization is not recorded';
+  END IF;
+
+  FOR expected IN
+    SELECT * FROM (VALUES
+      ('mcp_servers', 'mcp_servers_publisher_id_idx', ARRAY['publisher_id']),
+      ('canvas', 'canvas_run_playbook_idx', ARRAY['run_id', 'playbook_id']),
+      ('playbook_runs', 'playbook_runs_created_by_idx', ARRAY['created_by']),
+      ('playbook_versions', 'playbook_versions_changed_by_api_key_idx', ARRAY['changed_by_api_key_id']),
+      ('skill_versions', 'skill_versions_changed_by_api_key_idx', ARRAY['changed_by_api_key_id'])
+    ) AS indexes(table_name, index_name, columns)
+  LOOP
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_index i
+      JOIN pg_class c ON c.oid = i.indexrelid
+      JOIN pg_am am ON am.oid = c.relam
+      WHERE i.indrelid = to_regclass('public.' || expected.table_name)
+        AND c.oid = to_regclass('public.' || expected.index_name)
+        AND i.indisvalid AND i.indisready AND i.indpred IS NULL
+        AND am.amname = 'btree'
+        AND (SELECT array_agg(a.attname::text ORDER BY k.ordinality)
+             FROM unnest(i.indkey) WITH ORDINALITY AS k(attnum, ordinality)
+             JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = k.attnum
+             WHERE k.ordinality <= i.indnkeyatts) = expected.columns
+    ) THEN
+      RAISE EXCEPTION 'Missing or incorrect FK index: %', expected.index_name;
+    END IF;
+  END LOOP;
+
+  -- Same detection as Supabase's auth_rls_initplan advisor, for the identity
+  -- functions used by these policies. Inspect USING and WITH CHECK separately.
+  IF EXISTS (
+    SELECT 1 FROM pg_policies p
+    CROSS JOIN LATERAL (VALUES (p.qual), (p.with_check)) AS e(expression)
+    CROSS JOIN (VALUES ('auth.uid()'), ('auth.role()')) AS f(call)
+    WHERE p.schemaname = 'public'
+      AND e.expression LIKE '%' || f.call || '%'
+      AND lower(e.expression) NOT LIKE '%select ' || f.call || '%'
+  ) THEN
+    RAISE EXCEPTION 'A public policy still evaluates request identity per row';
+  END IF;
+END
+$verify_rls_performance$;
