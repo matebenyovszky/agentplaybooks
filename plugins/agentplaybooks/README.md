@@ -81,12 +81,11 @@ user API key for it with the CLI, then reconnecting `agentplaybooks-servers`
 from `/mcp`:
 
 ```bash
-npx --yes @agentplaybooks/cli@0.6.0 login --url=https://playbooks.example.org
+npx --yes @agentplaybooks/cli@0.7.0 login --url=https://playbooks.example.org
 ```
 
-The CLI takes the key from `AGENTPLAYBOOKS_API_KEY`, or prompts for it.
-The 0.6.0 prompt shows the key as you paste it — later releases do not — so on
-a shared screen set the variable instead.
+The CLI takes the key from `AGENTPLAYBOOKS_API_KEY`, or prompts for it without
+echoing the value. Enter the key locally; do not paste it into a conversation.
 
 `logout --url=<server>` removes the key again. A server whose certificate comes
 from a CA outside your operating system's store needs that CA's file in

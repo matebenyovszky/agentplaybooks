@@ -32,7 +32,7 @@ interface FakeServer {
  * session id on initialize and refuses later requests without it — the two
  * transport shapes a Streamable HTTP server may use.
  */
-async function fakeServer(name: string, key: string, options: { sse?: boolean; session?: string } = {}): Promise<FakeServer> {
+async function fakeServer(name: string, key: string, options: { sse?: boolean; session?: string; redirect?: string } = {}): Promise<FakeServer> {
   const calls: Call[] = [];
   const playbooks = [{ id: `uuid-${name}`, guid: `guid-${name}`, name: `Playbook on ${name}` }];
   const server = http.createServer((request, response) => {
@@ -41,6 +41,10 @@ async function fakeServer(name: string, key: string, options: { sse?: boolean; s
     request.on("end", () => {
       if (request.headers["x-api-key"] !== key) {
         response.writeHead(401, { "content-type": "application/json" }).end('{"error":"unauthorized"}');
+        return;
+      }
+      if (options.redirect) {
+        response.writeHead(307, { location: options.redirect }).end();
         return;
       }
       const message = JSON.parse(body);
@@ -271,6 +275,29 @@ describe("Claude plugin: agentplaybooks-servers", () => {
     const after = await client.callTool("get_playbook", { playbook_id: "guid-own" });
     expect(after.isError).toBe(true);
     expect(after.content[0].text).toContain("No key is stored");
+  });
+
+  it("does not forward a stored key to an upstream redirect destination", async () => {
+    let redirectedRequests = 0;
+    const destination = http.createServer((_request, response) => {
+      redirectedRequests++;
+      response.writeHead(400).end();
+    });
+    await new Promise<void>(resolve => destination.listen(0, "127.0.0.1", resolve));
+    const { port } = destination.address() as AddressInfo;
+    const redirecting = await fakeServer("redirecting", "apb_live_redirect_only", {
+      redirect: `http://127.0.0.1:${port}/capture`,
+    });
+    try {
+      const { client } = await start({ [redirecting.url]: { apiKey: redirecting.key } });
+      const result = await client.callTool("get_playbook", { playbook_id: "guid-redirecting" });
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).not.toContain(redirecting.key);
+      expect(redirectedRequests).toBe(0);
+    } finally {
+      await redirecting.close();
+      await new Promise<void>(resolve => destination.close(() => resolve()));
+    }
   });
 
   it("says how to connect a server when none is logged in", async () => {

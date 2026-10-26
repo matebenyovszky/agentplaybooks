@@ -147,12 +147,11 @@ szervert kiszolgál, amelyhez a CLI-vel felhasználói API-kulcsot tároltál �
 OAuth-szerver nem kell hozzá, és annyi szerver lehet, ahányra bejelentkezel:
 
 ```bash
-npx --yes @agentplaybooks/cli@0.6.0 login --url=https://<szervered>
+npx --yes @agentplaybooks/cli@0.7.0 login --url=https://<szervered>
 ```
 
-A CLI a kulcsot az `AGENTPLAYBOOKS_API_KEY`-ből veszi, vagy bekéri.
-A 0.6.0-s CLI promptja kiírja a beillesztett kulcsot — a későbbi kiadásoké már
-nem —, ezért megosztott képernyőn inkább a változót állítsd be.
+A CLI a kulcsot az `AGENTPLAYBOOKS_API_KEY`-ből veszi, vagy úgy kéri be, hogy
+az érték nem jelenik meg a képernyőn. A kulcsot helyben add meg, ne a beszélgetésben.
 
 Utána a `/mcp` alatt kapcsold újra az **agentplaybooks-servers**-t. Több szerver
 esetén a `list_playbooks` minden playbooknál megadja a szerverét, a

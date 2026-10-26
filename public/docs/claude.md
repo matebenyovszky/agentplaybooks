@@ -139,12 +139,11 @@ AgentPlaybooks server you have stored a user API key for with the CLI — no
 OAuth server needed, and as many servers as you log in to:
 
 ```bash
-npx --yes @agentplaybooks/cli@0.6.0 login --url=https://<your-server>
+npx --yes @agentplaybooks/cli@0.7.0 login --url=https://<your-server>
 ```
 
-The CLI takes the key from `AGENTPLAYBOOKS_API_KEY`, or prompts for it.
-The 0.6.0 prompt shows the key as you paste it — later releases do not — so on
-a shared screen set the variable instead.
+The CLI takes the key from `AGENTPLAYBOOKS_API_KEY`, or prompts for it without
+echoing the value. Enter the key locally; do not paste it into a conversation.
 
 Then reconnect **agentplaybooks-servers** from `/mcp`. With more than one
 server, `list_playbooks` marks each playbook with its server, a call that names
