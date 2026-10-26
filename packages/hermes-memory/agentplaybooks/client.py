@@ -7,6 +7,8 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode, urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
+USER_AGENT = "AgentPlaybooks-Hermes-Memory/0.3.1"
+
 
 class MemoryAPIError(RuntimeError):
     def __init__(self, message, status=None):
@@ -48,7 +50,7 @@ class Client:
         self.opener = build_opener(NoRedirects())
 
     def request(self, method, path, body=None, authenticated=True, timeout=15):
-        headers = {"Accept": "application/json"}
+        headers = {"Accept": "application/json", "User-Agent": USER_AGENT}
         if authenticated and self.api_key:
             headers["X-API-Key"] = self.api_key
         data = None
@@ -67,12 +69,21 @@ class Client:
     def assert_private(self):
         """Public AND unlisted playbooks are anonymously readable. Fail closed.
 
-        Existing APIs need no backend deployment: anonymous metadata must be 404,
-        then an authenticated memory read must succeed. A missing playbook or wrong
-        key fails the second check. Do this before every write, not just at startup.
+        Current servers prove private visibility and memory access in one small
+        authenticated request, without reading memory contents or expecting a 404.
+        Older servers ignore private_check and return a memory list: retain the
+        anonymous-404 privacy proof for those servers. Never cache either proof;
+        check before every write, not just at startup.
         """
         if not self.api_key:
             raise MemoryAPIError("A playbook-scoped memory API key is required.")
+        proof = self.request("GET", self.path + "?private_check=1&limit=1")
+        if isinstance(proof, dict) and proof.get("private_memory") is True:
+            return
+        if not isinstance(proof, list):
+            raise MemoryAPIError("AgentPlaybooks returned an invalid private-memory check.")
+        # A legacy server has already verified authenticated memory access.
+        # An ordinary successful response alone is not a privacy proof.
         try:
             self.request("GET", f"/api/playbooks/{self.guid}", authenticated=False)
         except MemoryAPIError as exc:
@@ -80,7 +91,6 @@ class Client:
                 raise
         else:
             raise MemoryAPIError("Personal memory requires a private playbook. Public and unlisted playbooks are refused.")
-        self.search(limit=1)
 
     def search(self, *, timeout=15, **params):
         query = urlencode({k: v for k, v in params.items() if v is not None})
