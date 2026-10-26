@@ -92,7 +92,7 @@ export default function LandingPageClient() {
 
   return (
 
-    <div className="min-h-screen bg-background text-foreground overflow-hidden">
+    <div className="min-h-screen min-w-0 overflow-hidden bg-background text-foreground">
       <FloatingNav />
 
       {/* Hero Section */}
@@ -105,7 +105,7 @@ export default function LandingPageClient() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <h1 className="text-5xl md:text-7xl font-bold mb-6">
+            <h1 className="mb-6 min-w-0 wrap-anywhere text-5xl font-bold md:text-7xl">
               <span className="gradient-text">{t("landing.hero.title")}</span>
             </h1>
           </motion.div>

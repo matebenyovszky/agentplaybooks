@@ -170,7 +170,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
     const [playbookResData, memoryData, keyData, runsData, canvasesData, secretsData] = await Promise.all([
       authFetch(`/api/manage/playbooks/${playbookId}`),
       authFetch(`/api/manage/playbooks/${playbookId}/memory`),
-      owner ? authFetch(`/api/playbooks/${playbookId}/api-keys`) : Promise.resolve(null),
+      (owner || pb.current_user_role === "editor") ? authFetch(`/api/playbooks/${playbookId}/api-keys`) : Promise.resolve(null),
       loadStorage.getRuns(),
       loadStorage.getCanvases(),
       owner ? loadStorage.getSecrets() : Promise.resolve([]),
@@ -407,22 +407,11 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
     setForking(true);
 
     try {
-      const response = await authFetch("/api/manage/playbooks", {
+      const response = await authFetch(`/api/manage/playbooks/${playbook.id}/fork`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          name: `${playbook.name} (Copy)`,
-          description: playbook.description,
-          visibility: "private",
-          config: playbook.config,
-          tags: playbook.tags,
-          persona_name: playbook.persona_name,
-          persona_system_prompt: playbook.persona_system_prompt,
-          persona_metadata: playbook.persona_metadata,
-          instructions: playbook.instructions,
-        }),
       });
 
       const newPlaybook = await response.json().catch(() => null);
@@ -430,58 +419,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
         throw new Error(newPlaybook?.error || "Failed to fork playbook");
       }
 
-      // Copy all skills
-      if (skills.length > 0) {
-        await Promise.all(
-          skills.map(async (s) => {
-            const skillResponse = await authFetch(`/api/manage/playbooks/${newPlaybook.id}/skills`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                  name: s.name,
-                  description: s.description,
-                  content: s.content,
-                  licence: s.licence,
-                }),
-            });
-
-            if (!skillResponse.ok) {
-              const data = await skillResponse.json().catch(() => null);
-              throw new Error(data?.error || "Failed to copy skills");
-            }
-          })
-        );
-      }
-
-      // Copy all MCP servers
-      if (mcpServers.length > 0) {
-        await Promise.all(
-          mcpServers.map(async (m) => {
-            const mcpResponse = await authFetch(`/api/manage/playbooks/${newPlaybook.id}/mcp-servers`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                name: m.name,
-                description: m.description,
-                tools: m.tools,
-                resources: m.resources,
-                transport_type: m.transport_type,
-                transport_config: m.transport_config,
-              }),
-            });
-
-            if (!mcpResponse.ok) {
-              const mcpData = await mcpResponse.json().catch(() => null);
-              throw new Error(mcpData?.error || "Failed to copy MCP servers");
-            }
-          })
-        );
-      }
-
+      // The fork endpoint copies skills, attachments and MCP records in one transaction.
       setForkSuccess(true);
       setTimeout(() => {
         // Redirect to the new playbook
@@ -888,11 +826,11 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
     { id: "mcp" as TabType, label: t("editor.tabs.mcp"), icon: Server, count: mcpServers.length, color: "pink" },
     { id: "canvas" as TabType, label: t("editor.tabs.canvas"), icon: FileText, count: canvases.length, color: "green" },
     { id: "memory" as TabType, label: t("editor.tabs.memory"), icon: Database, count: memories.length, color: "teal" },
-    ...(isOwner ? [
+    ...(canEdit ? [
       { id: "secrets" as TabType, label: t("editor.tabs.secrets") || "Secrets", icon: Shield, count: secrets.length, color: "emerald" },
       { id: "apiKeys" as TabType, label: t("editor.tabs.apiKeys"), icon: Puzzle, count: apiKeys.length, color: "amber" },
-      { id: "sharing" as TabType, label: "Sharing", icon: UsersRound, count: 0, color: "blue" },
     ] : []),
+    ...(isOwner ? [{ id: "sharing" as TabType, label: "Sharing", icon: UsersRound, count: 0, color: "blue" }] : []),
   ];
 
   if (loading) {
@@ -923,34 +861,37 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen min-w-0 w-full bg-background text-foreground">
       {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-neutral-200 dark:border-blue-900/30 bg-white/90 dark:bg-[#0a0f1a]/90 backdrop-blur-md px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
+      <header
+        data-testid="playbook-header"
+        className="sticky top-0 z-40 border-b border-neutral-200 dark:border-blue-900/30 bg-white/90 dark:bg-[#0a0f1a]/90 backdrop-blur-md px-4 py-4 md:px-6"
+      >
+        <div className="mx-auto flex max-w-7xl min-w-0 flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="flex min-w-0 items-center gap-4">
             <Link
               href="/dashboard"
               className="p-2 hover:bg-neutral-100 dark:hover:bg-slate-800/50 rounded-lg transition-colors text-neutral-500 dark:text-slate-400 hover:text-neutral-900 dark:hover:text-white"
             >
               <ArrowLeft className="h-5 w-5" />
             </Link>
-            <div>
+            <div className="min-w-0">
               {canEdit ? (
                 <input
                   type="text"
                   value={playbook.name}
                   onChange={(e) => updatePlaybook({ name: e.target.value })}
                   className={cn(
-                    "text-xl font-bold bg-transparent border-none focus:outline-none",
+                    "text-xl font-bold bg-transparent border-none focus:outline-none w-full min-w-0 wrap-anywhere",
                     "text-neutral-900 dark:text-white placeholder:text-neutral-400 dark:placeholder:text-slate-500",
                     "hover:bg-neutral-100 dark:hover:bg-slate-800/50 focus:bg-neutral-100 dark:focus:bg-slate-800/70 rounded px-2 py-1 -ml-2"
                   )}
                 />
               ) : (
-                <h1 className="text-xl font-bold text-neutral-900 dark:text-white px-2 py-1 -ml-2">{playbook.name}</h1>
+                <h1 className="min-w-0 wrap-anywhere px-2 py-1 -ml-2 text-xl font-bold text-neutral-900 dark:text-white">{playbook.name}</h1>
               )}
-              <div className="flex items-center gap-2 text-sm text-neutral-500 dark:text-slate-500 px-2">
-                <code className="font-mono">/{playbook.guid}</code>
+              <div className="flex min-w-0 items-center gap-2 px-2 text-sm text-neutral-500 dark:text-slate-500">
+                <code className="min-w-0 wrap-anywhere font-mono">/{playbook.guid}</code>
                 <button
                   onClick={() => copyToClipboard(`${getBaseUrl()}/api/playbooks/${playbook.guid}`, "api-url")}
                   className="p-1 hover:text-white transition-colors"
@@ -966,17 +907,20 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div
+            data-testid="playbook-header-actions"
+            className="flex w-full min-w-0 flex-col gap-2 md:w-auto md:flex-row md:flex-wrap md:items-center"
+          >
             {/* Access badge */}
             {!canEdit && (
-              <span className="px-3 py-1.5 bg-neutral-100 dark:bg-slate-700/50 text-neutral-600 dark:text-slate-400 text-sm rounded-lg border border-neutral-200 dark:border-slate-600/50 flex items-center gap-2">
+              <span className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-neutral-200 bg-neutral-100 px-3 py-1.5 text-sm text-neutral-600 dark:border-slate-600/50 dark:bg-slate-700/50 dark:text-slate-400 md:w-auto">
                 <Eye className="h-4 w-4" />
                 {t("editor.readOnly") || "Read Only"}
               </span>
             )}
 
             {canEdit && !isOwner && (
-              <span className="px-3 py-1.5 bg-blue-500/10 text-blue-500 text-sm rounded-lg border border-blue-500/20 flex items-center gap-2">
+              <span className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-blue-500/20 bg-blue-500/10 px-3 py-1.5 text-sm text-blue-500 md:w-auto">
                 <UsersRound className="h-4 w-4" />
                 Shared editor
               </span>
@@ -988,7 +932,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                 onClick={handleForkPlaybook}
                 disabled={forking || forkSuccess}
                 className={cn(
-                  "px-4 py-2 rounded-lg font-semibold flex items-center gap-2 transition-all text-sm",
+                  "inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all md:w-auto",
                   forkSuccess
                     ? "bg-green-600/20 text-green-400 border border-green-500/30"
                     : "bg-gradient-to-r from-amber-600 to-orange-500 text-white shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40"
@@ -1017,9 +961,9 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
             {!canEdit && playbook.visibility === 'public' && !currentUserId && (
               <Link
                 href="/login"
-                className="px-4 py-2 rounded-lg text-sm text-amber-400 border border-amber-500/30 hover:bg-amber-500/10 transition-colors flex items-center gap-2"
+                className="inline-flex w-full min-w-0 items-center justify-center gap-2 whitespace-normal rounded-lg border border-amber-500/30 px-4 py-2 text-center text-sm text-amber-400 transition-colors hover:bg-amber-500/10 md:w-auto"
               >
-                <Copy className="h-4 w-4" />
+                <Copy className="h-4 w-4 shrink-0" />
                 {t("editor.signInToFork")}
               </Link>
             )}
@@ -1040,7 +984,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
               <button
                 onClick={() => updatePlaybook({ visibility: playbook.visibility === 'public' ? 'private' : 'public' })}
                 className={cn(
-                  "px-3 py-2 rounded-lg flex items-center gap-2 text-sm transition-colors",
+                  "inline-flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors md:w-auto",
                   playbook.visibility === 'public'
                     ? "bg-green-500/10 text-green-400 border border-green-500/20 hover:bg-green-500/20"
                     : "bg-neutral-100 dark:bg-slate-800/50 text-neutral-700 dark:text-slate-400 border border-neutral-300 dark:border-slate-700/50 hover:border-neutral-400 dark:hover:border-slate-600"
@@ -1051,7 +995,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
               </button>
             ) : (
               <span className={cn(
-                "px-3 py-2 rounded-lg flex items-center gap-2 text-sm",
+                "inline-flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm md:w-auto",
                 playbook.visibility === 'public'
                   ? "bg-green-500/10 text-green-400 border border-green-500/20"
                   : "bg-neutral-100 dark:bg-slate-800/50 text-neutral-700 dark:text-slate-400 border border-neutral-300 dark:border-slate-700/50"
@@ -1066,7 +1010,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                 onClick={handleManualSave}
                 disabled={saving || !hasChanges}
                 className={cn(
-                  "px-4 py-2 rounded-lg font-semibold flex items-center gap-2 transition-all",
+                  "inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2 font-semibold transition-all md:w-auto",
                   hasChanges
                     ? "bg-gradient-to-r from-amber-600 to-amber-400 text-slate-900 shadow-lg shadow-amber-500/25"
                     : "bg-slate-800 text-slate-400"
@@ -1082,14 +1026,17 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
 
       {/* Tabs */}
       <div className="border-b border-neutral-200 dark:border-blue-900/30 bg-neutral-50 dark:bg-[#0a0f1a]/50">
-        <div className="max-w-7xl mx-auto px-6">
-          <nav className="flex gap-1 -mb-px overflow-x-auto">
+        <div className="mx-auto max-w-7xl min-w-0 px-4 md:px-6">
+          <nav
+            data-testid="playbook-tabs"
+            className="flex min-w-0 flex-wrap gap-1 -mb-px overflow-x-auto md:flex-nowrap"
+          >
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
-                  "px-4 py-3 flex items-center gap-2 text-sm font-medium border-b-2 transition-all whitespace-nowrap",
+                  "flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition-all",
                   activeTab === tab.id
                     ? `border-${tab.color}-500 text-neutral-900 dark:text-white`
                     : "border-transparent text-neutral-500 dark:text-slate-400 hover:text-neutral-900 dark:hover:text-white hover:border-neutral-300 dark:hover:border-slate-700"
@@ -1120,7 +1067,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
       </div>
 
       {/* Content */}
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="mx-auto w-full min-w-0 max-w-7xl px-4 py-8 md:px-6">
         <AnimatePresence mode="wait">
           {/* Personas: 1 playbook = 1 persona; edited in Details tab */}
 
@@ -1314,8 +1261,8 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
             </motion.div>
           )}
 
-          {/* Secrets Tab - only visible to owner */}
-          {activeTab === "secrets" && isOwner && (
+          {/* Secrets Tab - owners and accepted editors */}
+          {activeTab === "secrets" && canEdit && (
             <motion.div
               key="secrets"
               initial={{ opacity: 0, y: 10 }}
@@ -1326,13 +1273,13 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                 storage={storage}
                 secrets={secrets}
                 onUpdate={setSecrets}
-                readOnly={!isOwner}
+                readOnly={!canEdit}
               />
             </motion.div>
           )}
 
           {/* Secrets Tab - not owner message */}
-          {activeTab === "secrets" && !isOwner && (
+          {activeTab === "secrets" && !canEdit && (
             <motion.div
               key="secrets-readonly"
               initial={{ opacity: 0, y: 10 }}
@@ -1341,7 +1288,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
               className="text-center py-16"
             >
               <Lock className="h-12 w-12 mx-auto text-neutral-400 dark:text-slate-600 mb-4" />
-              <p className="text-neutral-600 dark:text-slate-400">Secrets are only visible to the playbook owner</p>
+              <p className="text-neutral-600 dark:text-slate-400">Secrets require owner or editor access</p>
             </motion.div>
           )}
 
@@ -1448,21 +1395,22 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                 )}
 
                 {/* API Keys - second block */}
-                {isOwner && (
+                {canEdit && (
                   <div className={cn(
                     "p-5 rounded-xl",
                     "bg-white dark:bg-gradient-to-br dark:from-slate-900/80 dark:to-slate-800/80",
                     "border border-neutral-200 dark:border-slate-700/50"
                   )}>
                     <ApiKeyManager
-                      playbook_id={id}
+                      playbook_id={playbook.id}
+                      readOnly={!isOwner}
                       apiKeys={apiKeys}
                       onUpdate={setApiKeys}
                     />
                   </div>
                 )}
 
-                {!isOwner && (
+                {!canEdit && (
                   <div className="text-center py-8">
                     <Lock className="h-12 w-12 mx-auto text-neutral-400 dark:text-slate-600 mb-4" />
                     <p className="text-neutral-600 dark:text-slate-400">{t("editor.apiKeysPrivate") || "API Keys are only visible to the playbook owner"}</p>
@@ -1993,12 +1941,14 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
 
               <div className="space-y-6">
                 {/* Description */}
-                <div className={cn(
-                  "p-5 rounded-xl",
+                <div
+                  data-testid="playbook-description"
+                  className={cn(
+                  "min-w-0 w-full wrap-anywhere p-5 rounded-xl",
                   "bg-white dark:bg-gradient-to-br dark:from-slate-900/80 dark:to-slate-800/80",
                   "border border-neutral-200 dark:border-slate-700/50"
                 )}>
-                  <label className="block text-sm font-medium text-neutral-600 dark:text-slate-400 mb-2">
+                  <label className="mb-2 block text-sm font-medium text-neutral-600 dark:text-slate-400">
                     Description
                   </label>
                   {canEdit ? (
@@ -2006,16 +1956,15 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                       value={playbook.description || ""}
                       onChange={(e) => updatePlaybook({ description: e.target.value })}
                       className={cn(
-                        "w-full p-3 rounded-lg",
+                        "min-h-[100px] min-w-0 w-full resize-y wrap-anywhere rounded-lg p-3",
                         "bg-neutral-50 dark:bg-slate-900/70 border border-neutral-200 dark:border-slate-700/50",
                         "text-neutral-900 dark:text-slate-200 placeholder:text-neutral-400 dark:placeholder:text-slate-600",
-                        "focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20",
-                        "resize-y min-h-[100px]"
+                        "focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20"
                       )}
                       placeholder="Describe what this playbook is for..."
                     />
                   ) : (
-                    <p className="text-neutral-700 dark:text-slate-300 p-3 bg-neutral-50 dark:bg-slate-900/50 rounded-lg min-h-[60px]">
+                    <p className="min-h-[60px] min-w-0 wrap-anywhere rounded-lg bg-neutral-50 p-3 text-neutral-700 dark:bg-slate-900/50 dark:text-slate-300">
                       {playbook.description || <span className="text-neutral-500 dark:text-slate-500 italic">No description</span>}
                     </p>
                   )}

@@ -3,6 +3,8 @@ import { isSecretExpired } from "@/lib/secret-expiry";
 import { referencedSecretNames } from "@/lib/mcp/secret-references";
 import { checkSecretDestination } from "@/lib/secret-destinations";
 import { getServiceSupabase } from "./supabase";
+import { getAuthenticatedUser, validateUserApiKey } from "./auth";
+import { getPlaybookAccessRole } from "./guards";
 import type { MCPServer, Secret } from "@/lib/supabase/types";
 
 /**
@@ -32,11 +34,47 @@ import type { MCPServer, Secret } from "@/lib/supabase/types";
  */
 
 
-function serverDestinations(transportConfig: unknown): string[] {
+// Stands for a destination this config does not name: an OpenAPI base URL that
+// comes from a fetched spec. It never matches an allow-list entry, so a pinned
+// secret is not sent there.
+const UNKNOWN_DESTINATION = "unknown-destination:";
+
+/** Every host a request carrying this server's credentials can be sent to. */
+export function serverDestinations(transportConfig: unknown): string[] {
   const config = transportConfig as Record<string, unknown> | null | undefined;
-  return ["url", "spec_url", "base_url"]
-    .map((key) => config?.[key])
-    .filter((value): value is string => typeof value === "string" && value.length > 0);
+  const auth = config?.auth as Record<string, unknown> | undefined;
+  const destinations: unknown[] = [config?.url, config?.spec_url, config?.base_url, auth?.token_url];
+  const inlineSpec = config?.openapi as { servers?: Array<{ url?: unknown }> } | undefined;
+  if (!config?.base_url) {
+    if (Array.isArray(inlineSpec?.servers)) {
+      destinations.push(...inlineSpec.servers.map((server) => server?.url));
+    } else if (config?.spec_url) {
+      destinations.push(UNKNOWN_DESTINATION);
+    }
+  }
+  return destinations.filter((value): value is string => typeof value === "string" && value.length > 0);
+}
+
+/**
+ * A server config that names vault secrets decides where those secrets are
+ * sent. Writing one is therefore a use of the secrets, and needs the same
+ * authority as `use_secret`: the playbook owner, or a key holding secrets:read.
+ */
+export function configReferencesSecrets(transportConfig: unknown): boolean {
+  return referencedSecretNames(transportConfig).length > 0;
+}
+
+export const SECRET_ROUTING_DENIED =
+  "This MCP server configuration references vault secrets. Only the playbook owner, or a key with secrets:read, may point a server at them.";
+
+/**
+ * Anonymous callers may use a server marked `access: "public"` only when it
+ * carries no vault credentials: "public" means a keyless upstream, not the
+ * owner's credentials offered to anyone.
+ */
+export function anonymousMayCall(server: Pick<MCPServer, "transport_config">): boolean {
+  const access = (server.transport_config as { access?: string } | null)?.access;
+  return access === "public" && !configReferencesSecrets(server.transport_config);
 }
 
 async function recordVaultUse(secrets: Secret[]) {
@@ -117,3 +155,16 @@ export async function loadFederationSecrets(
 
 // Re-exported so existing imports keep one entry point on the server side.
 export { referencedSecretNames };
+
+/**
+ * May this signed-in user, or user API key, point a server at vault secrets?
+ * Only the owner can use the playbook's secrets, and a user key needs
+ * secrets:read as well — playbooks:write alone must not route credentials.
+ */
+export async function userMayRouteSecrets(request: Request, userId: string, playbookId: string): Promise<boolean> {
+  if ((await getPlaybookAccessRole(userId, playbookId)) !== "owner") return false;
+  const session = await getAuthenticatedUser(request);
+  if (session?.id === userId) return true;
+  const userKey = await validateUserApiKey(request, "secrets:read");
+  return userKey?.user_id === userId;
+}

@@ -5,8 +5,9 @@ Playbook owners can invite other signed-in users to edit a playbook without shar
 The permission model is intentionally small: one immutable owner and two
 collaborator roles, **Editor** and **Auditor**. Editors change content.
 Auditors read and export the audit trail and enough playbook metadata to name
-it. Neither role can read secret values. Security-sensitive control-plane
-operations stay with the owner.
+it. Editors may also manage secrets and inspect API-key metadata; auditors
+cannot read secrets or copy playbook content. API-key creation, rotation and
+revocation, sharing, visibility and deletion stay with the owner.
 
 ## Share a playbook
 
@@ -31,8 +32,9 @@ Each playbook can have at most 25 active editors and pending invitations in tota
 | Read / export / verify audit logs | Yes | No | Yes |
 | Change visibility | Yes | No | No |
 | Manage collaborators | Yes | No | No |
-| Manage playbook API keys | Yes | No | No |
-| View or manage secrets | Yes | No | No |
+| Inspect playbook API-key metadata | Yes | Yes | No |
+| Create, rotate or revoke playbook API keys | Yes | No | No |
+| View or manage secrets | Yes | Yes | No |
 | Delete the playbook | Yes | No | No |
 
 Ownership always remains with the original owner.
@@ -51,7 +53,7 @@ Playbook API keys are bearer credentials intended for agents and integrations. T
 - Pending links expire after 72 hours and can be revoked before acceptance.
 - An owner cannot accept their own invite.
 - Removing an editor immediately removes membership-based access without rotating agent API keys.
-- Secrets, API keys, visibility, sharing, ownership, and deletion remain owner-only even when the editor can change playbook content.
+- Editors may manage secrets and inspect API-key metadata. API-key mutation, visibility, sharing, ownership and deletion remain owner-only. Auditors cannot access secret values or fork content.
 
 Treat an unexpired invitation link as a temporary credential. Send it privately, revoke it if it reaches the wrong person, and create a replacement.
 

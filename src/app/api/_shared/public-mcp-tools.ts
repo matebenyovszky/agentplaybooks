@@ -2,6 +2,7 @@ import type { McpTool, MCPServer } from "@/lib/supabase/types";
 import { READ_TOOL_PERMISSIONS, NO_DATA_TOOLS } from "./private-read-scopes";
 import { resolvePrivatePlaybookActor, validateUserApiKey } from "./auth";
 import { getPlaybookAccessRole } from "./guards";
+import { anonymousMayCall } from "./federation-secrets";
 
 /** A header alone is not authentication: rejected keys keep the public view. */
 export async function isAnonymousPublicRequest(request: Request, playbookId: string, isPublic: boolean) {
@@ -27,7 +28,7 @@ export function isPublicBuiltinTool(tool: McpTool) {
     && (Object.hasOwn(READ_TOOL_PERMISSIONS, tool.name) || NO_DATA_TOOLS.has(tool.name)) && isReadOnlyTool(tool);
 }
 
-/** The owner must explicitly publish a connection before any upstream discovery. */
+/** Reuse the credential-free public gate from main for discovery as well as calls. */
 export function isPublicMcpServer(server: MCPServer) {
-  return (server.transport_config as { access?: string } | null)?.access === "public";
+  return anonymousMayCall(server);
 }

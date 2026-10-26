@@ -170,7 +170,7 @@ describe("auditor role capabilities", () => {
     expect(roleMayPerform("auditor", "playbooks:write")).toBe(false);
     expect(roleMayPerform("auditor", "secrets:read")).toBe(false);
     expect(roleMayPerform("editor", "playbooks:write")).toBe(true);
-    expect(roleMayPerform("editor", "secrets:read")).toBe(false);
+    expect(roleMayPerform("editor", "secrets:read")).toBe(true);
     expect(roleMayWrite("editor")).toBe(true);
   });
 });

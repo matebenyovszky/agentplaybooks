@@ -64,10 +64,10 @@ A service_role megkerüli az RLS-t. Az engedélyezés az alkalmazáskódban van:
 | Adatosztály | Hol van | Titkosítás / kezelés | Ki fér hozzá |
 |-------------|---------|----------------------|--------------|
 | Titok plaintext | Csak memóriában, proxy/reveal közben | Nincs at rest | Alkalmazásfolyamat |
-| Titok ciphertext | `secrets` tábla | AES-256-GCM, felhasználónkénti HKDF | Tulajdonos (API); RLS owner + service_role |
+| Titok ciphertext | `secrets` tábla | AES-256-GCM, felhasználónkénti HKDF | Tulajdonos/editor az engedélyezett API-n; közvetlen RLS owner + service_role |
 | Mesterkulcs | Folyamat-env `SECRETS_ENCRYPTION_KEY` | 32 bájt hex; nincs KMS | Üzemeltető |
 | Playbook tartalom (persona, skill, memória, vászon) | Postgres | Szállítási TLS az ügyfél hatásköre | owner / editor / API-kulcs szerep |
-| Audit | `audit_logs` | Nincs hash-lánc; értékeket nem tárol | Playbook tulajdonos |
+| Audit | `audit_logs` | Playbookonkénti hash-lánc; titokérték nélkül | Tulajdonos / auditor |
 | API-kulcs | SHA-256 hash + prefix | Plaintext egyszer a létrehozáskor | Tulajdonos |
 | Meghívó token | SHA-256 hash, 72 óra | [`src/lib/utils.ts`](../../src/lib/utils.ts) `generateInviteToken` / `hashToken` | — |
 | mTLS kliens | SHA-256 ujjlenyomat, titoknevek | Privát kulcs a kliensen marad | Tulajdonos |
@@ -112,9 +112,9 @@ Self-host Entra: `GOTRUE_EXTERNAL_AZURE_*` a GoTrue konténeren, leírva: [`publ
 
 **Nincs** alkalmazásszintű MFA (TOTP/WebAuthn). Az MFA az IdP-n (Entra) kényszeríthető — ügyféli kontroll. **Nincs** SAML; a ROADMAP Phase 4-ben szerepel.
 
-**Emberi RBAC.** `PlaybookAccessRole = "owner" | "editor"` — [`src/app/api/_shared/guards.ts`](../../src/app/api/_shared/guards.ts). Az editor nem fér a titkokhoz, API-kulcsokhoz, láthatósághoz, törléshez ([`permissions.md`](../../permissions.md)).
+**Emberi RBAC.** A központi szerepkörmodell `owner | editor | auditor` ([`audit-access.ts`](../../src/lib/audit-access.ts)). Az editor szerkeszthet tartalmat, kezelhet titkokat és láthatja az API-kulcsok metaadatait. A kulcsok módosítása, a láthatóság, megosztás és törlés tulajdonosi jog. Az auditor auditbizonyítékot és playbook-metaadatot olvashat; titkot és tartalommásolási jogot nem kap ([`permissions.md`](../../permissions.md)).
 
-**Auditor szerepkör: a kódban nincs.** Amíg a `main`-en nincs, az auditnapló olvasása tulajdonos (vagy `playbooks:read` user API-kulcs) — szerkesztő és külön auditor szerep nélkül. Ez a csomag **nem** állítja, hogy az auditor szerep már létezik. **Folyamatban / In progress:** [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202).
+**Auditor szerepkör.** A mai kódban létezik: auditnaplót és playbook-metaadatot olvashat, titkot és tartalommásolási jogot nem kap. A policy forrása az `audit-access.ts`.
 
 **API-kulcs szerepek.** `viewer`, `coworker`, `proposer`, `admin` ([`src/app/api/[[...route]]/route.ts`](../../src/app/api/[[...route]]/route.ts) `API_KEY_ROLES`, [`src/components/playbook/ApiKeyManager.tsx`](../../src/components/playbook/ApiKeyManager.tsx)). Jogosultság-sztringek: [`src/app/api/_shared/permissions.ts`](../../src/app/api/_shared/permissions.ts) `grantsPermission`.
 
@@ -128,9 +128,9 @@ Vault műveletek: `secret.create`, `secret.rotate`, `secret.update`, `secret.del
 
 Szabály: nincs titokérték, nincs teljes URL, nincs API-kulcs a sorban. Az írási hiba nem dönti el a vault-műveletet ([`src/app/api/_shared/audit.ts`](../../src/app/api/_shared/audit.ts)).
 
-Olvasás: `GET /api/playbooks/:guid/audit` (legacy `GET /api/mcp/audit/:guid`), limit ≤ 500, szűrő `operation`, `secret.` prefix, `secret=` név — [`src/app/api/playbooks/[guid]/audit/app.ts`](../../src/app/api/playbooks/[guid]/audit/app.ts). Playbook API-kulccsal szándékosan nem olvasható.
+Olvasás/export/ellenőrzés: tulajdonosi vagy auditor fiókszerep, illetve auditor playbook-kulcs. Más playbook-kulcsszerep nem olvashatja a naplót. Szűrők és JSONL/CSV: [Audit Logs](../../public/docs/audit-logs.md).
 
-**Nincs a `main`-en:** SIEM / syslog export, megőrzési job, hash-lánc. Skills / memória / vászon írások nincsenek naplózva. **Folyamatban / In progress** (export, syslog/SIEM, megőrzés, hash-lánc, auditor olvasás): [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202).
+**Kész a `main`-en:** JSONL/CSV-export, opcionális SIEM-továbbítás, konfigurálható megőrzés lánc-checkpointokkal, playbookonkénti hash-lánc és auditor szerep ([#202](https://github.com/matebenyovszky/agentplaybooks/pull/202)). Nyitott rés: a skill-, memória- és vászonírások még nincsenek naplózva. A hash-lánc módosításjelző; külső rögzítés nélkül nem bizonyíték egy adatbázis-adminisztrátorral szemben.
 
 ## 8. Titok-lejárat és visszavonás
 
@@ -175,7 +175,7 @@ HTTP-fejlécek (HSTS, `X-Frame-Options: DENY`, nosniff, Permissions-Policy): [`s
 | CycloneDX SBOM | Igen, a `main`-en | [`.github/workflows/sbom.yml`](../../.github/workflows/sbom.yml), [`docs/security/supply-chain.md`](./supply-chain.md). **Kész a `main`-en:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205) |
 | SBOM-blob cosign `cli-v*` tageken | Igen, a `main`-en | [`docs/security/supply-chain.md`](./supply-chain.md). Nincs aláírt konténer-**registry** publikálás |
 | `SECURITY.md`, incidens-runbook | Igen, a `main`-en | [`SECURITY.md`](../../SECURITY.md), [`docs/security/incident-runbook.md`](./incident-runbook.md). **Kész a `main`-en:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205) (runbook), [#207](https://github.com/matebenyovszky/agentplaybooks/pull/207) (a biztonsági kapcsolat kizárólag a GitHub privát sérülékenység-jelentés; nincs security e-mail). A maintainer-review best-effort; a 24/72 órás órák üzemeltetői kötelezettségek, nem bejelentői SLA |
-| Titkosított helyszíni mentés / restore + üres-gép drill | Igen, a `main`-en | [`docs/self-host/backup-restore.md`](../self-host/backup-restore.md), [`scripts/self-host/backup.sh`](../../scripts/self-host/backup.sh), [`.github/workflows/self-host-restore-drill.yml`](../../.github/workflows/self-host-restore-drill.yml). **Kész a `main`-en:** [#203](https://github.com/matebenyovszky/agentplaybooks/pull/203). A mesterkulcs külön tárolt; a drill hash-lánc ellenőzése a [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202) megérkezéséig feltételes |
+| Titkosított helyszíni mentés / restore + üres-gép drill | Igen, a `main`-en | [`docs/self-host/backup-restore.md`](../self-host/backup-restore.md), [`scripts/self-host/backup.sh`](../../scripts/self-host/backup.sh), [`.github/workflows/self-host-restore-drill.yml`](../../.github/workflows/self-host-restore-drill.yml). **Kész a `main`-en:** [#203](https://github.com/matebenyovszky/agentplaybooks/pull/203). A mesterkulcs külön tárolt; a drill meghívja az elérhető hash-lánc ellenőrzőt; régebbi, ellenőrző nélküli revízióban kihagyási üzenetet ad |
 
 A lockfile (`package-lock.json`, `packages/cli/package-lock.json`) a reprodukálható telepítés bemenete.
 
@@ -186,11 +186,11 @@ A lockfile (`package-lock.json`, `packages/cli/package-lock.json`) a reprodukál
 1. **Nincs KMS / HSM.** A mesterkulcs folyamat-környezeti változó.
 2. **Nincs kulcsrotáció újratitkosítással.** A mesterkulcs cseréje adatvesztés a széfben.
 3. **Nincs alkalmazásszintű MFA.** Az MFA csak az IdP-n (pl. Entra feltételes hozzáférés).
-4. **Nincs auditor szerepkör a kódban.** Human RBAC: owner \| editor. Az audit olvasása tulajdonos-szintű. **Folyamatban / In progress:** [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202).
+4. **Az auditjog nem tartalomhozzáférés.** Az auditor titok- és tartalommásolási hozzáférése tiltott; külön átadott ügynökkulcsokat külön kell visszavonni.
 5. **Nincs SAML SSO.** OIDC/OAuth a GoTrue-n keresztül, ha az ügyfél bekapcsolja.
-6. **Audit: nincs export, megőrzés, hash-lánc a `main`-en.** Skills / memória / vászon írások nincsenek naplózva. **Folyamatban / In progress** (export, syslog/SIEM, megőrzés, hash-lánc): [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202).
+6. **Audit-lefedettség:** a skill-, memória- és vászonírások még nincsenek naplózva. Export, megőrzés, hash-lánc és auditor hozzáférés már van; az üzemeltető állítja be a megőrzést és a külső továbbítást.
 7. **A `SECURITY.md` és a 24/72 óra / 1 hónap incidens-runbook a `main`-en van.** **Kész a `main`-en:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205) — [`SECURITY.md`](../../SECURITY.md), [`docs/security/incident-runbook.md`](./incident-runbook.md). A biztonsági kapcsolat kizárólag a GitHub privát sérülékenység-jelentés (**Kész a `main`-en:** [#207](https://github.com/matebenyovszky/agentplaybooks/pull/207)); nincs security e-mail. A maintainer-review best-effort. A 24/72 óra / 1 hónap órák a 418/2024. 77. § szerinti üzemeltetői kötelezettségek, nem bejelentői SLA. Az ügyfél NKI-bejelentése saját rend — **jogi ellenőrzés szükséges**.
-8. **A helyszíni mentés / restore-runbook és az üres-gép drill a `main`-en van.** **Kész a `main`-en:** [#203](https://github.com/matebenyovszky/agentplaybooks/pull/203) — [`docs/self-host/backup-restore.md`](../self-host/backup-restore.md), [`scripts/self-host/backup.sh`](../../scripts/self-host/backup.sh), [`scripts/self-host/restore-drill.sh`](../../scripts/self-host/restore-drill.sh), [`.github/workflows/self-host-restore-drill.yml`](../../.github/workflows/self-host-restore-drill.yml). Az archívum AES-256-CBC; a `SECRETS_ENCRYPTION_KEY` nincs az archívumban. A playbook snapshotok továbbra sem tartalmazzák a széf értékeit. A drill hash-lánc ellenőzése a [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202) megérkezéséig opcionális.
+8. **A helyszíni mentés / restore-runbook és az üres-gép drill a `main`-en van.** **Kész a `main`-en:** [#203](https://github.com/matebenyovszky/agentplaybooks/pull/203) — [`docs/self-host/backup-restore.md`](../self-host/backup-restore.md), [`scripts/self-host/backup.sh`](../../scripts/self-host/backup.sh), [`scripts/self-host/restore-drill.sh`](../../scripts/self-host/restore-drill.sh), [`.github/workflows/self-host-restore-drill.yml`](../../.github/workflows/self-host-restore-drill.yml). Az archívum AES-256-CBC; a `SECRETS_ENCRYPTION_KEY` nincs az archívumban. A playbook snapshotok továbbra sem tartalmazzák a széf értékeit. A drill meghívja az elérhető hash-lánc ellenőrzőt; ellenőrző nélküli régi revízióban kihagyási üzenetet ad.
 9. **A CodeQL, a CycloneDX SBOM és az SBOM-blob cosign a `main`-en van.** **Kész a `main`-en:** [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205) — [`.github/workflows/codeql.yml`](../../.github/workflows/codeql.yml), [`.github/workflows/sbom.yml`](../../.github/workflows/sbom.yml), [`docs/security/supply-chain.md`](./supply-chain.md). Dependabot + production npm audit + CLI provenance megmarad. Aláírt konténer-**registry** publikálás továbbra sincs.
 10. **A self-host mTLS trusted proxy-n a `main`-en van.** **Kész a `main`-en:** [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201) — `MTLS_MODE=proxy`, [`public/docs/self-hosted-mtls.md`](../../public/docs/self-hosted-mtls.md), [`deploy/self-host/docker-compose.mtls.yml`](../../deploy/self-host/docker-compose.mtls.yml). A Node továbbra sem terminál TLS-t; terminátor nélkül az alapértelmezés fail-closed.
 11. **Az izolált no-egress CI bizonyíték a `main`-en van.** **Kész a `main`-en:** fontok [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200) (`next/font/local`); secrets-flow CI [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204) — [`.github/workflows/no-egress.yml`](../../.github/workflows/no-egress.yml), [`deploy/airgap/`](../../deploy/airgap/). A produkciós compose továbbra is csak az `app`. Az `npm ci` és az alapimage-húzás az izolálás előtt történik. A `use_secret` pinelés nélkül kilép a hálózatról.
@@ -219,7 +219,7 @@ Részletes leképezés: [risk-assessment.hu.md](./risk-assessment.hu.md).
 | Kripto | `src/lib/crypto.ts`, `src/lib/crypto.test.ts` |
 | mTLS | `src/lib/mtls.ts`, `src/lib/mtls.test.ts`, `supabase/migrations/20261010081252_secret_clients.sql`, `public/docs/self-hosted-mtls.md`, `deploy/self-host/docker-compose.mtls.yml` |
 | Authz | `src/app/api/_shared/guards.ts`, `src/app/api/_shared/permissions.ts`, `src/app/api/_shared/auth.ts`, `permissions.md` |
-| Audit | `src/app/api/_shared/audit.ts`, `src/app/api/playbooks/[guid]/audit/app.ts`, `supabase/migrations/20260819_audit_logs_secrets.sql` |
+| Audit | `src/app/api/_shared/audit.ts`, `src/app/api/playbooks/[guid]/audit/app.ts`, `supabase/migrations/20260819_audit_logs_secrets.sql`, `src/lib/audit-chain.ts`, `supabase/migrations/20261024120000_audit_logs_compliance.sql` |
 | Lejárat / SSRF | `src/lib/secret-expiry.ts`, `src/lib/secret-destinations.ts`, `src/lib/mcp/federation.ts` |
 | Self-host | `docker-compose.yml`, `Dockerfile`, `public/docs/self-hosting.md`, `src/app/fonts/Geist-Variable.woff2`, `deploy/airgap/`, `.github/workflows/no-egress.yml`, `docs/self-host/backup-restore.md`, `scripts/self-host/backup.sh`, `.github/workflows/self-host-restore-drill.yml` |
 | SDLC | `.github/dependabot.yml`, `.github/workflows/ci.yml`, `.github/workflows/publish-cli.yml`, `.github/workflows/codeql.yml`, `.github/workflows/sbom.yml`, `.github/workflows/no-egress.yml`, `scripts/audit-production.mjs`, `SECURITY.md`, `docs/security/incident-runbook.md`, `docs/security/supply-chain.md` |

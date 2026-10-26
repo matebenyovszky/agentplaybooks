@@ -15,7 +15,10 @@ vi.mock("@/app/api/_shared/auth", async original => ({
   validateUserApiKey: vi.fn().mockResolvedValue(null),
 }));
 vi.mock("@/app/api/_shared/guards", () => ({ getPlaybookAccessRole: vi.fn().mockResolvedValue(null) }));
-vi.mock("@/app/api/_shared/federation-secrets", () => ({ loadFederationSecrets: vi.fn().mockResolvedValue({}) }));
+vi.mock("@/app/api/_shared/federation-secrets", async original => ({
+  ...await original<typeof import("@/app/api/_shared/federation-secrets")>(),
+  loadFederationSecrets: vi.fn().mockResolvedValue({}),
+}));
 vi.mock("@/lib/mcp/federation", async original => ({
   ...await original<typeof import("@/lib/mcp/federation")>(),
   listFederatedTools: vi.fn(),
@@ -30,13 +33,15 @@ const publicServer: MCPServer = { ...serverDefaults, id: "public-server", name: 
   tools: [tool("search", read), tool("delete", { readOnlyHint: false }), tool("unknown")] };
 const protectedServer: MCPServer = { ...serverDefaults, id: "protected-server", name: "Protected", transport_type: "http", transport_config: { access: "playbook_api_key" },
   tools: [tool("read", read)] };
+const vaultServer: MCPServer = { ...serverDefaults, id: "vault-server", name: "VaultBacked", transport_type: "http",
+  transport_config: { access: "public", auth: { type: "bearer", token_secret: "OWNER_TOKEN" } }, tools: [tool("read", read)] };
 let playbook: { id: string; guid: string; name: string; visibility: string };
 let serial = 0;
 const mutations = vi.fn();
 
 function database() {
   return { from(table: string) {
-    const data = table === "playbooks" ? playbook : table === "mcp_servers" ? [publicServer, protectedServer]
+    const data = table === "playbooks" ? playbook : table === "mcp_servers" ? [publicServer, protectedServer, vaultServer]
       : table === "skills" ? [{ id: "skill-1", name: "review", content: "Review code" }] : [];
     const builder: Record<string, unknown> = {};
     for (const method of ["select", "eq", "in", "order", "limit", "ilike"]) builder[method] = vi.fn(() => builder);
@@ -82,11 +87,11 @@ describe("anonymous public MCP tools", () => {
     expect(listed).toContain("list_skills");
     expect(listed).toContain("search_memory");
     expect(listed).toContain("publicreader__search");
-    for (const hidden of ["read_memory", "write_memory", "list_secrets", "use_secret", "list_mcp_servers", "publicreader__delete", "publicreader__unknown", "protected__read"]) {
+    for (const hidden of ["read_memory", "write_memory", "list_secrets", "use_secret", "list_mcp_servers", "publicreader__delete", "publicreader__unknown", "protected__read", "vaultbacked__read"]) {
       expect(listed).not.toContain(hidden);
     }
     expect(manifest.tools.every((t: McpTool) => t.annotations?.readOnlyHint === true)).toBe(true);
-    expect(vi.mocked(loadFederationSecrets).mock.calls.every(([server]) => server.id !== protectedServer.id)).toBe(true);
+    expect(vi.mocked(loadFederationSecrets).mock.calls.every(([server]) => ![protectedServer.id, vaultServer.id].includes(server.id))).toBe(true);
     const result = await (await request("tools/call", { name: "list_skills", arguments: {} })).json();
     expect(result.result.structuredContent.skills).toHaveLength(1);
   });
@@ -134,6 +139,8 @@ describe("anonymous public MCP tools", () => {
   it("refuses protected federation and requires the shared read-only gate for public RPC and REST calls", async () => {
     const denied = await request("tools/call", { name: "protected__read", arguments: {} });
     expect(denied.status).toBe(403);
+    const vaultDenied = await request("tools/call", { name: "vaultbacked__read", arguments: {} });
+    expect(vaultDenied.status).toBe(403);
     expect(callFederatedTool).not.toHaveBeenCalled();
     await request("tools/call", { name: "publicreader__search", arguments: {} });
     expect(callFederatedTool).toHaveBeenLastCalledWith(publicServer, "publicreader__search", {}, expect.objectContaining({ readOnly: true }));

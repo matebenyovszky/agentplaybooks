@@ -1,3 +1,20 @@
+BEGIN;
+CREATE TEMP TABLE _seed_mcp_servers (
+  author_id uuid, name text, description text, transport_type text, transport_config jsonb,
+  tools jsonb, resources jsonb, tags text[], source_url text, source_type text, is_verified boolean
+) ON COMMIT DROP;
+CREATE TEMP TABLE _seed_skills (
+  author_id uuid, name text, description text, definition jsonb, examples jsonb,
+  tags text[], source_url text, source_type text, is_verified boolean
+) ON COMMIT DROP;
+CREATE OR REPLACE FUNCTION pg_temp.seed_skill_content(skill_name text, description text, definition jsonb, examples jsonb)
+RETURNS text LANGUAGE sql AS $$
+  SELECT E'---\nname: ' || replace(skill_name, '_', '-') || E'\ndescription: '
+    || to_json(COALESCE(description, 'Seed skill'))::text || E'\n---\n\n'
+    || COALESCE(definition->>'system_prompt', description, '')
+    || E'\n\n## Original definition\n```json\n' || COALESCE(definition, '{}'::jsonb)::text
+    || E'\n```\n\n## Examples\n```json\n' || COALESCE(examples, '[]'::jsonb)::text || E'\n```\n';
+$$;
 -- ============================================
 -- AgentPlaybooks Full Seed Script
 -- ============================================
@@ -37,10 +54,22 @@ INSERT INTO auth.users (
   'authenticated'
 ) ON CONFLICT (id) DO NOTHING;
 
+-- Make the system user's publisher profile explicit; the seed must not create
+-- playbooks with a NULL publisher if the auth-user trigger is absent.
+INSERT INTO profiles (id, auth_user_id, display_name, is_virtual, is_verified)
+VALUES (
+  '00000000-0000-0000-0000-000000000002',
+  '00000000-0000-0000-0000-000000000001',
+  'AgentPlaybooks System',
+  true,
+  true
+)
+ON CONFLICT (auth_user_id) DO NOTHING;
+
 -- ============================================
 -- 2. PUBLIC MCP SERVERS (Official, No Auth Required)
 -- ============================================
-INSERT INTO public_mcp_servers (author_id, name, description, transport_type, transport_config, tools, resources, tags, source_url, source_type, is_verified)
+INSERT INTO _seed_mcp_servers (author_id, name, description, transport_type, transport_config, tools, resources, tags, source_url, source_type, is_verified)
 VALUES
 -- Filesystem
 ('00000000-0000-0000-0000-000000000001',
@@ -151,7 +180,7 @@ ON CONFLICT DO NOTHING;
 -- ============================================
 -- 3. PUBLIC SKILLS (Developer Personas)
 -- ============================================
-INSERT INTO public_skills (author_id, name, description, definition, examples, tags, source_url, source_type, is_verified)
+INSERT INTO _seed_skills (author_id, name, description, definition, examples, tags, source_url, source_type, is_verified)
 VALUES
 -- Next.js skill
 ('00000000-0000-0000-0000-000000000001',
@@ -308,60 +337,66 @@ ON CONFLICT DO NOTHING;
 -- ============================================
 -- 4. SAMPLE PLAYBOOKS
 -- ============================================
-INSERT INTO playbooks (id, user_id, guid, name, description, config, is_public)
+INSERT INTO playbooks (id, user_id, publisher_id, guid, name, description, config, visibility)
 VALUES
 -- Full-stack developer playbook
 ('11111111-1111-1111-1111-111111111111',
  '00000000-0000-0000-0000-000000000001',
+ (SELECT id FROM profiles WHERE auth_user_id = '00000000-0000-0000-0000-000000000001' LIMIT 1),
  'fullstack-dev',
  'Full-Stack Developer',
  'Complete toolkit for modern full-stack development with Next.js, TypeScript, and Supabase',
  '{"theme": "dark", "language": "en"}'::jsonb,
- true),
+ 'public'),
 
 -- Python backend playbook
 ('22222222-2222-2222-2222-222222222222',
  '00000000-0000-0000-0000-000000000001',
+ (SELECT id FROM profiles WHERE auth_user_id = '00000000-0000-0000-0000-000000000001' LIMIT 1),
  'python-backend',
  'Python Backend Developer',
  'FastAPI, async programming, and clean architecture patterns for Python APIs',
  '{"theme": "dark", "language": "en"}'::jsonb,
- true),
+ 'public'),
 
 -- DevOps playbook
 ('33333333-3333-3333-3333-333333333333',
  '00000000-0000-0000-0000-000000000001',
+ (SELECT id FROM profiles WHERE auth_user_id = '00000000-0000-0000-0000-000000000001' LIMIT 1),
  'devops-toolkit',
  'DevOps Toolkit',
  'Docker, CI/CD, infrastructure as code, and deployment best practices',
  '{"theme": "dark", "language": "en"}'::jsonb,
- true),
+ 'public'),
 
 -- Code quality playbook
 ('44444444-4444-4444-4444-444444444444',
  '00000000-0000-0000-0000-000000000001',
+ (SELECT id FROM profiles WHERE auth_user_id = '00000000-0000-0000-0000-000000000001' LIMIT 1),
  'code-quality',
  'Code Quality Champion',
  'Code review, testing strategies, and maintainability focused development',
  '{"theme": "light", "language": "en"}'::jsonb,
- true),
+ 'public'),
 
 -- Startup MVP playbook
 ('55555555-5555-5555-5555-555555555555',
  '00000000-0000-0000-0000-000000000001',
+ (SELECT id FROM profiles WHERE auth_user_id = '00000000-0000-0000-0000-000000000001' LIMIT 1),
  'startup-mvp',
  'Startup MVP Builder',
  'Rapid prototyping with Next.js, Supabase, and modern UI frameworks',
  '{"theme": "dark", "language": "en"}'::jsonb,
- true)
+ 'public')
 
 ON CONFLICT (guid) DO NOTHING;
 
 -- ============================================
 -- 5. PLAYBOOK PERSONAS
 -- ============================================
-INSERT INTO personas (playbook_id, name, system_prompt, metadata)
-VALUES
+UPDATE playbooks AS p
+SET persona_name = seed.name, persona_system_prompt = seed.system_prompt, persona_metadata = seed.metadata
+FROM (VALUES
 ('11111111-1111-1111-1111-111111111111',
  'Full-Stack Expert',
  'You are a senior full-stack developer with expertise in TypeScript, React, Next.js, and Supabase. You write clean, maintainable code following best practices. You prioritize type safety, performance, and user experience. When suggesting solutions, consider both frontend and backend implications.',
@@ -385,64 +420,63 @@ VALUES
 ('55555555-5555-5555-5555-555555555555',
  'MVP Architect',
  'You are a pragmatic full-stack developer who helps startups build MVPs quickly. You focus on shipping fast while maintaining code quality. You make smart tradeoffs between speed and technical debt, always considering the business context.',
- '{"avatar": "🚀", "specialties": ["Rapid Prototyping", "Next.js", "Supabase", "Tailwind"]}'::jsonb)
-
-ON CONFLICT DO NOTHING;
+ '{"avatar": "🚀", "specialties": ["Rapid Prototyping", "Next.js", "Supabase", "Tailwind"]}'::jsonb)) AS seed(playbook_id, name, system_prompt, metadata)
+WHERE p.id = seed.playbook_id::uuid;
 
 -- ============================================
--- 6. PLAYBOOK SKILLS (copy from public_skills)
+-- 6. PLAYBOOK SKILLS (copy from _seed_skills)
 -- ============================================
 -- Full-stack playbook
-INSERT INTO skills (playbook_id, name, description, definition, examples)
-SELECT '11111111-1111-1111-1111-111111111111', ps.name, ps.description, ps.definition, ps.examples
-FROM public_skills ps WHERE ps.name IN ('nextjs_expert', 'react_expert', 'typescript_expert', 'supabase_expert', 'tailwind_expert')
+INSERT INTO skills (playbook_id, publisher_id, name, description, content)
+SELECT '11111111-1111-1111-1111-111111111111', (SELECT id FROM profiles WHERE auth_user_id = '00000000-0000-0000-0000-000000000001'), replace(ps.name, '_', '-'), ps.description, pg_temp.seed_skill_content(ps.name, ps.description, ps.definition, ps.examples)
+FROM _seed_skills ps WHERE ps.name IN ('nextjs_expert', 'react_expert', 'typescript_expert', 'supabase_expert', 'tailwind_expert')
 ON CONFLICT DO NOTHING;
 
 -- Python playbook
-INSERT INTO skills (playbook_id, name, description, definition, examples)
-SELECT '22222222-2222-2222-2222-222222222222', ps.name, ps.description, ps.definition, ps.examples
-FROM public_skills ps WHERE ps.name IN ('python_api_expert')
+INSERT INTO skills (playbook_id, publisher_id, name, description, content)
+SELECT '22222222-2222-2222-2222-222222222222', (SELECT id FROM profiles WHERE auth_user_id = '00000000-0000-0000-0000-000000000001'), replace(ps.name, '_', '-'), ps.description, pg_temp.seed_skill_content(ps.name, ps.description, ps.definition, ps.examples)
+FROM _seed_skills ps WHERE ps.name IN ('python_api_expert')
 ON CONFLICT DO NOTHING;
 
 -- DevOps playbook
-INSERT INTO skills (playbook_id, name, description, definition, examples)
-SELECT '33333333-3333-3333-3333-333333333333', ps.name, ps.description, ps.definition, ps.examples
-FROM public_skills ps WHERE ps.name IN ('docker_expert', 'git_expert')
+INSERT INTO skills (playbook_id, publisher_id, name, description, content)
+SELECT '33333333-3333-3333-3333-333333333333', (SELECT id FROM profiles WHERE auth_user_id = '00000000-0000-0000-0000-000000000001'), replace(ps.name, '_', '-'), ps.description, pg_temp.seed_skill_content(ps.name, ps.description, ps.definition, ps.examples)
+FROM _seed_skills ps WHERE ps.name IN ('docker_expert', 'git_expert')
 ON CONFLICT DO NOTHING;
 
 -- Code quality playbook
-INSERT INTO skills (playbook_id, name, description, definition, examples)
-SELECT '44444444-4444-4444-4444-444444444444', ps.name, ps.description, ps.definition, ps.examples
-FROM public_skills ps WHERE ps.name IN ('code_reviewer', 'typescript_expert', 'git_expert')
+INSERT INTO skills (playbook_id, publisher_id, name, description, content)
+SELECT '44444444-4444-4444-4444-444444444444', (SELECT id FROM profiles WHERE auth_user_id = '00000000-0000-0000-0000-000000000001'), replace(ps.name, '_', '-'), ps.description, pg_temp.seed_skill_content(ps.name, ps.description, ps.definition, ps.examples)
+FROM _seed_skills ps WHERE ps.name IN ('code_reviewer', 'typescript_expert', 'git_expert')
 ON CONFLICT DO NOTHING;
 
 -- Startup MVP playbook
-INSERT INTO skills (playbook_id, name, description, definition, examples)
-SELECT '55555555-5555-5555-5555-555555555555', ps.name, ps.description, ps.definition, ps.examples
-FROM public_skills ps WHERE ps.name IN ('nextjs_expert', 'supabase_expert', 'tailwind_expert')
+INSERT INTO skills (playbook_id, publisher_id, name, description, content)
+SELECT '55555555-5555-5555-5555-555555555555', (SELECT id FROM profiles WHERE auth_user_id = '00000000-0000-0000-0000-000000000001'), replace(ps.name, '_', '-'), ps.description, pg_temp.seed_skill_content(ps.name, ps.description, ps.definition, ps.examples)
+FROM _seed_skills ps WHERE ps.name IN ('nextjs_expert', 'supabase_expert', 'tailwind_expert')
 ON CONFLICT DO NOTHING;
 
 -- ============================================
--- 7. PLAYBOOK MCP SERVERS (copy from public_mcp_servers)
+-- 7. PLAYBOOK MCP SERVERS (copy from _seed_mcp_servers)
 -- ============================================
-INSERT INTO mcp_servers (playbook_id, name, description, tools, resources, transport_type, transport_config)
-SELECT '11111111-1111-1111-1111-111111111111', pm.name, pm.description, pm.tools, pm.resources, pm.transport_type, pm.transport_config
-FROM public_mcp_servers pm WHERE pm.name IN ('filesystem', 'fetch', 'memory')
+INSERT INTO mcp_servers (playbook_id, publisher_id, name, description, tools, resources, transport_type, transport_config, source_url)
+SELECT '11111111-1111-1111-1111-111111111111', (SELECT id FROM profiles WHERE auth_user_id = '00000000-0000-0000-0000-000000000001'), pm.name, pm.description, pm.tools, pm.resources, pm.transport_type, pm.transport_config, pm.source_url
+FROM _seed_mcp_servers pm WHERE pm.name IN ('filesystem', 'fetch', 'memory')
 ON CONFLICT DO NOTHING;
 
-INSERT INTO mcp_servers (playbook_id, name, description, tools, resources, transport_type, transport_config)
-SELECT '22222222-2222-2222-2222-222222222222', pm.name, pm.description, pm.tools, pm.resources, pm.transport_type, pm.transport_config
-FROM public_mcp_servers pm WHERE pm.name IN ('filesystem', 'sqlite')
+INSERT INTO mcp_servers (playbook_id, publisher_id, name, description, tools, resources, transport_type, transport_config, source_url)
+SELECT '22222222-2222-2222-2222-222222222222', (SELECT id FROM profiles WHERE auth_user_id = '00000000-0000-0000-0000-000000000001'), pm.name, pm.description, pm.tools, pm.resources, pm.transport_type, pm.transport_config, pm.source_url
+FROM _seed_mcp_servers pm WHERE pm.name IN ('filesystem', 'sqlite')
 ON CONFLICT DO NOTHING;
 
-INSERT INTO mcp_servers (playbook_id, name, description, tools, resources, transport_type, transport_config)
-SELECT '33333333-3333-3333-3333-333333333333', pm.name, pm.description, pm.tools, pm.resources, pm.transport_type, pm.transport_config
-FROM public_mcp_servers pm WHERE pm.name IN ('filesystem', 'everything')
+INSERT INTO mcp_servers (playbook_id, publisher_id, name, description, tools, resources, transport_type, transport_config, source_url)
+SELECT '33333333-3333-3333-3333-333333333333', (SELECT id FROM profiles WHERE auth_user_id = '00000000-0000-0000-0000-000000000001'), pm.name, pm.description, pm.tools, pm.resources, pm.transport_type, pm.transport_config, pm.source_url
+FROM _seed_mcp_servers pm WHERE pm.name IN ('filesystem', 'everything')
 ON CONFLICT DO NOTHING;
 
-INSERT INTO mcp_servers (playbook_id, name, description, tools, resources, transport_type, transport_config)
-SELECT '55555555-5555-5555-5555-555555555555', pm.name, pm.description, pm.tools, pm.resources, pm.transport_type, pm.transport_config
-FROM public_mcp_servers pm WHERE pm.name IN ('filesystem', 'fetch', 'puppeteer', 'memory')
+INSERT INTO mcp_servers (playbook_id, publisher_id, name, description, tools, resources, transport_type, transport_config, source_url)
+SELECT '55555555-5555-5555-5555-555555555555', (SELECT id FROM profiles WHERE auth_user_id = '00000000-0000-0000-0000-000000000001'), pm.name, pm.description, pm.tools, pm.resources, pm.transport_type, pm.transport_config, pm.source_url
+FROM _seed_mcp_servers pm WHERE pm.name IN ('filesystem', 'fetch', 'puppeteer', 'memory')
 ON CONFLICT DO NOTHING;
 
 -- ============================================
@@ -477,12 +511,14 @@ ON CONFLICT (playbook_id, key) DO NOTHING;
 -- ============================================
 SELECT 'Seed completed!' as status;
 SELECT 'Users' as entity, COUNT(*) as count FROM auth.users
-UNION ALL SELECT 'Public MCP Servers', COUNT(*) FROM public_mcp_servers
-UNION ALL SELECT 'Public Skills', COUNT(*) FROM public_skills
+UNION ALL SELECT 'Public MCP Servers', COUNT(*) FROM _seed_mcp_servers
+UNION ALL SELECT 'Public Skills', COUNT(*) FROM _seed_skills
 UNION ALL SELECT 'Playbooks', COUNT(*) FROM playbooks
-UNION ALL SELECT 'Personas', COUNT(*) FROM personas
+UNION ALL SELECT 'Personas', COUNT(*) FROM playbooks WHERE persona_name IS NOT NULL
 UNION ALL SELECT 'Skills (linked)', COUNT(*) FROM skills
 UNION ALL SELECT 'MCP Servers (linked)', COUNT(*) FROM mcp_servers
 UNION ALL SELECT 'Memories', COUNT(*) FROM memories;
 
 
+
+COMMIT;

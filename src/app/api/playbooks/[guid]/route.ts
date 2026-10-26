@@ -1,10 +1,12 @@
 // Native Request/Response handler: shared by Next.js and the Worker dispatcher.
 // @worker-native
+import { runWithAuditRequest } from "@/lib/audit-context";
 import { getServiceSupabase } from "../../_shared/supabase";
 import { getAuthenticatedUser } from "../../_shared/auth";
 import { getPlaybookAccessRole } from "../../_shared/guards";
 import { buildPlaybookUpdate } from "@/lib/playbook-access";
 import { playbookViewForRole, roleMayWrite } from "@/lib/audit-access";
+import { getPublisherIdForAuthUser } from "@/lib/repositories/playbooks";
 import {
     formatAsOpenAPI,
     formatAsMCP,
@@ -140,7 +142,7 @@ export async function GET(
     }
 }
 
-export async function PUT(
+async function handlePUT(
     request: Request,
     { params }: { params: Promise<{ guid: string }> }
 ) {
@@ -154,7 +156,7 @@ export async function PUT(
     const supabase = getServiceSupabase();
 
     // Find the playbook ID first
-    let query = supabase.from("playbooks").select("id, user_id");
+    let query = supabase.from("playbooks").select("id, user_id, publisher_id");
     if (isUuid) {
         query = query.eq("id", idOrGuid);
     } else {
@@ -173,6 +175,15 @@ export async function PUT(
 
     const body = await request.json();
     const updateData = buildPlaybookUpdate(body, accessRole);
+    if ((updateData.visibility === "public" || updateData.visibility === "unlisted")
+        && !playbook.publisher_id) {
+        try {
+            updateData.publisher_id = await getPublisherIdForAuthUser(playbook.user_id);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : "Publisher profile not found";
+            return Response.json({ error: message }, { status: 500 });
+        }
+    }
     if (Object.keys(updateData).length === 0) {
         return Response.json({ error: "No valid fields to update" }, { status: 400 });
     }
@@ -191,7 +202,7 @@ export async function PUT(
     return Response.json(data);
 }
 
-export async function DELETE(
+async function handleDELETE(
     request: Request,
     { params }: { params: Promise<{ guid: string }> }
 ) {
@@ -232,4 +243,12 @@ export async function DELETE(
     }
 
     return Response.json({ success: true });
+}
+
+export async function PUT(request: Request, { params }: { params: Promise<{ guid: string }> }) {
+  return runWithAuditRequest(request, () => handlePUT(request, { params }));
+}
+
+export async function DELETE(request: Request, { params }: { params: Promise<{ guid: string }> }) {
+  return runWithAuditRequest(request, () => handleDELETE(request, { params }));
 }

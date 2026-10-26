@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Public page shells</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; }
+    body {
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      background: #0a0f1a;
+      color: #f1f5f9;
+      min-width: 0;
+    }
+    .page { min-width: 0; overflow-x: clip; }
+    .wrap { max-width: 72rem; margin: 0 auto; padding: 1rem; min-width: 0; width: 100%; }
+    .hero { padding: 4rem 1rem 2rem; text-align: center; }
+    .hero h1 { font-size: 2.5rem; overflow-wrap: anywhere; margin: 0 0 1rem; }
+    .hero p { overflow-wrap: anywhere; }
+    .nav {
+      display: flex;
+      width: max-content;
+      max-width: calc(100% - 2rem);
+      margin: 1rem auto 0;
+      overflow-x: auto;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 9999px;
+    }
+    .tabs { display: flex; min-width: 0; gap: 0.5rem; overflow-x: auto; border-bottom: 1px solid #1e3a8a; }
+    .tab { flex-shrink: 0; white-space: nowrap; padding: 0.75rem 1rem; }
+    .cards { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+    .card { min-width: 0; overflow-wrap: anywhere; padding: 1.25rem; border: 1px solid #334155; border-radius: 0.75rem; }
+    .row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem; min-width: 0; }
+    article { max-width: 48rem; margin: 0 auto; min-width: 0; overflow-wrap: anywhere; padding: 1.5rem; }
+    @media (min-width: 768px) {
+      .cards { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <section class="page" data-testid="page-home">
+    <div class="nav" data-testid="home-nav">Home Explore Docs Blog EN</div>
+    <div class="hero">
+      <h1 data-testid="home-title">One playbook, every agent</h1>
+      <p>Portable skills, tools, and memory for AI agents.</p>
+    </div>
+  </section>
+
+  <section class="page" data-testid="page-blog">
+    <div class="wrap">
+      <article data-testid="blog-article">
+        <h1>Welcome to AgentPlaybooks</h1>
+        <p data-testid="blog-description">
+          Thoughts, updates, and guides on building autonomous agents with portable skills and MCP servers.
+        </p>
+      </article>
+    </div>
+  </section>
+
+  <section class="page" data-testid="page-explore">
+    <div class="wrap">
+      <div class="tabs" data-testid="explore-tabs">
+        <button class="tab">Playbooks</button>
+        <button class="tab">Skills</button>
+        <button class="tab">MCP</button>
+      </div>
+      <div class="cards" style="margin-top: 1rem;">
+        <div class="card" data-testid="skill-card">
+          <h2>Next.js App Router</h2>
+          <p>Complete toolkit for modern full-stack development with Next.js, TypeScript, and Supabase</p>
+        </div>
+        <div class="card" data-testid="mcp-card">
+          <h2>Supabase MCP</h2>
+          <p>Query public playbooks, memory, and skills over the Model Context Protocol.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="page" data-testid="page-dashboard">
+    <div class="wrap">
+      <div class="row">
+        <h1 data-testid="dashboard-title">Welcome, owner</h1>
+        <button>Create Playbook</button>
+      </div>
+      <div class="card" data-testid="dashboard-card">
+        <h2>Full-Stack Developer</h2>
+        <p>Complete toolkit for modern full-stack development with Next.js, TypeScript, and Supabase</p>
+      </div>
+    </div>
+  </section>
+</body>
+</html>

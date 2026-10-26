@@ -2,7 +2,7 @@ import { handle } from "hono/vercel";
 import { createApiApp } from "@/app/api/_shared/hono";
 import { validateApiKey } from "@/app/api/_shared/auth";
 import { getServiceSupabase, getSupabase } from "@/app/api/_shared/supabase";
-import { loadFederationSecrets } from "@/app/api/_shared/federation-secrets";
+import { anonymousMayCall, loadFederationSecrets } from "@/app/api/_shared/federation-secrets";
 import { callFederatedTool, federatedCallPrefixes } from "@/lib/mcp/federation";
 import { federationAuditWriter } from "@/app/api/_shared/audit";
 import type { ApiKey, MCPServer } from "@/lib/supabase/types";
@@ -42,8 +42,8 @@ app.post("/", async (c) => {
   if (!server) return c.json({ error: "Federated tool not found" }, 404);
   const anonymousPublic = await isAnonymousPublicRequest(c.req.raw, playbook.id, isPublicPlaybook);
   if (anonymousPublic && !isPublicMcpServer(server)) return c.json({ error: "tools:call permission required" }, 401);
-  const access = (server.transport_config as { access?: string } | null)?.access;
-  if (access !== "public") {
+  // "public" covers keyless upstreams only; see anonymousMayCall.
+  if (!anonymousMayCall(server as MCPServer)) {
     const key = authenticatedKey || await validateApiKey(c.req.raw, "tools:call");
     if (!key || key.playbooks.id !== playbook.id) return c.json({ error: "tools:call permission required" }, 401);
   }

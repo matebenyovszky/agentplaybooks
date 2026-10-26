@@ -20,6 +20,19 @@ const cutoff = versions.at(-1);
 // This SQL was deployed through Dashboard under a different timestamp.
 // Its normalized SQL matched the heap project's recorded statement on 2026-10-25.
 const recordedVersionAliases = new Map([["20261002120000", "20261009220418"]]);
+// Newest version already in production schema_migrations (PR #185).
+// `supabase db push --dry-run` refuses any other local file older than this
+// with "rerun with --include-all". Do not pass that flag; rename the file.
+const lastRemoteProductionVersion = "20261025123000";
+const recordedForwardVersions = new Set([
+  "20260922213700",
+  "20261009220418",
+  "20261010081252",
+  "20261010115900",
+  "20261010120000",
+  "20261024120000",
+  lastRemoteProductionVersion,
+]);
 const migrationDir = join(root, "supabase", "migrations");
 const forwardFiles = readdirSync(migrationDir)
   .filter((file) => file.endsWith(".sql"))
@@ -33,6 +46,16 @@ if (forwardFiles.some(({ file }) => !/^[0-9]{14}_[a-z0-9_]+\.sql$/.test(file))) 
 }
 if (forwardFiles.some((entry, index) => index > 0 && entry.version === forwardFiles[index - 1].version)) {
   throw new Error("Two forward migrations have the same version.");
+}
+const insertedBeforeLastRemote = forwardFiles.filter(
+  ({ version }) => version < lastRemoteProductionVersion && !recordedForwardVersions.has(version),
+);
+if (insertedBeforeLastRemote.length) {
+  throw new Error(
+    `Found local migration files to be inserted before the last migration on production (${lastRemoteProductionVersion}):\n` +
+      insertedBeforeLastRemote.map(({ file }) => `  supabase/migrations/${file}`).join("\n") +
+      `\nRename them to a version after ${lastRemoteProductionVersion}. Do not pass --include-all.`,
+  );
 }
 
 const databaseUrl = process.env.SUPABASE_DB_URL;

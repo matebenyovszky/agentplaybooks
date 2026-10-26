@@ -55,7 +55,7 @@ describe("security documentation pack", () => {
     expect(whitepaper.toLowerCase()).toMatch(/jogi ellenőrzés szükséges/);
     expect(whitepaper).toMatch(/No KMS \/ HSM/);
     expect(whitepaper).toMatch(/No application-level MFA/);
-    expect(whitepaper).toMatch(/Auditor role: not in the codebase/);
+    expect(whitepaper).toMatch(/owner \| editor \| auditor/);
     expect(whitepaper).toMatch(/Folyamatban \/ In progress/);
     expect(whitepaper).toMatch(/Done on `main`/);
     expect(whitepaper).toMatch(/pull\/202/);

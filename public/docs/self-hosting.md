@@ -222,8 +222,9 @@ an empty database: the incremental history cannot create the core tables.
 | `NEXT_PUBLIC_APP_URL` | Yes for self-hosting | This instance's own origin. Baked in at build time; unset, OAuth metadata and generated links point at `https://agentplaybooks.ai`. |
 | `SECRETS_ENCRYPTION_KEY` | Yes for the secrets vault | 64 hexadecimal characters. Rotating it makes existing secrets undecryptable — there is no re-encryption tooling yet. |
 | `ALLOWED_ORIGINS` | No | Comma-separated origins allowed to make credentialed cross-origin API calls. Setting it **replaces** the default list, which is what a self-hosted instance wants — otherwise the project's own domains stay trusted. Unset keeps the previous behaviour. |
-| `SECRETS_REQUIRE_ALLOWED_HOSTS` | No | Set to `true` to refuse outbound use of any secret that has not declared `allowed_hosts`. Off by default. |
-| `AUDIT_RETENTION_DAYS` | No | Positive integer of days to keep `audit_logs`. Unset, `0`, or `forever` keeps current behaviour (until playbook/account deletion). Requires a scheduler hitting `POST /api/cron/audit-purge`. |
+| `SECRETS_REQUIRE_ALLOWED_HOSTS` | No | `true` refuses outbound use of any secret that has not declared `allowed_hosts`. The bundled `docker-compose.yml` defaults it to `true`; the hosted service leaves it off. |
+| `OUTBOUND_DNS_CHECK` | No | On by default in a Node process: before a credential is sent, the destination's name is resolved and refused if any address is internal. Set `false` only when egress is enforced at the network layer instead. |
+| `AUDIT_RETENTION_DAYS` | No | Positive integer of days to keep `audit_logs`. Unset, `0`, or `forever` keeps every row. Deleting a playbook, server or account does not remove its trail. Requires a scheduler hitting `POST /api/cron/audit-purge`. |
 | `AUDIT_CRON_SECRET` | No | Bearer token for the instance purge endpoint. Unset hides the endpoint. `CRON_SECRET` is also accepted. |
 | `AUDIT_SYSLOG_URL` | No | Optional RFC 5424 forwarder: `udp://host:514`, `tcp://host:514`, or `tls://host:6514`. Off by default. |
 | `AUDIT_SIEM_WEBHOOK_URL` | No | Optional HTTPS POST of each audit event. Off by default. Requires `AUDIT_SIEM_WEBHOOK_SECRET` (≥32 random bytes, not a password) for an HMAC `X-Audit-Signature` header. |
@@ -234,7 +235,29 @@ an empty database: the incremental history cannot create the core tables.
 | `MTLS_PROXY_VERIFY_HEADER` | No | Required in proxy mode. That header must equal `SUCCESS` or mTLS is rejected. |
 | `MTLS_TRUSTED_PROXIES` | No | Required when `MTLS_MODE=proxy`. Comma-separated IPs/CIDRs of the terminator. The authenticated X-APB-Proxy-Address must match; also requires MTLS_PROXY_SHARED_SECRET. |
 
-Existing databases need `20261024120000_audit_logs_compliance.sql` (hash chain backfill, auditor role, retention checkpoints). That migration rewrites every `audit_logs` row and **must not be applied to production without approval and a backup**. Follow [`scripts/ops/audit-migration/RUNBOOK.md`](https://github.com/matebenyovszky/agentplaybooks/blob/cursor/audit-logs-compliance-adfd/scripts/ops/audit-migration/RUNBOOK.md). Apply it **before** merging/deploying the app change; the previously deployed app tolerates the additive schema. See [Audit Logs](./audit-logs.md).
+Existing databases need `20261024120000_audit_logs_compliance.sql` (hash chain backfill, auditor role, retention checkpoints). That migration rewrites every `audit_logs` row and **must not be applied to production without approval and a backup**. Follow [`scripts/ops/audit-migration/RUNBOOK.md`](https://github.com/matebenyovszky/agentplaybooks/blob/main/scripts/ops/audit-migration/RUNBOOK.md). Apply it **before** merging/deploying the app change; the previously deployed app tolerates the additive schema. See [Audit Logs](./audit-logs.md).
+
+Three later migrations rewrite no rows and apply in the normal way:
+
+- `20261025124500_audit_logs_tamper_resistance.sql` — the trail no longer has foreign keys, so deleting a playbook, MCP server or account keeps its rows and its hash chain; DELETE and TRUNCATE are refused except by the retention function; checkpoints are immutable.
+- `20261025130000_audit_config_changes.sql` — changes to playbooks (including visibility), skills, MCP servers, API keys and collaborators are recorded by triggers, whichever API path made them, with the actor the application authenticated.
+- `20261025140000_private_instance.sql` — the private-instance switch below.
+
+### Private instance
+
+An instance for one organisation usually has nothing to publish. Turn on the
+private-instance switch and no playbook can be public or unlisted, so the
+public listings, a public playbook's MCP endpoint, and reading an unlisted
+playbook by its GUID have nothing to serve without a sign-in:
+
+```sql
+ALTER DATABASE postgres SET agentplaybooks.private_instance = 'on';
+UPDATE public.playbooks SET visibility = 'private' WHERE visibility <> 'private';
+```
+
+Restart the Data API (PostgREST) afterwards so its pooled connections pick up
+the setting. Independently of the switch, a playbook-scoped API key — an
+agent's credential — cannot make a playbook public or unlisted.
 
 ### Air-gapped / no-egress
 
@@ -282,7 +305,21 @@ curl -X PUT 'https://your-domain.com/api/playbooks/GUID/secrets/GITHUB_TOKEN' \
 Entries are case-insensitive hostnames. A leading `*.` matches subdomains but
 not the bare domain, so list both if you need both. An unset or empty list means
 any destination, which keeps existing secrets working unchanged; set
-`SECRETS_REQUIRE_ALLOWED_HOSTS=true` to make pinning mandatory on your instance.
+`SECRETS_REQUIRE_ALLOWED_HOSTS=true` to make pinning mandatory on your instance
+(the bundled `docker-compose.yml` does).
+
+An API key may narrow a secret's list but not widen or clear it, and cannot
+turn on API-key reveal: those are the owner's decisions. Pointing an MCP server
+configuration at vault secrets likewise needs the owner or a key with
+`secrets:read`, because the configuration decides where they are sent.
+
+Destinations are refused when they are internal: loopback, private,
+link-local and carrier-grade NAT addresses in any IPv4 or IPv6 spelling,
+single-label names such as a Docker service, and `*.local` / `*.internal`
+names. The name is also resolved, and refused if any address it resolves to
+is internal. A name whose DNS answer changes between that check and the
+connection is not covered; run the application container without a route to
+internal networks it does not need, so egress policy covers it too.
 
 ## Custom Domain
 

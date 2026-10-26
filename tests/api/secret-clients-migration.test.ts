@@ -10,8 +10,9 @@ beforeAll(async () => {
   await db.exec(`CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role BYPASSRLS;
     CREATE TABLE playbooks (id uuid PRIMARY KEY); INSERT INTO playbooks VALUES ('${A}'), ('${B}');`);
   await db.exec(readFileSync("supabase/migrations/20261010081252_secret_clients.sql", "utf8"));
-  const verification = readFileSync("scripts/verify-production-schema.sql", "utf8").split("DO $verify_secret_clients$")[1];
-  await db.exec(`DO $verify_secret_clients$${verification}`);
+  const verification = readFileSync("scripts/verify-production-schema.sql", "utf8")
+    .split("DO $verify_secret_clients$")[1].split("$verify_secret_clients$;")[0];
+  await db.exec(`DO $verify_secret_clients$${verification}$verify_secret_clients$;`);
 }, 30000);
 afterAll(async () => { await db?.close(); });
 

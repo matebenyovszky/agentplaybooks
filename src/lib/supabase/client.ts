@@ -24,10 +24,12 @@ export function createBrowserClient() {
 }
 
 // Server-side Supabase client (for API routes)
-export function createServerClient(supabaseUrl: string, supabaseKey: string) {
+export function createServerClient(supabaseUrl: string, supabaseKey: string, fetchImpl?: typeof fetch) {
   // API routes pass bearer tokens explicitly. A server client must never keep
   // one request's session in an isolate that can serve another request.
   return createClient<Database>(supabaseUrl, supabaseKey, {
+    // Server writes carry the audit actor (see src/lib/audit-context.ts).
+    ...(fetchImpl ? { global: { fetch: fetchImpl } } : {}),
     auth: {
       autoRefreshToken: false,
       persistSession: false,

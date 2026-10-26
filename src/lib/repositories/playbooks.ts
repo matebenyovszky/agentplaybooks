@@ -18,6 +18,35 @@ type PlaybookWithCounts = Playbook & {
   memories?: Array<{ count: number }>;
 };
 
+/** Resolve the public profile row used by publisher_id from an Auth user ID. */
+export async function getPublisherIdForAuthUser(userId: string): Promise<string> {
+  const { data, error } = await getServiceSupabase()
+    .from("profiles")
+    .select("id")
+    .eq("auth_user_id", userId)
+    .maybeSingle();
+
+  if (error) throw new Error(`Failed to resolve publisher profile: ${error.message}`);
+  if (data?.id) return data.id;
+
+  // API-first/self-hosted signups may not have visited the profile screen yet.
+  // Ignore a concurrent insert: never replace an existing publisher's details.
+  const supabase = getServiceSupabase();
+  const { error: creationError } = await supabase.from("profiles").upsert({
+    id: userId,
+    auth_user_id: userId,
+    display_name: "User",
+    avatar_svg: null, website_url: null, description: null,
+    is_verified: false, is_virtual: false, updated_at: new Date().toISOString(),
+  }, { onConflict: "auth_user_id", ignoreDuplicates: true });
+  if (creationError) throw new Error(`Failed to create publisher profile: ${creationError.message}`);
+  const { data: profile, error: lookupError } = await supabase.from("profiles")
+    .select("id").eq("auth_user_id", userId).maybeSingle();
+  if (lookupError) throw new Error(`Failed to resolve publisher profile: ${lookupError.message}`);
+  if (!profile?.id) throw new Error("Publisher profile could not be resolved.");
+  return profile.id;
+}
+
 function withCounts(
   rows: PlaybookWithCounts[],
   roleFor: (playbookId: string) => PlaybookAccessRole,
@@ -116,6 +145,11 @@ export type CreatePlaybookInput = {
   instructions?: string | null;
 };
 
+export type CreatePlaybookOptions = {
+  /** Trusted server-side attribution override, used only when forking a playbook. */
+  publisherId?: string;
+};
+
 /** Parse the canonical create payload used by REST, MCP, and the dashboard. */
 export function parseCreatePlaybookInput(body: unknown):
   | { input: CreatePlaybookInput }
@@ -171,12 +205,15 @@ export function parseCreatePlaybookInput(body: unknown):
 export async function createPlaybook(
   userId: string,
   input: CreatePlaybookInput,
+  options: CreatePlaybookOptions = {},
 ) {
   const supabase = getServiceSupabase();
+  const publisherId = options.publisherId ?? await getPublisherIdForAuthUser(userId);
   const { data, error } = await supabase
     .from("playbooks")
     .insert({
       user_id: userId,
+      publisher_id: publisherId,
       guid: generateGuid(),
       name: input.name,
       description: input.description || null,
@@ -194,4 +231,21 @@ export async function createPlaybook(
   if (error) throw new Error(error.message);
   if (!data) throw new Error("Created playbook could not be read back.");
   return data;
+}
+
+/** Copy content atomically, keeping attribution and assigning new ownership. */
+export async function forkPlaybook(userId: string, sourceId: string): Promise<Playbook> {
+  const { data, error } = await getServiceSupabase().rpc("fork_playbook_with_content", {
+    p_source_id: sourceId,
+    p_user_id: userId,
+    p_guid: generateGuid(),
+  });
+  if (error) {
+    if (error.code === "P0002") throw new Error("Playbook not found");
+    throw new Error("Failed to copy playbook content");
+  }
+  if (!data || typeof data !== "object" || !("id" in data)) {
+    throw new Error("Copied playbook could not be read back");
+  }
+  return data as Playbook;
 }

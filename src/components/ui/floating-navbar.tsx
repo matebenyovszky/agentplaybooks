@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { Home, ChevronDown, BookOpen, LogOut, Globe, Server, Star, Settings, LayoutDashboard, Rss, Sun, Moon, Laptop, UserCircle } from "lucide-react";
 import { locales, localeNames, localeFlags, type Locale } from "@/i18n/config";
+import { localeCookie } from "@/lib/locale-cookie";
 import { useLocale, useTranslations } from "next-intl";
 import { createBrowserClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
@@ -139,7 +140,7 @@ export const FloatingNav = ({
     // Set cookie and reload to apply new locale. The reload is the point: the
     // server re-resolves the locale from the cookie and re-renders with the new
     // messages, so there is no local copy of the choice to keep in step.
-    document.cookie = `NEXT_LOCALE=${newLocale};path=/;max-age=31536000`;
+    document.cookie = localeCookie(newLocale, window.location.protocol === "https:");
     window.location.reload();
   };
 
@@ -160,7 +161,7 @@ export const FloatingNav = ({
           duration: 0.2,
         }}
         className={cn(
-          "flex max-w-fit fixed top-4 inset-x-0 mx-auto border dark:border-white/[0.2] border-black/[0.1] rounded-full dark:bg-black bg-white shadow-[0px_2px_3px_-1px_rgba(0,0,0,0.1),0px_1px_0px_0px_rgba(25,28,33,0.02),0px_0px_0px_1px_rgba(25,28,33,0.08)] z-[5000] pr-2 pl-4 py-2 items-center justify-center space-x-4",
+          "fixed inset-x-0 top-4 z-[5000] mx-auto flex w-max max-w-[calc(100%-2rem)] items-center justify-center space-x-2 overflow-x-auto rounded-full border border-black/[0.1] bg-white py-2 pl-4 pr-2 shadow-[0px_2px_3px_-1px_rgba(0,0,0,0.1),0px_1px_0px_0px_rgba(25,28,33,0.02),0px_0px_0px_1px_rgba(25,28,33,0.08)] sm:space-x-4 dark:border-white/[0.2] dark:bg-black",
           className
         )}
       >
