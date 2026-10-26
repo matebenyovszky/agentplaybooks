@@ -40,6 +40,10 @@ it again with `--apply` only after the user agrees.
   own terminal; it prompts for the key and stores it in the user's private
   credential file. Never ask for the key in chat, and never print, read, or
   copy that file.
+- Against a self-hosted server, add `--url=<server base URL>` to `login` and
+  to the account commands, or set `AGENTPLAYBOOKS_URL`. A server whose
+  certificate comes from a private CA also needs `NODE_EXTRA_CA_CERTS` set to
+  that CA's file in the user's terminal.
 - Secret values never move. The CLI writes `${VAR}` references, and `doctor`
   reports a credential that is hard-coded in a config file without printing it.
 

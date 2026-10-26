@@ -285,6 +285,7 @@ GET /api/playbooks/:guid/memory?tags=settings,preferences
 | `key` | string | Get specific memory by key |
 | `search` | string | Search in keys and descriptions |
 | `tags` | string | Filter by tags (comma-separated, any match) |
+| `private_check` | `1` | Authenticated privacy/access check for memory clients; returns `{ "private_memory": true }` only for a currently private playbook accessible with `memory:read`. Returns no memory entries and uses `Cache-Control: no-store`; public/unlisted playbooks are refused with 403. |
 
 **Response:**
 

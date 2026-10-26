@@ -59,15 +59,35 @@ check(
   directoryPlugin.mcpServers?.["agentplaybooks-account"]?.url === registry.remotes?.[0]?.url,
   "Claude directory plugin MCP URL differs from the registry.",
 );
+// The plugin's local server names the `login` command in its messages and
+// reports a version of its own, so both move with the CLI as well.
+const localServer = await read("plugins/agentplaybooks/server/servers.mjs");
+check(
+  localServer.match(/^const VERSION = "([^"]+)";\r?$/m)?.[1] === cli.version,
+  "Claude plugin's local server reports a version other than the CLI's.",
+);
 for (const file of [
   "plugins/agentplaybooks/README.md",
   "plugins/agentplaybooks/commands/doctor.md",
   "plugins/agentplaybooks/commands/sync.md",
   "plugins/agentplaybooks/skills/agentplaybooks-cli/SKILL.md",
+  "plugins/agentplaybooks/server/servers.mjs",
 ]) {
   const pins = [...(await read(file)).matchAll(/@agentplaybooks\/cli@([0-9A-Za-z.+-]+)/g)].map(match => match[1]);
   check(pins.length > 0, `${file} no longer pins the CLI version.`);
   for (const pin of pins) check(pin === cli.version, `${file} pins @agentplaybooks/cli@${pin}, not ${cli.version}.`);
+}
+// The 0.6.0 login prompt echoes a pasted key; later releases read it without
+// echo (#188). The docs warn about it in prose, which no pin check moves, so
+// past 0.6.0 the warning has to go: the prompt simply does not show the key.
+if (cli.version !== "0.6.0") {
+  for (const [file, warning] of [
+    ["plugins/agentplaybooks/README.md", /The \S+ prompt shows the key/],
+    ["public/docs/claude.md", /The \S+ prompt shows the key/],
+    ["public/docs/claude.hu.md", /A \S+ CLI promptja kiírja/],
+  ]) {
+    check(!warning.test((await read(file)).replace(/\s+/g, " ")), `${file} still says the login prompt shows the key; past 0.6.0 it does not.`);
+  }
 }
 
 // Hermes packages and installer instructions must describe the same release.

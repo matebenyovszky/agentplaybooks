@@ -463,6 +463,20 @@ Authorization: Bearer apb_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 **Write-back operations** (writing memory, canvas, etc.) always require an API key, even for public playbooks. The key must have the appropriate permissions (e.g. `memory:write`).
 
+Anonymous public connections advertise only callable read-only tools in the JSON
+manifest, `tools/list`, and `find_tools`. Credential-backed tools such as
+`list_secrets` and `use_secret`, connection configuration (`list_mcp_servers`),
+write tools, and `read_memory` (which updates
+access counters) require authentication and are omitted from that public catalog.
+Use `search_memory` to read public memory without updating access counters.
+The same restriction applies to direct calls by name, including federated REST
+calls. Connected tools are public only when the owner explicitly sets the
+connection's `access` to `public` and the upstream declares a read-only tool.
+Unknown or destructive tools require authentication; OpenAPI calls are checked
+against their actual HTTP method (GET or HEAD). A valid credential for the
+playbook restores the authenticated catalog; existing per-operation permissions
+still apply.
+
 On a private playbook, any active key of that playbook reaches the MCP endpoint. Each operation then checks its own permission:
 
 - Memory reads need `memory:read`, skill reads `skills:read`, canvas and run reads `canvas:read`, and the connected servers list `playbooks:read`.

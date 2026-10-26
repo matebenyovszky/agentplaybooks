@@ -4,7 +4,7 @@
 
 **Közönség:** ügyfél információbiztonságért felelős személye (IBF), kockázatkezelés, jog, üzemeltetés. Készült magyar állami / önkormányzati beszállítói értékeléshez és EIR biztonsági osztályba soroláshoz.
 
-**Ellenőrzés dátuma:** 2026-10-25. A kódbeli állítások a `main` ág akkor aktuális forrására vonatkoznak (benne a merge-elt [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200), [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201), [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202), [#203](https://github.com/matebenyovszky/agentplaybooks/pull/203), [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204), [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205), [#207](https://github.com/matebenyovszky/agentplaybooks/pull/207), [#216](https://github.com/matebenyovszky/agentplaybooks/pull/216)). Párhuzamos, még nem merge-elt PR-ek a gap listában **Folyamatban / In progress** jelöléssel szerepelnek.
+**Ellenőrzés dátuma:** 2026-10-25. A kódbeli állítások a `main` ág akkor aktuális forrására vonatkoznak (benne a merge-elt [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200), [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201), [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202), [#203](https://github.com/matebenyovszky/agentplaybooks/pull/203), [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204), [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205), [#207](https://github.com/matebenyovszky/agentplaybooks/pull/207), [#216](https://github.com/matebenyovszky/agentplaybooks/pull/216), [#220](https://github.com/matebenyovszky/agentplaybooks/pull/220)). Párhuzamos, még nem merge-elt PR-ek a gap listában **Folyamatban / In progress** jelöléssel szerepelnének; ezen a napon nincs ilyen.
 
 > **Jogi ellenőrzés szükséges.** Ez a csomag nem jogi tanács, nem tanúsítvány, és nem helyettesíti az ügyfél saját kockázatelemzését vagy a 7/2024. (VI. 24.) MK rendelet szerinti védelmi intézkedés-kiválasztást. Minden hatály-, osztályba sorolási, felelősségmegosztási és jogértelmezési megjegyzést az ügyfél jogászának és IBF-jének jóvá kell hagynia éles bevezetés előtt.
 
@@ -62,14 +62,17 @@ Ezek a gapek a `main`-en záródtak. A fehérkönyv sorai a merge-elt PR-ekre hi
 | 8 helyszíni mentés / restore-runbook + üres-gép drill | [#203](https://github.com/matebenyovszky/agentplaybooks/pull/203) |
 | 7 `SECURITY.md` / incidens-runbook; 9 CodeQL, CycloneDX SBOM, SBOM-blob cosign | [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205) |
 | 7 GitHub privát sérülékenység-jelentés mint egyetlen kapcsolat (nincs security e-mail; best-effort review) | [#207](https://github.com/matebenyovszky/agentplaybooks/pull/207) |
+| 4 auditor szerep (együttműködő és `auditor` API-kulcs); 6 playbookonkénti SHA-256 hash-lánc, export (json/jsonl/csv), `/audit/verify`, syslog / SIEM-webhook továbbítás, megőrzési purge | [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202) |
+| 6 az auditnapló túléli a playbook / MCP-szerver / fiók törlését; DELETE csak a megőrzési purge-ból, TRUNCATE tiltva, a checkpointok megváltoztathatatlanok | [#216](https://github.com/matebenyovszky/agentplaybooks/pull/216) |
+| 6 konfigurációváltozások naplózása DB-triggerrel (playbook, skill, MCP-szerver, API-kulcs, együttműködő), a hívó azonosításával | [#216](https://github.com/matebenyovszky/agentplaybooks/pull/216) |
+| 16 SSRF: egy közös célellenőrzés (`use_secret`, titok-proxy, federáció) DNS-feloldással; a federáció nem követ átirányítást | [#216](https://github.com/matebenyovszky/agentplaybooks/pull/216) |
+| 25 Titok-útválasztás: API-kulcs nem kapcsolhat be reveal-t és nem bővítheti az `allowed_hosts`-ot; titokra hivatkozó MCP-konfig írásához tulajdonos vagy `secrets:read` kell | [#216](https://github.com/matebenyovszky/agentplaybooks/pull/216) |
+| 25 Privát instance kapcsoló (`agentplaybooks.private_instance`; a hivatalos self-hosted Supabase image-en `supabase_admin`-ként kell futtatni, utána a PostgREST-et újra kell indítani); a compose alapértelmezése `SECRETS_REQUIRE_ALLOWED_HOSTS=true` | [#216](https://github.com/matebenyovszky/agentplaybooks/pull/216) |
+| 20 CORS: self-hosted `NEXT_PUBLIC_APP_URL` mellett a hosted originek már nem megbízhatók | [#220](https://github.com/matebenyovszky/agentplaybooks/pull/220) |
 
 ## Párhuzamos PR-ek (nincsenek a `main`-en)
 
-A kódállítás a `main`. Az alábbi gapek még nyitottak; merge után a fehérkönyv gap-sorát kell átbillenteni.
-
-| Gap | Folyamatban / In progress |
-|-----|---------------------------|
-| 4 auditor szerep; 6 audit export / syslog / SIEM / megőrzés / hash-lánc | [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202) |
+A kódállítás alapja a `main`. A nyitott PR-ek itt **Folyamatban / In progress** jelöléssel szerepelnének, merge után a fenti táblába kerülnek. 2026-10-25-én nincs ilyen.
 
 ## Amit ez a csomag nem állít
 

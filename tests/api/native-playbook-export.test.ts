@@ -14,10 +14,15 @@ beforeEach(() => {
     from(table: string) {
       const playbook = { id: "pb", guid: "guid", name: "Test", visibility, persona_name: "Assistant", persona_system_prompt: "Help", persona_metadata: {}, created_at: "2026-01-01", config: {}, instructions: null };
       const rows = table === "skills" ? [{ id: "skill", name: "review", description: "Review code", content: "Review", skill_attachments: [{ id: "file", filename: "scripts/review.py", content: "pass" }] }] : [];
+      let visibleValues: string[] | undefined;
       const builder = {
         select(columns: string) { select(table, columns); return builder; },
         eq() { return builder; },
-        single: async () => ({ data: playbook, error: null }),
+        in(column: string, values: string[]) {
+          if (column === "visibility") visibleValues = values;
+          return builder;
+        },
+        single: async () => ({ data: visibleValues && !visibleValues.includes(playbook.visibility) ? null : playbook, error: null }),
         then: (resolve: (value: unknown) => unknown) => Promise.resolve({ data: rows, error: null }).then(resolve),
       };
       return builder;

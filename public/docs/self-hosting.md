@@ -248,15 +248,20 @@ Three later migrations rewrite no rows and apply in the normal way:
 An instance for one organisation usually has nothing to publish. Turn on the
 private-instance switch and no playbook can be public or unlisted, so the
 public listings, a public playbook's MCP endpoint, and reading an unlisted
-playbook by its GUID have nothing to serve without a sign-in:
+playbook by its GUID have nothing to serve without a sign-in. Setting a
+database parameter needs a superuser; on the official self-hosted Supabase
+image that is `supabase_admin`, not `postgres`:
 
-```sql
+```bash
+docker exec -i supabase-db psql -U supabase_admin -d postgres <<'SQL'
 ALTER DATABASE postgres SET agentplaybooks.private_instance = 'on';
 UPDATE public.playbooks SET visibility = 'private' WHERE visibility <> 'private';
+SQL
+docker restart supabase-rest
 ```
 
-Restart the Data API (PostgREST) afterwards so its pooled connections pick up
-the setting. Independently of the switch, a playbook-scoped API key — an
+The restart makes the Data API's pooled connections pick up the setting; until
+then, connections opened before it do not enforce it. Independently of the switch, a playbook-scoped API key — an
 agent's credential — cannot make a playbook public or unlisted.
 
 ### Air-gapped / no-egress
