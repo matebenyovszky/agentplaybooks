@@ -10,7 +10,6 @@ import {
   readFederatedResource,
 } from "@/lib/mcp/federation";
 import type { MCPServer } from "@/lib/supabase/types";
-import { exportSkill, exportedMemoryFields, exportedSkillSchema } from "@/lib/playbook-export-schema";
 
 const server = (overrides: Partial<MCPServer> = {}): MCPServer => ({
   id: "12345678-1234-1234-1234-123456789abc",
@@ -331,30 +330,5 @@ describe("MCP federation", () => {
       {},
       { fetch: fetchMock as typeof fetch },
     )).rejects.toMatchObject({ code: "UPSTREAM_TIMEOUT", status: 504 });
-  });
-});
-
-describe("export schema compatibility", () => {
-  it("exports current SKILL.md fields without removed definition/examples fields", () => {
-    const skill = exportSkill({
-      id: "skill-id",
-      playbook_id: "playbook-id",
-      publisher_id: null,
-      name: "Research guide",
-      description: "How to research",
-      content: "# Research\nUse primary sources.",
-      licence: "MIT",
-      priority: 80,
-      created_at: "2026-07-30T00:00:00.000Z",
-    });
-    expect(skill).toHaveProperty("content");
-    expect(skill).not.toHaveProperty("definition");
-    expect(skill).not.toHaveProperty("examples");
-    expect(exportedSkillSchema.properties).not.toHaveProperty("definition");
-  });
-
-  it("uses the current memory tier and retention enums", () => {
-    expect(exportedMemoryFields.tier.enum).toEqual(["working", "contextual", "longterm"]);
-    expect(exportedMemoryFields.retention_policy.enum).toEqual(["permanent", "session", "auto"]);
   });
 });

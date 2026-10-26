@@ -72,8 +72,7 @@ agentplaybooks/
 │   │       ├── sidebar.tsx         # Navigation sidebar
 │   │       ├── floating-navbar.tsx # Top navigation
 │   │       ├── bento-grid.tsx      # Feature grid
-│   │       ├── spotlight.tsx       # Spotlight effect
-│   │       └── card-hover-effect.tsx
+│   │       └── spotlight.tsx       # Spotlight effect
 │   │
 │   ├── lib/                        # Utilities
 │   │   ├── utils.ts                # cn() and helpers

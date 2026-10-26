@@ -55,13 +55,11 @@
   "devDependencies": {
     "@cloudflare/workers-types": "5.20261021.1",
     "@electric-sql/pglite": "0.5.11",
-    "@eslint/js": "^9.39.2",
     "@swc/helpers": "^0.5.23",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^26",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@vitejs/plugin-react": "^6.1.2",
     "eslint": "^10",
     "eslint-config-next": "16.4.2",
     "tailwindcss": "^4",
