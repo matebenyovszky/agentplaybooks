@@ -60,6 +60,13 @@ reconciled explicitly. Setup never overwrites them or migrates existing memory.
 Memory 0.3.0 uses Hermes's exact `previous_content` for mirrored replacement and
 removal. Ambiguous/missing identity fails closed and requires reconciliation.
 
+Memory 0.3.1 checks private visibility and memory access in one authenticated
+`private_check=1` API request, without the expected anonymous 404 of older
+clients. It identifies requests as `AgentPlaybooks-Hermes-Memory/0.3.1`. Each
+write still rechecks privacy and credentials; older servers retain the legacy
+check. Already installed plugins and pinned catalog/npm bundles require an
+update to use this behavior; deploying the server alone does not update them.
+
 ## Daily use
 
 | Tool | Purpose |
