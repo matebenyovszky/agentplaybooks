@@ -170,7 +170,7 @@ export async function visitAndAssert(
     await expect(page.locator(route.waitFor).first()).toBeVisible();
   }
   if (route.name === "explore") {
-    expect(await response!.text(), "Explore content should be in the initial HTML").toContain("What will you use your playbook for?");
+    expect(await response!.text(), "Explore content should be in the initial HTML").toContain("Stop starting over.");
   }
   if (route.locale === "hu") {
     await expect(page.locator("h1").first()).toContainText("Egy playbook");
@@ -194,11 +194,23 @@ export async function runLiveOverflowSuite(page: Page, viewport: ViewportCase) {
     if (route.name === "explore") page.on("request", recordCatalogRequest);
     await visitAndAssert(page, route, viewport, cspErrors);
     if (route.name === "explore") {
-      await page.getByRole("link", { name: "See how it works" }).click();
+      await expect(page.locator("#workflow-title-handoff")).toBeVisible();
+      await page.getByText("Turn research into a decision", { exact: true }).click();
+      await expect(page.getByRole("radio", { name: "Turn research into a decision" })).toBeChecked();
+      await expect(page.locator("#workflow-title-research")).toBeVisible();
+      await expect(page.locator("#workflow-title-handoff")).toBeHidden();
+      await assertPageFits(page, "explore-research", viewport);
+      await page.getByRole("radio", { name: "Turn research into a decision" }).focus();
+      await page.keyboard.press("ArrowRight");
+      await expect(page.getByRole("radio", { name: "Review a change" })).toBeChecked();
+      await expect(page.locator("#workflow-title-review")).toBeVisible();
+      await expect(page.locator("#workflow-title-research")).toBeHidden();
+      await assertPageFits(page, "explore-review", viewport);
+      await page.getByRole("link", { name: "03 Get started" }).click();
       await expect(page.locator("#how-it-works")).toBeInViewport();
-      await page.getByText("Where do my project details belong?", { exact: true }).click();
+      await page.locator("summary").filter({ hasText: "Where do my project details belong?" }).click();
       await expect(page.getByText("In your own private playbook.", { exact: false })).toBeVisible();
-      await expect(page.getByRole("link", { name: "Open starter playbook" })).toHaveCount(3);
+      await expect(page.getByRole("link", { name: "Open starter playbook", includeHidden: true })).toHaveCount(3);
       await assertPageFits(page, "explore-guide", viewport);
       await assertNoCspViolations(page, cspErrors);
       page.off("request", recordCatalogRequest);

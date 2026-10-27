@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useSyncExternalStore } from "react";
 
 type Theme = "dark" | "light" | "system";
 
@@ -22,21 +22,36 @@ const initialState: ThemeProviderState = {
 
 const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
 
+const THEME_CHANGE_EVENT = "apb-theme-change";
+
+function subscribeToTheme(onChange: () => void) {
+    window.addEventListener("storage", onChange);
+    window.addEventListener(THEME_CHANGE_EVENT, onChange);
+    return () => {
+        window.removeEventListener("storage", onChange);
+        window.removeEventListener(THEME_CHANGE_EVENT, onChange);
+    };
+}
+
 export function ThemeProvider({
     children,
     defaultTheme = "system",
     storageKey = "vite-ui-theme",
 }: ThemeProviderProps) {
-    const [theme, setTheme] = useState<Theme>(() => {
-        // Check if we're in the browser
-        if (typeof window !== "undefined") {
+    const readTheme = useCallback((): Theme => {
+        try {
             const stored = localStorage.getItem(storageKey);
-            if (stored) {
-                return stored as Theme;
+            if (stored === "light" || stored === "dark" || stored === "system") {
+                return stored;
             }
+        } catch {
+            // Reading storage can be disabled by the browser.
         }
         return defaultTheme;
-    });
+    }, [storageKey, defaultTheme]);
+    // Hydration uses the same default as SSR before reading the saved choice.
+    // Otherwise theme-dependent navigation icons can invalidate the page tree.
+    const theme = useSyncExternalStore(subscribeToTheme, readTheme, () => defaultTheme);
 
     useEffect(() => {
         const root = window.document.documentElement;
@@ -60,7 +75,7 @@ export function ThemeProvider({
         theme,
         setTheme: (theme: Theme) => {
             localStorage.setItem(storageKey, theme);
-            setTheme(theme);
+            window.dispatchEvent(new Event(THEME_CHANGE_EVENT));
         },
     };
 

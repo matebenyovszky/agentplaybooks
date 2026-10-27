@@ -254,102 +254,213 @@
     }
   },
   "explore": {
-    "eyebrow": "AgentPlaybooks en la práctica",
-    "title": "El conocimiento de tu proyecto. Listo para la próxima conversación.",
-    "subtitle": "Reúne instrucciones, habilidades y memoria útil en un playbook. Dale a tu agente el contexto que necesita, donde sea que retomes el trabajo.",
-    "create": "Crear un playbook",
-    "howLink": "Cómo funciona",
-    "clients": "Úsalo con ChatGPT, Codex, Claude, Cursor, Hermes y otros clientes.",
-    "exampleLabel": "Un flujo de ejemplo",
-    "exampleAskLabel": "Tu pregunta",
-    "exampleAsk": "«¿Dónde nos quedamos y cuál es el siguiente paso?»",
-    "examplePlaybook": "El playbook de tu proyecto",
-    "example": {
-      "rules": "Instrucciones: objetivos del proyecto y acuerdos de trabajo",
-      "skill": "Habilidad: un traspaso breve y estructurado del proyecto",
-      "memory": "Memoria: decisiones verificadas y preguntas abiertas"
+    "metaTitle": "Explore — Pon a trabajar el conocimiento de tu IA",
+    "eyebrow": "Descubre AgentPlaybooks",
+    "fieldGuide": "Una guía práctica",
+    "title": "Deja de empezar de cero.",
+    "titleAccent": "Construye sobre lo aprendido.",
+    "subtitle": "Dale a tu IA un proyecto que pueda retomar. Reúne instrucciones, métodos reutilizables y decisiones en un playbook, y lleva el contexto adecuado a las herramientas que ya usas.",
+    "tryWorkflow": "Ver ejemplos",
+    "create": "Crear tu playbook",
+    "heroNote": "Tu conocimiento sigue siendo portátil. Tu asistente hace el trabajo.",
+    "exampleLabel": "Un proyecto de ejemplo",
+    "onePlaybook": "Un proyecto. Un playbook.",
+    "private": "Privado",
+    "heroRules": "Verifica antes de cambiar. Explica las alternativas.",
+    "heroSkill": "Revisar → probar → entregar",
+    "heroMemory": "Acceso por enlace de correo. Falta revisar producción.",
+    "heroContext": "Carga lo que necesita esta tarea",
+    "nextSession": "La próxima conversación",
+    "nextSessionExample": "«Sigamos con Northstar. ¿Qué comprobamos ahora?»",
+    "clientsLabel": "Contexto del proyecto en tus herramientas de IA",
+    "andMore": "y más",
+    "pageNavigation": "Secciones de Explore",
+    "navWorkflows": "Ejemplos prácticos",
+    "navInside": "Dentro del playbook",
+    "navStart": "Primeros pasos",
+    "casesEyebrow": "01 / De la pregunta al trabajo útil",
+    "casesTitle": "La misma IA. Un mejor punto de partida.",
+    "casesIntro": "Elige un escenario. Descubre qué pides, qué contexto importa y cómo podría ser una respuesta útil.",
+    "chooseWorkflow": "Elige un flujo de trabajo",
+    "workedExample": "Ejemplo desarrollado",
+    "requestLabel": "Tú preguntas",
+    "contextLabel": "El playbook aporta",
+    "resultLabel": "Tu asistente puede producir",
+    "contextTypes": {
+      "goal": "Objetivo del proyecto",
+      "skill": "Método reutilizable",
+      "memory": "Contexto guardado"
     },
-    "exampleResult": "Tu agente usa el contexto relevante para proponer los siguientes pasos. Continúas sin volver a explicar todo el proyecto.",
-    "casesEyebrow": "Empieza con una tarea real",
-    "casesTitle": "¿Para qué usarás tu playbook?",
-    "casesIntro": "Prueba una de estas pequeñas plantillas de AgentPlaybooks y adáptala a tu trabajo.",
+    "contextNote": "Solo el material relevante, no toda tu base de conocimiento.",
+    "illustrative": "Resultado ilustrativo, no una ejecución en directo. Depende del asistente, las fuentes y las herramientas disponibles.",
+    "openStarter": "Abrir playbook de ejemplo",
+    "starterNote": "Estos ejemplos públicos de AgentPlaybooks contienen instrucciones genéricas en inglés. Crea una copia privada antes de añadir datos del proyecto. Los escenarios muestran cómo personalizarlos.",
     "cases": {
       "handoff": {
-        "title": "Retoma un proyecto",
-        "description": "Cambia de sesión o de agente con el objetivo, las decisiones y las próximas acciones a mano.",
-        "prompt": "«Prepara un traspaso: qué está hecho, qué es incierto y cuáles son las tres próximas acciones.»"
+        "title": "Retomar un proyecto",
+        "tagline": "Menos recapitulación. Más avance.",
+        "headline": "Una conversación nueva no tiene que empezar de cero.",
+        "description": "Vuelve después de una semana o cambia de asistente sin reconstruir todas las decisiones.",
+        "prompt": "«Retomemos el portal Northstar. ¿Qué deberíamos hacer ahora?»",
+        "situation": "Has abierto una sesión nueva. La conversación anterior no está en su contexto.",
+        "context": {
+          "goal": "Lanzar una incorporación accesible al portal de clientes.",
+          "skill": "Separar trabajo confirmado, preguntas abiertas y próximos pasos.",
+          "memory": "Se eligió el acceso por enlace de correo. Funciona en pruebas; producción sigue sin verificar."
+        },
+        "resultTitle": "Un traspaso con próximos pasos",
+        "results": {
+          "one": "Estado: según la nota, el acceso funciona en pruebas. Producción no está verificada.",
+          "two": "Próximas comprobaciones: entrega de correo, enlaces caducados y navegación por teclado.",
+          "three": "Pedir el entorno de producción y autorización antes de modificarlo."
+        },
+        "starter": "Empieza con Project Handoff"
       },
       "research": {
-        "title": "Convierte la investigación en una decisión",
-        "description": "Reúne la pregunta, los enlaces a las fuentes y los hallazgos para que la próxima respuesta se base en la evidencia.",
-        "prompt": "«Compara estas opciones, enlaza las pruebas e indica qué falta por comprobar.»"
+        "title": "Investigar para decidir",
+        "tagline": "Fuentes antes que conclusiones.",
+        "headline": "Conserva el razonamiento, no solo la respuesta.",
+        "description": "Usa un método repetible y requisitos guardados para crear un informe que se pueda cuestionar y actualizar.",
+        "prompt": "«Compara estos dos gestores de tareas. ¿Qué falta para elegir?»",
+        "situation": "Aportas dos documentos. El asistente no debe rellenar sus lagunas con datos inventados.",
+        "context": {
+          "goal": "Elegir un gestor con exportación de datos para un equipo pequeño.",
+          "skill": "Comparar pruebas, citar las fuentes aportadas y señalar lo desconocido.",
+          "memory": "La exportación es obligatoria. Faltan la aprobación del presupuesto y los requisitos de SSO."
+        },
+        "resultTitle": "Una decisión basada en fuentes",
+        "results": {
+          "one": "Comparación de las afirmaciones de los documentos aportados, con referencias.",
+          "two": "Lista de lagunas: verificar el alcance de exportación, el precio final y el plan de SSO.",
+          "three": "Recomendación condicional con los supuestos que podrían cambiarla."
+        },
+        "starter": "Empieza con Research Brief"
       },
       "review": {
-        "title": "Revisa un cambio con cuidado",
-        "description": "Dale a tu agente un método repetible para revisar cambios, detectar riesgos importantes y verificar el resultado.",
-        "prompt": "«Revisa este cambio en busca de errores y riesgos de acceso. Explica qué comprobaste y qué sigue siendo incierto.»"
+        "title": "Revisar un cambio",
+        "tagline": "Comprueba los riesgos importantes.",
+        "headline": "Incluye tus criterios en la revisión.",
+        "description": "Lleva las reglas del proyecto y las decisiones anteriores a la revisión de código sin repetir la misma lista cada vez.",
+        "prompt": "«Revisa este cambio de caché de la API. ¿Qué debemos verificar antes de publicarlo?»",
+        "situation": "Tu asistente de programación puede inspeccionar el cambio y ejecutar pruebas si sus herramientas y permisos lo permiten.",
+        "context": {
+          "goal": "Reducir el tiempo de respuesta sin exponer datos privados.",
+          "skill": "Revisar límites de acceso, claves de caché, invalidación y rutas de error.",
+          "memory": "Separar respuestas públicas y privadas. Medir antes de afirmar que es más rápido."
+        },
+        "resultTitle": "Una revisión centrada en la entrega",
+        "results": {
+          "one": "Comprobar si las claves de caché distinguen todos los ámbitos de acceso relevantes.",
+          "two": "Probar cambios de permisos, entradas obsoletas y solicitudes anónimas y autenticadas.",
+          "three": "Documentar resultados verificados, riesgos pendientes y mediciones necesarias."
+        },
+        "starter": "Empieza con Change Review"
       }
     },
-    "openStarter": "Abrir playbook de ejemplo",
-    "starterNote": "Estas plantillas públicas son de AgentPlaybooks y contienen instrucciones generales en inglés. Crea tu propia copia privada antes de añadir datos del proyecto. Tu agente realiza el trabajo con las herramientas disponibles en tu cliente.",
-    "howEyebrow": "Cómo funciona",
-    "howTitle": "Un playbook. Un punto de partida útil en cada ocasión.",
-    "steps": {
-      "start": {
-        "title": "Hazlo tuyo",
-        "description": "Crea un playbook privado o copia una plantilla. Añade un objetivo claro, reglas de trabajo y una habilidad útil."
-      },
-      "connect": {
-        "title": "Conecta tu agente",
-        "description": "Usa el plugin, una conexión MCP o el acceso por API o CLI de tu cliente. Elige la opción que encaje con tu trabajo."
-      },
-      "continue": {
-        "title": "Trabaja y conserva lo importante",
-        "description": "Consulta la habilidad o el contexto relevante. Guarda decisiones útiles en la memoria privada del proyecto y recupéralas la próxima vez."
-      }
-    },
-    "setupGuide": "Leer la guía de configuración",
-    "anatomyTitle": "¿Qué contiene un playbook?",
-    "anatomyIntro": "Empieza con poco. Añade solo el contexto y las conexiones que necesita tu tarea.",
+    "anatomyEyebrow": "02 / Dentro del playbook",
+    "anatomyTitle": "Un plan de trabajo. Con memoria.",
+    "anatomyIntro": "Un playbook reúne lo que necesita un asistente para trabajar con coherencia. Empieza con instrucciones y añade el resto cuando haga falta.",
+    "contextPrinciple": "El contexto relevante vale más que acumular contexto.",
+    "contextPrincipleDetail": "Pide el método, la referencia o el recuerdo que necesita esta tarea. Deja lo demás en la base de conocimiento.",
     "anatomy": {
+      "persona": {
+        "title": "Rol",
+        "description": "Define el papel y la perspectiva que quieres para tu asistente.",
+        "example": "«Actúa como revisor práctico del proyecto.»"
+      },
       "instructions": {
         "title": "Instrucciones",
-        "description": "Objetivos, preferencias y reglas que tu agente debe seguir."
+        "description": "Objetivos, límites y convenciones de trabajo en un lugar.",
+        "example": "«Verifica primero. Señala los supuestos.»"
       },
       "skills": {
-        "title": "Habilidades",
-        "description": "Guías reutilizables para tareas concretas, con referencias que se cargan cuando hacen falta."
+        "title": "Skills",
+        "description": "Métodos reutilizables con los archivos de referencia necesarios.",
+        "example": "Lista de entrega + guía de revisión"
       },
       "memory": {
         "title": "Memoria",
-        "description": "Decisiones, observaciones y preguntas abiertas para la próxima sesión."
+        "description": "Guarda explícitamente decisiones y datos útiles para futuras sesiones.",
+        "example": "Decisión: acceso por enlace de correo"
       },
       "tools": {
-        "title": "Herramientas conectadas",
-        "description": "Configura servidores MCP y otras conexiones desde el panel de tu playbook cuando la tarea los necesite."
+        "title": "Conexiones de herramientas",
+        "description": "Referencia las herramientas que tu cliente necesita para trabajar.",
+        "example": "Repositorio, base de datos, gestor de tareas"
+      },
+      "secrets": {
+        "title": "Credenciales limitadas",
+        "description": "Gestiona las credenciales separadas de las instrucciones habituales y con acceso controlado.",
+        "example": "Clave limitada al servicio necesario"
       }
     },
-    "questionsTitle": "Algunos detalles útiles",
+    "howEyebrow": "03 / Tu primera sesión útil",
+    "howTitle": "Empieza pequeño. Aprende del trabajo real.",
+    "howIntro": "No necesitas un prompt enorme ni una biblioteca de herramientas. Basta con un proyecto, un objetivo claro y un método útil.",
+    "steps": {
+      "start": {
+        "title": "Adáptalo a tu proyecto",
+        "description": "Crea un playbook o copia un ejemplo. Añade el objetivo, los límites y una tarea recurrente.",
+        "outcome": "Un marco de trabajo claro"
+      },
+      "connect": {
+        "title": "Conecta tu asistente",
+        "description": "Sigue la guía de tu cliente. Elige MCP, skills locales o la API según tu forma de trabajar.",
+        "outcome": "Contexto donde trabajas"
+      },
+      "continue": {
+        "title": "Conserva lo aprendido",
+        "description": "Pide al asistente que guarde decisiones útiles si dispone de herramientas de memoria. Revísalas antes de volver a usarlas.",
+        "outcome": "Un mejor comienzo la próxima vez"
+      }
+    },
+    "connectionTitle": "Elige la conexión que encaje contigo.",
+    "connectionIntro": "El playbook no cambia. La conexión puede cambiar.",
+    "connections": {
+      "chat": {
+        "title": "Trabaja conversando",
+        "description": "Conecta un asistente compatible y lee el contexto que necesitas.",
+        "label": "Guías de clientes"
+      },
+      "code": {
+        "title": "Trabaja en tu editor",
+        "description": "Usa la CLI para importar, exportar y sincronizar configuraciones portátiles.",
+        "label": "Documentación de la CLI"
+      },
+      "automate": {
+        "title": "Crea tu propio flujo",
+        "description": "Lee y gestiona playbooks desde scripts y aplicaciones con la API.",
+        "label": "Documentación de la API"
+      }
+    },
+    "faqEyebrow": "Algunas diferencias útiles",
+    "questionsTitle": "Antes de empezar.",
+    "setupGuide": "Leer la guía de configuración",
     "faq": {
-      "clients": {
-        "question": "¿Puedo cambiar de agente?",
-        "answer": "El playbook mantiene juntas tus instrucciones y el contexto del proyecto. Conéctalo desde clientes compatibles o exporta archivos compatibles. Las herramientas y capacidades pueden variar entre clientes."
+      "memory": {
+        "question": "¿En qué se diferencia del historial de chat?",
+        "answer": "Un playbook guarda instrucciones elegidas, skills y datos fuera de una conversación concreta. No recuerda automáticamente todos los chats. Tu asistente debe leer el contexto relevante y guardar explícitamente lo que merece conservarse."
+      },
+      "execution": {
+        "question": "¿AgentPlaybooks hace el trabajo por mí?",
+        "answer": "Tu cliente de IA y sus herramientas conectadas ejecutan el trabajo. AgentPlaybooks aporta contexto y configuración reutilizables. Una instrucción guardada no se convierte automáticamente en una tarea programada ni concede permisos adicionales."
       },
       "privacy": {
-        "question": "¿Dónde debo guardar los datos de mi proyecto?",
-        "answer": "En tu propio playbook privado. Las plantillas públicas son ejemplos que puedes copiar y adaptar. Revisa la visibilidad antes de compartir y no incluyas credenciales en las instrucciones ni en la memoria."
+        "question": "¿Dónde deben ir los datos de mi proyecto?",
+        "answer": "En tu propio playbook privado. Los ejemplos públicos se pueden leer libremente. Crea una copia antes de añadir información, revisa quién tiene acceso y usa las funciones específicas para gestionar credenciales."
       },
       "tools": {
-        "question": "¿Tengo que elegir ya entre MCP, API o CLI?",
-        "answer": "Empieza con la conexión que admite tu cliente. MCP ofrece herramientas al agente; la API y la CLI también sirven para scripts y flujos locales. Pueden usar el mismo playbook. Solicita solo el contexto necesario."
+        "question": "¿Uso MCP, skills o la API?",
+        "answer": "Elige lo que mejor admita tu cliente. MCP ofrece herramientas estructuradas en la conversación; los skills, instrucciones reutilizables. La CLI y la API encajan con archivos y automatizaciones. Las lecturas pequeñas y concretas importan más que el nombre de la conexión."
       }
     },
-    "startTitle": "Empieza con un solo flujo de trabajo.",
-    "startDescription": "Elige una tarea que repitas, añade algo de contexto y usa el playbook en tu próxima conversación.",
-    "browseExamples": "Elegir una plantilla",
+    "startEyebrow": "Haz que la próxima conversación cuente",
+    "startTitle": "Dale ventaja a tu próxima idea.",
+    "startDescription": "Elige un proyecto que siempre tengas que explicar. Conviértelo en un playbook y construye a partir de ahí.",
+    "browseExamples": "Volver a los ejemplos",
+    "footerTagline": "Conocimiento reutilizable para tu trabajo.",
     "docs": "Documentación",
-    "privacy": "Privacidad",
-    "metaTitle": "Casos de uso y playbooks de ejemplo"
+    "privacy": "Privacidad"
   },
   "canvas": {
     "title": "Documentos Canvas",
