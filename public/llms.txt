@@ -1,0 +1,28 @@
+# AgentPlaybooks
+
+> Portable operating environments for AI agents: personas, instructions, Agent Skills, memory, MCP connections, and versioned work documents.
+
+The canonical website is https://agentplaybooks.ai. https://apbks.com serves the same application as a short domain. Documentation below is public and available as plain Markdown.
+
+## Documentation
+
+- [Getting started](https://agentplaybooks.ai/docs/getting-started.md): Create a playbook and connect an agent.
+- [Playbooks](https://agentplaybooks.ai/docs/playbooks.md): Playbook contents and usage.
+- [MCP integration](https://agentplaybooks.ai/docs/mcp-integration.md): MCP endpoints, OAuth, API keys, and client setup.
+- [API reference](https://agentplaybooks.ai/docs/api-reference.md): REST endpoints, identifiers, and authentication.
+- [Management API](https://agentplaybooks.ai/docs/management-api.md): Account-level operations and authorization boundaries.
+- [Skills](https://agentplaybooks.ai/docs/skills.md): Portable skills and their supporting resources.
+- [CLI](https://agentplaybooks.ai/docs/cli.md): Local configuration audits and synchronization.
+- [Portable backups](https://agentplaybooks.ai/docs/portable-agent-backups.md): Backup, migration, and restoration.
+
+## Agent access
+
+The account-level MCP endpoint is https://agentplaybooks.ai/api/mcp/manage.
+Playbook-scoped MCP endpoints use /api/mcp/YOUR_GUID; use the actual playbook GUID or UUID supplied by its owner, never the placeholder.
+
+Interactive clients use OAuth. API keys are supported for authorized automation. A 401 response from a protected endpoint means authentication is required; follow its authentication metadata and the MCP integration guide.
+
+For an authorized, playbook-specific plain-text guide, request /api/mcp/YOUR_GUID/llms.txt with the appropriate credential. That endpoint is separate from this public site-wide index.
+
+Public skill discovery is available at https://agentplaybooks.ai/.well-known/skills/.
+Private playbooks, credentials, and account data are not part of this public index.
