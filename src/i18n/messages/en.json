@@ -263,101 +263,212 @@
     }
   },
   "explore": {
-    "eyebrow": "AgentPlaybooks in practice",
-    "title": "Your project knowledge. Ready for the next conversation.",
-    "subtitle": "Keep instructions, skills, and useful memory in one playbook. Give your agent the context it needs, wherever you pick up the work.",
-    "create": "Create a playbook",
-    "howLink": "See how it works",
-    "clients": "Use with ChatGPT, Codex, Claude, Cursor, Hermes, and more.",
-    "exampleLabel": "An example workflow",
-    "exampleAskLabel": "You ask",
-    "exampleAsk": "“Where did we leave off, and what should we do next?”",
-    "examplePlaybook": "Your project playbook",
-    "example": {
-      "rules": "Instructions: project goals and working agreements",
-      "skill": "Skill: a short, structured project handoff",
-      "memory": "Memory: verified decisions and open questions"
+    "metaTitle": "Explore — Put your AI’s knowledge to work",
+    "eyebrow": "Explore AgentPlaybooks",
+    "fieldGuide": "A practical field guide",
+    "title": "Stop starting over.",
+    "titleAccent": "Start building on it.",
+    "subtitle": "Give your AI a project it can pick up again. Keep instructions, reusable skills and decisions in one playbook, then bring the right context into the tools you already use.",
+    "tryWorkflow": "See it in action",
+    "create": "Create your playbook",
+    "heroNote": "Your knowledge stays portable. Your agent does the work.",
+    "exampleLabel": "An illustrative project",
+    "onePlaybook": "One project. One playbook.",
+    "private": "Private",
+    "heroRules": "Check before changing. Explain the tradeoffs.",
+    "heroSkill": "Review → test → hand off",
+    "heroMemory": "Email-link login chosen. Production check next.",
+    "heroContext": "Load what this task needs",
+    "nextSession": "The next conversation",
+    "nextSessionExample": "“Continue Northstar. What should we check next?”",
+    "clientsLabel": "Bring context into your existing AI workflow",
+    "andMore": "and more",
+    "pageNavigation": "Explore sections",
+    "navWorkflows": "Real-world workflows",
+    "navInside": "Inside a playbook",
+    "navStart": "Get started",
+    "casesEyebrow": "01 / From question to useful work",
+    "casesTitle": "Same AI. A better starting point.",
+    "casesIntro": "Choose a scenario. See what you ask, which context matters, and what a useful answer could look like.",
+    "chooseWorkflow": "Choose a workflow",
+    "workedExample": "Worked example",
+    "requestLabel": "You ask",
+    "contextLabel": "The playbook provides",
+    "resultLabel": "Your agent can produce",
+    "contextTypes": {
+      "goal": "Project direction",
+      "skill": "Reusable method",
+      "memory": "Saved context"
     },
-    "exampleResult": "Your agent uses the relevant context to suggest the next steps. You keep working without retelling the whole project.",
-    "casesEyebrow": "Start with a real task",
-    "casesTitle": "What will you use your playbook for?",
-    "casesIntro": "Try one of these small AgentPlaybooks starters, then shape it around your own work.",
+    "contextNote": "Only the relevant material, not your entire knowledge base.",
+    "illustrative": "Illustrative output, not a live execution. Results depend on your agent, sources and available tools.",
+    "openStarter": "Open starter playbook",
+    "starterNote": "These public, first-party starters are in English and contain generic instructions. Make a private copy before adding your project details. The scenarios above illustrate how to customize them.",
     "cases": {
       "handoff": {
         "title": "Pick up a project",
-        "description": "Move between sessions or agents with the goal, decisions, and next actions close at hand.",
-        "prompt": "“Make a handoff: what is done, what is uncertain, and what are the next three actions?”"
+        "tagline": "Less recap. More progress.",
+        "headline": "A new chat shouldn’t mean a blank slate.",
+        "description": "Return to a project after a week, or switch to another assistant, without reconstructing every decision.",
+        "prompt": "“Pick up the Northstar portal. What should we do next?”",
+        "situation": "You have opened a new session. The previous conversation isn’t in its context.",
+        "context": {
+          "goal": "Ship accessible onboarding for the customer portal.",
+          "skill": "Separate confirmed work, open questions and next actions.",
+          "memory": "Email-link login was chosen. Staging works; production is still unchecked."
+        },
+        "resultTitle": "A handoff you can act on",
+        "results": {
+          "one": "Current state: staging login is recorded as working. Production remains unverified.",
+          "two": "Next checks: email delivery, expired links and keyboard navigation.",
+          "three": "Ask for the production environment and permission before making changes."
+        },
+        "starter": "Start with Project Handoff"
       },
       "research": {
         "title": "Turn research into a decision",
-        "description": "Keep the question, source links, and useful findings together so the next answer builds on the evidence.",
-        "prompt": "“Compare these options, link the evidence, and tell me what still needs checking.”"
+        "tagline": "Sources before conclusions.",
+        "headline": "Keep the reasoning, not just the answer.",
+        "description": "Use a repeatable research method and saved constraints to build a brief someone can challenge and update.",
+        "prompt": "“Compare these two issue trackers for our team. What’s missing before we choose?”",
+        "situation": "You provide two source documents. The assistant should not fill their gaps with invented facts.",
+        "context": {
+          "goal": "Find a tracker for a small team that needs data export.",
+          "skill": "Compare evidence, cite supplied sources and separate unknowns.",
+          "memory": "Export is required. Budget approval and SSO requirements are still open."
+        },
+        "resultTitle": "An evidence-led decision brief",
+        "results": {
+          "one": "A comparison of claims in the supplied documents, with source references.",
+          "two": "A gap list: verify export coverage, final price and the required SSO plan.",
+          "three": "A conditional recommendation, with the assumptions that could change it."
+        },
+        "starter": "Start with Research Brief"
       },
       "review": {
-        "title": "Review a change with care",
-        "description": "Give your agent a repeatable way to inspect a change, identify meaningful risks, and verify the result.",
-        "prompt": "“Review this change for bugs and access risks. Explain what you checked and what remains uncertain.”"
+        "title": "Review a change",
+        "tagline": "Check the risks that matter.",
+        "headline": "Make your standards part of the review.",
+        "description": "Bring project rules and past decisions into a code review instead of repeating the same checklist each time.",
+        "prompt": "“Review this API caching change. What must we verify before release?”",
+        "situation": "Your coding agent can inspect the diff and run checks when its tools and permissions allow it.",
+        "context": {
+          "goal": "Reduce response time without exposing private data.",
+          "skill": "Trace access boundaries, cache keys, invalidation and failure paths.",
+          "memory": "Public and private responses must stay isolated. Measure before claiming a speedup."
+        },
+        "resultTitle": "A focused release review",
+        "results": {
+          "one": "Inspect whether cache keys distinguish every relevant access scope.",
+          "two": "Check permission changes, stale entries and anonymous versus signed-in requests.",
+          "three": "Report verified results, remaining risks and the measurements still needed."
+        },
+        "starter": "Start with Change Review"
       }
     },
-    "openStarter": "Open starter playbook",
-    "starterNote": "These public starters are authored by AgentPlaybooks and contain generic guidance in English. Make your own private copy before adding project details. Your agent performs the work using the tools available in your client.",
-    "howEyebrow": "How it works",
-    "howTitle": "One playbook. A useful place to start every time.",
-    "steps": {
-      "start": {
-        "title": "Make it yours",
-        "description": "Create a private playbook or copy a starter. Add a clear goal, working rules, and one useful skill."
-      },
-      "connect": {
-        "title": "Connect your agent",
-        "description": "Use the plugin, an MCP connection, or API/CLI access supported by your client. Choose the route that fits your workflow."
-      },
-      "continue": {
-        "title": "Work, then keep what matters",
-        "description": "Ask for the relevant skill or context. Save useful decisions to your private project memory and return to them next time."
-      }
-    },
-    "setupGuide": "Read the setup guide",
-    "anatomyTitle": "What goes into a playbook?",
-    "anatomyIntro": "Start small. Add only the context and connections your workflow needs.",
+    "anatomyEyebrow": "02 / Inside the playbook",
+    "anatomyTitle": "A working brief. With a memory.",
+    "anatomyIntro": "A playbook brings together the pieces an assistant needs to work consistently. Start with instructions; add the rest when your workflow needs them.",
+    "contextPrinciple": "Relevant context beats more context.",
+    "contextPrincipleDetail": "Ask for the skill, reference or memory needed for this task. Keep unrelated material out of the conversation.",
     "anatomy": {
+      "persona": {
+        "title": "Persona",
+        "description": "Define the role and the perspective you want your assistant to take.",
+        "example": "“Act as a pragmatic project reviewer.”"
+      },
       "instructions": {
         "title": "Instructions",
-        "description": "Project goals, preferences, and rules your agent should follow."
+        "description": "Keep goals, boundaries and working conventions in one place.",
+        "example": "“Verify first. Flag assumptions.”"
       },
       "skills": {
         "title": "Skills",
-        "description": "Reusable guidance for a particular task, with references loaded when needed."
+        "description": "Package a repeatable method with the reference files it needs.",
+        "example": "Release checklist + review guide"
       },
       "memory": {
         "title": "Memory",
-        "description": "Decisions, observations, and open questions worth carrying into the next session."
+        "description": "Save decisions and useful facts explicitly for later sessions.",
+        "example": "Decision: use email-link login"
       },
       "tools": {
-        "title": "Connected tools",
-        "description": "Configure MCP servers and other tool connections inside your playbook dashboard when the task needs them."
+        "title": "Tool connections",
+        "description": "Reference the tools your client needs to carry out the work.",
+        "example": "Repository, database, issue tracker"
+      },
+      "secrets": {
+        "title": "Scoped credentials",
+        "description": "Manage credentials separately from ordinary project instructions, with controlled access.",
+        "example": "A key scoped to the required service"
       }
     },
-    "questionsTitle": "A few useful details",
+    "howEyebrow": "03 / Your first useful session",
+    "howTitle": "Start small. Build on real work.",
+    "howIntro": "You don’t need a giant prompt or a library of tools. One project, a clear goal and one useful method are enough to begin.",
+    "steps": {
+      "start": {
+        "title": "Make it your project",
+        "description": "Create a playbook or copy a starter. Add your objective, boundaries and one repeatable task.",
+        "outcome": "A focused working brief"
+      },
+      "connect": {
+        "title": "Connect your assistant",
+        "description": "Use the setup guide for your client. Choose MCP, a local skill setup or the API to fit how you work.",
+        "outcome": "Context where the work happens"
+      },
+      "continue": {
+        "title": "Keep what you learn",
+        "description": "Ask your agent to save useful decisions when memory tools are available. Review them before relying on them next time.",
+        "outcome": "A better starting point next session"
+      }
+    },
+    "connectionTitle": "Choose the route that fits your work.",
+    "connectionIntro": "The playbook stays the same. The connection can change.",
+    "connections": {
+      "chat": {
+        "title": "Work in a conversation",
+        "description": "Bring a playbook into a supported assistant and read the context you need.",
+        "label": "Client setup guides"
+      },
+      "code": {
+        "title": "Work in your editor",
+        "description": "Use the CLI to import, export and sync portable agent configuration.",
+        "label": "CLI documentation"
+      },
+      "automate": {
+        "title": "Build your own workflow",
+        "description": "Read and manage playbooks from scripts and applications through the API.",
+        "label": "API documentation"
+      }
+    },
+    "faqEyebrow": "A few useful distinctions",
+    "questionsTitle": "Before you begin.",
+    "setupGuide": "Read the setup guide",
     "faq": {
-      "clients": {
-        "question": "Can I switch between agents?",
-        "answer": "A playbook keeps your guidance and project context together. Connect it from supported clients, or export compatible files. Each client's tools and capabilities can differ."
+      "memory": {
+        "question": "How is this different from chat history?",
+        "answer": "A playbook stores chosen instructions, skills and saved facts outside a single conversation. It does not automatically remember every chat. Your assistant needs to read the relevant context and explicitly save anything worth keeping."
+      },
+      "execution": {
+        "question": "Does AgentPlaybooks run the work for me?",
+        "answer": "Your AI client and its connected tools execute the work. AgentPlaybooks supplies reusable context and configuration. It does not turn a saved instruction into a scheduled job or grant your assistant extra permissions."
       },
       "privacy": {
         "question": "Where do my project details belong?",
-        "answer": "In your own private playbook. The public starters are examples to copy and adapt. Review visibility before sharing anything, and keep credentials out of instructions and memory."
+        "answer": "In your own private playbook. Public starters are examples anyone may read. Copy one before adding project information, check who has access, and keep credentials in the dedicated secret-management features."
       },
       "tools": {
-        "question": "Do I need to choose MCP, API, or CLI now?",
-        "answer": "Start with the connection your client supports. MCP exposes tools to your agent; the API and CLI also support scripts and local workflows. They can use the same playbook. Request only the context the task needs."
+        "question": "Should I use MCP, skills or the API?",
+        "answer": "Use the route your client supports best. MCP offers structured tools inside a conversation; skills provide reusable instructions; the CLI and API suit file-based or automated workflows. Small, targeted reads matter more than the name of the connection."
       }
     },
-    "startTitle": "Start with one workflow.",
-    "startDescription": "Pick a task you repeat, give it a little context, and use the playbook in your next conversation.",
-    "browseExamples": "Choose a starter",
+    "startEyebrow": "Make the next conversation count",
+    "startTitle": "Give your next idea a head start.",
+    "startDescription": "Pick one project you keep explaining. Turn it into a playbook, and build from there.",
+    "browseExamples": "Explore the examples",
+    "footerTagline": "Reusable knowledge for the way you work.",
     "docs": "Documentation",
-    "privacy": "Privacy",
-    "metaTitle": "Explore use cases and starter playbooks"
+    "privacy": "Privacy"
   }
 }
