@@ -21,7 +21,7 @@ A Hermes-katalógus csomagneve `agentplaybooks-tools`:
 ```bash
 hermes plugins install agentplaybooks-tools --no-enable
 hermes plugins enable agentplaybooks-tools
-npm install -g @agentplaybooks/cli@0.8.0
+npm install -g @agentplaybooks/cli@0.8.1
 apb --version
 ```
 
@@ -104,3 +104,14 @@ a tervet. Nyilvános skillek közvetlenül a playbook
 
 Részletekért lásd a [CLI-útmutatót](./cli.md) és a
 [Hermes Memory útmutatót](./hermes-memory.md).
+
+## MCP-kapcsolat üresjárati hálózati forgalom nélkül
+
+A CLI 0.8.1 a Hermeshez helyi `apb mcp stdio` közvetítőt állít be. Ez csak tényleges
+MCP-kéréskor éri el a szervert; a helyi `ping` nem kerül továbbításra. Nincs
+időzített életjel vagy automatikus újrapróbálkozás. A kulcs profilhoz tartozó
+környezeti változóból érkezik, nem parancssori argumentumból.
+
+A meglévő HTTP-bejegyzést mentés után, a terv alapján kell lecserélni; az automatikus
+beállítás ütközésként jelzi. Utána indítsd újra a gatewayt/dashboardot.
+A `keepalive_interval: 0` nem kikapcsolás: a Hermes 0.22.5 öt másodpercre korlátozza.

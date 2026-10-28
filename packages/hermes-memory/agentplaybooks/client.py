@@ -7,7 +7,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode, urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
-USER_AGENT = "AgentPlaybooks-Hermes-Memory/0.3.1"
+USER_AGENT = "AgentPlaybooks-Hermes-Memory/0.3.2"
 
 
 class MemoryAPIError(RuntimeError):

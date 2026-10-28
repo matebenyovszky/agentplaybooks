@@ -13,7 +13,7 @@ the [AgentPlaybooks Tools plugin](https://agentplaybooks.ai/docs/hermes-portable
 On the gateway host/container, as the user running Hermes:
 
 ```bash
-npm install -g @agentplaybooks/cli@0.8.0
+npm install -g @agentplaybooks/cli@0.8.1
 apb memory setup PRIVATE_PLAYBOOK_GUID --target=hermes
 apb memory setup PRIVATE_PLAYBOOK_GUID --target=hermes --apply
 hermes memory setup
@@ -75,7 +75,7 @@ and Desktop share `$HERMES_HOME/agentplaybooks/config.json` and the profile's se
 
 The provider does **not** upload conversation transcripts, run automatic fact
 extraction, import existing local memory, add embeddings, or implement a
-local cache, offline queue, retries or circuit breaker. A failed API operation is
+persistent content cache, offline queue or automatic retries. A failed API operation is
 reported, not queued for later delivery. The HTTP transport has a finite timeout;
 Hermes itself supplies its normal external-provider execution deadline.
 
@@ -127,3 +127,18 @@ npm --prefix packages/cli test
 ## License
 
 MIT. The plugin has no third-party Python runtime dependencies beyond Hermes.
+
+## Avoiding unnecessary traffic (0.3.2)
+
+There is no polling timer. Short English/Hungarian acknowledgements (including
+`köszönöm`, `rendben`, and `oké`) skip automatic recall. The same query in the same
+session and source set is suppressed for 30 seconds; only a bounded in-memory
+digest is kept, and no recalled content is cached or replayed. A successful
+explicit memory mutation clears this suppression. Explicit search/read tools
+always remain available.
+
+Automatic recall serializes keywords within each source while searching different
+sources in parallel. A failed source stops immediately and is skipped for 60
+seconds, so a failure does not fan out into four requests. Other sources continue.
+The next user-triggered recall after that interval can try again; no background
+retry is scheduled. Private visibility is still checked afresh before every write.

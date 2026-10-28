@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agentplaybooks-hermes-memory"
-version = "0.3.1"
+version = "0.3.2"
 description = "AgentPlaybooks native memory provider for Hermes Agent"
 requires-python = ">=3.11"
 license = {file = "agentplaybooks/LICENSE"}
