@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { collectDirectoryFiles, directoryMcp } from '../scripts/pack-openai-directory.mjs';
 import { buildZipStore, listZipStore } from '../packages/cli/scripts/pack-openai-skills-zip.mjs';
+import { managementTools } from '../src/app/api/_shared/management-tools';
+import { managementToolset } from '../src/app/api/_shared/management-toolsets';
 
 describe('hosted OpenAI directory package', () => {
   it('round-trips OAuth MCP and a self-contained hosted skill together', async () => {
@@ -8,7 +10,7 @@ describe('hosted OpenAI directory package', () => {
     const unpacked = listZipStore(buildZipStore([...files].map(([name, data]) => ({ name, data }))));
     expect(unpacked.map((file: { name: string }) => file.name)).toContain('mcp.json');
     const mcp = JSON.parse(files.get('mcp.json')!.toString());
-    expect(mcp.mcpServers['agentplaybooks-account'].url).toBe('https://agentplaybooks.ai/api/mcp/manage?toolset=full');
+    expect(mcp.mcpServers['agentplaybooks-account'].url).toBe('https://agentplaybooks.ai/api/mcp/manage?toolset=directory');
     expect(mcp.mcpServers['agentplaybooks-account'].headers).toBeUndefined();
     expect(mcp.mcpServers['agentplaybooks-account'].extensions['com.openai'].auth).toEqual({
       type: 'oauth', client: { mode: 'dcr' }, defaultScopes: ['openid', 'email', 'profile', 'offline_access'],
@@ -17,9 +19,18 @@ describe('hosted OpenAI directory package', () => {
     expect(plugin.name).toBe('agentplaybooks-hosted');
     expect(plugin.extensions['com.openai'].review.test_cases.positive).toHaveLength(5);
     expect(plugin.extensions['com.openai'].review.test_cases.negative).toHaveLength(3);
+    const directory = managementToolset(managementTools(), 'directory');
+    if ('error' in directory) throw new Error(directory.error);
+    const exposedNames = new Set(directory.advertised.map(tool => tool.name));
+    for (const scenario of plugin.extensions['com.openai'].review.test_cases.positive) {
+      for (const name of scenario.tools_triggered.split(',').map((value: string) => value.trim())) {
+        expect(exposedNames.has(name), `Review scenario refers to unavailable tool ${name}`).toBe(true);
+      }
+    }
     expect(files.has(plugin.extensions['com.openai'].onboardingSkill.replace(/^\.\//, ''))).toBe(true);
     const skill = files.get('skills/playbooks/SKILL.md')!.toString();
-    expect(skill).toContain('find_tools');
+    expect(skill).toContain('get_memory_context');
+    expect(skill).not.toMatch(/find_tools|call_connected_tool|use_secret|list_secrets/);
     expect(skill).not.toMatch(/CLAUDE_PLUGIN_ROOT|node packages|\/mcp|agentplaybooks-servers/);
   });
 
