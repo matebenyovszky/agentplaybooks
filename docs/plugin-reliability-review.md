@@ -10,6 +10,10 @@ stdio bridge, and upstream Hermes per-source cooldown. The new profile tool is
 advertised in core and pinned navigation; full discovery is 53 tools and core 16.
 Review also added protection against resurrecting locally deleted managed skill
 files, backup symlink escapes, and unexpected headers in the full plugin ZIP.
+The later bf51978 dashboard summary API and 7f9db23 OpenAI safety/discovery fixes
+are retained. In particular, the separate hosted-directory identity uses upstream's
+full-catalog URL on initial upload, without attempting to mutate an existing
+registered app URL; the CLI's endpoint is unchanged.
 
 ## Hermes traffic
 

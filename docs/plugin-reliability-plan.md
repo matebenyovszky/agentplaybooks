@@ -9,6 +9,11 @@ its compact management views, direct federated-tool routing, per-source Hermes
 failure isolation, stdio bridge and registered OpenAI MCP URL. This delivery
 prepares CLI 0.9.0 and Hermes memory 0.4.0; package versions are not proof of
 publication. Core discovery has 16 tools, including get_profile; full has 53.
+Follow-up integration preserves main bf51978 dashboard summaries and 7f9db23
+OpenAI review fixes. The hosted directory packer now follows upstream's distinct
+agentplaybooks-hosted identity with full discovery from its first upload; it does
+not rewrite an existing registered app's MCP URL. The normal CLI endpoint stays
+unchanged. Explicit pinned views outrank the discovery header.
 
 ## Today's implementation
 
