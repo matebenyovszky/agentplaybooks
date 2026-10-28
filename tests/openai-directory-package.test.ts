@@ -8,6 +8,7 @@ describe('hosted OpenAI directory package', () => {
     const unpacked = listZipStore(buildZipStore([...files].map(([name, data]) => ({ name, data }))));
     expect(unpacked.map((file: { name: string }) => file.name)).toContain('mcp.json');
     const mcp = JSON.parse(files.get('mcp.json')!.toString());
+    expect(mcp.mcpServers['agentplaybooks-account'].url).toBe('https://agentplaybooks.ai/api/mcp/manage?toolset=full');
     expect(mcp.mcpServers['agentplaybooks-account'].extensions['com.openai'].auth).toEqual({
       type: 'oauth', client: { mode: 'dcr' }, defaultScopes: ['openid', 'email', 'profile', 'offline_access'],
     });
@@ -24,5 +25,12 @@ describe('hosted OpenAI directory package', () => {
     const server = { type: 'streamable-http', url: 'https://agentplaybooks.ai/api/mcp/manage' };
     expect(() => directoryMcp({ mcpServers: { 'agentplaybooks-account': { ...server, headers: { Authorization: 'secret' } } } })).toThrow('without credentials');
     expect(() => directoryMcp({ mcpServers: { 'agentplaybooks-account': { ...server, url: 'https://other.example/mcp' } } })).toThrow('public account endpoint');
+  });
+
+  it('imports an explicitly supplied public review recording without credentials', async () => {
+    const files = await collectDirectoryFiles({ recordingUrl: 'https://example.com/review.mp4' });
+    expect(JSON.parse(files.get('plugin.json')!.toString()).extensions['com.openai'].review.demo_recording_url).toBe('https://example.com/review.mp4');
+    await expect(collectDirectoryFiles({ recordingUrl: 'http://example.com/review.mp4' })).rejects.toThrow('public HTTPS');
+    await expect(collectDirectoryFiles({ recordingUrl: 'https://user:password@example.com/review.mp4' })).rejects.toThrow('without credentials');
   });
 });
