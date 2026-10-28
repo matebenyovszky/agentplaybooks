@@ -74,7 +74,7 @@ insecure MCP URLs, cross-platform drift, and a 0-100 health score.
    and skipped — never overwritten. Replaced files are backed up under
    `.agentplaybooks/backups/`.
 
-## Hermes 0.7.0 workflow
+## Hermes 0.8.0 workflow
 
 Run on the host/container serving the Hermes profile:
 

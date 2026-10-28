@@ -173,7 +173,11 @@
     "favorites": "Favorites",
     "signOut": "Sign Out",
     "createPlaybook": "Create Playbook",
-    "noPlaybooks": "You don't have any playbooks yet",
+    "noPlaybooks": "Your dashboard is empty",
+    "emptyDescription": "You don't have any playbooks yet. Create your first playbook to get started.",
+    "createFirstPlaybook": "Create your first playbook",
+    "playbookNamePrompt": "Enter a name for your playbook:",
+    "createError": "Could not create the playbook. Please try again.",
     "playbookCard": {
       "personas": "personas",
       "skills": "skills",

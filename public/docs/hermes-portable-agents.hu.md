@@ -21,7 +21,7 @@ A Hermes-katalógus csomagneve `agentplaybooks-tools`:
 ```bash
 hermes plugins install agentplaybooks-tools --no-enable
 hermes plugins enable agentplaybooks-tools
-npm install -g @agentplaybooks/cli@0.7.0
+npm install -g @agentplaybooks/cli@0.8.0
 apb --version
 ```
 
@@ -30,7 +30,7 @@ A CLI-hez Node.js 20 vagy újabb kell. Távoli Hermes gateway esetén a Node.js-
 lennie. A távoli profilba telepített skill nem telepíti a CLI-t sem a Macedre,
 sem a gatewayre.
 
-## Közös beállítás (CLI 0.7.0)
+## Közös beállítás (CLI 0.8.0)
 
 A gateway gépén vagy konténerében, a projekt könyvtárában futtasd:
 

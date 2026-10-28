@@ -13,7 +13,7 @@ the [AgentPlaybooks Tools plugin](https://agentplaybooks.ai/docs/hermes-portable
 On the gateway host/container, as the user running Hermes:
 
 ```bash
-npm install -g @agentplaybooks/cli@0.7.0
+npm install -g @agentplaybooks/cli@0.8.0
 apb memory setup PRIVATE_PLAYBOOK_GUID --target=hermes
 apb memory setup PRIVATE_PLAYBOOK_GUID --target=hermes --apply
 hermes memory setup

@@ -16,7 +16,7 @@ Hermes profile setup. Review each plan before applying it.
 ```bash
 hermes plugins install matebenyovszky/agentplaybooks/packages/hermes-portable/agentplaybooks-tools --no-enable
 hermes plugins enable agentplaybooks-tools
-npm install -g @agentplaybooks/cli@0.7.0
+npm install -g @agentplaybooks/cli@0.8.0
 apb --version
 ```
 
@@ -26,7 +26,7 @@ For a remote Hermes gateway, Node.js and `apb` must be available on the gateway
 host/container, and commands must target the profile that runs there. Installing
 the skill into a remote profile does not install the CLI on your Mac or gateway.
 
-## Guided setup (CLI 0.7.0)
+## Guided setup (CLI 0.8.0)
 
 Run these commands on the gateway host/container, in the project directory.
 `--profile=work` selects a named profile beneath the installation home;

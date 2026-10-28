@@ -25,7 +25,7 @@ En la práctica:
 - El inicio de sesión puede limitarse a tu inquilino con **Microsoft Entra ID** (`GOTRUE_EXTERNAL_AZURE_*` en GoTrue). No hay MFA a nivel de aplicación; el MFA es un control del IdP.
 - La copia de seguridad cifrada en las instalaciones y un ensayo de restauración en máquina vacía están documentados. La clave maestra **nunca** va dentro del archivo.
 
-**Rastro de auditoría.** **`audit_logs`** registra operaciones de la caja fuerte (`secret.*`) y llamadas MCP federadas. Una denegación es un evento. Las filas guardan un nombre de host, no una URL completa ni el valor del secreto. Las escrituras de skills, memoria y canvas no se registran.
+**Rastro de auditoría.** **`audit_logs`** registra operaciones de la caja fuerte (`secret.*`) y llamadas MCP federadas. Una denegación es un evento. Las filas guardan un nombre de host, no una URL completa ni el valor del secreto. Las escrituras de skills, memoria y canvas se auditan; los inicios de sesión y las lecturas de auditoría requieren cobertura independiente.
 
 - **Cadena de hashes / evidencia de manipulación** — cadena SHA-256 por playbook (`hash = sha256(JSON canónico incluyendo prev_hash)`). La primera fila encadena desde 64 dígitos hexadecimales a cero. Un disparador de inserción asigna el eslabón; las actualizaciones se rechazan, las filas quedan inmutables. `GET /api/playbooks/:guid/audit/verify` y `apb audit verify` responden HTTP 409 si se rompe un eslabón.
 - **Exportación** — `format` json, jsonl o csv en `GET /api/playbooks/:guid/audit`. `GET /api/playbooks/:guid/audit/export` usa JSONL por defecto. CLI: `apb audit export`.
@@ -61,7 +61,7 @@ Es una ayuda de lectura, no una evaluación ISO 27001 ni NIST.
 | Tema | Lado del producto |
 | --- | --- |
 | Criptografía (ISO 27001 A.8.24 / NIST SC) | AES-256-GCM, HKDF por usuario, ciphertext v2 ligado a AAD. Sin KMS |
-| Registro (A.8.15 / AU) | `audit_logs` con cadena de hashes, exportación, retención opcional, rol auditor, SIEM/syslog. Las escrituras de skills, memoria y canvas no se auditan |
+| Registro (A.8.15 / AU) | `audit_logs` con cadena de hashes, exportación, retención opcional, rol auditor, SIEM/syslog. Las escrituras de skills, memoria y canvas se auditan; los inicios de sesión y las lecturas de auditoría requieren cobertura independiente |
 | Copia (A.8.13 / CP) | Volcado cifrado + ensayo de restauración; el RPO/RTO lo fijas tú |
 | Acceso (A.5.15 / AC, IA) | owner / editor / auditor; Entra OIDC; mTLS autoalojado vía proxy de confianza |
 | Cadena de suministro (A.5.21 / SR, SI) | lockfiles, CodeQL, CycloneDX, cosign de blobs SBOM |
@@ -78,7 +78,7 @@ El software no hace esto por ti:
 - **Endurecimiento de la infraestructura** — terminación TLS, aislamiento de red, ventanas de parcheo, salas físicas, MFA del IdP. Compose arranca la app en el puerto 3000; no termina TLS y no arranca Supabase.
 - **EIPD y roles del RGPD** — en autoalojamiento sueles decidir fines y medios. La EIPD, el registro de actividades y los avisos del art. 13 son tuyos si hay datos personales.
 
-Lagunas honestas: no hay KMS/HSM, no hay recifrado al cambiar la clave maestra, no hay MFA de aplicación, no hay SAML, no hay imagen firmada en un registro de contenedores, la CSP es Report-Only, las escrituras de skills, memoria y canvas no se auditan.
+Lagunas honestas: no hay KMS/HSM, no hay recifrado al cambiar la clave maestra, no hay MFA de aplicación, no hay SAML, no hay imagen firmada en un registro de contenedores, la CSP se aplica, pero todavía permite scripts en línea y eval, los inicios de sesión y las lecturas de auditoría requieren cobertura independiente.
 
 ## Cómo desplegar en local
 

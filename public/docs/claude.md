@@ -139,7 +139,7 @@ AgentPlaybooks server you have stored a user API key for with the CLI — no
 OAuth server needed, and as many servers as you log in to:
 
 ```bash
-npx --yes @agentplaybooks/cli@0.7.0 login --url=https://<your-server>
+npx --yes @agentplaybooks/cli@0.8.0 login --url=https://<your-server>
 ```
 
 The CLI takes the key from `AGENTPLAYBOOKS_API_KEY`, or prompts for it without

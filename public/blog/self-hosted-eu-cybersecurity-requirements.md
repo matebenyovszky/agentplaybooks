@@ -25,7 +25,7 @@ What that split means in practice:
 - Sign-in can be limited to your tenant with **Microsoft Entra ID** (`GOTRUE_EXTERNAL_AZURE_*` on GoTrue). There is no application-level MFA; MFA is an IdP control.
 - Encrypted on-prem backup and an empty-machine restore drill are documented. The master key is **never** inside the archive.
 
-**Audit trail.** `audit_logs` records vault operations (`secret.*`) and federated MCP calls. A refusal is an event. Rows keep a hostname, not a full URL, and not the secret value. Skills, memory, and canvas writes are not logged.
+**Audit trail.** `audit_logs` records vault operations (`secret.*`) and federated MCP calls. A refusal is an event. Rows keep a hostname, not a full URL, and not the secret value. Skill, memory, and canvas writes are recorded by database triggers; sign-ins and audit reads need separate coverage.
 
 - **Hash chain / tamper evidence** — per-playbook SHA-256 chain (`hash = sha256(canonical JSON including prev_hash)`). The first row chains from 64 zero hex digits. An insert trigger assigns the link; updates are rejected, so rows stay immutable. `GET /api/playbooks/:guid/audit/verify` and `apb audit verify` return HTTP 409 when a link is broken.
 - **Export** — `format` json, jsonl, or csv on `GET /api/playbooks/:guid/audit`. `GET /api/playbooks/:guid/audit/export` defaults to JSONL. CLI: `apb audit export`.
@@ -61,7 +61,7 @@ This is a reading aid, not an ISO 27001 or NIST assessment.
 | Theme | Product side |
 | --- | --- |
 | Cryptography (ISO 27001 A.8.24 / NIST SC) | AES-256-GCM, HKDF per user, AAD-bound v2 ciphertext. No KMS |
-| Logging (A.8.15 / AU) | `audit_logs` with hash chain, export, optional retention, auditor role, SIEM/syslog. Skills, memory, and canvas writes are not audited |
+| Logging (A.8.15 / AU) | `audit_logs` with hash chain, export, optional retention, auditor role, SIEM/syslog. Skill, memory, and canvas writes are audited; sign-ins and audit reads need separate coverage |
 | Backup (A.8.13 / CP) | Encrypted dump + restore drill; you set RPO/RTO |
 | Access (A.5.15 / AC, IA) | owner / editor / auditor; Entra OIDC; self-host mTLS via trusted proxy |
 | Supply chain (A.5.21 / SR, SI) | lockfiles, CodeQL, CycloneDX, cosign of SBOM blobs |
@@ -78,7 +78,7 @@ The software cannot do these for you:
 - **Infrastructure hardening** — TLS termination, network isolation, patch windows, physical rooms, IdP MFA. Compose starts the app on port 3000; it does not terminate TLS and does not start Supabase.
 - **DPIA and GDPR roles** — on self-host you generally decide purposes and means. A DPIA, records of processing, and Art. 13 notices are yours if personal data is in play.
 
-Honest gaps: no KMS/HSM, no re-encryption when the master key changes, no app MFA, no SAML, no signed container registry image, CSP is Report-Only, skills/memory/canvas writes are not audited.
+Honest gaps: no KMS/HSM, no re-encryption when the master key changes, no app MFA, no SAML, no signed container registry image, CSP is enforced but still permits inline scripts and eval, sign-ins and audit reads need separate coverage.
 
 ## How to deploy locally
 

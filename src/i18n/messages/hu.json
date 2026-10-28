@@ -173,7 +173,11 @@
     "favorites": "Kedvencek",
     "signOut": "Kijelentkezés",
     "createPlaybook": "Playbook Létrehozása",
-    "noPlaybooks": "Még nincsenek playbookjaid",
+    "noPlaybooks": "Az irányítópultod most üres",
+    "emptyDescription": "Még nincs egyetlen playbookod sem. A kezdéshez hozd létre az első playbookodat.",
+    "createFirstPlaybook": "Első playbook létrehozása",
+    "playbookNamePrompt": "Add meg a playbook nevét:",
+    "createError": "Nem sikerült létrehozni a playbookot. Próbáld újra.",
     "playbookCard": {
       "personas": "persona",
       "skills": "skill",
