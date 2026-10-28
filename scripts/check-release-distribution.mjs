@@ -45,6 +45,13 @@ check(portable.extensions?.["com.openai"]?.interface?.logo === "./assets/icon.sv
 check(portable.extensions?.["com.openai"]?.interface?.composerIcon === "./assets/icon.svg", "Plugin composer icon path differs.");
 check(variants[0].interface?.logo === "./assets/icon.svg", "Codex compatibility logo path differs.");
 check(variants[0].interface?.composerIcon === "./assets/icon.svg", "Codex compatibility composer icon path differs.");
+for (const [name, metadata] of [
+  ["Agent Plugins", portable.extensions?.["com.openai"]?.interface],
+  ["Codex compatibility", variants[0].interface],
+]) {
+  check(typeof metadata?.shortDescription === "string" && metadata.shortDescription.length > 0 &&
+    [...metadata.shortDescription].length <= 30, `${name} subtitle must fit the OpenAI directory's 30-character limit.`);
+}
 check(variants[2].logo === "assets/agentplaybooks-mark.svg", "Cursor plugin logo path differs.");
 check(variants[4].plugins?.[0]?.logo === "packages/cli/assets/agentplaybooks-mark.svg", "Cursor marketplace logo path differs.");
 // The Claude directory plugin (plugins/agentplaybooks) is a separate, lean
