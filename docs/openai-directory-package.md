@@ -8,9 +8,16 @@ node scripts/pack-openai-directory.mjs --output=.tmp/agentplaybooks-openai.zip
 
 The package uses shared release metadata and the website's logo, a hosted-only
 playbook skill, and the account MCP endpoint with OAuth dynamic registration.
+The directory package selects `?toolset=full` so clients can discover the
+complete tool catalog during scanning; the server's default compact view is
+unchanged. Every call still enforces the connected account's permissions.
 It includes no local CLI dependency, fixed bearer token, authentication headers
 or reviewer credentials. The packer rejects unexpected endpoints and server
 settings rather than copying credentials into a public archive.
+
+After producing and verifying a public walkthrough, import its URL with
+`--recording-url=https://example.com/review.mp4`. Omit the flag for an initial
+draft. The packer accepts HTTPS URLs without embedded credentials.
 
 The initial 0.8.0 draft was uploaded on 2026-10-28. Upload does not mean review
 approval or publication. Track actual status in the
