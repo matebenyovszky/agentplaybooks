@@ -75,6 +75,7 @@ export function createApiApp(basePath?: string) {
       "Content-Type",
       "Authorization",
       "X-API-Key",
+      "X-AgentPlaybooks-Toolset",
       "MCP-Protocol-Version",
       "Mcp-Session-Id",
       "Mcp-Method",

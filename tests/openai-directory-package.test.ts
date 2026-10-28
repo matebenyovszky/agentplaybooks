@@ -9,6 +9,7 @@ describe('hosted OpenAI directory package', () => {
     expect(unpacked.map((file: { name: string }) => file.name)).toContain('mcp.json');
     const mcp = JSON.parse(files.get('mcp.json')!.toString());
     expect(mcp.mcpServers['agentplaybooks-account'].url).toBe('https://agentplaybooks.ai/api/mcp/manage');
+    expect(mcp.mcpServers['agentplaybooks-account'].headers).toEqual({ 'X-AgentPlaybooks-Toolset': 'full' });
     expect(mcp.mcpServers['agentplaybooks-account'].extensions['com.openai'].auth).toEqual({
       type: 'oauth', client: { mode: 'dcr' }, defaultScopes: ['openid', 'email', 'profile', 'offline_access'],
     });

@@ -133,6 +133,7 @@ describe("hosted MCP tool definition quality", () => {
     for (const name of [
       "delete_playbook",
       "delete_persona",
+      "update_persona",
       "delete_memory",
       "delete_skill",
       "delete_mcp_server",
@@ -155,6 +156,7 @@ describe("hosted MCP tool definition quality", () => {
     const openWorld = manageTools.filter((tool) => tool.annotations?.openWorldHint);
     expect(openWorld.map((tool) => tool.name).sort()).toEqual([
       "call_connected_tool",
+      "create_playbook",
       "use_secret",
       "use_secret_write",
     ]);

@@ -1,7 +1,6 @@
 import type { McpTool } from "@/lib/supabase/types";
 import {
   DESTRUCTIVE_CLOSED,
-  IDEMPOTENT_WRITE_CLOSED,
   playbookListOutputSchema,
   READ_CLOSED,
   WRITE_CLOSED,
@@ -38,7 +37,8 @@ export const ACCOUNT_TOOLS: McpTool[] = [
       },
       required: ["name"],
     },
-    annotations: WRITE_CLOSED,
+    // A caller can publish to a public or unlisted audience with visibility.
+    annotations: { ...WRITE_CLOSED, openWorldHint: true },
   },
   {
     name: "get_playbook",
@@ -98,7 +98,8 @@ export const ACCOUNT_TOOLS: McpTool[] = [
       },
       required: ["playbook_id"],
     },
-    annotations: IDEMPOTENT_WRITE_CLOSED,
+    // Supplied fields replace the previous values without a restore history.
+    annotations: DESTRUCTIVE_CLOSED,
   },
   {
     name: "delete_persona",
