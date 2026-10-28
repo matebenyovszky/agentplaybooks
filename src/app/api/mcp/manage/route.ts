@@ -110,7 +110,7 @@ app.get("/", async (c) => {
     }, 401, oauthChallengeHeaders());
   }
 
-  const view = managementToolset(MCP_TOOLS, c.req.query("toolset"));
+  const view = managementToolset(MCP_TOOLS, c.req.query("toolset") ?? c.req.header("X-AgentPlaybooks-Toolset"));
   if ("error" in view) return c.json({ error: view.error }, 400);
   const manifest = {
     protocolVersion: LATEST_PROTOCOL_VERSION,
@@ -156,7 +156,7 @@ app.post("/", async (c) => {
 
   const body = await c.req.json();
   const { method, params, id } = body;
-  const view = managementToolset(MCP_TOOLS, c.req.query("toolset"));
+  const view = managementToolset(MCP_TOOLS, c.req.query("toolset") ?? c.req.header("X-AgentPlaybooks-Toolset"));
   if ("error" in view) return c.json({ jsonrpc: "2.0", id, error: { code: -32602, message: view.error } }, 400);
   if (method === "tools/call") {
     startMcpToolUsage(c.req.raw, MCP_TOOLS.some(tool => tool.name === params?.name) ? params.name : "connected_tool", "management");

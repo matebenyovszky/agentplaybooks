@@ -122,6 +122,28 @@ describe("AgentPlaybooks management MCP transport", () => {
     expect(await response.json()).toEqual({ jsonrpc: "2.0", id: 2, result: {} });
   });
 
+  it("supports full discovery at a fixed URL without changing the default compact view", async () => {
+    const list = { id: 3, method: "tools/list" };
+    const full = await (await POST(mcpRequest(list, { "X-AgentPlaybooks-Toolset": "full" }))).json();
+    const compact = await (await POST(mcpRequest(list))).json();
+    expect(full.result.tools.length).toBeGreaterThan(compact.result.tools.length);
+    expect(full.result.tools.map((tool: { name: string }) => tool.name)).toContain("delete_secret");
+    const manifest = await (await GET(new Request("http://localhost/api/mcp/manage", {
+      headers: { "X-AgentPlaybooks-Toolset": "full" },
+    }))).json();
+    expect(manifest.tools).toEqual(full.result.tools);
+  });
+
+  it("does not let the discovery header override an explicit restricted domain", async () => {
+    const response = await POST(mcpRequest({ id: 3, method: "tools/list" },
+      { "X-AgentPlaybooks-Toolset": "full" }, "?toolset=memory"));
+    const payload = await response.json();
+    expect(payload.result.tools.map((tool: { name: string }) => tool.name)).not.toContain("delete_secret");
+    const denied = await POST(mcpRequest({ id: 4, method: "tools/call", params: { name: "delete_secret", arguments: {} } },
+      { "X-AgentPlaybooks-Toolset": "full" }, "?toolset=memory"));
+    expect((await denied.json()).error.code).toBe(-32602);
+  });
+
   it("projects every playbook operation with an explicit playbook_id", async () => {
     const response = await POST(mcpRequest({ id: 4, method: "tools/list" }, {}, "?toolset=full"));
     const payload = await response.json();
