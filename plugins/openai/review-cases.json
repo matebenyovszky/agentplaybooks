@@ -4,29 +4,29 @@
       "description": "List the connected demo account's playbooks",
       "prompt": "Show my AgentPlaybooks playbooks.",
       "tools_triggered": "list_playbooks",
-      "expected_behavior": "List only playbooks available to the connected account, including AgentPlaybooks Review Demo. Do not reveal credentials."
+      "expected_behavior": "List only playbooks available to the connected account, including Reviewer demo: Team handbook and Reviewer demo: Research notes. Do not reveal credentials."
     },
     {
       "description": "Open the portable demo agent setup",
-      "prompt": "Open AgentPlaybooks Review Demo and explain its persona and project instructions.",
+      "prompt": "Open Reviewer demo: Team handbook and explain its persona and project instructions.",
       "tools_triggered": "list_playbooks, get_playbook",
       "expected_behavior": "Resolve the named demo playbook, then summarize its persona and instructions with the correct playbook ID. Do not change the configuration."
     },
     {
       "description": "Read a reusable skill",
-      "prompt": "Read the release-checklist skill in AgentPlaybooks Review Demo.",
+      "prompt": "Read the code-review-checklist skill in Reviewer demo: Team handbook.",
       "tools_triggered": "find_tools, list_skills, get_skill",
-      "expected_behavior": "Discover tool schemas when needed and return the existing release-checklist skill from the demo playbook. Do not invent missing skill content."
+      "expected_behavior": "Discover tool schemas when needed and return the existing code-review-checklist skill from the demo playbook. Do not invent missing skill content."
     },
     {
       "description": "Retrieve shared project knowledge",
-      "prompt": "Find the release policy in the memory of AgentPlaybooks Review Demo.",
+      "prompt": "Find the release policy in the memory of Reviewer demo: Team handbook.",
       "tools_triggered": "find_tools, search_memory",
-      "expected_behavior": "Return the seeded demo/release-policy entry: release checks must pass before publication. Stay within the selected playbook."
+      "expected_behavior": "Return the seeded decision/release-cadence entry: releases are every second Tuesday; hotfixes can go out any day with two approvals. Stay within the selected playbook."
     },
     {
       "description": "Retain an explicitly requested sample decision",
-      "prompt": "In AgentPlaybooks Review Demo, remember under demo/review-note that the review uses synthetic data only.",
+      "prompt": "In Reviewer demo: Team handbook, remember under demo/review-note that the review uses synthetic data only.",
       "tools_triggered": "find_tools, write_memory",
       "expected_behavior": "Write the requested synthetic note to the selected demo playbook and confirm the tool result. Do not modify other playbooks or claim success after a denied write."
     }

@@ -38,6 +38,9 @@
   ],
   "exclude": [
     "node_modules",
+    "artifacts",
+    "work",
+    ".tmp",
     "playwright.config.ts",
     "tests/e2e"
   ]
