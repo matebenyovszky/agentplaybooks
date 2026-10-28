@@ -51,7 +51,7 @@ export default async function ExplorePage() {
               <div className={styles.heroCopy}>
                 <h1 id="explore-title">
                   {t("title")}
-                  <span>{t("titleAccent")}</span>
+                  <span className="gradient-text">{t("titleAccent")}</span>
                 </h1>
                 <p className={styles.heroIntro}>{t("subtitle")}</p>
                 <div className={styles.actions}>
@@ -451,7 +451,7 @@ export default async function ExplorePage() {
               <Link
                 href="/dashboard"
                 prefetch={false}
-                className={styles.darkButton}
+                className={styles.primary}
               >
                 {t("create")}
                 <ArrowRight size={17} aria-hidden="true" />
