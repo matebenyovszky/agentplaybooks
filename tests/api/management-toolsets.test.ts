@@ -35,7 +35,8 @@ describe("compact management discovery", () => {
   it("exposes fixed directory operations and refuses excluded dispatchers before any access", async () => {
     const manifest = await (await GET(new Request("https://apbks.test/api/mcp/manage?toolset=directory"))).json();
     const names = manifest.tools.map((tool: { name: string }) => tool.name);
-    expect(names).toHaveLength(38);
+    expect(names).toHaveLength(39);
+    expect(names).toContain("get_profile");
     expect(names).toEqual(expect.arrayContaining(["create_playbook", "update_persona", "reset_persona", "write_memory", "patch_canvas_section", "update_run"]));
     for (const name of ["find_tools", "call_connected_tool", "notes__search", "use_secret", "use_secret_write", "store_secret", "list_mcp_servers", "create_persona", "delete_persona"]) {
       expect(names).not.toContain(name);
@@ -47,9 +48,10 @@ describe("compact management discovery", () => {
     await POST(request("read_canvas", { playbook_id: "pb", slug: "plan" }, "directory"));
     expect(scoped).toHaveBeenCalledOnce();
   });
-  it("advertises 15 core tools and discovers hidden operations without selecting a playbook", async () => {
+  it("advertises 16 core tools and discovers hidden operations without selecting a playbook", async () => {
     const manifest = await (await GET(new Request("https://apbks.test/api/mcp/manage"))).json();
-    expect(manifest.tools).toHaveLength(15);
+    expect(manifest.tools).toHaveLength(16);
+    expect(manifest.tools.map((t: { name: string }) => t.name)).toContain("get_profile");
     expect(manifest.tools.map((t: { name: string }) => t.name)).not.toContain("delete_playbook");
     const finder = manifest.tools.find((t: { name: string }) => t.name === "find_tools");
     expect(finder.inputSchema.required).toEqual(["query"]);

@@ -80,29 +80,59 @@ const playbookListSelection = (summary: boolean) => `
   memories:memories(count)
 `;
 
+const compactPlaybookListSelection = `
+  id, guid, name, description, visibility, tags, persona_name, created_at, updated_at, user_id,
+  skills:skills(count), mcp_servers:mcp_servers(count), memories:memories(count)
+`;
+
+export type PlaybookListOptions = {
+  /** A metadata-only view for conversational discovery, not an export. */
+  compact: true;
+  query?: string;
+  limit: number;
+  offset: number;
+};
+
 export type PlaybookListSummary = Pick<PlaybookListItem,
   "id" | "guid" | "user_id" | "name" | "description" | "visibility" | "updated_at"
   | "skill_count" | "mcp_server_count" | "memory_count" | "current_user_role"
 >;
+export type PlaybookDiscoveryItem = PlaybookListSummary & Pick<Playbook, "tags" | "persona_name" | "created_at">;
 
 export function listAccessiblePlaybooks(userId: string): Promise<PlaybookListItem[]>;
 export function listAccessiblePlaybooks(userId: string, summary: true): Promise<PlaybookListSummary[]>;
+export function listAccessiblePlaybooks(userId: string, options: PlaybookListOptions): Promise<PlaybookDiscoveryItem[]>;
 export async function listAccessiblePlaybooks(
   userId: string,
-  summary = false,
-): Promise<PlaybookListItem[] | PlaybookListSummary[]> {
+  summaryOrOptions: boolean | PlaybookListOptions = false,
+): Promise<PlaybookListItem[] | PlaybookListSummary[] | PlaybookDiscoveryItem[]> {
   const supabase = getServiceSupabase();
+  const options = typeof summaryOrOptions === "object" ? summaryOrOptions : undefined;
 
-  // These independent reads used to cost two sequential database round trips.
+  if (options && (!Number.isInteger(options.limit) || options.limit < 1 || options.limit > 100
+    || !Number.isInteger(options.offset) || options.offset < 0 || options.offset > 999
+    || (options.query !== undefined && (typeof options.query !== "string" || options.query.length > 200)))) {
+    throw new Error("Invalid playbook list options: limit 1-100, offset 0-999, query at most 200 characters");
+  }
+  const selection = options ? compactPlaybookListSelection : playbookListSelection(summaryOrOptions === true);
+  // Escape LIKE metacharacters: a chat query is a literal name fragment, not a
+  // PostgREST expression. Fetch each stream's top offset+limit then merge;
+  // paging the streams independently would skip interleaved owned/shared rows.
+  const selectWindow = (sharedIds?: string[]) => {
+    let query = supabase.from("playbooks").select(selection);
+    query = sharedIds ? query.in("id", sharedIds) : query.eq("user_id", userId);
+    if (sharedIds && options) query = query.neq("user_id", userId);
+    if (options?.query?.trim()) {
+      query = query.ilike("name", `%${options.query.trim().replace(/[\\%_]/g, "\\$&")}%`);
+    }
+    query = query.order("updated_at", { ascending: false }).order("id", { ascending: true });
+    return options ? query.range(0, Math.min(1000, options.offset + options.limit) - 1) : query;
+  };
+
   const [ownedResult, membershipResult] = await Promise.all([
-    supabase.from("playbooks")
-      .select(playbookListSelection(summary))
-      .eq("user_id", userId)
-      .order("updated_at", { ascending: false }),
-    supabase.from("playbook_collaborators")
-      .select("playbook_id, role")
-      .eq("user_id", userId)
-      .not("accepted_at", "is", null),
+    selectWindow(),
+    supabase.from("playbook_collaborators").select("playbook_id, role")
+      .eq("user_id", userId).not("accepted_at", "is", null),
   ]);
   const { data: ownedData, error: ownedError } = ownedResult;
   const { data: memberships, error: membershipError } = membershipResult;
@@ -123,22 +153,23 @@ export async function listAccessiblePlaybooks(
   );
   let sharedData: typeof ownedData = [];
   if (sharedIds.length > 0) {
-    const sharedResult = await supabase
-      .from("playbooks")
-      .select(playbookListSelection(summary))
-      .in("id", sharedIds)
-      .order("updated_at", { ascending: false });
+    const sharedResult = await selectWindow(sharedIds);
     if (sharedResult.error) throw new Error(sharedResult.error.message);
     sharedData = sharedResult.data || [];
   }
 
-  return [
-    ...withCounts((ownedData || []) as unknown as PlaybookWithCounts[], () => "owner"),
-    ...withCounts((sharedData || []) as unknown as PlaybookWithCounts[], (id) => roleByPlaybook.get(id) ?? "editor"),
+  const owned = withCounts((ownedData || []) as unknown as PlaybookWithCounts[], () => "owner");
+  const ownedIds = new Set(owned.map(row => row.id));
+  const merged = [
+    ...owned,
+    ...withCounts((sharedData || []) as unknown as PlaybookWithCounts[], (id) => roleByPlaybook.get(id) ?? "editor")
+      .filter(row => !ownedIds.has(row.id)),
   ].sort(
     (left, right) =>
-      new Date(right.updated_at).getTime() - new Date(left.updated_at).getTime(),
+      new Date(right.updated_at).getTime() - new Date(left.updated_at).getTime()
+      || left.id.localeCompare(right.id),
   );
+  return options ? merged.slice(options.offset, Math.min(1000, options.offset + options.limit)) : merged;
 }
 
 export type CreatePlaybookInput = {

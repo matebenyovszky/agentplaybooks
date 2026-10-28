@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, symlink, unlink, writeFile } from "node:fs/promises";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -156,6 +156,7 @@ test("sync --target=cursor on a Claude-only fixture does not write CLAUDE.md or 
 
   await applySync(plan);
   assert.deepEqual(await listFiles(root), [
+    ".agentplaybooks/sync-state.json",
     ".claude/skills/hello/SKILL.md",
     ".cursor/mcp.json",
     ".cursor/skills/hello/SKILL.md",
@@ -205,6 +206,7 @@ test("sync --target=cursor,claude still writes both on a Claude-only fixture", a
 
   await applySync(plan);
   assert.deepEqual(await listFiles(root), [
+    ".agentplaybooks/sync-state.json",
     ".claude/skills/hello/SKILL.md",
     ".cursor/mcp.json",
     ".cursor/skills/hello/SKILL.md",
@@ -216,4 +218,69 @@ test("sync --target=cursor,claude still writes both on a Claude-only fixture", a
   assert.match(await readFile(path.join(root, "CLAUDE.md"), "utf8"), /@AGENTS\.md/);
   assert.equal(await readFile(path.join(root, ".claude", "skills", "hello", "SKILL.md"), "utf8"), claudeSkill);
   assert.equal(await readFile(path.join(root, ".mcp.json"), "utf8"), claudeMcp);
+});
+
+test("three-way skill sync updates unchanged generated files and backs them up", async () => {
+  const root = await fixture();
+  const source = ".agents/skills/hello/SKILL.md";
+  const target = ".cursor/skills/hello/SKILL.md";
+  await put(root, source, HELLO_SKILL);
+  await put(root, ".agents/skills/hello/references/checklist.md", "original resource");
+  await applySync(await planSync(root, { targets: ["cursor"] }));
+  const changed = HELLO_SKILL.replace("Say hello.", "Say hello politely.");
+  await put(root, source, changed);
+  await put(root, ".agents/skills/hello/references/checklist.md", "updated resource");
+  const plan = await planSync(root, { targets: ["cursor"] });
+  assert.equal(plan.conflicts.length, 0);
+  assert.ok(plan.fileActions.some(action => action.path === target && action.action === "merge"));
+  const result = await applySync(plan);
+  assert.equal(await readFile(path.join(root, target), "utf8"), changed);
+  assert.ok(result.backups.length >= 2);
+  assert.ok((await Promise.all(result.backups.map(file => readFile(file, "utf8")))).includes(HELLO_SKILL));
+});
+
+test("three-way skill sync preserves local changes and refuses stale previews", async () => {
+  const root = await fixture();
+  const source = ".agents/skills/hello/SKILL.md";
+  const target = ".cursor/skills/hello/SKILL.md";
+  await put(root, source, HELLO_SKILL);
+  await applySync(await planSync(root, { targets: ["cursor"] }));
+  await put(root, source, HELLO_SKILL.replace("Say hello.", "Source update."));
+  await put(root, target, HELLO_SKILL.replace("Say hello.", "Local update."));
+  const conflict = await planSync(root, { targets: ["cursor"] });
+  assert.ok(conflict.conflicts.some(item => item.kind === "skill"));
+  assert.ok(!conflict.fileActions.some(action => action.path === target));
+  await put(root, target, HELLO_SKILL);
+  const plan = await planSync(root, { targets: ["cursor"] });
+  await put(root, target, "concurrent editor change");
+  await assert.rejects(applySync(plan), /changed after preview/);
+  assert.equal(await readFile(path.join(root, target), "utf8"), "concurrent editor change");
+});
+
+test("three-way sync preserves locally deleted managed skill files", async () => {
+  const root = await fixture();
+  const target = ".cursor/skills/hello/SKILL.md";
+  await put(root, ".agents/skills/hello/SKILL.md", HELLO_SKILL);
+  await applySync(await planSync(root, { targets: ["cursor"] }));
+  await unlink(path.join(root, target));
+  const plan = await planSync(root, { targets: ["cursor"] });
+  assert.ok(plan.conflicts.some(item => item.reason.includes("deleted locally")));
+  assert.ok(!plan.fileActions.some(action => action.path === target));
+  await applySync(plan);
+  await assert.rejects(readFile(path.join(root, target)), { code: "ENOENT" });
+});
+
+test("sync refuses a backup directory symlink before writing updated files", async () => {
+  const root = await fixture();
+  const outside = await fixture();
+  const source = ".agents/skills/hello/SKILL.md";
+  const target = ".cursor/skills/hello/SKILL.md";
+  await put(root, source, HELLO_SKILL);
+  await applySync(await planSync(root, { targets: ["cursor"] }));
+  await symlink(outside, path.join(root, ".agentplaybooks/backups"), "dir");
+  await put(root, source, HELLO_SKILL.replace("Say hello.", "Source update."));
+  const plan = await planSync(root, { targets: ["cursor"] });
+  await assert.rejects(applySync(plan), /symlink/);
+  assert.deepEqual(await readdir(outside), []);
+  assert.equal(await readFile(path.join(root, target), "utf8"), HELLO_SKILL);
 });

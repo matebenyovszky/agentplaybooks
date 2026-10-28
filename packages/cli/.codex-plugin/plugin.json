@@ -1,7 +1,7 @@
 {
   "name": "agentplaybooks",
-  "description": "Portable, vendor-neutral agents: sync configuration and manage skills, tools, memory, canvas, and secrets.",
-  "version": "0.8.1",
+  "description": "Use playbooks, skills, memory, canvas, connected tools, and vault secrets in chat; sync portable agent configuration across clients.",
+  "version": "0.9.0",
   "author": {
     "name": "AgentPlaybooks",
     "url": "https://agentplaybooks.ai"
@@ -26,8 +26,8 @@
   },
   "interface": {
     "displayName": "AgentPlaybooks",
-    "shortDescription": "Your agents. Every platform.",
-    "longDescription": "Keep agents vendor-neutral across Codex, Claude, Cursor, Hermes, and other clients. Audit and sync local configuration, then manage playbooks, skills, memory, canvas, federated MCP/OpenAPI tools, workflows, and vault-backed API calls through one account connection.",
+    "shortDescription": "Skills, memory & tools",
+    "longDescription": "Use playbooks, skills, memory, collaborative canvas, connected MCP/OpenAPI tools, workflows, and vault-backed API calls directly in chat through one account connection. Also audit, sync, and back up portable agent configuration across clients.",
     "developerName": "AgentPlaybooks",
     "category": "Productivity",
     "capabilities": [
@@ -38,8 +38,8 @@
     "privacyPolicyURL": "https://agentplaybooks.ai/privacy",
     "termsOfServiceURL": "https://agentplaybooks.ai/terms",
     "defaultPrompt": [
-      "Audit and synchronize my agent configuration.",
       "Show my playbooks and their connected tools.",
+      "Find the right skill and memory for this task.",
       "Call an API with a vault secret without revealing it."
     ],
     "brandColor": "#2563EB",

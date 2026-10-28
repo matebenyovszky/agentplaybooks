@@ -13,6 +13,8 @@ CONFIG_SCHEMA = ProviderConfigSchema(
                       description="Playbook-scoped key with memory:read and memory:write permissions."),
         ProviderField(key="base_url", label="Service URL", kind=KIND_TEXT,
                       default="https://agentplaybooks.ai"),
+        ProviderField(key="recall_mode", label="Recall mode", kind=KIND_TEXT,
+                      default="explicit", description="explicit: tools only (no automatic searches); automatic: bounded per-turn recall."),
         ProviderField(key="shared_playbooks", label="Shared playbook GUIDs", kind=KIND_TEXT,
                       description="Optional comma-separated read-only sources."),
         ProviderField(key="team_playbooks", label="Team playbook GUIDs", kind=KIND_TEXT,

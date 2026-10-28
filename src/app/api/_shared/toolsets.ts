@@ -122,7 +122,7 @@ export function searchToolCatalog(
   tools: McpTool[],
   query: string,
   limit = 10,
-): Array<{ name: string; description: string; inputSchema: unknown }> {
+): Array<Pick<McpTool, "name" | "description" | "inputSchema" | "annotations">> {
   const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
   const boundedLimit = Number.isFinite(limit) ? Math.max(1, Math.min(Math.floor(limit), 25)) : 10;
   if (terms.length === 0) return [];
@@ -146,5 +146,6 @@ export function searchToolCatalog(
       name: tool.name,
       description: tool.description || tool.name,
       inputSchema: tool.inputSchema || { type: "object", properties: {} },
+      ...(tool.annotations ? { annotations: tool.annotations } : {}),
     }));
 }

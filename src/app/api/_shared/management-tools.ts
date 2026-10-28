@@ -13,5 +13,5 @@ export function managementTools() {
   finder.inputSchema = { ...finder.inputSchema, required: ["query"] };
   finder.description = "Find account and playbook operations by keyword and return their input schemas. No playbook_id is needed for the account catalog. Supply playbook_id to also search connected servers. Call returned tools directly; omitted tools remain callable in core/full. Pinned domain views search only their allowed operations.";
 
-  return tools;
+  return tools.map(tool => ({ ...tool, securitySchemes: tool.securitySchemes ?? [{ type: "oauth2", scopes: [] }] }));
 }

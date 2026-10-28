@@ -18,6 +18,7 @@ import { managementTools } from "@/app/api/_shared/management-tools";
 import { structuredToolResult } from "@/app/api/_shared/mcp-tool-hints";
 import {
   LATEST_PROTOCOL_VERSION,
+  isNotification,
   negotiateProtocolVersion,
   requestsEventStream,
 } from "@/app/api/_shared/mcp-protocol";
@@ -154,8 +155,19 @@ app.post("/", async (c) => {
     }, 401, oauthChallengeHeaders());
   }
 
-  const body = await c.req.json();
+  let body;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ jsonrpc: "2.0", id: null, error: { code: -32700, message: "Invalid JSON" } }, 400);
+  }
+  if (!body || Array.isArray(body) || body.jsonrpc !== "2.0" || typeof body.method !== "string") {
+    return c.json({ jsonrpc: "2.0", id: null, error: { code: -32600, message: "Invalid JSON-RPC request" } }, 400);
+  }
   const { method, params, id } = body;
+  // Cancellation/progress notifications from newer clients must not receive a
+  // JSON-RPC error response, or execute a tool accidentally without a call id.
+  if (isNotification(method, id)) return c.body(null, 202);
   const view = managementToolset(MCP_TOOLS, c.req.query("toolset") ?? c.req.header("X-AgentPlaybooks-Toolset"));
   if ("error" in view) return c.json({ jsonrpc: "2.0", id, error: { code: -32602, message: view.error } }, 400);
   if (method === "tools/call") {
@@ -333,12 +345,33 @@ async function executeManagementTool(
   const userId = actor.user_id;
 
   switch (toolName) {
+    case "get_profile": {
+      // Never accept a model-supplied account selector. The immutable auth user
+      // ID identifies the same profile for API keys, OAuth, and reconnections.
+      if (Object.keys(args).length) throw new Error("get_profile accepts no arguments");
+      if (!userId?.trim()) throw new Error("Authenticated profile unavailable");
+      const { data, error } = await supabase.from("profiles")
+        .select("display_name").eq("auth_user_id", userId).maybeSingle();
+      if (error) throw new Error("Profile metadata unavailable");
+      return { id: userId, ...(typeof data?.display_name === "string" && data.display_name.trim() ? { name: data.display_name } : {}) };
+    }
+
     case "list_playbooks": {
       if (!hasPermission(actor, "playbooks:read")) {
         throw new Error("Permission denied: playbooks:read required");
       }
 
-      const playbooks = await listAccessiblePlaybooks(userId);
+      const query = args.query;
+      const limit = args.limit ?? 50;
+      const offset = args.offset ?? 0;
+      if (query !== undefined && (typeof query !== "string" || query.length > 200)) {
+        throw new Error("query must be a string of at most 200 characters");
+      }
+      if (typeof limit !== "number" || !Number.isInteger(limit) || limit < 1 || limit > 100
+        || typeof offset !== "number" || !Number.isInteger(offset) || offset < 0 || offset > 999) {
+        throw new Error("limit must be 1-100 and offset must be 0-999");
+      }
+      const playbooks = await listAccessiblePlaybooks(userId, { compact: true, query, limit, offset });
       return playbooks.map((playbook) => ({
         ...playbook,
         persona_count: playbook.persona_name ? 1 : 0,
@@ -404,6 +437,17 @@ async function executeManagementTool(
       if (error || !playbook) throw new Error("Playbook not found");
 
       const includeContent = args.include_content === true;
+      const memoryLimit = args.memory_limit ?? 20;
+      const memoryOffset = args.memory_offset ?? 0;
+      if (typeof memoryLimit !== "number" || !Number.isInteger(memoryLimit) || memoryLimit < 1 || memoryLimit > 100
+        || typeof memoryOffset !== "number" || !Number.isInteger(memoryOffset) || memoryOffset < 0 || memoryOffset > 10000) {
+        throw new Error("memory_limit must be 1-100 and memory_offset must be 0-10000");
+      }
+      let memoryQuery = supabase.from("memories")
+        .select(includeContent ? "*" : "key, summary, tier, priority, tags, memory_at, updated_at")
+        .eq("playbook_id", playbook.id).eq("is_archived", false);
+      if (!includeContent) memoryQuery = memoryQuery.order("priority", { ascending: false })
+        .order("key", { ascending: true }).range(memoryOffset, memoryOffset + memoryLimit);
       const [skills, mcpServers, memories] = await Promise.all([
         includeContent
           ? supabase.from("skills").select("*").eq("playbook_id", playbook.id).then(({ data, error }) => {
@@ -412,7 +456,7 @@ async function executeManagementTool(
           })
           : listSkillSummaries(supabase, playbook.id),
         supabase.from("mcp_servers").select(includeContent ? "*" : "id, name, description, transport_type, created_at").eq("playbook_id", playbook.id),
-        supabase.from("memories").select(includeContent ? "*" : "key, summary, tier, priority, tags, memory_at, updated_at").eq("playbook_id", playbook.id).eq("is_archived", false),
+        memoryQuery,
       ]);
       if (mcpServers.error) throw mcpServers.error;
       if (memories.error) throw memories.error;
@@ -425,7 +469,12 @@ async function executeManagementTool(
         personas: [playbookToPersona(playbook)], // backward-compatible shape
         skills,
         mcp_servers: mcpServers.data || [],
-        memories: memories.data || [],
+        memories: includeContent ? memories.data || [] : (memories.data || []).slice(0, memoryLimit),
+        ...(!includeContent ? { memory_page: {
+          offset: memoryOffset, limit: memoryLimit,
+          has_more: (memories.data?.length || 0) > memoryLimit,
+          next_offset: (memories.data?.length || 0) > memoryLimit ? memoryOffset + memoryLimit : null,
+        } } : {}),
       };
     }
 

@@ -11,8 +11,10 @@ export function directoryMcp(source) {
   const servers = source.mcpServers;
   if (Object.keys(servers ?? {}).length !== 1) throw new Error('Expected one account MCP server.');
   const server = servers['agentplaybooks-account'];
+  const expectedExtensions = { 'com.openai': { auth: { type: 'oauth' } } };
   if (server?.type !== 'streamable-http' || server.url !== 'https://agentplaybooks.ai/api/mcp/manage' ||
-      Object.keys(server).some(key => !['type', 'url'].includes(key))) {
+      Object.keys(server).some(key => !['type', 'url', 'extensions'].includes(key)) ||
+      (server.extensions !== undefined && JSON.stringify(server.extensions) !== JSON.stringify(expectedExtensions))) {
     throw new Error('Expected the public account endpoint without credentials or headers.');
   }
   return { ...source, mcpServers: { 'agentplaybooks-account': {

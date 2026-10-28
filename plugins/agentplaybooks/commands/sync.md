@@ -5,7 +5,7 @@ argument-hint: "[path] [--target=claude,cursor,codex]"
 
 Synchronize the project's portable agent configuration across tools.
 
-1. Run: `npx --yes @agentplaybooks/cli@0.8.1 sync $ARGUMENTS --json`
+1. Run: `npx --yes @agentplaybooks/cli@0.9.0 sync $ARGUMENTS --json`
 2. Summarize the plan: manifest create or update, platform files to be written
    per target, secret references found, and any conflicts. If
    `suggestedTargets` is non-empty, no target is enabled yet — name the agent

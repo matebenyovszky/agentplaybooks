@@ -1,5 +1,69 @@
 # AgentPlaybooks CLI
 
+## Chat-first plugin use (0.9.0)
+
+The Codex/OpenAI plugin primarily uses hosted playbooks, skills, memory, canvas,
+vault-backed API calls, and connected MCP/OpenAPI tools directly in conversation.
+The local CLI is for configuration, doctor/sync, and backup/restore, not a
+prerequisite for those hosted tasks. The entry skill routes directly to selected
+tools; detailed local workflows load only from its optional bundled reference.
+
+`list_playbooks` supports literal name `query`, `limit` (default 50, max 100),
+and `offset` (0–999); it returns metadata/counts without persona prompts,
+instructions, or config. Narrow the query beyond the first 1000 matches.
+Compact `get_playbook` memory defaults to 20 metadata entries with
+`memory_page.has_more` / `next_offset`. Use targeted skill/reference, memory,
+and canvas-section reads instead of routine full exports. Known IDs and secret
+names can be used directly without prerequisite listing calls.
+
+## Connection self-check and cloud use (0.9.0)
+
+`apb connection check --json` runs an on-demand, bounded check of OAuth
+resource metadata, MCP initialize, initialized notification, tools/list, and
+`get_profile` when available. It stops on failures, never retries credentials,
+and never prints response bodies or keys. Use `--anonymous` to diagnose the
+public route without reading stored credentials, or `--key-env=<VAR>` to use a
+specific environment credential. An anonymous 401 proves reachability and a need
+to authenticate; it is not evidence that the server is down.
+
+CLI API-key login and host plugin OAuth are separate. `apb logout` removes the
+stored account key; an exported `AGENTPLAYBOOKS_API_KEY` still overrides it.
+Reconnect or add another account in ChatGPT/Codex plugin settings, refresh the
+connection, start a new conversation and call `get_profile` to verify identity.
+OAuth consent now offers **Use another account**, signing out only the current
+browser session rather than every device.
+
+Build `npm run pack:openai-remote` for the full web/cloud plugin ZIP. It includes
+`mcp.json` with the hosted HTTPS endpoint and explicit OAuth declaration; the
+existing `pack:openai-skills` remains skills-only. The full package still needs
+host registration/account consent and a real cloud smoke test. A local
+marketplace installation or working CLI alone does not establish cloud access.
+
+The repository's separate `scripts/pack-openai-directory.mjs` builds the public
+`agentplaybooks-hosted` directory variant with an enforced knowledge/document
+profile (`?toolset=directory`). That variant does not expose secret handling or
+connected-service dispatchers. The complete remote ZIP and private/custom
+account connection retain those capabilities; the two packages are not equivalent.
+
+## Managed skill updates (0.9.0)
+
+Sync records hashes of newly generated skill files in
+`.agentplaybooks/sync-state.json`. Later source changes update untouched generated
+files with backups. Local edits remain conflicts, and concurrent changes after
+preview stop apply. Existing files without recorded state are not adopted or
+overwritten automatically. MCP definitions and custom-agent conflicts retain
+their existing conservative behavior; remote deletions are not mirrored.
+
+## ROS 2 inspection (0.9.0)
+
+`apb doctor <workspace> --target=ros2 --json` inventories `package.xml` metadata
+and launch-file paths without executing launch code, importing Python, running
+ROS commands, or contacting a robot. It detects missing package metadata,
+duplicate package names, and a ROS target declaring physical actions without
+an emergency-stop requirement. The report explicitly says `runtimeChecked:
+false`: it does not prove dependencies, graph/QoS compatibility, simulation
+behavior or physical safety. A robot/simulator pilot is a separate verification.
+
 ![AgentPlaybooks — portable agent tools](https://agentplaybooks.ai/plugin-catalog/agentplaybooks.png)
 
 Local-first CLI for auditing, synchronizing, and sharing portable agent

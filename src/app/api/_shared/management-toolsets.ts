@@ -2,6 +2,7 @@ import type { McpTool } from "@/lib/supabase/types";
 import { resolveToolset } from "./toolsets";
 
 const CORE = new Set([
+  "get_profile",
   "list_playbooks", "create_playbook", "get_playbook", "update_persona",
   "list_skills", "get_skill", "get_skill_reference",
   "search_memory", "read_memory", "write_memory",
@@ -19,10 +20,11 @@ const SECRETS = new Set([
   "list_secrets", "use_secret", "use_secret_write", "store_secret", "rotate_secret", "delete_secret",
 ]);
 const PLANNING = new Set(["create_task_graph", "update_task_status"]);
-const NAVIGATION = new Set(["list_playbooks", "get_playbook", "find_tools"]);
+const NAVIGATION = new Set(["get_profile", "list_playbooks", "get_playbook", "find_tools"]);
 // Public directory review requires fixed, independently exposed operations.
 // Deliberately exclude dispatchers, credential handling and legacy aliases.
 const DIRECTORY = new Set([
+  "get_profile",
   "list_playbooks", "create_playbook", "get_playbook", "update_playbook", "delete_playbook",
   "update_persona", "reset_persona",
   "list_skills", "get_skill", "get_skill_reference", "create_skill", "update_skill", "delete_skill", "list_skill_versions", "rollback_skill",

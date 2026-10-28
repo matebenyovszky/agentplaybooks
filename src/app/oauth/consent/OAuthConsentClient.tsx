@@ -15,7 +15,7 @@ export default function OAuthConsentClient({ authorizationId }: { authorizationI
   const [details, setDetails] = useState<OAuthAuthorizationDetails | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [deciding, setDeciding] = useState<"approve" | "deny" | null>(null);
+  const [deciding, setDeciding] = useState<"approve" | "deny" | "switch" | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -77,6 +77,19 @@ export default function OAuthConsentClient({ authorizationId }: { authorizationI
     }
 
     window.location.replace(data.redirect_url);
+  }
+
+  async function switchAccount() {
+    if (!authorizationId || deciding) return;
+    setDeciding("switch");
+    const { error: signOutError } = await createBrowserClient().auth.signOut({ scope: "local" });
+    if (signOutError) {
+      setError("Could not switch accounts. Please try again.");
+      setDeciding(null);
+      return;
+    }
+    const next = `/oauth/consent?authorization_id=${encodeURIComponent(authorizationId)}`;
+    window.location.replace(`/login?next=${encodeURIComponent(next)}`);
   }
 
   const scopes = details?.scope.split(/\s+/).filter(Boolean) ?? [];
@@ -153,7 +166,13 @@ export default function OAuthConsentClient({ authorizationId }: { authorizationI
             <dl className="mt-5 space-y-2 border-t border-neutral-200 pt-5 text-xs dark:border-blue-900/50">
               <div className="flex gap-3">
                 <dt className="w-24 shrink-0 text-neutral-500 dark:text-slate-500">Signed in as</dt>
-                <dd className="break-all text-neutral-700 dark:text-slate-300">{details.user.email}</dd>
+                <dd className="break-all text-neutral-700 dark:text-slate-300">
+                  {details.user.email}
+                  <button type="button" disabled={Boolean(deciding)} onClick={() => void switchAccount()}
+                    className="ml-3 text-blue-600 underline disabled:opacity-50 dark:text-blue-400">
+                    {deciding === "switch" ? "Switching…" : "Use another account"}
+                  </button>
+                </dd>
               </div>
               <div className="flex gap-3">
                 <dt className="w-24 shrink-0 text-neutral-500 dark:text-slate-500">Returns to</dt>

@@ -30,8 +30,8 @@ import os from "node:os";
 import path from "node:path";
 import readline from "node:readline";
 
-const VERSION = "0.8.1";
-const LOGIN = "npx --yes @agentplaybooks/cli@0.8.1 login";
+const VERSION = "0.9.0";
+const LOGIN = "npx --yes @agentplaybooks/cli@0.9.0 login";
 const PROTOCOL_VERSIONS = ["2025-06-18", "2025-03-26", "2024-11-05"];
 const UPSTREAM_PROTOCOL = "2025-06-18";
 const LIST_TIMEOUT_MS = 15_000;

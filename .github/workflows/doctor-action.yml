@@ -1,0 +1,28 @@
+name: Doctor Action compatibility
+on:
+  pull_request:
+    paths: ['actions/doctor/**', 'packages/cli/**', '.github/workflows/doctor-action.yml']
+  push:
+    branches: [main]
+    paths: ['actions/doctor/**', 'packages/cli/**', '.github/workflows/doctor-action.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./actions/doctor
+        id: doctor
+        with:
+          path: packages/cli
+          strict: 'false'
+      - uses: actions/upload-artifact@v7
+        if: always() && steps.doctor.outputs.report != ''
+        with:
+          name: agent-config-health
+          path: |
+            ${{ steps.doctor.outputs.report }}
+            ${{ steps.doctor.outputs.badge }}

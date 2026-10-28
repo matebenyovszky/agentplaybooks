@@ -66,7 +66,7 @@ try:
             (home / "config.yaml").write_text("memory:\n  provider: agentplaybooks-memory\n")
             (home / "agentplaybooks").mkdir()
             (home / "agentplaybooks" / "config.json").write_text(json.dumps({
-                "playbook_guid": guid, "base_url": f"http://127.0.0.1:{server.server_port}"}))
+                "playbook_guid": guid, "base_url": f"http://127.0.0.1:{server.server_port}", "recall_mode": "automatic"}))
         home_token = set_hermes_home_override(home)
         secret_token = set_secret_scope({"AGENTPLAYBOOKS_MEMORY_API_KEY": f"key-{guid}"})
         try:
@@ -77,7 +77,9 @@ try:
             assert provider is not None and provider.is_available()
             manager = MemoryManager()
             manager.add_provider(provider)
+            before_initialize = len(service.calls)
             manager.initialize_all(f"session-{index}", agent_identity=guid, agent_context="primary")
+            assert len(service.calls) == before_initialize, "Unused provider must stay offline"
             assert provider.client.guid == guid
             assert any(t["name"] == "apb_memory_write" for t in manager.get_all_tool_schemas())
             result = json.loads(provider.handle_tool_call("apb_memory_search", {}))

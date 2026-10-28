@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import readline from "node:readline";
 import { printDoctor, publicReport, runDoctor, runGlobalDoctor } from "./doctor.js";
+import { checkConnection, printConnection } from "./connection.js";
 import {
   checkPrerequisites,
   chooseClientId,
@@ -75,7 +76,8 @@ import {
 const HELP = `AgentPlaybooks CLI
 
 Usage:
-  agentplaybooks doctor [path] [--json] [--strict] [--global] [--include-vendored]
+  agentplaybooks connection check [--url=<base>] [--key-env=<VAR>] [--anonymous] [--json]
+  agentplaybooks doctor [path] [--json] [--strict] [--global] [--include-vendored] [--target=ros2]
   agentplaybooks sync [path] [--apply] [--json] [--target=<types>] [--profile=<bot>]
   agentplaybooks sync --global [--apply] [--json] [--target=<types>] [--include-vendored]
   agentplaybooks plugin export [path] [--output=<directory>] [--apply] [--json]
@@ -122,6 +124,7 @@ Usage:
   agentplaybooks audit purge <guid> [--days=N] [--yes] [--url=<base>]
 
 Commands:
+  connection On-demand OAuth/MCP self-check (discovery, initialize, tools, account).
   memory     Install and configure the native Hermes memory provider for a private
              playbook. Plan-only without --apply; credentials are never copied.
   hermes     'hermes setup' previews/restores complete skill trees and connects hosted
@@ -762,9 +765,12 @@ export async function run(args) {
   }
 
   if (command === "doctor") {
+    const target = flags.get("--target");
+    if (target && target !== "ros2") throw new Error("Doctor's optional --target currently supports ros2 only.");
+    if (target && flags.has("--global")) throw new Error("ROS 2 Doctor requires a project directory, not --global.");
     const report = flags.has("--global")
       ? await runGlobalDoctor({ includeVendored: flags.has("--include-vendored") })
-      : await runDoctor(path.resolve(positional[0] ?? process.cwd()));
+      : await runDoctor(path.resolve(positional[0] ?? process.cwd()), { robotics: target === "ros2" });
     if (flags.has("--json")) console.log(JSON.stringify(publicReport(report), null, 2));
     else printDoctor(report);
     if (flags.has("--strict") && report.findings.some((item) => item.severity === "critical" || item.severity === "high")) {
@@ -886,6 +892,20 @@ export async function run(args) {
 
   const url = resolveBaseUrl(typeof flags.get("--url") === "string" ? flags.get("--url") : undefined);
 
+  if (command === "connection") {
+    if (positional[0] !== "check") throw new Error("Usage: apb connection check [--url=<base>] [--key-env=<VAR>] [--anonymous] [--json]");
+    const keyEnv = flags.get("--key-env");
+    if (keyEnv && (typeof keyEnv !== "string" || !/^[A-Z_][A-Z0-9_]*$/.test(keyEnv))) throw new Error("Invalid key environment variable name.");
+    const apiKey = flags.has("--anonymous") ? undefined
+      : keyEnv ? process.env[keyEnv] : await resolveApiKey(url);
+    if (keyEnv && !apiKey && !flags.has("--anonymous")) throw new Error(`No credential available in ${keyEnv}.`);
+    const report = await checkConnection(url, { apiKey });
+    if (flags.has("--json")) console.log(JSON.stringify(report, null, 2));
+    else printConnection(report);
+    if (!report.ok) process.exitCode = 2;
+    return;
+  }
+
   if (command === "audit") {
     await runAudit(url, flags, positional);
     return;
@@ -909,6 +929,7 @@ export async function run(args) {
   if (command === "logout") {
     const removed = await removeApiKey(url);
     console.log(removed ? `Removed API key for ${url}.` : `No stored API key for ${url}.`);
+    if (process.env.AGENTPLAYBOOKS_API_KEY) console.log("AGENTPLAYBOOKS_API_KEY is still set in this process and overrides stored credentials. Unset it before signing in as another user. Host-managed plugin OAuth connections must be disconnected in that host's settings.");
     return;
   }
 

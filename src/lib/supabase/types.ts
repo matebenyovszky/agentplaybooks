@@ -29,6 +29,8 @@ export type McpTool = {
   inputSchema?: Record<string, unknown>;
   outputSchema?: Record<string, unknown>;
   annotations?: McpToolAnnotations;
+  securitySchemes?: Array<{ type: "oauth2"; scopes: string[] } | { type: "noauth" }>;
+  _meta?: Record<string, unknown>;
 };
 
 export type McpResource = {

@@ -37,6 +37,7 @@ describe('hosted OpenAI directory package', () => {
   it('refuses credential-bearing headers and unexpected destinations', () => {
     const server = { type: 'streamable-http', url: 'https://agentplaybooks.ai/api/mcp/manage' };
     expect(() => directoryMcp({ mcpServers: { 'agentplaybooks-account': { ...server, headers: { Authorization: 'secret' } } } })).toThrow('without credentials');
+    expect(() => directoryMcp({ mcpServers: { 'agentplaybooks-account': { ...server, extensions: { 'com.openai': { auth: { type: 'api_key', value: 'secret' } } } } } })).toThrow('without credentials');
     expect(() => directoryMcp({ mcpServers: { 'agentplaybooks-account': { ...server, url: 'https://other.example/mcp' } } })).toThrow('public account endpoint');
   });
 

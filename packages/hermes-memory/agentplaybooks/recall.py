@@ -1,8 +1,8 @@
 """Bounded lexical recall. Explicit search remains literal; no transcripts/cache."""
 from __future__ import annotations
 
-import hashlib
 import json
+import hashlib
 import queue
 import re
 import threading
@@ -58,7 +58,9 @@ class Recall:
             self.recent.clear()
             self.failed_until.clear()
 
-    def fetch(self, clients, query, *, session_id=""):
+    reset = invalidate
+
+    def fetch(self, clients, query, *, session_id="", ensure_private=None):
         terms = search_terms(query)
         if not terms:
             return ""
@@ -77,6 +79,7 @@ class Recall:
             self.recent[signature] = now + 30
         deadline = time.monotonic() + self.budget
         jobs, results = queue.Queue(), queue.Queue()
+        request_budget = [8]
         # One worker owns a source: a failed first keyword cannot fan out into
         # three more failed requests. Different sources still progress in parallel.
         for client in clients:
@@ -95,10 +98,19 @@ class Recall:
                             continue
                         self.active_sources.add(source)
                     try:
+                        if ensure_private:
+                            remaining = deadline - time.monotonic()
+                            if remaining <= 0:
+                                continue
+                            ensure_private(client, timeout=max(0.01, min(0.5, remaining / 2)))
                         for term in terms:
                             remaining = deadline - time.monotonic()
                             if remaining <= 0:
                                 break
+                            with self.state_lock:
+                                if request_budget[0] <= 0:
+                                    break
+                                request_budget[0] -= 1
                             try:
                                 entries = client.search(search=term, limit=10, timeout=min(2.5, remaining))
                                 if isinstance(entries, list):
@@ -107,6 +119,9 @@ class Recall:
                                 with self.state_lock:
                                     self.failed_until[source] = self.clock() + 60
                                 break
+                    except MemoryAPIError:
+                        with self.state_lock:
+                            self.failed_until[source] = self.clock() + 60
                     finally:
                         with self.state_lock:
                             self.active_sources.discard(source)

@@ -137,9 +137,14 @@ Az ügy lezárásakor archiváld vagy töröld a csapat-playbookot, és vedd ki 
 
 ## Keresés és jelenlegi korlátok
 
-Az automatikus felidézés legfeljebb négy kulcsszóval, párhuzamosan keres a
+A 0.4.0-s memóriaplugin alapbeállítása `recall_mode: explicit`: csak a memória-
+toolok hívásakor keres. Az inicializálás és a nem használt felidézés nem indít
+hálózati kérést. A beállításokban `automatic` értékkel bekapcsolható a körönkénti
+felidézés. Kulcs- vagy fiókváltás után indítsd újra a kiválasztott Hermes-profilt.
+
+A külön bekapcsolt automatikus felidézés legfeljebb négy kulcsszóval, párhuzamosan keres a
 személyes és csapatmemóriában. Legfeljebb nyolc forrást és négy párhuzamos
-lekérést használ, négy másodperces időkerettel. A találatokat rangsorolja és
+lekérést használ, összesen legfeljebb nyolc kereséssel és négy másodperces időkerettel. A találatokat rangsorolja és
 összevonja; legfeljebb nyolc rövid bejegyzést, összesen 8000 karaktert ad át.
 A teljes tartalom `apb_memory_read` hívással olvasható. Angol és magyar gyakori
 szavakat szűr; a keresés nem szemantikus és nem végez szótövezést. Az explicit
@@ -160,7 +165,9 @@ kell ehhez: a szerver telepítése önmagában nem frissíti a klienseket.
 
 A plugin nem tölti fel a teljes beszélgetéseket, nem nyer ki automatikusan
 tényeket, nem importálja tömegesen a helyi memóriát, és nem ad gyorsítótárat,
-offline várólistát vagy automatikus újrapróbálkozást. A sikertelen API-
+offline várólistát vagy automatikus újrapróbálkozást. Az azonos automatikus keresést
+30 másodpercig elnyomja; 401/403 után 60 másodpercig szünetelteti a hitelesített
+lekéréseket. A sikertelen API-
 műveleteket jelzi, nem teszi félre későbbre.
 
 A szinteket, időbélyegeket és előzményeket a [memória-API útmutatója](./memory.md),

@@ -21,7 +21,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   {
     name: "find_tools",
     title: "Find tools",
-    description: "Search this playbook's complete tool catalog by keyword: the built-in playbook tools (memory, skills, canvas, workflow runs, secrets) and every connected server's federated tools (names like supabase__execute_sql or cloudflare__search). Matches against tool names and descriptions; a name match ranks above a description match. Returns up to `limit` (default 10, max 25) entries with name, description, and full input schema. Every returned tool can be called directly by name even when it is absent from tools/list — the advertised list is a view, not a boundary, unless this connection was pinned with ?toolset=. Read-only and free of side effects. Use this when the tool you need is not in your current list, before concluding a capability is missing.",
+    description: "Search this playbook's complete tool catalog by keyword: the built-in playbook tools (memory, skills, canvas, workflow runs, secrets) and every connected server's federated tools (names like supabase__execute_sql or cloudflare__search). Matches against tool names and descriptions; a name match ranks above a description match. Returns up to `limit` (default 10, max 25) entries with name, description, full input schema, and effect annotations when supplied. Every returned tool can be called directly by name even when it is absent from tools/list — the advertised list is a view, not a boundary, unless this connection was pinned with ?toolset=. Read-only and free of side effects. Use this when the tool you need is not in your current list, before concluding a capability is missing.",
     inputSchema: {
       type: "object",
       properties: {
