@@ -109,6 +109,13 @@ describe("searching the tool catalog", () => {
     expect(searchToolCatalog(catalog, "memory", 1)).toHaveLength(1);
   });
 
+  it("preserves effect annotations when discovering tools, including external writes", () => {
+    const tool = PLAYBOOK_TOOLS.find(tool => tool.name === "use_secret_write")!;
+    const [match] = searchToolCatalog([tool], "use_secret_write", 1);
+    expect(match.annotations).toEqual(tool.annotations);
+    expect(match.annotations).toMatchObject({ readOnlyHint: false, openWorldHint: true });
+  });
+
   it("finds every real builtin by a word from its own name", () => {
     for (const tool of PLAYBOOK_TOOLS) {
       const term = tool.name.split("_").findLast((part) => part.length > 2) ?? tool.name;

@@ -10,12 +10,33 @@ import {
 /** Account lifecycle tools. Playbook-scoped tools live in playbook-tools.ts. */
 export const ACCOUNT_TOOLS: McpTool[] = [
   {
+    name: "get_profile",
+    title: "Check connected account",
+    description: "Return the profile represented by this connection's validated credentials. Use to check which AgentPlaybooks account is connected before choosing a playbook or reconnecting. The opaque ID stays stable across reconnections. Read-only; accepts no account selector.",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    outputSchema: {
+      type: "object",
+      properties: {
+        id: { type: "string", minLength: 1, pattern: "\\S" },
+        name: { type: "string" }, email: { type: "string" }, nickname: { type: "string" },
+      },
+      required: ["id"], additionalProperties: false,
+    },
+    annotations: READ_CLOSED,
+    securitySchemes: [{ type: "oauth2", scopes: [] }],
+    _meta: { "openai/profile": true },
+  },
+  {
     name: "list_playbooks",
     title: "List playbooks",
-    description: "List playbooks owned by or shared with the authenticated user, including access role and content counts. Read-only; it does not create or modify playbooks. Use get_playbook when you need the singleton persona, skills, connected servers, and memory for one playbook. Requires playbooks:read or full permission.",
+    description: "Find playbooks owned by or shared with the authenticated user by a literal name fragment. Returns compact metadata, access roles and counts, not instructions, persona prompts or config. Default 50 results, newest first; use offset for the next page. Supports the first 1000 matches; narrow query for larger accounts. Read-only; requires playbooks:read or full. Reuse a known ID instead of listing before every operation; get_playbook retrieves one playbook's context.",
     inputSchema: {
       type: "object",
-      properties: {},
+      properties: {
+        query: { type: "string", maxLength: 200, description: "Case-insensitive literal name fragment; omit to browse" },
+        limit: { type: "integer", minimum: 1, maximum: 100, default: 50, description: "Maximum metadata entries in this page (1-100)" },
+        offset: { type: "integer", minimum: 0, maximum: 999, default: 0, description: "Skip this many matches; pages stop at the first 1000 matches. Narrow query for larger accounts." },
+      },
     },
     outputSchema: playbookListOutputSchema,
     annotations: READ_CLOSED,
@@ -43,12 +64,14 @@ export const ACCOUNT_TOOLS: McpTool[] = [
   {
     name: "get_playbook",
     title: "Get playbook",
-    description: "Get a playbook with its singleton persona and compact skill, connected-server and memory metadata. Skill bodies, memory values and server configurations are omitted unless include_content=true. This is the only persona retrieval tool; there is no get_persona. Read-only; requires playbooks:read or full. Use list_playbooks for IDs, get_skill / get_skill_reference for selected instructions and search_memory / read_memory for selected facts.",
+    description: "Get a playbook with its singleton persona and compact skill, connected-server and memory metadata. Compact memory is paged (20 by default); memory_page reports has_more and next_offset. Skill bodies, memory values and server configurations are omitted unless include_content=true, an explicit full-content export. This is the only persona retrieval tool; there is no get_persona. Read-only; requires playbooks:read or full. Use list_playbooks for IDs, get_skill / get_skill_reference for selected instructions and search_memory / read_memory for selected facts.",
     inputSchema: {
       type: "object",
       properties: {
         playbook_id: { type: "string", description: "UUID of the playbook" },
         include_content: { type: "boolean", default: false, description: "Restore the full skill, memory and server payload; prefer targeted reads" },
+        memory_limit: { type: "integer", minimum: 1, maximum: 100, default: 20, description: "Memory metadata page size in compact mode; use search_memory for focused recall" },
+        memory_offset: { type: "integer", minimum: 0, maximum: 10000, default: 0, description: "Memory metadata offset in compact mode" },
       },
       required: ["playbook_id"],
     },

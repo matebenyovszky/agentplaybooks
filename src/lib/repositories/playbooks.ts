@@ -80,24 +80,52 @@ const playbookListSelection = `
   memories:memories(count)
 `;
 
+const compactPlaybookListSelection = `
+  id, guid, name, description, visibility, tags, persona_name, created_at, updated_at, user_id,
+  skills:skills(count), mcp_servers:mcp_servers(count), memories:memories(count)
+`;
+
+export type PlaybookListOptions = {
+  /** A metadata-only view for conversational discovery, not an export. */
+  compact: true;
+  query?: string;
+  limit: number;
+  offset: number;
+};
+
 export async function listAccessiblePlaybooks(
   userId: string,
+  options?: PlaybookListOptions,
 ): Promise<PlaybookListItem[]> {
   const supabase = getServiceSupabase();
 
-  const { data: ownedData, error: ownedError } = await supabase
-    .from("playbooks")
-    .select(playbookListSelection)
-    .eq("user_id", userId)
-    .order("updated_at", { ascending: false });
+  if (options && (!Number.isInteger(options.limit) || options.limit < 1 || options.limit > 100
+    || !Number.isInteger(options.offset) || options.offset < 0 || options.offset > 999
+    || (options.query !== undefined && (typeof options.query !== "string" || options.query.length > 200)))) {
+    throw new Error("Invalid playbook list options: limit 1-100, offset 0-999, query at most 200 characters");
+  }
+  const selection = options ? compactPlaybookListSelection : playbookListSelection;
+  // Escape LIKE metacharacters: a chat query is a literal name fragment, not a
+  // PostgREST expression. Fetch each stream's top offset+limit then merge;
+  // paging the streams independently would skip interleaved owned/shared rows.
+  const selectWindow = (sharedIds?: string[]) => {
+    let query = supabase.from("playbooks").select(selection);
+    query = sharedIds ? query.in("id", sharedIds).neq("user_id", userId) : query.eq("user_id", userId);
+    if (options?.query?.trim()) {
+      query = query.ilike("name", `%${options.query.trim().replace(/[\\%_]/g, "\\$&")}%`);
+    }
+    query = query.order("updated_at", { ascending: false }).order("id", { ascending: true });
+    return options ? query.range(0, Math.min(1000, options.offset + options.limit) - 1) : query;
+  };
 
+  const [ownedResult, membershipResult] = await Promise.all([
+    selectWindow(),
+    supabase.from("playbook_collaborators").select("playbook_id, role")
+      .eq("user_id", userId).not("accepted_at", "is", null),
+  ]);
+  const { data: ownedData, error: ownedError } = ownedResult;
+  const { data: memberships, error: membershipError } = membershipResult;
   if (ownedError) throw new Error(ownedError.message);
-
-  const { data: memberships, error: membershipError } = await supabase
-    .from("playbook_collaborators")
-    .select("playbook_id, role")
-    .eq("user_id", userId)
-    .not("accepted_at", "is", null);
 
   // Collaboration was introduced after owned playbooks. A deployment that has
   // not applied that optional migration must still show the owner's data.
@@ -114,22 +142,20 @@ export async function listAccessiblePlaybooks(
   );
   let sharedData: typeof ownedData = [];
   if (sharedIds.length > 0) {
-    const sharedResult = await supabase
-      .from("playbooks")
-      .select(playbookListSelection)
-      .in("id", sharedIds)
-      .order("updated_at", { ascending: false });
+    const sharedResult = await selectWindow(sharedIds);
     if (sharedResult.error) throw new Error(sharedResult.error.message);
     sharedData = sharedResult.data || [];
   }
 
-  return [
+  const merged = [
     ...withCounts((ownedData || []) as unknown as PlaybookWithCounts[], () => "owner"),
     ...withCounts((sharedData || []) as unknown as PlaybookWithCounts[], (id) => roleByPlaybook.get(id) ?? "editor"),
   ].sort(
     (left, right) =>
-      new Date(right.updated_at).getTime() - new Date(left.updated_at).getTime(),
+      new Date(right.updated_at).getTime() - new Date(left.updated_at).getTime()
+      || left.id.localeCompare(right.id),
   );
+  return options ? merged.slice(options.offset, Math.min(1000, options.offset + options.limit)) : merged;
 }
 
 export type CreatePlaybookInput = {

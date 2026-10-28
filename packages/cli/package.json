@@ -59,6 +59,7 @@
     "build": "node scripts/build.mjs",
     "prepack": "npm run build",
     "pack:openai-skills": "node scripts/pack-openai-skills-zip.mjs",
+    "pack:openai-remote": "node scripts/pack-openai-remote-zip.mjs",
     "test": "node --test"
   },
   "allowScripts": {

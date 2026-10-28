@@ -69,6 +69,13 @@ update to use this behavior; deploying the server alone does not update them.
 
 ## Daily use
 
+Memory 0.4.0 defaults to `recall_mode: explicit`: only memory tool calls perform
+searches. Initialization and unused prefetch callbacks are offline. For automatic
+per-turn recall, set `recall_mode` to `automatic` in memory-provider settings.
+Updating the installed provider is required; a server deploy doesn't change
+client behavior. After changing the account key or playbook, restart the selected
+Hermes profile to discard old clients and recall state.
+
 | Tool | Purpose |
 |---|---|
 | `apb_memory_search` | Search literal text, or omit the query to list current memories |
@@ -138,8 +145,8 @@ from `team_playbooks`.
 
 ## Search and current limits
 
-Automatic recall extracts up to four keywords, searches personal and team
-sources concurrently (up to eight sources, four workers, a four-second budget),
+Opt-in automatic recall extracts up to four keywords, searches personal and team
+sources concurrently (up to eight sources and eight search requests total, four workers, a four-second budget),
 and ranks/deduplicates matches. It injects at most eight short records and 8,000
 characters; use `apb_memory_read` for full content. Slow sources do not suppress
 completed results. English and Hungarian stopwords are filtered; this is lexical
@@ -147,8 +154,10 @@ matching, not embeddings or morphological/semantic search. Explicit
 `apb_memory_search` remains literal and unchanged.
 
 The plugin does not upload full conversations, extract facts automatically,
-bulk-import existing local memories, or add a cache, offline queue, retries, or
-circuit breaker. Failed API operations are reported rather than queued for later.
+bulk-import existing local memories, or add a result cache, offline queue or
+automatic retries. Repeated automatic queries are suppressed for 30 seconds;
+401/403 pauses authenticated requests for 60 seconds. Failed explicit API
+operations are reported rather than queued for later.
 
 See the [memory API guide](./memory.md) for tiers, timestamps, history, and
 archiving, and the [provider source and tests](https://github.com/matebenyovszky/agentplaybooks/tree/main/packages/hermes-memory)

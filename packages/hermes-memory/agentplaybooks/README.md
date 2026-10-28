@@ -96,19 +96,34 @@ For a private shared playbook, supply a read-only key using
 secret environment. Public sources need no key. Personal credentials are never
 sent to shared sources. Tags and metadata organize data; they are not access controls.
 
-Personal writes are refused if the playbook is public or unlisted. Version 0.3.1
+Personal writes are refused if the playbook is public or unlisted. Version 0.4.0
 checks current private visibility and authenticated memory access in one small
 request (`GET /api/playbooks/:guid/memory?private_check=1&limit=1`) before each
-write and on initialization. It does not fetch memory contents for this check or
-cache a privacy proof. Older servers that return an ordinary memory list retain
+write and on first explicit read. Initialization is offline. Older servers that return an ordinary memory list retain
 the anonymous metadata check: its expected 404 conceals a private playbook and is
 not a failed memory read. The client identifies its requests with
-`AgentPlaybooks-Hermes-Memory/0.3.1` rather than Python's generic user agent.
+`AgentPlaybooks-Hermes-Memory/0.4.0` rather than Python's generic user agent.
 Keep this playbook private: changing its visibility later
 publishes existing contents according to the service's access model. Visibility
 checks and writes are separate requests, not a transaction locking visibility.
 
 ## Verify
+
+### Recall traffic and reconnection (0.4.0)
+
+The default `recall_mode` is `explicit`: the provider searches only when an
+`apb_memory_*` tool is called. Registration, initialization, session switching,
+and unused prefetch callbacks make no network requests. Explicit Hermes memory
+writes are still mirrored. Set `recall_mode` to `automatic` in the provider's
+settings to opt into per-turn recall. It uses at most eight search requests,
+four workers and a four-second budget, and suppresses the same query for 30
+seconds. Query/result contents are not cached. A successful write invalidates
+the query digest so the next recall can see the correction.
+
+On HTTP 401/403 the client pauses authenticated requests for 60 seconds instead
+of repeatedly calling with a rejected key. Update the profile's key/playbook in
+Hermes memory setup, then restart that profile to bind fresh clients. Switching
+profiles/users never reuses another provider's clients or recall state.
 
 1. Ask Hermes to save a new fact with `apb_memory_write`.
 2. Start a new session and read/search that key.

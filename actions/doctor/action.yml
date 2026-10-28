@@ -1,0 +1,35 @@
+name: AgentPlaybooks Doctor
+description: Audit agent configuration, skills, MCP drift and likely credentials without accessing the network during the scan.
+inputs:
+  path:
+    description: Project directory, relative to the workspace
+    default: .
+  strict:
+    description: Fail on high or critical findings
+    default: 'true'
+outputs:
+  score:
+    description: Configuration health score (0-100)
+    value: ${{ steps.audit.outputs.score }}
+  report:
+    description: Absolute JSON report path in the runner temporary directory
+    value: ${{ steps.audit.outputs.report }}
+  badge:
+    description: Shields-compatible endpoint JSON path
+    value: ${{ steps.audit.outputs.badge }}
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v5
+      with:
+        node-version: '24'
+    - name: Install locked Doctor dependencies
+      shell: bash
+      run: npm ci --ignore-scripts --prefix "$GITHUB_ACTION_PATH/../../packages/cli"
+    - name: Audit agent configuration
+      id: audit
+      shell: bash
+      env:
+        APB_DOCTOR_PATH: ${{ inputs.path }}
+        APB_DOCTOR_STRICT: ${{ inputs.strict }}
+      run: node "$GITHUB_ACTION_PATH/run.mjs"

@@ -58,7 +58,7 @@ describe("local AgentPlaybooks MCP transport", () => {
     const client = await connect();
     const read = await client.callTool({ name: "list_playbooks", arguments: {} });
     expect(read.isError).not.toBe(true);
-    expect(listAccessiblePlaybooks).toHaveBeenCalledWith("reader-id");
+    expect(listAccessiblePlaybooks).toHaveBeenCalledWith("reader-id", { compact: true, limit: 50, offset: 0 });
     const request = validateUserApiKey.mock.calls[0][0] as Request;
     expect(request.headers.get("X-API-Key")).toBe("stdio-test-user-key");
     expect(request.url).toBe("http://localhost/api/mcp/manage");

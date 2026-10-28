@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GET, POST } from "@/app/api/mcp/manage/route";
 import { getAuthenticatedUser, validateUserApiKey } from "@/app/api/_shared/auth";
+import { getServiceSupabase } from "@/app/api/_shared/supabase";
+import { listAccessiblePlaybooks } from "@/lib/repositories/playbooks";
+
+vi.mock("@/app/api/_shared/supabase", () => ({ getServiceSupabase: vi.fn() }));
+vi.mock("@/lib/repositories/playbooks", () => ({ listAccessiblePlaybooks: vi.fn(), createPlaybook: vi.fn() }));
 
 vi.mock("@/app/api/_shared/auth", () => ({
   getAuthenticatedUser: vi.fn(),
@@ -50,6 +55,43 @@ describe("AgentPlaybooks management MCP transport", () => {
       id: null,
       error: { code: -32001 },
     });
+  });
+
+  it("declares a read-only OAuth profile tool and resolves only the validated account", async () => {
+    const maybeSingle = vi.fn().mockResolvedValue({ data: { display_name: "First account" }, error: null });
+    const eq = vi.fn().mockReturnValue({ maybeSingle });
+    vi.mocked(getServiceSupabase).mockReturnValue({ from: () => ({ select: () => ({ eq }) }) } as never);
+    const listed = await POST(mcpRequest({ id: 10, method: "tools/list" }));
+    const { result: catalog } = await listed.json();
+    const descriptor = catalog.tools.find((tool: { name: string }) => tool.name === "get_profile");
+    expect(descriptor._meta).toEqual({ "openai/profile": true });
+    expect(descriptor.annotations.readOnlyHint).toBe(true);
+    expect(descriptor.securitySchemes).toEqual([{ type: "oauth2", scopes: [] }]);
+
+    const request = () => mcpRequest({ id: 11, method: "tools/call", params: { name: "get_profile", arguments: {} } });
+    const first = await (await POST(request())).json();
+    expect(first.result.structuredContent).toEqual({ id: "user-id", name: "First account" });
+    expect(eq).toHaveBeenLastCalledWith("auth_user_id", "user-id");
+    mockValidateUserApiKey.mockResolvedValueOnce({ ...authenticatedUserKey, user_id: "other-user" });
+    const second = await (await POST(request())).json();
+    expect(second.result.structuredContent.id).toBe("other-user");
+    expect(eq).toHaveBeenLastCalledWith("auth_user_id", "other-user");
+    mockValidateUserApiKey.mockResolvedValueOnce(null);
+    expect((await POST(request())).status).toBe(401);
+  });
+
+  it("uses bounded metadata discovery and never accepts an unbounded list request", async () => {
+    const list = vi.mocked(listAccessiblePlaybooks).mockResolvedValue([]);
+    const call = (args: object) => POST(mcpRequest({ id: 20, method: "tools/call", params: { name: "list_playbooks", arguments: args } }));
+    expect((await (await call({})).json()).result.structuredContent).toEqual({ playbooks: [] });
+    expect(list).toHaveBeenLastCalledWith("user-id", { compact: true, limit: 50, offset: 0 });
+    await call({ query: "robot", limit: 5, offset: 10 });
+    expect(list).toHaveBeenLastCalledWith("user-id", { compact: true, query: "robot", limit: 5, offset: 10 });
+    for (const args of [{ limit: 101 }, { offset: -1 }, { offset: 1000 }, { query: {} }, { query: "x".repeat(201) }]) {
+      list.mockClear();
+      expect((await (await call(args)).json()).error).toBeDefined();
+      expect(list).not.toHaveBeenCalled();
+    }
   });
 
   it("rejects an unauthenticated body before attempting to parse it", async () => {
@@ -115,6 +157,23 @@ describe("AgentPlaybooks management MCP transport", () => {
     const response = await POST(mcpRequest({ method: "notifications/initialized" }));
     expect(response.status).toBe(202);
     expect(await response.text()).toBe("");
+  });
+
+  it("acknowledges cancellation notifications without a JSON-RPC reply", async () => {
+    const response = await POST(mcpRequest({ method: "notifications/cancelled", params: { requestId: 1 } }));
+    expect(response.status).toBe(202);
+    expect(await response.text()).toBe("");
+  });
+
+  it("reports malformed authenticated requests as protocol errors", async () => {
+    const invalidJson = await POST(new Request("http://localhost/api/mcp/manage", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: "{",
+    }));
+    expect(invalidJson.status).toBe(400);
+    expect((await invalidJson.json()).error.code).toBe(-32700);
+    const invalidEnvelope = await POST(mcpRequest({ id: 1, method: 123 }));
+    expect(invalidEnvelope.status).toBe(400);
+    expect((await invalidEnvelope.json()).error.code).toBe(-32600);
   });
 
   it("supports ping", async () => {

@@ -114,7 +114,7 @@ class ProviderTests(unittest.TestCase):
     def config(self, guid, shared="", team=""):
         (self.home / CONFIG_FILE).parent.mkdir(parents=True, exist_ok=True)
         (self.home / CONFIG_FILE).write_text(json.dumps({"playbook_guid": guid, "base_url": "https://example.test",
-                                                         "shared_playbooks": shared, "team_playbooks": team}))
+                                                         "shared_playbooks": shared, "team_playbooks": team, "recall_mode": "automatic"}))
 
     def provider(self, session="session-1", **kwargs):
         p = AgentPlaybooksMemoryProvider()
@@ -192,8 +192,9 @@ class ProviderTests(unittest.TestCase):
         self.assertNotIn("case/lead", self.service.books[A]["entries"])
         self.assertNotIn("note", self.service.books[C]["entries"])
         self.assertEqual(self.call(p, "read", key="case/lead", source=C)["value"], "Company X is the lead tenderer")
-        self.assertIn("tenderer", p.prefetch("tenderer"))
-        self.assertIn(C, p.prefetch("tenderer"))
+        recalled = p.prefetch("tenderer")
+        self.assertIn("tenderer", recalled)
+        self.assertIn(C, recalled)
         self.call(p, "archive", key="case/lead", source=C)
         self.assertTrue(self.service.books[C]["entries"]["case/lead"]["is_archived"])
         self.call(p, "delete", key="case/lead", source=C)
@@ -210,11 +211,11 @@ class ProviderTests(unittest.TestCase):
     def test_public_unlisted_wrong_key_and_visibility_change_fail_closed(self):
         for visibility in ("public", "unlisted"):
             self.service.books[A]["visibility"] = visibility
-            with self.assertRaisesRegex(MemoryAPIError, "private playbook"):
-                self.provider()
+            p = self.provider()
+            self.assertIn("private playbook", self.call(p, "search")["error"])
         self.service.books[A]["visibility"] = "private"
         self.secrets[KEY_ENV] = "wrong"
-        with self.assertRaises(MemoryAPIError): self.provider()
+        self.assertIn("error", self.call(self.provider(), "search"))
         self.secrets[KEY_ENV] = f"key-{A}"
         p = self.provider()
         self.service.books[A]["visibility"] = "public"
@@ -227,6 +228,42 @@ class ProviderTests(unittest.TestCase):
         self.assertTrue(collected[0].is_available())
         self.assertFalse(self.service.calls)
         self.assertEqual(collected[0].name, "agentplaybooks-memory")
+
+    def test_default_explicit_mode_and_initialization_make_no_requests(self):
+        config = json.loads((self.home / CONFIG_FILE).read_text())
+        config.pop("recall_mode")
+        (self.home / CONFIG_FILE).write_text(json.dumps(config))
+        p = self.provider()
+        self.assertFalse(self.service.calls)
+        for _ in range(20):
+            self.assertEqual(p.prefetch("coffee preferences"), "")
+        self.assertFalse(self.service.calls)
+        self.assertEqual(self.call(p, "search", query="coffee"), [])
+        self.assertTrue(self.service.calls)
+
+    def test_rejected_key_is_cooled_down_and_reinitialize_uses_new_account(self):
+        self.secrets[KEY_ENV] = "wrong"
+        p = self.provider()
+        for _ in range(10):
+            self.assertIn("error", self.call(p, "search"))
+        self.assertEqual(len(self.service.calls), 1)
+        self.config(B)
+        self.secrets[KEY_ENV] = f"key-{B}"
+        self.service.calls.clear()
+        p.initialize("new-account", hermes_home=str(self.home), agent_context="primary")
+        self.assertFalse(self.service.calls)
+        self.assertEqual(self.call(p, "search"), [])
+        self.assertTrue(all(guid == B for _, guid, _, _ in self.service.calls))
+
+    def test_automatic_recall_suppresses_repeated_queries_and_refreshes_after_write(self):
+        p = self.provider()
+        self.call(p, "write", key="coffee", value="coffee preference")
+        self.assertIn("preference", p.prefetch("coffee"))
+        self.service.calls.clear()
+        self.assertEqual(p.prefetch("coffee"), "")
+        self.assertFalse(self.service.calls)
+        self.call(p, "write", key="coffee", value="coffee changed")
+        self.assertIn("changed", p.prefetch("coffee"))
 
     def test_setup_saves_no_credentials_and_accepts_native_schema(self):
         p = AgentPlaybooksMemoryProvider()
@@ -286,6 +323,7 @@ class ProviderTests(unittest.TestCase):
         self.call(p, "write", key="coffee", value="Coffee without sugar")
         self.assertIn("without sugar", p.prefetch("How do I like my coffee?"))
         self.assertEqual(p.prefetch("please tell me"), "")
+        p.recall.reset()
         with patch.object(p.client, "search", return_value=[{"key": str(i), "value": "coffee " + "x" * 20000,
             "metadata": {"private_internal": "excluded"}} for i in range(20)]):
             recalled = p.prefetch("coffee coffee")

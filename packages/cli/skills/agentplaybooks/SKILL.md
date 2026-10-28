@@ -1,180 +1,80 @@
 ---
 name: agentplaybooks
-description: Audit, migrate, back up, and restore portable agent configuration (instructions, Agent Skills, custom agents, MCP references) with the AgentPlaybooks CLI. Use for drift checks, Agent Plugins import/export, cross-platform sync among Claude Code, Cursor, Codex, Copilot, Gemini, Antigravity, Grok Bot, and Hermes, or hosted playbook backup and recovery.
+description: Use AgentPlaybooks playbooks, skills, memory, canvas, connected MCP/OpenAPI tools, and vault-backed API calls in chat. Also audit, sync, back up, or restore agent configuration across clients. Applies to AgentPlaybooks-hosted data and portable agent configuration, not unrelated document or memory services.
 ---
 
 # AgentPlaybooks
 
-AgentPlaybooks keeps an agent's operating configuration — instruction files
-(`AGENTS.md`, `CLAUDE.md`), Agent Skills (`SKILL.md`), and MCP server
-definitions — consistent across AI clients and shareable as a portable
-"playbook" (`agentplaybook.json` manifest, optionally synced with a hosted
-playbook on agentplaybooks.ai).
+Use the connected AgentPlaybooks tools for hosted work. A local CLI is an
+additional configuration/sync surface, not a prerequisite for chat operations.
+The account connection covers all the capabilities below, not just listing or
+backups. Tool names may have a host-assigned namespace; use the actual catalog.
 
-A hosted playbook keeps two different things apart: the **persona** is who the
-agent is (identity, portable between projects), while **instructions** are the
-always-on rules of one project (`AGENTS.md` / `CLAUDE.md` content). `pull` writes
-instructions to `AGENTS.md` and the persona to `.agents/persona.md`; `push` sends
-instructions to the live hosted field, while its private snapshot also preserves
-an existing portable persona file. The hosted playbook owns the live persona. From the portable store,
-`sync` hands the persona to targets that have a place for an identity: Hermes
-reads it as `SOUL.md`.
+## Choose the shortest relevant path
 
-## Locating the CLI
+- Reuse a playbook ID already established for the intended account and task.
+  Otherwise use `list_playbooks` with a name query and a small limit. Do not
+  enumerate the whole account or load every playbook to find one. If several
+  match, ask which one before writing. Account tools use UUIDs; scoped tools
+  on the management connection also accept a playbook GUID.
+- Pass `playbook_id` to scoped tools on the account connection. A connection
+  already scoped to one playbook does not need that argument.
+- Call an available, known tool directly. Use `find_tools` with a few relevant
+  keywords and a small limit to discover unfamiliar built-in or federated
+  MCP/OpenAPI operations for the selected playbook. Read the returned schema
+  and effect annotations; discovering a tool does not authorize its effects.
+- Keep list/overview calls compact. Fetch bodies, reference sections, or
+  memory values only when needed for the task. Never begin a routine task
+  with `get_playbook(include_content=true)` or download every attachment.
+- Reuse IDs and metadata during this conversation, but refresh after a write,
+  a not-found result, or an account change. Do not poll or prefetch on idle.
 
-The CLI requires Node.js >= 20. Try in this order:
+## Hosted task routing
 
-1. Installed as a Claude Code plugin: `node "${CLAUDE_PLUGIN_ROOT}/bin/agentplaybooks.js"`
-2. Inside the AgentPlaybooks repository: `node packages/cli/bin/agentplaybooks.js`
-3. Installed globally: `agentplaybooks` (alias: `apb`)
+| User's task | Useful path |
+|---|---|
+| Inspect or edit a playbook | `get_playbook` (compact by default); `update_playbook` for the requested fields. Persona is the agent's identity; instructions are the project's rules. There is no `get_persona`. |
+| Use a skill | `list_skills` for metadata → `get_skill` for the chosen body. Read only the required attachment/heading via `get_skill_reference`; do not fetch all attachments. |
+| Save or revise a skill | `create_skill` / `update_skill`; version history via `list_skill_versions`. Check the target rather than creating duplicates. |
+| Recall a fact | Known key: `read_memory`. Otherwise `search_memory` with focused filters and a small limit (e.g. 5–10). For a broader session brief use `get_memory_context` with bounded `max_items`. `read_memory` updates access statistics. |
+| Remember something | `write_memory` for the chosen key. A proposal/pending-review result is not an applied write; report its status accurately. Do not persist unrelated conversation content automatically. |
+| Work on a canvas | `list_canvas` locates run IDs and slugs; `get_canvas_toc` then `read_canvas(section_id=...)` avoids loading the whole document. Use `patch_canvas_section` for partial edits; `write_canvas` replaces full content. Lock/unlock only when coordinating concurrent editors. |
+| Run a connected API/tool | `find_tools` → the matching federated tool, or `list_mcp_servers` → `call_connected_tool`. MCP and OpenAPI connections are both hosted capabilities; no local executable is required. |
+| Call an API using a secret | If its name is known, call `use_secret` directly for GET/HEAD. Otherwise discover names via `list_secrets` (metadata only). `use_secret_write` handles POST/PUT/PATCH/DELETE only within the user's authorized external action. |
+| Work with isolated artifacts | Reuse the relevant run from `list_runs`, or `create_run` when a new run is requested. There is no `get_run`; the list returns run records. |
 
-Substitute your variant for `apb` in the commands below.
+Secret values stay server-side: never retrieve them into chat, tool arguments,
+files, skill bodies, or logs. For adding/rotating a secret, direct the user to
+the secure vault UI or their local stdin-based CLI workflow; don't request a
+value in chat. A read permission or discovered tool is not permission to send
+data to a new external destination, delete content, or replace whole documents.
+Report permission and policy failures; do not bypass them by changing transport.
 
-## Commands
+## Connection and account self-check
 
-| Command | What it does | Writes? |
-|---|---|---|
-| `apb doctor [path] [--json] [--strict]` | Health report: inventory, spec violations, likely hard-coded secrets, insecure MCP URLs, cross-platform drift, 0-100 score | Never |
-| `apb sync [path]` | Plan the canonical `agentplaybook.json` plus platform files missing from enabled targets (claude, cursor, codex, copilot, gemini, antigravity, hermes, grok) | Plan only |
-| `apb sync [path] --apply` | Write the manifest and missing platform files, with backups under `.agentplaybooks/backups/` | Yes |
-| `apb sync [path] --target=<types>` | Write only those targets this run, e.g. `--target=claude,codex` | Plan only without `--apply` |
-| `apb sync --global [--include-vendored]` | Same plan across the user's home stores instead of one project. Skills and custom agents, not credential-bearing MCP config | Plan only without `--apply` |
-| `apb plugin export [path] [--output=<dir>]` | Package complete skill trees, MCP references, and custom-agent extensions as Agent Plugins 1.0 | Plan only without `--apply` |
-| `apb plugin import <dir> [path]` | Import an Agent Plugins 1.0 package into the portable store | Plan only without `--apply` |
-| `apb login [--url=<base>]` | Store a user API key (`apb_...`) for a remote; reads `AGENTPLAYBOOKS_API_KEY` first | `~/.agentplaybooks/credentials.json` |
-| `apb playbooks [--json]` | List remote playbooks the key can access | Never |
-| `apb connect --account [path] [--target=<types>]` | Connect an agent to the account-management MCP endpoint using `${AGENTPLAYBOOKS_API_KEY}` | Plan only without `--apply` |
-| `apb connect <guid>[,<guid>...] [path]` | Connect one or more scoped playbook MCP endpoints in one config update | Plan only without `--apply` |
-| `apb backups <guid>` | List private, immutable backup revisions by playbook GUID | Never |
-| `apb pull <id\|guid> [path] [--snapshot=<id>] [--apply]` | Restore latest or selected portable snapshot; legacy playbooks fall back to skill/MCP records | With `--apply` |
-| `apb push [path] [--apply]` | Upload live skills/MCP plus a complete private snapshot of instructions, skill trees, agents, MCP references, and manifest | With confirmation or `--apply` |
-| `apb push --global [--apply]` | Back up this machine's skills and custom agents; global MCP configuration stays local | With confirmation or `--apply` |
-| `apb secrets adopt [--global] [--apply] [--rewrite=<files>]` | Store a credential that is already hard-coded in an MCP config into the vault; rewrites the file to `${VAR}` only for files named in `--rewrite` | With `--apply` |
+Check only when requested or after an AgentPlaybooks failure, not before every
+task. `get_profile` identifies the account from the connection's validated
+credentials and takes no arguments. After switching accounts, discard old IDs
+and private cached content; verify the new profile before continuing.
 
-## Typical workflows
+On 401/403 stop retrying. Reconnect or choose another account in the host's
+plugin/connection settings. OAuth consent offers **Use another account**.
+Refresh the host's tool catalog or start a new conversation when required.
+A missing tool in this chat alone does not establish a server failure.
 
-- **"Is my agent config healthy?"** → `apb doctor . --json`, then explain the
-  findings by severity with their sources and line numbers.
-- **"Make my Claude skills available in Cursor / ChatGPT (Codex) / Antigravity / Grok Bot / Hermes"**
-  → run `apb sync --target=<type>`, show the user the plan, then re-run with
-  `--apply`. Target file mapping: claude → `.claude/skills` + `.mcp.json`;
-  cursor → `.cursor/skills` + `.cursor/mcp.json`; codex → `.codex/skills` +
-  `.codex/config.toml`; antigravity → `.agents/skills` (portable store);
-  grok → `.agents/skills` (portable store; Grok Bot also reads `AGENTS.md`
-  natively, and its MCP servers come from the account MCP Box, not a file);
-  hermes → `.agents/skills` registered under `skills.external_dirs` in
-  `~/.hermes/config.yaml` (or `$HERMES_HOME`), MCP servers merged into the same
-  file, persona written to `SOUL.md`.
-- **"Share this project's setup with my team"** → `apb login`, then `apb push`
-  (review the plan), then `apb push --apply`. Give the team the playbook GUID;
-  they run `apb pull <guid> --apply` followed by
-  `apb sync --target=<their tools> --apply`. Full skill trees, custom agents,
-  instructions, and MCP references make the trip. Secret values do not.
-- **"My skills are scattered across my tools, not in a project"** → this is the
-  global case: `apb sync --global --target=<their tools>`, show the plan, then
-  `--apply`. It moves **skills and custom agents only**, on purpose: a global MCP config holds
-  credentials (an auth header, a token), and copying it into two more files
-  would spread the secret rather than fix it. Report MCP drift from
-  `apb doctor --global` instead. Skills a client ships with itself (Cursor's
-  managed set, Hermes' bundle) are left out unless the user asks for
-  `--include-vendored` — syncing `update-cursor-settings` into Claude Code helps
-  nobody.
-- **"Set this machine up from our team playbook"** → `apb pull <guid> --apply`,
-  then `apb sync --apply`. If the project has no target yet, sync lists the
-  agent tools it detected for this user; pass them via `--target`.
-- **"Recover an older setup or deleted playbook"** → `apb backups <guid>` to
-  find revision IDs, then `apb pull <guid> <new-directory> --snapshot=<id>`
-  to review the plan and re-run with `--apply`. Owner-only backups survive
-  deletion of the playbook record. Existing differing files are conflicts.
-- **"Connect my whole AgentPlaybooks account"** → run
-  `apb connect --account --target=<type>`, show the plan, then run it with
-  `--apply`. The generated config contains `${AGENTPLAYBOOKS_API_KEY}`, never
-  the key. Set that variable before starting or restarting the agent.
-- **"Work with my hosted playbooks"** → use the bundled
-  `agentplaybooks-account` MCP connection. Start with `list_playbooks`, then
-  pass the selected `playbook_id` to playbook-scoped tools. The connection
-  covers versioned skills, memory and task graphs, workflow runs, collaborative
-  canvas documents, MCP/OpenAPI tools, and encrypted secrets; do not imply it
-  is only a sync or listing API.
-- **"Call an API without revealing its key"** → use `list_secrets` to discover
-  names, then `use_secret` for GET/HEAD. Use `use_secret_write` for
-  POST/PUT/PATCH/DELETE only after the user approves the external mutation.
-  Both inject the credential server-side and must never reveal or request its
-  value. The account MCP form also needs the target `playbook_id`.
-- **"Connect these playbooks only"** → pass a comma-separated GUID list to
-  `apb connect`. The CLI creates a separate, stable MCP entry for each and
-  merges them into the target configuration atomically.
-- **"Which credentials does this playbook need?"** → run
-  `apb secrets status --json` (or read `spec.secrets` in `agentplaybook.json` if
-  the project has no playbook key). It reports names and state only. Tell the
-  user which variables to set; never try to fetch, print, or guess a value.
-- **"Share our project rules with the team"** → the project-root instruction
-  file travels with `push`. If `AGENTS.md` and `CLAUDE.md` disagree, `push`
-  reports a conflict: ask which one is canonical, make the other a
-  `@AGENTS.md` import, then re-run.
-- **CI guard** → `apb doctor --strict --json` exits with code 2 on high or
-  critical findings.
+In local Codex, use its supported MCP login/logout for the actual configured
+server ID (bundled IDs can be namespaced). `apb login` changes CLI API-key
+credentials, not the cloud plugin's OAuth connection. Never ask for tokens in
+chat or modify host-owned credential stores. An uploaded skills-only ZIP has
+no remote MCP connection; the full remote plugin or a custom MCP connection
+must be connected for hosted operations. Without a connected surface, explain
+what is missing rather than pretending to have read or changed hosted data.
 
-## Rules
+## Local configuration and portability
 
-- `doctor` is read-only and local-only; run it freely.
-- `sync` and `pull` are plan-only by default; `push` asks before uploading in
-  an interactive terminal. Show or summarize the plan before `--apply`.
-- Conflicting definitions are reported and never overwritten. `push --apply`
-  refuses an incomplete backup; resolve drift before retrying. `pull` skips
-  differing local files and reports each conflict.
-- Never echo API keys. Prefer `AGENTPLAYBOOKS_API_KEY=<your-key>` in the
-  environment over pasting keys into the terminal. `push` refuses to upload
-  content that looks like it contains hard-coded credentials — fix the finding
-  instead of working around it.
-- If the bundled Codex MCP connection reports an authentication error, run
-  `codex mcp login agentplaybooks-account` to start the browser OAuth flow.
-  `apb login` alone does not configure the bundled MCP connection. For
-  headless/CI use only, put `bearer_token_env_var =
-  "AGENTPLAYBOOKS_API_KEY"` under `[mcp_servers.agentplaybooks-account]` in
-  Codex configuration and fully restart it. Never ask the user to paste the key
-  into chat.
-- `apb secrets status` is safe to run. **Do not run `apb secrets push` for the
-  user**: storing a credential is theirs to confirm, and the command needs a
-  value on stdin that you must never hold or generate. Tell them the exact
-  command instead, e.g.
-  `pass show deploy/api | apb secrets push DEPLOY_API_KEY`.
-- `apb secrets run -- <command>` injects values into one child process and
-  writes nothing to disk. Prefer it over asking the user to export variables,
-  and never suggest writing secrets into `.env`, `.mcp.json`, or a skill.
-- **`apb secrets adopt` is the way out of a credential that is already on disk.**
-  Planning is read-only and needs no vault key, so run it freely and report what
-  it found: names, files, key paths, lengths — it never prints a value. With
-  `--apply` the value goes to the vault and *no file changes*. Only a file the
-  user explicitly names in `--rewrite=<file>` gets its literal replaced with a
-  `${VAR}` reference — never offer to rewrite everything, and never rewrite a
-  client whose expansion support the plan reports as `unsupported`. After an
-  adopt, always say that the credential must be rotated: it was in plain text on
-  disk, so it may also be in git history, shell history, and editor backups.
-  Note that no backup of the original is written, deliberately — a backup would
-  be a second plaintext copy.
-- Secret values never belong in `agentplaybook.json` or in pushed content;
-  only environment/vault references are allowed. `spec.secrets` records which
-  variables the configuration references, never their values.
-- The private snapshot keeps full skill resources (including binary assets),
-  custom agents, instructions, and MCP references; it excludes `.local`
-  overrides, settings, hooks, worktrees, and arbitrary application data.
-  It does not guarantee identical behavior for client-specific features.
-- `push` treats local files as authoritative for an MCP server's connection
-  (command, args, env, url, headers) and preserves hosted-only settings
-  (timeouts, auth, access, curated tool lists, descriptions). Remote entries
-  missing locally are never deleted; say so rather than implying a full mirror.
-- OpenAPI federation servers exist only on the hosted side. `pull` reports
-  them; do not hand-write a local equivalent.
-- Claude Code reads `CLAUDE.md`, not `AGENTS.md`. The `claude` target therefore
-  writes a `CLAUDE.md` that imports `AGENTS.md` instead of duplicating the text.
-  Never resolve an instruction conflict by copying content between the two —
-  make one import the other.
-- Hermes Agent loads only the **first** project context file it finds
-  (`.hermes.md` → `AGENTS.md` → `CLAUDE.md` → `.cursorrules`). If sync reports a
-  `.hermes.md` hiding `AGENTS.md`, say so plainly: the fix is to keep one file, or
-  to make `.hermes.md` point at `AGENTS.md`. Never silently duplicate the text.
-- A public playbook's skills are also installable straight from the web, with no
-  CLI involved:
-  `hermes skills install well-known:https://agentplaybooks.ai/playbooks/<guid>/.well-known/skills/<name>`.
-  Private and unlisted playbooks are not published there; use `pull` for those.
+For local doctor, sync, plugin import/export, backup, restore, or credential
+adoption, read [references/local-cli.md](references/local-cli.md). It covers
+platform mappings, CLI discovery, plan/apply semantics, conflict handling, and
+secret-safe local workflows. Do not load it for ordinary hosted chat tasks.
+In cloud/web chat, local files and the CLI may not exist; use an attached
+execution environment only when the requested task actually needs them.

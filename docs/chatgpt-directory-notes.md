@@ -32,9 +32,9 @@ more; describe OAuth as the default.
 
 ## Tool surface (do not shrink)
 
-`tools/list` on `/api/mcp/manage` advertises **51** tools:
+`tools/list` on `/api/mcp/manage` advertises **52** tools:
 
-- 7 account tools
+- 8 account tools, including the credential-scoped `get_profile` identity check
 - 44 playbook tools, including `find_tools`, `use_secret_write`,
   `get_memory_history` and `get_skill_reference`
 

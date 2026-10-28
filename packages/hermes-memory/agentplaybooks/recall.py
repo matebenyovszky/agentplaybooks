@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import queue
 import re
 import threading
@@ -36,17 +37,33 @@ class Recall:
         # Slots stay occupied until an HTTP call really returns, even after the
         # caller's deadline; repeated turns cannot spawn unbounded stuck workers.
         self.slots = threading.BoundedSemaphore(4)
+        self.last_query = None
+        self.last_query_at = 0.0
 
-    def fetch(self, clients, query):
+    def reset(self):
+        self.last_query = None
+        self.last_query_at = 0.0
+
+    def fetch(self, clients, query, *, deadline=None):
         terms = search_terms(query)
         if not terms:
             return ""
-        deadline = time.monotonic() + self.budget
+        # Store only a digest, never a query or recalled contents. Repeated
+        # prefetch callbacks must not multiply identical network requests.
+        clients = list(clients)[:8]
+        signature = hashlib.sha256(json.dumps([terms, [(c.base_url, c.guid) for c in clients]]).encode()).hexdigest()
+        now = time.monotonic()
+        if signature == self.last_query and now - self.last_query_at < 30:
+            return ""
+        self.last_query, self.last_query_at = signature, now
+        deadline = deadline if deadline is not None else time.monotonic() + self.budget
         jobs, results = queue.Queue(), queue.Queue()
         # Fairly try each source before the second keyword. Eight sources and
         # four terms bound fan-out; explicit tools can query any configured source.
         for term in terms:
-            for client in list(clients)[:8]:
+            for client in clients:
+                if jobs.qsize() >= 8:
+                    break
                 jobs.put((client, term))
 
         def worker():

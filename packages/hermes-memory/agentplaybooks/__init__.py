@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import time
 import uuid
 from pathlib import Path
 
@@ -19,9 +20,11 @@ KEY_ENV = "AGENTPLAYBOOKS_MEMORY_API_KEY"
 
 def load_config(home=None):
     config = {"base_url": "https://agentplaybooks.ai", "playbook_guid": "", "shared_playbooks": "",
-              "team_playbooks": "", "allow_insecure_http": False}
+              "team_playbooks": "", "allow_insecure_http": False, "recall_mode": "explicit"}
     config.update(read_json_or_empty(Path(home or get_hermes_home()) / CONFIG_FILE))
     config["allow_insecure_http"] = config.get("allow_insecure_http") is True
+    if config.get("recall_mode") not in ("explicit", "automatic"):
+        raise ValueError("recall_mode must be explicit or automatic.")
     validate_url(config["base_url"], config["allow_insecure_http"])
     return config
 
@@ -61,6 +64,7 @@ class AgentPlaybooksMemoryProvider(MemoryProvider):
         self.platform = ""
         self.primary = False
         self.recall = Recall()
+        self.recall_mode = "explicit"
 
     @property
     def name(self):
@@ -84,12 +88,15 @@ class AgentPlaybooksMemoryProvider(MemoryProvider):
             {"key": "base_url", "description": "AgentPlaybooks service URL", "default": "https://agentplaybooks.ai"},
             {"key": "shared_playbooks", "description": "Optional comma-separated shared playbook GUIDs (read-only)", "default": ""},
             {"key": "team_playbooks", "description": "Optional comma-separated private team playbook GUIDs (writable shared case memory)", "default": ""},
+            {"key": "recall_mode", "description": "explicit: search only on tool calls; automatic: also recall on conversation turns", "default": "explicit"},
         ]
 
     def save_config(self, values, hermes_home):
         # Only configuration, never credentials. Hermes owns the secret field.
-        allowed = {k: v for k, v in values.items() if k in {"playbook_guid", "base_url", "shared_playbooks", "team_playbooks"}}
+        allowed = {k: v for k, v in values.items() if k in {"playbook_guid", "base_url", "shared_playbooks", "team_playbooks", "recall_mode"}}
         config = {**load_config(hermes_home), **allowed}
+        if config["recall_mode"] not in ("explicit", "automatic"):
+            raise ValueError("recall_mode must be explicit or automatic.")
         validate_guid(config["playbook_guid"])
         validate_url(config["base_url"], config["allow_insecure_http"])
         for field in ("shared_playbooks", "team_playbooks"):
@@ -102,7 +109,11 @@ class AgentPlaybooksMemoryProvider(MemoryProvider):
         config = load_config(kwargs.get("hermes_home"))
         insecure = config["allow_insecure_http"]
         self.client = Client(config["base_url"], config["playbook_guid"], get_secret(KEY_ENV, ""), insecure)
-        self.client.assert_private()
+        # Initialization must stay offline. Privacy is checked on first use and
+        # before writes, so an installed but unused provider makes no requests.
+        self.recall_mode = config["recall_mode"]
+        self.recall = Recall()
+        self._validated_sources = set()
         # Team playbooks are shared case memory a team writes together: private,
         # each with its own key, never the personal key. A GUID listed both as
         # shared and as team is a team source (writable).
@@ -130,12 +141,14 @@ class AgentPlaybooksMemoryProvider(MemoryProvider):
 
     def on_session_switch(self, new_session_id, **kwargs):
         self.session_id = new_session_id
+        self.recall.reset()
 
     def identity_signature(self):
         config = load_config()
         return {"agentplaybooks-memory.base_url": config["base_url"], "agentplaybooks-memory.playbook_guid": config["playbook_guid"],
                 "agentplaybooks-memory.shared_playbooks": config.get("shared_playbooks", ""),
-                "agentplaybooks-memory.team_playbooks": config.get("team_playbooks", "")}
+                "agentplaybooks-memory.team_playbooks": config.get("team_playbooks", ""),
+                "agentplaybooks-memory.recall_mode": config["recall_mode"]}
 
     def system_prompt_block(self):
         block = ("AgentPlaybooks supplies persistent memory. Use apb_memory_search/read for prior facts and "
@@ -151,9 +164,24 @@ class AgentPlaybooksMemoryProvider(MemoryProvider):
         return block
 
     def prefetch(self, query, *, session_id=""):
-        if not self.client or not query.strip():
+        if self.recall_mode != "automatic" or not self.primary or not self.client or not query.strip():
             return ""
-        return self.recall.fetch([self.client, *self.teams.values()], query)
+        clients = []
+        deadline = time.monotonic() + self.recall.budget
+        for client in [self.client, *self.teams.values()][:8]:
+            if time.monotonic() >= deadline:
+                break
+            try:
+                self._ensure_private(client, timeout=max(0.05, min(0.5, deadline - time.monotonic())))
+                clients.append(client)
+            except MemoryAPIError:
+                continue
+        return self.recall.fetch(clients, query, deadline=deadline)
+
+    def _ensure_private(self, client, timeout=15):
+        if client.guid not in self._validated_sources:
+            client.assert_private(timeout=timeout)
+            self._validated_sources.add(client.guid)
 
     def get_tool_schemas(self):
         return TOOLS
@@ -198,6 +226,8 @@ class AgentPlaybooksMemoryProvider(MemoryProvider):
                 raise ValueError("A non-empty memory key is required.")
             writes = tool_name in ("apb_memory_write", "apb_memory_archive", "apb_memory_delete")
             source = self._target(args) if writes else self._source(args)
+            if source is self.client or source.guid in self.teams:
+                self._ensure_private(source)
             if tool_name == "apb_memory_search":
                 limit, offset = args.get("limit", 20), args.get("offset", 0)
                 if type(limit) is not int or not 1 <= limit <= 200 or type(offset) is not int or offset < 0:
@@ -230,6 +260,8 @@ class AgentPlaybooksMemoryProvider(MemoryProvider):
                     result = source.write(args["key"], {**body, "is_archived": True})
                 else:
                     result = source.delete(args["key"])
+            if writes:
+                self.recall.reset()
             return json.dumps(result, ensure_ascii=False)
         except (MemoryAPIError, ValueError, TypeError, KeyError) as exc:
             return json.dumps({"error": str(exc)}, ensure_ascii=False)
@@ -240,6 +272,7 @@ class AgentPlaybooksMemoryProvider(MemoryProvider):
         if target not in ("memory", "user"):
             raise ValueError("Unknown Hermes memory target.")
         metadata = metadata or {}
+        self.recall.reset()
         if action == "add":
             key = f"hermes.{target}.{uuid.uuid4().hex}"
         else:

@@ -1,5 +1,6 @@
 import { analyze } from "./checks.js";
 import { discover, discoverGlobal } from "./discovery.js";
+import { inspectRos2 } from "./ros2.js";
 
 const PLATFORM_LABELS = {
   claude: "Claude",
@@ -17,7 +18,13 @@ const REPORTED_ABSENCES = ["claude", "cursor"];
 
 export async function runDoctor(target, options) {
   const inventory = await discover(target, options);
-  return analyze(inventory);
+  const report = analyze(inventory);
+  if (options?.robotics) {
+    report.robotics = await inspectRos2(inventory.root);
+    report.findings.push(...report.robotics.findings);
+    report.score = Math.max(0, report.score - report.robotics.findings.reduce((sum, item) => sum + ({ high: 10, medium: 4, low: 1 }[item.severity] ?? 0), 0));
+  }
+  return report;
 }
 
 export async function runGlobalDoctor(options = {}) {
@@ -66,6 +73,7 @@ export function publicReport(report) {
     },
     platforms: platformPresence(report.inventory),
     findings: report.findings,
+    ...(report.robotics ? { robotics: report.robotics } : {}),
   };
 }
 
@@ -118,6 +126,10 @@ export function printDoctor(report) {
   console.log(`Found ${report.inventory.instructions.length} instruction file(s), ${report.inventory.skills.length} skill(s), ${report.inventory.agents.length} custom agent(s), and ${report.inventory.mcpServers.length} MCP server definition(s).`);
   console.log(formatPlatformLine(platformPresence(report.inventory)));
   console.log(`Findings: ${counts.critical ?? 0} critical, ${counts.high ?? 0} high, ${counts.medium ?? 0} medium, ${counts.low ?? 0} low.`);
+  if (report.robotics) {
+    console.log(`ROS 2: ${report.robotics.packages.length} package(s), ${report.robotics.launchFiles.length} launch file(s); offline inspection only.`);
+    for (const limitation of report.robotics.limitations) console.log(limitation);
+  }
 
   if (report.findings.length === 0) {
     console.log("No findings.");

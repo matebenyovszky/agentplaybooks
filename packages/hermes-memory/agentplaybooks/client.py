@@ -3,11 +3,12 @@ from __future__ import annotations
 
 import json
 import re
+import time
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode, urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
-USER_AGENT = "AgentPlaybooks-Hermes-Memory/0.3.1"
+USER_AGENT = "AgentPlaybooks-Hermes-Memory/0.4.0"
 
 
 class MemoryAPIError(RuntimeError):
@@ -48,8 +49,11 @@ class Client:
         self.api_key = api_key
         self.path = f"/api/playbooks/{quote(guid, safe='')}/memory"
         self.opener = build_opener(NoRedirects())
+        self.retry_after = 0.0
 
     def request(self, method, path, body=None, authenticated=True, timeout=15):
+        if authenticated and time.monotonic() < self.retry_after:
+            raise MemoryAPIError("AgentPlaybooks authentication is paused after a rejection; reconfigure the key and reinitialize the provider.", status=401)
         headers = {"Accept": "application/json", "User-Agent": USER_AGENT}
         if authenticated and self.api_key:
             headers["X-API-Key"] = self.api_key
@@ -61,12 +65,14 @@ class Client:
             with self.opener.open(Request(self.base_url + path, data=data, headers=headers, method=method), timeout=timeout) as response:
                 return json.loads(response.read())
         except HTTPError as exc:
+            if authenticated and exc.code in (401, 403):
+                self.retry_after = time.monotonic() + 60
             # Do not expose response bodies, credentials or request headers to the model/log.
             raise MemoryAPIError(f"AgentPlaybooks request failed (HTTP {exc.code}).", status=exc.code) from None
         except (URLError, TimeoutError, OSError, ValueError):
             raise MemoryAPIError("AgentPlaybooks is unavailable or returned invalid JSON; the operation was not confirmed.") from None
 
-    def assert_private(self):
+    def assert_private(self, timeout=15):
         """Public AND unlisted playbooks are anonymously readable. Fail closed.
 
         Current servers prove private visibility and memory access in one small
@@ -77,7 +83,7 @@ class Client:
         """
         if not self.api_key:
             raise MemoryAPIError("A playbook-scoped memory API key is required.")
-        proof = self.request("GET", self.path + "?private_check=1&limit=1")
+        proof = self.request("GET", self.path + "?private_check=1&limit=1", timeout=timeout)
         if isinstance(proof, dict) and proof.get("private_memory") is True:
             return
         if not isinstance(proof, list):
@@ -85,7 +91,7 @@ class Client:
         # A legacy server has already verified authenticated memory access.
         # An ordinary successful response alone is not a privacy proof.
         try:
-            self.request("GET", f"/api/playbooks/{self.guid}", authenticated=False)
+            self.request("GET", f"/api/playbooks/{self.guid}", authenticated=False, timeout=timeout)
         except MemoryAPIError as exc:
             if exc.status != 404:
                 raise

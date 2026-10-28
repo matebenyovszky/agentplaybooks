@@ -4,6 +4,7 @@ import path from "node:path";
 import { ADAPTER_TARGET_TYPES, applyAdapters, detectInstalledTargets, planAdapters } from "./adapters.js";
 import { runDoctor, runGlobalDoctor } from "./doctor.js";
 import { comparableManifest, createManifest } from "./manifest.js";
+import { assertSafeSyncPath, fileHash, hashFile, loadSyncState, saveSyncState } from "./sync-state.js";
 
 const MANIFEST_NAME = "agentplaybook.json";
 
@@ -57,6 +58,8 @@ export async function planGlobalSync(options = {}) {
 }
 
 async function planFrom(report, manifestPath, options = {}) {
+  const statePath = path.join(path.dirname(manifestPath), ...(options.scope === "global" ? [] : [".agentplaybooks"]), "sync-state.json");
+  const syncState = await loadSyncState(statePath);
   const existing = await readExisting(manifestPath);
   const discovered = createManifest(report);
   const manifest = existing?.apiVersion === discovered.apiVersion && existing?.kind === discovered.kind
@@ -65,7 +68,8 @@ async function planFrom(report, manifestPath, options = {}) {
   const requested = options.targets ?? [];
   enableRequestedTargets(manifest, requested);
   const manifestChanged = !existing || JSON.stringify(comparableManifest(existing)) !== JSON.stringify(comparableManifest(manifest));
-  const adapters = await planAdapters(report, adapterWriteTargets(manifest, requested), options);
+  const adapters = await planAdapters(report, adapterWriteTargets(manifest, requested), { ...options, syncState });
+  for (const action of adapters.actions) action.expectedHash = await hashFile(action.absolutePath);
 
   // A project pulled onto a fresh machine holds only the portable store, which
   // is not a deployment target — without a hint, sync would look broken.
@@ -79,6 +83,10 @@ async function planFrom(report, manifestPath, options = {}) {
 
   return {
     report,
+    syncState,
+    statePath,
+    expectedStateHash: await hashFile(statePath),
+    expectedManifestHash: await hashFile(manifestPath),
     manifest,
     manifestPath,
     existing,
@@ -150,6 +158,21 @@ function mergeExisting(discovered, existing) {
 export async function applySync(plan) {
   if (!plan.changed) return { applied: false, backupPath: null, written: [], backups: [] };
 
+  // Revalidate the entire preview before the first write, including symlink
+  // boundaries for project files. A concurrent editor must not lose changes.
+  if (await hashFile(plan.manifestPath) !== plan.expectedManifestHash || await hashFile(plan.statePath) !== plan.expectedStateHash) {
+    throw new Error("Manifest or sync state changed after preview; run sync again.");
+  }
+  if (plan.scope === "project") {
+    await assertSafeSyncPath(plan.report.inventory.root, "agentplaybook.json");
+    await assertSafeSyncPath(plan.report.inventory.root, ".agentplaybooks/sync-state.json");
+  }
+  for (const action of plan.fileActions) {
+    const relative = path.relative(plan.report.inventory.root, action.absolutePath);
+    if (!relative.startsWith("..") && !path.isAbsolute(relative)) await assertSafeSyncPath(plan.report.inventory.root, relative);
+    if (await hashFile(action.absolutePath) !== action.expectedHash) throw new Error(`Sync target changed after preview: ${action.path}`);
+  }
+
   const backupDirectory = path.join(path.dirname(plan.manifestPath), ".agentplaybooks", "backups", timestampForPath());
 
   let backupPath = null;
@@ -162,6 +185,14 @@ export async function applySync(plan) {
     await atomicWrite(plan.manifestPath, plan.manifest);
   }
   const { written, backups } = await applyAdapters(plan.fileActions, backupDirectory);
+  const files = { ...plan.syncState.files };
+  for (const action of plan.fileActions) {
+    if (!["skill", "skill-resource"].includes(action.kind)) continue;
+    files[action.path] = { digest: fileHash(Buffer.isBuffer(action.content) ? action.content : Buffer.from(action.content)), from: action.from };
+  }
+  if (plan.fileActions.some(action => ["skill", "skill-resource"].includes(action.kind))) {
+    await saveSyncState(plan.statePath, { version: 1, files });
+  }
   return { applied: true, backupPath, written, backups };
 }
 

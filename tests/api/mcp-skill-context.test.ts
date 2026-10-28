@@ -34,8 +34,9 @@ const rows: Record<string, Record<string, unknown>[]> = {
 function database() {
   return { from(table: string) {
     let selected = "*";
+    let window: [number, number] | undefined;
     const filters: Array<(row: Record<string, unknown>) => boolean> = [];
-    const data = () => (rows[table] || []).filter(row => filters.every(test => test(row))).map(row => {
+    const data = () => (rows[table] || []).filter(row => filters.every(test => test(row))).slice(window?.[0] ?? 0, window ? window[1] + 1 : undefined).map(row => {
       const base = selected.startsWith("*") ? row : Object.fromEntries(selected.split(", skill_attachments(")[0].split(",").map(key => key.trim()).map(key => [key, row[key]]));
       if (!selected.includes("skill_attachments(")) return base;
       return { ...base, skill_attachments: attachments.filter(file => file.skill_id === row.id).map(file => {
@@ -48,6 +49,7 @@ function database() {
       eq: (key: string, value: unknown) => { filters.push(row => row[key] === value); return query; },
       ilike: (key: string, value: string) => { filters.push(row => String(row[key]).toLowerCase() === value.toLowerCase()); return query; },
       order: () => query, limit: () => query,
+      range: (from: number, to: number) => { window = [from, to]; return query; },
       single: async () => ({ data: data()[0] ?? null, error: null }),
       maybeSingle: async () => ({ data: data()[0] ?? null, error: null }),
       then: (resolve: (value: unknown) => unknown) => Promise.resolve({ data: data(), error: null }).then(resolve),
@@ -121,9 +123,41 @@ it("keeps account summaries compact and restores complete records explicitly", a
   expect(small.memories[0].summary).toBe("Short summary");
   expect(small.memories[0].value).toBeUndefined();
   expect(small.mcp_servers[0].transport_config).toBeUndefined();
+  expect(small.memory_page).toEqual({ offset: 0, limit: 20, has_more: false, next_offset: null });
   const full = await read(true);
   expect(full.skills[0].content).toBe(body);
   expect(full.memories[0].value).toBe("FULL_MEMORY_VALUE");
   expect(full.mcp_servers[0].transport_config.detail).toBe("SERVER_CONFIGURATION_DETAIL");
   expect(full.persona).toEqual(small.persona);
+  expect(full.memory_page).toBeUndefined();
+});
+
+it("pages compact memory metadata without dropping or leaking full values", async () => {
+  const original = rows.memories;
+  rows.memories = Array.from({ length: 25 }, (_, index) => ({
+    playbook_id: "pb", key: `fact-${index}`, summary: `Summary ${index}`,
+    value: "DO_NOT_LOAD_FULL_VALUE", is_archived: false,
+  }));
+  const read = async (args: object) => (await (await managementPost(new Request("http://localhost/api/mcp/manage", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: {
+      name: "get_playbook", arguments: { playbook_id: "pb", ...args },
+    } }),
+  }))).json());
+  try {
+    const first = await read({});
+    const small = JSON.parse(first.result.content[0].text);
+    expect(small.memories).toHaveLength(20);
+    expect(small.memory_page).toMatchObject({ has_more: true, next_offset: 20 });
+    expect(JSON.stringify(first)).not.toContain("DO_NOT_LOAD_FULL_VALUE");
+    const second = JSON.parse((await read({ memory_offset: small.memory_page.next_offset })).result.content[0].text);
+    expect(second.memories.map((row: { key: string }) => row.key)).toEqual(["fact-20", "fact-21", "fact-22", "fact-23", "fact-24"]);
+    expect(second.memory_page).toMatchObject({ has_more: false, next_offset: null });
+    expect((await read({ memory_limit: 0 })).error).toBeDefined();
+    const full = JSON.parse((await read({ include_content: true })).result.content[0].text);
+    expect(full.memories).toHaveLength(25);
+    expect(full.memories[0].value).toBe("DO_NOT_LOAD_FULL_VALUE");
+  } finally {
+    rows.memories = original;
+  }
 });

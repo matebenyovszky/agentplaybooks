@@ -20,6 +20,7 @@ const EXPECTED_NAMES = [
   "assets/icon.svg",
   "plugin.json",
   "skills/agentplaybooks/SKILL.md",
+  "skills/agentplaybooks/references/local-cli.md",
 ];
 
 test("default Skills-only ZIP path is packages/cli/dist/agentplaybooks-openai-skills.zip", () => {
@@ -46,7 +47,11 @@ test("Skills-only packer collects MIT plugin files and omits MCP", async () => {
 
   const skill = files.get("skills/agentplaybooks/SKILL.md").toString("utf8");
   assert.match(skill, /^---\r?\nname: agentplaybooks\r?\n/);
-  assert.match(skill, /^description: Audit, migrate/m);
+  assert.match(skill, /^description: \S.+/m);
+  // The entrypoint's optional local workflow must remain readable after upload.
+  const reference = "skills/agentplaybooks/references/local-cli.md";
+  assert.match(skill, /\]\(references\/local-cli\.md\)/);
+  assert.equal(files.get(reference).toString("utf8"), await readFile(path.join(packageRoot, reference), "utf8"));
 
   const license = files.get("LICENSE").toString("utf8");
   assert.match(license, /MIT License/);

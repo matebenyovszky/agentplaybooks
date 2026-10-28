@@ -15,8 +15,8 @@
     "com.openai": {
       "interface": {
         "displayName": "AgentPlaybooks",
-        "shortDescription": "Portable agents, connected tools, and secret proxy",
-        "longDescription": "Audit and sync agent configuration, then manage playbooks, skills, memory, canvas, MCP/OpenAPI tools, workflows, and vault-backed API calls.",
+        "shortDescription": "Playbooks, skills, memory, canvas, and secret proxy",
+        "longDescription": "Use playbooks, skills, memory, collaborative canvas, connected MCP/OpenAPI tools, and vault-backed API calls directly in chat. Also audit, sync, and back up portable agent configuration.",
         "developerName": "AgentPlaybooks",
         "category": "Productivity",
         "capabilities": ["Interactive", "Write"],
@@ -24,8 +24,8 @@
         "privacyPolicyURL": "https://agentplaybooks.ai/privacy",
         "termsOfServiceURL": "https://agentplaybooks.ai/terms",
         "defaultPrompt": [
-          "Audit and synchronize my agent configuration.",
           "Show my playbooks and their connected tools.",
+          "Find the right skill and memory for this task.",
           "Call an API with a vault secret without revealing it."
         ],
         "brandColor": "#7C3AED",

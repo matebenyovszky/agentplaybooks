@@ -5,6 +5,7 @@ import path from "node:path";
 import { isMap, parseDocument } from "yaml";
 import { SAFE_AGENT_NAME, serializeAgent } from "./agents.js";
 import { expandConfiguredPath, hermesProfile, normalizePath, normalizeText } from "./discovery.js";
+import { fileHash } from "./sync-state.js";
 
 // Platform adapters describe where a deployment target keeps its skills and
 // MCP server definitions.
@@ -186,7 +187,7 @@ async function readBufferIfExists(absolutePath) {
   }
 }
 
-async function skillActions(report, targetIds, conflicts, { root }) {
+async function skillActions(report, targetIds, conflicts, { root, syncState = { files: {} } }) {
   const actions = [];
   const groups = groupByName(report.inventory.skills);
   // Two targets can share one store (antigravity and hermes both read
@@ -194,11 +195,24 @@ async function skillActions(report, targetIds, conflicts, { root }) {
   const planned = new Set();
 
   for (const [name, variants] of groups) {
-    const canonical = variants.find((item) => item.platform === "portable") ?? variants[0];
-    const skillDigests = new Set(variants.map((item) => item.digest));
-    const treeDigests = new Set(variants.map((item) => item.treeDigest ?? item.digest));
+    const canonical = variants.find((item) => item.platform === "portable")
+      ?? variants.find(item => !syncState.files[item.source]) ?? variants[0];
     const sourceRoot = path.dirname(canonical.absolutePath);
     const sourceFiles = await directoryFiles(sourceRoot);
+    // A generated target is not a second author while every recorded member
+    // still matches its last applied hash. Any local edit remains a conflict.
+    const authored = [];
+    for (const variant of variants) {
+      if (variant === canonical || !syncState.files[variant.source]) { authored.push(variant); continue; }
+      const members = await directoryFiles(path.dirname(variant.absolutePath));
+      const unchanged = (await Promise.all(members.map(async member => {
+        const source = normalizePath(path.relative(root, member));
+        return syncState.files[source]?.digest === fileHash(await readFile(member));
+      }))).every(Boolean);
+      if (!unchanged) authored.push(variant);
+    }
+    const skillDigests = new Set(authored.map((item) => item.digest));
+    const treeDigests = new Set(authored.map((item) => item.treeDigest ?? item.digest));
     for (const target of targetIds) {
       const adapter = TARGET_ADAPTERS[target];
       if (!adapter?.skillsDir) continue;
@@ -220,7 +234,14 @@ async function skillActions(report, targetIds, conflicts, { root }) {
         const [content, existing] = await Promise.all([readFile(sourceFile), readBufferIfExists(absolutePath)]);
         if (existing !== null) {
           if (!sameFileContent(existing, content)) {
-            conflicts.push(conflict(target, member === "SKILL.md" ? "skill" : "skill-resource", name, `${relativePath} differs from the portable skill and was not overwritten.`, [canonical.source, relativePath]));
+            if (syncState.files[relativePath]?.digest === fileHash(existing)
+                && syncState.files[relativePath]?.from === canonical.source) {
+              planned.add(absolutePath);
+              actions.push({ kind: member === "SKILL.md" ? "skill" : "skill-resource", target, name,
+                action: "merge", path: relativePath, absolutePath, content, from: canonical.source });
+            } else {
+              conflicts.push(conflict(target, member === "SKILL.md" ? "skill" : "skill-resource", name, `${relativePath} differs from the portable skill and was not overwritten.`, [canonical.source, relativePath]));
+            }
           }
           continue;
         }
@@ -633,6 +654,7 @@ export async function planAdapters(report, targets, {
   // every hermes-target write at `profiles/<name>/` instead of the main
   // profile, which is what makes one playbook drive one bot.
   hermesProfileName = "",
+  syncState,
 } = {}) {
   const root = report.inventory.root;
   const targetIds = targets
@@ -641,7 +663,7 @@ export async function planAdapters(report, targets, {
   const conflicts = [];
   const actions = [
     ...await instructionActions(report, targetIds, conflicts, { root }),
-    ...await skillActions(report, targetIds, conflicts, { root }),
+    ...await skillActions(report, targetIds, conflicts, { root, syncState }),
     ...agentActions(report, targetIds, conflicts, { root }),
     ...(skipMcp ? [] : mcpActions(report, targetIds, conflicts, { root })),
     ...await hermesActions(report, targetIds, conflicts, { root, homedir, env, platform, skipMcp, hermesProfileName }),
