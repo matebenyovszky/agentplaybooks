@@ -1,1050 +1,484 @@
-"use client";
-
-import { useEffect, useState, useMemo, useCallback, useRef } from "react";
-import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
-import { FloatingNav } from "@/components/ui/floating-navbar";
-import { createBrowserClient } from "@/lib/supabase/client";
-import { authFetch } from "@/lib/auth-fetch";
-import { LatestRequest } from "@/lib/latest-request";
-import { cn } from "@/lib/utils";
 import {
-  Search,
+  ArrowDown,
+  ArrowRight,
+  ArrowUpRight,
   BookOpen,
-  Globe,
-  Star,
-  Brain,
-  Zap,
-  Server,
-  Wrench,
-  FolderOpen,
-  Filter,
-  Clock,
-  User,
-  ExternalLink,
-  Sparkles,
-  Copy,
   Check,
-  ChevronDown,
-  ChevronUp
+  CheckCheck,
+  FileText,
+  GitBranch,
+  KeyRound,
+  Layers,
+  Link2,
+  MessageSquare,
+  Search,
+  ShieldCheck,
+  Sparkles,
+  Terminal,
+  UserRound,
 } from "lucide-react";
-import type { Skill, MCPServer } from "@/lib/supabase/types";
+import { FloatingNav } from "@/components/ui/floating-navbar";
+import styles from "./explore.module.css";
 
-// Extended types from API that include publisher info
-interface Publisher {
-  id: string;
-  name: string;
-  avatar_svg?: string;
-  website_url?: string;
-  is_verified?: boolean;
-  is_virtual?: boolean;
-}
+// Hosted first-party starters belong to the demo/system account. These links
+// also work from self-hosted installations, without querying a public catalog.
+const workflows = [
+  { key: "handoff", guid: "7df83339bbdf4a71", icon: GitBranch },
+  { key: "research", guid: "5db1054925da4244", icon: Search },
+  { key: "review", guid: "334cd3082c2a4d1b", icon: ShieldCheck },
+] as const;
 
-function PublisherAvatar({ value }: { value: string }) {
-  const trimmed = value.trim();
-  const src = trimmed.startsWith("<svg")
-    ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(trimmed)}`
-    : trimmed;
-
-  // SVG is intentionally loaded as an isolated image, never inserted into the DOM as active markup.
-  // eslint-disable-next-line @next/next/no-img-element
-  return <img src={src} alt="" className="h-full w-full object-cover" />;
-}
-
-interface PublicPlaybook {
-  id: string;
-  guid: string;
-  name: string;
-  description?: string;
-  config?: Record<string, unknown>;
-  star_count: number;
-  tags?: string[];
-  created_at: string;
-  updated_at?: string;
-  user_id: string;
-  personas_count: number;
-  skills_count: number;
-  mcp_servers_count: number;
-  publisher?: Publisher;
-}
-
-type TabType = "playbooks" | "skills" | "mcp";
-type SortType = "stars" | "recent" | "name";
-
-import { FileText, Link as LinkIcon } from "lucide-react"; // Import missing icons
-
-export default function ExplorePage() {
-  const t = useTranslations();
-  const router = useRouter();
-  const [activeTab, setActiveTab] = useState<TabType>("playbooks");
-
-  // Playbooks state
-  const [playbooks, setPlaybooks] = useState<PublicPlaybook[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [sortBy, setSortBy] = useState<SortType>("stars");
-  const [loading, setLoading] = useState(true);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [starredIds, setStarredIds] = useState<Set<string>>(new Set());
-
-  // Skills & MCP state
-  const [skills, setSkills] = useState<Skill[]>([]);
-  const [mcpServers, setMcpServers] = useState<MCPServer[]>([]);
-  const [skillsLoading, setSkillsLoading] = useState(false);
-  const [mcpLoading, setMcpLoading] = useState(false);
-  const [skillSearch, setSkillSearch] = useState("");
-  const [mcpSearch, setMcpSearch] = useState("");
-
-  const loadUserStars = useCallback(async () => {
-    const response = await authFetch("/api/user/starred");
-
-    if (!response.ok) {
-      setStarredIds(new Set());
-      return;
-    }
-
-    const data = await response.json().catch(() => null);
-    if (Array.isArray(data)) {
-      setStarredIds(new Set((data as PublicPlaybook[]).map((playbook) => playbook.id)));
-    }
-  }, []);
-
-  const checkAuth = useCallback(async () => {
-    const supabase = createBrowserClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      setUserId(user.id);
-      loadUserStars();
-    }
-  }, [loadUserStars]);
-
-  const playbookRequests = useRef(new LatestRequest());
-  useEffect(() => {
-    if (activeTab !== "playbooks") return;
-    return playbookRequests.current.schedule(async ticket => {
-      setLoading(true);
-      try {
-        const params = new URLSearchParams();
-        if (searchQuery) params.set("search", searchQuery);
-        if (selectedTags.length) params.set("tags", selectedTags.join(","));
-        params.set("sort", sortBy);
-
-        const res = await authFetch(`/api/public/playbooks?${params}`, { signal: ticket.signal });
-        if (!res.ok) throw new Error("Playbook search failed");
-        const data = await res.json();
-        if (ticket.isCurrent()) setPlaybooks(Array.isArray(data) ? data : []);
-      } catch (error) {
-        if (!ticket.isCurrent()) return;
-        console.error("Failed to load playbooks:", error);
-        setPlaybooks([]);
-      } finally {
-        if (ticket.isCurrent()) setLoading(false);
-      }
-    }, searchQuery ? 300 : 0);
-  }, [activeTab, searchQuery, selectedTags, sortBy]);
-
-  const loadSkills = useCallback(async () => {
-    setSkillsLoading(true);
-    try {
-      const res = await authFetch("/api/public/skills");
-      const data = await res.json();
-      setSkills(Array.isArray(data) ? data : []);
-    } catch (e) {
-      console.error("Failed to load skills:", e);
-      setSkills([]);
-    }
-    setSkillsLoading(false);
-  }, []);
-
-  const loadMCPServers = useCallback(async () => {
-    setMcpLoading(true);
-    try {
-      const res = await authFetch("/api/public/mcp");
-      const data = await res.json();
-      setMcpServers(Array.isArray(data) ? data : []);
-    } catch (e) {
-      console.error("Failed to load MCP servers:", e);
-      setMcpServers([]);
-    }
-    setMcpLoading(false);
-  }, []);
-
-  useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
-
-  useEffect(() => {
-    if (activeTab === "skills" && skills.length === 0) {
-      loadSkills();
-    } else if (activeTab === "mcp" && mcpServers.length === 0) {
-      loadMCPServers();
-    }
-  }, [activeTab, loadSkills, loadMCPServers, skills.length, mcpServers.length]);
-
-  const toggleStar = async (playbookId: string) => {
-    if (!userId) {
-      router.push("/login?redirect=/explore");
-      return;
-    }
-
-    const isStarred = starredIds.has(playbookId);
-
-    if (isStarred) {
-      const response = await authFetch(`/api/playbooks/${playbookId}/star`, {
-        method: "POST",
-      });
-
-      if (!response.ok) {
-        return;
-      }
-
-      setStarredIds(prev => {
-        const next = new Set(prev);
-        next.delete(playbookId);
-        return next;
-      });
-
-      setPlaybooks(prev => prev.map(p =>
-        p.id === playbookId ? { ...p, star_count: Math.max(0, p.star_count - 1) } : p
-      ));
-    } else {
-      const response = await authFetch(`/api/playbooks/${playbookId}/star`, {
-        method: "POST",
-      });
-
-      if (!response.ok) {
-        return;
-      }
-
-      setStarredIds(prev => new Set(prev).add(playbookId));
-
-      setPlaybooks(prev => prev.map(p =>
-        p.id === playbookId ? { ...p, star_count: p.star_count + 1 } : p
-      ));
-    }
-  };
-
-  // Extract unique tags from all playbooks
-  const allTags = useMemo(() => {
-    const tagCounts: Record<string, number> = {};
-    playbooks.forEach(p => {
-      (p.tags || []).forEach(tag => {
-        tagCounts[tag] = (tagCounts[tag] || 0) + 1;
-      });
-    });
-    return Object.entries(tagCounts)
-      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-      .map(([tag]) => tag)
-      .slice(0, 15);
-  }, [playbooks]);
-
-  const toggleTag = (tag: string) => {
-    if (selectedTags.includes(tag)) {
-      setSelectedTags(selectedTags.filter(t => t !== tag));
-    } else {
-      setSelectedTags([...selectedTags, tag]);
-    }
-  };
-
-  // Filtered skills and MCP servers
-  const filteredSkills = skills.filter(s =>
-    s.name.toLowerCase().includes(skillSearch.toLowerCase()) ||
-    (s.description || "").toLowerCase().includes(skillSearch.toLowerCase())
-  );
-
-  const filteredMCPs = mcpServers.filter(m =>
-    m.name.toLowerCase().includes(mcpSearch.toLowerCase()) ||
-    (m.description || "").toLowerCase().includes(mcpSearch.toLowerCase())
-  );
-
-  const tabs = [
-    { id: "playbooks" as TabType, label: t("explore.tabPlaybooks"), icon: BookOpen, count: playbooks.length },
-    { id: "skills" as TabType, label: t("explore.tabSkills"), icon: Zap, count: skills.length },
-    { id: "mcp" as TabType, label: t("explore.tabMCP"), icon: Server, count: mcpServers.length },
-  ];
+export default async function ExplorePage() {
+  const t = await getTranslations("explore");
 
   return (
-    <div className="min-h-screen min-w-0 overflow-x-clip bg-background text-foreground">
+    <div className={styles.page}>
       <FloatingNav />
+      <main id="main-content">
+        <section className={styles.hero} aria-labelledby="explore-title">
+          <div className={styles.heroGrid} aria-hidden="true" />
+          <div className={styles.wrap}>
+            <div className={styles.heroTopline}>
+              <span>
+                <span className={styles.statusDot} />
+                {t("eyebrow")}
+              </span>
+              <span className={styles.edition}>01 / {t("fieldGuide")}</span>
+            </div>
+            <div className={styles.heroColumns}>
+              <div className={styles.heroCopy}>
+                <h1 id="explore-title">
+                  {t("title")}
+                  <span className="gradient-text">{t("titleAccent")}</span>
+                </h1>
+                <p className={styles.heroIntro}>{t("subtitle")}</p>
+                <div className={styles.actions}>
+                  <a href="#use-cases" className={styles.primary}>
+                    {t("tryWorkflow")}
+                    <ArrowDown size={17} aria-hidden="true" />
+                  </a>
+                  <Link
+                    href="/dashboard"
+                    prefetch={false}
+                    className={styles.heroSecondary}
+                  >
+                    {t("create")}
+                    <ArrowUpRight size={17} aria-hidden="true" />
+                  </Link>
+                </div>
+                <p className={styles.heroNote}>
+                  <Check size={15} aria-hidden="true" />
+                  {t("heroNote")}
+                </p>
+              </div>
 
-      {/* Hero */}
-      <section className="pt-32 pb-8 px-4">
-        <div className="max-w-4xl mx-auto text-center">
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-4xl md:text-5xl font-bold mb-4 gradient-text"
-          >
-            {t("explore.title")}
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-xl text-neutral-600 dark:text-slate-400"
-          >
-            {t("explore.subtitle")}
-          </motion.p>
-        </div>
-      </section>
-
-      {/* Tabs */}
-      <section className="px-4 pb-4">
-        <div className="max-w-5xl mx-auto">
-          <div className="flex min-w-0 gap-2 overflow-x-auto border-b border-neutral-200 dark:border-blue-900/30">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={cn(
-                  "flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition-all",
-                  activeTab === tab.id
-                    ? "border-amber-500 text-neutral-900 dark:text-white"
-                    : "border-transparent text-neutral-500 dark:text-slate-400 hover:text-neutral-900 dark:hover:text-white hover:border-neutral-300 dark:hover:border-slate-700"
-                )}
-              >
-                <tab.icon className="h-4 w-4" />
-                {tab.label}
-                {tab.count > 0 && (
-                  <span className={cn(
-                    "px-2 py-0.5 rounded-full text-xs",
-                    activeTab === tab.id ? "bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400" : "bg-neutral-100 dark:bg-slate-800 text-neutral-500 dark:text-slate-500"
-                  )}>
-                    {tab.count}
+              <figure className={styles.diagram}>
+                <figcaption>
+                  {t("exampleLabel")}
+                  <span>PROJECT / NORTHSTAR</span>
+                </figcaption>
+                <div className={styles.agentRow}>
+                  <span>
+                    <MessageSquare size={14} aria-hidden="true" />
+                    ChatGPT
                   </span>
+                  <span>
+                    <Terminal size={14} aria-hidden="true" />
+                    Codex
+                  </span>
+                  <span>
+                    <Sparkles size={14} aria-hidden="true" />
+                    Claude
+                  </span>
+                </div>
+                <svg
+                  className={styles.connectors}
+                  viewBox="0 0 400 48"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <path d="M65 0V13Q65 24 77 24H188Q200 24 200 36V48M200 0V48M335 0V13Q335 24 323 24H212Q200 24 200 36" />
+                  <circle cx="200" cy="42" r="3" />
+                </svg>
+                <div className={styles.paper}>
+                  <div className={styles.paperHeading}>
+                    <span className={styles.bookMark}>
+                      <Layers size={24} aria-hidden="true" />
+                    </span>
+                    <div>
+                      <small>{t("onePlaybook")}</small>
+                      <strong>Northstar</strong>
+                    </div>
+                    <span className={styles.privateBadge}>
+                      <ShieldCheck size={11} aria-hidden="true" />
+                      {t("private")}
+                    </span>
+                  </div>
+                  <div className={styles.paperRow}>
+                    <FileText size={16} aria-hidden="true" />
+                    <div>
+                      <b>{t("anatomy.instructions.title")}</b>
+                      <span>{t("heroRules")}</span>
+                    </div>
+                    <span className={styles.paperIndex}>01</span>
+                  </div>
+                  <div className={styles.paperRow}>
+                    <Layers size={16} aria-hidden="true" />
+                    <div>
+                      <b>{t("anatomy.skills.title")}</b>
+                      <span>{t("heroSkill")}</span>
+                    </div>
+                    <span className={styles.paperIndex}>02</span>
+                  </div>
+                  <div className={styles.paperRow}>
+                    <BookOpen size={16} aria-hidden="true" />
+                    <div>
+                      <b>{t("anatomy.memory.title")}</b>
+                      <span>{t("heroMemory")}</span>
+                    </div>
+                    <span className={styles.paperIndex}>03</span>
+                  </div>
+                  <div className={styles.paperFoot}>
+                    <span className={styles.statusDot} />
+                    {t("heroContext")}
+                  </div>
+                </div>
+                <div className={styles.nextSession}>
+                  <div className={styles.nextIcon}>
+                    <ArrowRight size={18} aria-hidden="true" />
+                  </div>
+                  <div>
+                    <small>{t("nextSession")}</small>
+                    <p>{t("nextSessionExample")}</p>
+                  </div>
+                  <CheckCheck size={19} aria-hidden="true" />
+                </div>
+              </figure>
+            </div>
+            <div className={styles.heroFooter}>
+              <span>{t("clientsLabel")}</span>
+              <div>
+                {["ChatGPT", "Codex", "Claude", "Cursor", "Hermes"].map(
+                  (name) => (
+                    <span key={name}>{name}</span>
+                  ),
                 )}
-              </button>
-            ))}
+                <span>{t("andMore")}</span>
+              </div>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <AnimatePresence mode="wait">
-        {/* Playbooks Tab */}
-        {activeTab === "playbooks" && (
-          <motion.div
-            key="playbooks"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-          >
-            {/* Search & Filters */}
-            <section className="px-4 pb-8">
-              <div className="max-w-5xl mx-auto">
-                <div className="relative mb-6">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder={t("explore.searchPlaybooks")}
-                    className={cn(
-                      "w-full pl-12 pr-4 py-4 rounded-xl text-lg",
-                      "bg-white dark:bg-blue-950/30 border border-neutral-200 dark:border-blue-900/50",
-                      "focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20",
-                      "placeholder:text-neutral-400 dark:placeholder:text-slate-600",
-                      "text-neutral-900 dark:text-white"
-                    )}
-                  />
+        <nav className={styles.sectionNav} aria-label={t("pageNavigation")}>
+          <div className={styles.wrap}>
+            <a href="#use-cases">
+              <span>01</span>
+              {t("navWorkflows")}
+            </a>
+            <a href="#inside">
+              <span>02</span>
+              {t("navInside")}
+            </a>
+            <a href="#how-it-works">
+              <span>03</span>
+              {t("navStart")}
+            </a>
+          </div>
+        </nav>
+
+        <section
+          id="use-cases"
+          className={styles.section}
+          aria-labelledby="use-cases-title"
+        >
+          <div className={styles.wrap}>
+            <div className={styles.sectionHeading}>
+              <div>
+                <p className={styles.kicker}>{t("casesEyebrow")}</p>
+                <h2 id="use-cases-title">{t("casesTitle")}</h2>
+              </div>
+              <p>{t("casesIntro")}</p>
+            </div>
+
+            <div className={styles.lab}>
+              <fieldset className={styles.choices}>
+                <legend className={styles.srOnly}>{t("chooseWorkflow")}</legend>
+                {workflows.map(({ key, icon: Icon }, index) => (
+                  <label key={key} className={styles.choice}>
+                    <input
+                      className={styles[`radio_${key}`]}
+                      type="radio"
+                      name="explore-workflow"
+                      value={key}
+                      defaultChecked={index === 0}
+                      aria-label={t(`cases.${key}.title`)}
+                    />
+                    <Icon size={21} aria-hidden="true" />
+                    <span>
+                      <strong>{t(`cases.${key}.title`)}</strong>
+                      <small>{t(`cases.${key}.tagline`)}</small>
+                    </span>
+                    <ArrowUpRight size={17} aria-hidden="true" />
+                  </label>
+                ))}
+              </fieldset>
+              {workflows.map(({ key, guid }, index) => (
+                <article
+                  key={key}
+                  className={`${styles.panel} ${styles[`panel_${key}`]}`}
+                  aria-labelledby={`workflow-title-${key}`}
+                >
+                  <header className={styles.panelHeader}>
+                    <div>
+                      <span className={styles.exampleNumber}>
+                        0{index + 1} / {t("workedExample")}
+                      </span>
+                      <h3 id={`workflow-title-${key}`}>
+                        {t(`cases.${key}.headline`)}
+                      </h3>
+                    </div>
+                    <p>{t(`cases.${key}.description`)}</p>
+                  </header>
+                  <div className={styles.workflowGrid}>
+                    <div className={styles.request}>
+                      <p className={styles.stageLabel}>
+                        <span>01</span>
+                        {t("requestLabel")}
+                      </p>
+                      <MessageSquare size={23} aria-hidden="true" />
+                      <blockquote>{t(`cases.${key}.prompt`)}</blockquote>
+                      <p className={styles.requestNote}>
+                        {t(`cases.${key}.situation`)}
+                      </p>
+                    </div>
+                    <div className={styles.context}>
+                      <p className={styles.stageLabel}>
+                        <span>02</span>
+                        {t("contextLabel")}
+                      </p>
+                      {["goal", "skill", "memory"].map((part, partIndex) => (
+                        <div key={part} className={styles.contextItem}>
+                          <span className={styles.contextIndex}>
+                            0{partIndex + 1}
+                          </span>
+                          <div>
+                            <b>{t(`contextTypes.${part}`)}</b>
+                            <p>{t(`cases.${key}.context.${part}`)}</p>
+                          </div>
+                        </div>
+                      ))}
+                      <div className={styles.contextNote}>
+                        <Layers size={14} aria-hidden="true" />
+                        {t("contextNote")}
+                      </div>
+                    </div>
+                    <div className={styles.result}>
+                      <p className={styles.stageLabel}>
+                        <span>03</span>
+                        {t("resultLabel")}
+                      </p>
+                      <div className={styles.resultHeader}>
+                        <CheckCheck size={19} aria-hidden="true" />
+                        <b>{t(`cases.${key}.resultTitle`)}</b>
+                      </div>
+                      <ol>
+                        {["one", "two", "three"].map((part) => (
+                          <li key={part}>
+                            {t(`cases.${key}.results.${part}`)}
+                          </li>
+                        ))}
+                      </ol>
+                      <p className={styles.resultNote}>{t("illustrative")}</p>
+                    </div>
+                  </div>
+                  <footer className={styles.panelFooter}>
+                    <p>
+                      <BookOpen size={17} aria-hidden="true" />
+                      {t(`cases.${key}.starter`)}
+                    </p>
+                    <a
+                      href={`https://agentplaybooks.ai/dashboard/playbook/${guid}`}
+                    >
+                      {t("openStarter")}
+                      <ArrowUpRight size={16} aria-hidden="true" />
+                    </a>
+                  </footer>
+                </article>
+              ))}
+            </div>
+            <p className={styles.starterNote}>
+              <ShieldCheck size={17} aria-hidden="true" />
+              {t("starterNote")}
+            </p>
+          </div>
+        </section>
+
+        <section
+          id="inside"
+          className={styles.inside}
+          aria-labelledby="inside-title"
+        >
+          <div className={`${styles.wrap} ${styles.insideGrid}`}>
+            <div className={styles.insideIntro}>
+              <p className={styles.kicker}>{t("anatomyEyebrow")}</p>
+              <h2 id="inside-title">{t("anatomyTitle")}</h2>
+              <p>{t("anatomyIntro")}</p>
+              <div className={styles.contextPrinciple}>
+                <Layers size={23} aria-hidden="true" />
+                <strong>{t("contextPrinciple")}</strong>
+                <span>{t("contextPrincipleDetail")}</span>
+              </div>
+            </div>
+            <dl className={styles.anatomyGrid}>
+              {[
+                { key: "persona", icon: UserRound },
+                { key: "instructions", icon: FileText },
+                { key: "skills", icon: Layers },
+                { key: "memory", icon: BookOpen },
+                { key: "tools", icon: Link2 },
+                { key: "secrets", icon: KeyRound },
+              ].map(({ key, icon: Icon }, index) => (
+                <div key={key} className={styles.anatomyItem}>
+                  <div className={styles.anatomyTop}>
+                    <Icon size={20} aria-hidden="true" />
+                    <span>0{index + 1}</span>
+                  </div>
+                  <dt>{t(`anatomy.${key}.title`)}</dt>
+                  <dd>
+                    <p>{t(`anatomy.${key}.description`)}</p>
+                    <span>{t(`anatomy.${key}.example`)}</span>
+                  </dd>
                 </div>
+              ))}
+            </dl>
+          </div>
+        </section>
 
-                {/* Tags */}
-                <div className="flex flex-wrap gap-2 mb-6">
-                  <span className="flex items-center gap-1 text-sm text-neutral-500 dark:text-slate-500 mr-2">
-                    <Filter className="h-4 w-4" />
-                    {t("explore.tags")}:
+        <section
+          id="how-it-works"
+          className={styles.section}
+          aria-labelledby="how-title"
+        >
+          <div className={styles.wrap}>
+            <div className={styles.sectionHeading}>
+              <div>
+                <p className={styles.kicker}>{t("howEyebrow")}</p>
+                <h2 id="how-title">{t("howTitle")}</h2>
+              </div>
+              <p>{t("howIntro")}</p>
+            </div>
+            <ol className={styles.steps}>
+              {["start", "connect", "continue"].map((key, index) => (
+                <li key={key}>
+                  <span className={styles.stepNumber}>0{index + 1}</span>
+                  <h3>{t(`steps.${key}.title`)}</h3>
+                  <p>{t(`steps.${key}.description`)}</p>
+                  <span className={styles.stepOutcome}>
+                    <Check size={15} aria-hidden="true" />
+                    {t(`steps.${key}.outcome`)}
                   </span>
-                  {allTags.map((tag) => (
-                    <button
-                      key={tag}
-                      onClick={() => toggleTag(tag)}
-                      className={cn(
-                        "px-3 py-1.5 rounded-full text-sm transition-colors",
-                        selectedTags.includes(tag)
-                          ? "bg-amber-500 text-slate-900 font-medium"
-                          : "bg-white dark:bg-blue-950/50 text-neutral-600 dark:text-slate-400 hover:bg-neutral-100 dark:hover:bg-blue-900/50 border border-neutral-200 dark:border-blue-800/30"
-                      )}
-                    >
-                      {tag}
-                    </button>
-                  ))}
-                </div>
+                </li>
+              ))}
+            </ol>
+            <div className={styles.connectionHeading}>
+              <h3>{t("connectionTitle")}</h3>
+              <p>{t("connectionIntro")}</p>
+            </div>
+            <div className={styles.connections}>
+              {[
+                {
+                  key: "chat",
+                  icon: MessageSquare,
+                  href: "/docs/platform-integrations",
+                },
+                { key: "code", icon: Terminal, href: "/docs/cli" },
+                { key: "automate", icon: Link2, href: "/docs/management-api" },
+              ].map(({ key, icon: Icon, href }) => (
+                <Link
+                  key={key}
+                  href={href}
+                  prefetch={false}
+                  className={styles.connection}
+                >
+                  <Icon size={24} aria-hidden="true" />
+                  <span>
+                    <b>{t(`connections.${key}.title`)}</b>
+                    <small>{t(`connections.${key}.description`)}</small>
+                    <em>{t(`connections.${key}.label`)}</em>
+                  </span>
+                  <ArrowUpRight size={18} aria-hidden="true" />
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
 
-                {/* Sort */}
-                <div className="flex items-center justify-between mb-8">
-                  <div className="flex items-center gap-2 text-sm text-neutral-500 dark:text-slate-400">
-                    <span>{playbooks.length} {t("explore.playbooks")}</span>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-neutral-500 dark:text-slate-400">{t("explore.sortBy")}:</span>
-                    <select
-                      value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value as SortType)}
-                      className={cn(
-                        "px-3 py-2 rounded-lg text-sm cursor-pointer",
-                        "bg-white dark:bg-slate-800 border border-neutral-200 dark:border-slate-600",
-                        "text-neutral-900 dark:text-white focus:outline-none focus:border-amber-500",
-                        "[&>option]:bg-white [&>option]:text-neutral-900 dark:[&>option]:bg-slate-800 dark:[&>option]:text-white"
-                      )}
-                    >
-                      <option value="stars">{t("explore.mostStarred")}</option>
-                      <option value="recent">{t("explore.mostRecent")}</option>
-                      <option value="name">{t("explore.alphabetical")}</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            {/* Results */}
-            <section className="px-4 pb-24">
-              <div className="max-w-6xl mx-auto">
-                {loading ? (
-                  <div className="flex justify-center py-12">
-                    <div className="animate-spin h-8 w-8 border-2 border-amber-500 border-t-transparent rounded-full" />
-                  </div>
-                ) : playbooks.length === 0 ? (
-                  <EmptyState type="playbooks" />
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {playbooks.map((playbook, idx) => (
-                      <PlaybookCard
-                        key={playbook.id}
-                        playbook={playbook}
-                        index={idx}
-                        isStarred={starredIds.has(playbook.id)}
-                        onToggleStar={() => toggleStar(playbook.id)}
-                        isLoggedIn={!!userId}
-                        isOwner={playbook.user_id === userId}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            </section>
-          </motion.div>
-        )}
-
-        {/* Skills Tab */}
-        {activeTab === "skills" && (
-          <motion.div
-            key="skills"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-          >
-            <section className="px-4 pb-8">
-              <div className="max-w-5xl mx-auto">
-                <div className="relative mb-6">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-neutral-400 dark:text-slate-500" />
-                  <input
-                    type="text"
-                    value={skillSearch}
-                    onChange={(e) => setSkillSearch(e.target.value)}
-                    placeholder={t("explore.searchSkills")}
-                    className={cn(
-                      "w-full pl-12 pr-4 py-4 rounded-xl text-lg",
-                      "bg-white dark:bg-blue-950/30 border border-neutral-200 dark:border-blue-900/50",
-                      "focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20",
-                      "placeholder:text-neutral-400 dark:placeholder:text-slate-600",
-                      "text-neutral-900 dark:text-white"
-                    )}
-                  />
-                </div>
-                <p className="text-sm text-neutral-600 dark:text-slate-400 mb-4">
-                  {filteredSkills.length} {t("explore.skillsAvailable")}
-                </p>
-              </div>
-            </section>
-
-            <section className="px-4 pb-24">
-              <div className="max-w-6xl mx-auto">
-                {skillsLoading ? (
-                  <div className="flex justify-center py-12">
-                    <div className="animate-spin h-8 w-8 border-2 border-purple-500 border-t-transparent rounded-full" />
-                  </div>
-                ) : filteredSkills.length === 0 ? (
-                  <EmptyState type="skills" />
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {filteredSkills.map((skill, idx) => (
-                      <SkillCard key={skill.id} skill={skill} index={idx} />
-                    ))}
-                  </div>
-                )}
-              </div>
-            </section>
-          </motion.div>
-        )}
-
-        {/* MCP Tab */}
-        {activeTab === "mcp" && (
-          <motion.div
-            key="mcp"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-          >
-            <section className="px-4 pb-8">
-              <div className="max-w-5xl mx-auto">
-                <div className="relative mb-6">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-neutral-400 dark:text-slate-500" />
-                  <input
-                    type="text"
-                    value={mcpSearch}
-                    onChange={(e) => setMcpSearch(e.target.value)}
-                    placeholder={t("explore.searchMCP")}
-                    className={cn(
-                      "w-full pl-12 pr-4 py-4 rounded-xl text-lg",
-                      "bg-white dark:bg-blue-950/30 border border-neutral-200 dark:border-blue-900/50",
-                      "focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20",
-                      "placeholder:text-neutral-400 dark:placeholder:text-slate-600",
-                      "text-neutral-900 dark:text-white"
-                    )}
-                  />
-                </div>
-                <p className="text-sm text-neutral-600 dark:text-slate-400 mb-4">
-                  {filteredMCPs.length} {t("explore.mcpAvailable")}
-                </p>
-              </div>
-            </section>
-
-            <section className="px-4 pb-24">
-              <div className="max-w-6xl mx-auto">
-                {mcpLoading ? (
-                  <div className="flex justify-center py-12">
-                    <div className="animate-spin h-8 w-8 border-2 border-pink-500 border-t-transparent rounded-full" />
-                  </div>
-                ) : filteredMCPs.length === 0 ? (
-                  <EmptyState type="mcp" />
-                ) : (
-                  <div className="space-y-4">
-                    {filteredMCPs.map((mcp, idx) => (
-                      <MCPCard key={mcp.id} mcp={mcp} index={idx} />
-                    ))}
-                  </div>
-                )}
-              </div>
-            </section>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* CTA */}
-      <section className="px-4 pb-24">
-        <div className="max-w-2xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className={cn(
-              "p-8 rounded-2xl text-center",
-              "bg-gradient-to-br from-amber-900/20 to-orange-900/20",
-              "border border-amber-500/30"
-            )}
-          >
-            <Sparkles className="h-10 w-10 text-amber-400 mx-auto mb-4" />
-            <h3 className="text-2xl font-bold mb-2">{t("explore.createOwn")}</h3>
-            <p className="text-slate-400 mb-6">{t("explore.createOwnDesc")}</p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Link
-                href="/login"
-                className={cn(
-                  "px-6 py-3 rounded-lg font-medium flex items-center justify-center gap-2",
-                  "bg-amber-500 text-slate-900 hover:bg-amber-400 transition-colors"
-                )}
-              >
-                {t("common.getStarted")}
+        <section className={styles.faq} aria-labelledby="questions-title">
+          <div className={`${styles.wrap} ${styles.faqGrid}`}>
+            <div>
+              <p className={styles.kicker}>{t("faqEyebrow")}</p>
+              <h2 id="questions-title">{t("questionsTitle")}</h2>
+              <Link href="/docs/getting-started" prefetch={false}>
+                {t("setupGuide")}
+                <ArrowUpRight size={16} aria-hidden="true" />
               </Link>
             </div>
-          </motion.div>
-        </div>
-      </section>
-    </div>
-  );
-}
-
-function EmptyState({ type }: { type: "playbooks" | "skills" | "mcp" }) {
-  const t = useTranslations();
-
-  const config = {
-    playbooks: { icon: Globe, color: "text-blue-700", title: t("explore.noPlaybooks"), desc: t("explore.noPlaybooksDesc") },
-    skills: { icon: Zap, color: "text-purple-700", title: t("explore.noSkills"), desc: t("explore.noSkillsDesc") },
-    mcp: { icon: Server, color: "text-pink-700", title: t("explore.noMCP"), desc: t("explore.noMCPDesc") },
-  };
-
-  const { icon: Icon, color, title, desc } = config[type];
-
-  return (
-    <div className="text-center py-16">
-      <div className="w-16 h-16 mx-auto mb-4 bg-blue-900/30 rounded-full flex items-center justify-center">
-        <Icon className={cn("h-8 w-8", color)} />
-      </div>
-      <h3 className="text-xl font-semibold text-slate-400 mb-2">{title}</h3>
-      <p className="text-slate-500 mb-6">{desc}</p>
-      <Link
-        href="/login"
-        className={cn(
-          "inline-flex items-center gap-2 px-6 py-3 rounded-lg",
-          "bg-amber-500 text-slate-900 font-medium",
-          "hover:bg-amber-400 transition-colors"
-        )}
-      >
-        <Sparkles className="h-5 w-5" />
-        {t("common.getStarted")}
-      </Link>
-    </div>
-  );
-}
-
-interface PlaybookCardProps {
-  playbook: PublicPlaybook;
-  index: number;
-  isStarred: boolean;
-  onToggleStar: () => void;
-  isLoggedIn: boolean;
-  isOwner: boolean;
-}
-
-function PlaybookCard({ playbook, index, isStarred, onToggleStar, isLoggedIn, isOwner }: PlaybookCardProps) {
-  const t = useTranslations();
-  const playbookUrl = `/dashboard/playbook/${playbook.id}`;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05 }}
-      className={cn(
-        "rounded-xl overflow-hidden group cursor-pointer flex flex-col",
-        "bg-white dark:bg-gradient-to-br dark:from-slate-900/80 dark:to-slate-800/80",
-        "border border-neutral-200 dark:border-blue-900/30 hover:border-amber-500/30",
-        "transition-all duration-300 hover:shadow-lg hover:shadow-amber-500/5 shadow-sm dark:shadow-none"
-      )}
-    >
-      <Link href={playbookUrl} className="block flex-1">
-        <div className="p-5">
-          <div className="flex items-start justify-between mb-3">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <h3 className="font-semibold text-lg truncate text-neutral-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
-                  {playbook.name}
-                </h3>
-                {isOwner && (
-                  <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs rounded-full font-medium shrink-0">
-                    {t("explore.yours")}
-                  </span>
-                )}
-              </div>
-              {/* Publisher profile */}
-              {playbook.publisher && (
-                <div className="flex items-center gap-2">
-                  {playbook.publisher.avatar_svg ? (
-                    <div className="w-5 h-5 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
-                      <PublisherAvatar value={playbook.publisher.avatar_svg} />
-                    </div>
-                  ) : (
-                    <div className="w-5 h-5 rounded-full bg-neutral-100 dark:bg-slate-700 flex items-center justify-center">
-                      <User className="h-3 w-3 text-neutral-400 dark:text-slate-400" />
-                    </div>
-                  )}
-                  <span className="text-xs text-neutral-500 dark:text-slate-400 flex items-center gap-1">
-                    {playbook.publisher.name}
-                    {playbook.publisher.is_verified && (
-                      <span className="text-blue-500 dark:text-blue-400" title="Verified">✓</span>
-                    )}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onToggleStar();
-              }}
-              className={cn(
-                "flex items-center gap-1 px-3 py-1.5 rounded-lg transition-all",
-                isStarred
-                  ? "bg-amber-500/20 text-amber-600 dark:text-amber-400"
-                  : "bg-neutral-100 dark:bg-slate-800/50 text-neutral-500 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-500/10"
-              )}
-              title={isLoggedIn ? (isStarred ? "Unstar" : "Star") : "Sign in to star"}
-            >
-              <Star className={cn("h-4 w-4", isStarred && "fill-current")} />
-              <span className="text-sm font-medium">{playbook.star_count}</span>
-            </button>
-          </div>
-
-          {playbook.description && (
-            <p className="text-sm text-neutral-600 dark:text-slate-400 mb-4 line-clamp-2">{playbook.description}</p>
-          )}
-
-          <div className="flex flex-wrap gap-3 mb-4">
-            <span className="flex items-center gap-1 text-xs text-neutral-500 dark:text-slate-500">
-              <Brain className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
-              {playbook.personas_count} {t("explore.personas")}
-            </span>
-            <span className="flex items-center gap-1 text-xs text-neutral-500 dark:text-slate-500">
-              <Zap className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
-              {playbook.skills_count} {t("explore.skills")}
-            </span>
-            <span className="flex items-center gap-1 text-xs text-neutral-500 dark:text-slate-500">
-              <Server className="h-3.5 w-3.5 text-pink-600 dark:text-pink-400" />
-              {playbook.mcp_servers_count} MCP
-            </span>
-          </div>
-
-          {playbook.tags && playbook.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {playbook.tags.slice(0, 4).map((tag) => (
-                <span key={tag} className="px-2 py-0.5 bg-neutral-100 dark:bg-blue-900/30 rounded text-xs text-neutral-500 dark:text-slate-400">
-                  {tag}
-                </span>
+            <div>
+              {["memory", "execution", "privacy", "tools"].map((key) => (
+                <details key={key}>
+                  <summary>
+                    {t(`faq.${key}.question`)}
+                    <span aria-hidden="true">+</span>
+                  </summary>
+                  <p>{t(`faq.${key}.answer`)}</p>
+                </details>
               ))}
-              {playbook.tags.length > 4 && (
-                <span className="px-2 py-0.5 text-xs text-neutral-500 dark:text-slate-500">+{playbook.tags.length - 4}</span>
-              )}
             </div>
-          )}
-        </div>
-      </Link>
-
-      <div className="px-5 py-3 border-t border-neutral-100 dark:border-slate-700/30 bg-neutral-50 dark:bg-slate-900/30">
-        <div className="flex items-center justify-between">
-          <Link
-            href={playbookUrl}
-            className={cn(
-              "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm",
-              "bg-amber-100 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-500/20",
-              "transition-colors"
-            )}
-          >
-            <ExternalLink className="h-4 w-4" />
-            {t("explore.view")}
-          </Link>
-          <span className="text-xs text-neutral-500 dark:text-slate-500 flex items-center gap-1">
-            <Clock className="h-3 w-3" />
-            {new Date(playbook.created_at).toLocaleDateString()}
-          </span>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
-// Extended skill type from API
-interface SkillWithPublisher extends Skill {
-  playbook_name?: string;
-  playbook_guid?: string;
-  publisher?: {
-    id: string;
-    name: string;
-    avatar_svg?: string;
-    is_verified?: boolean;
-    is_virtual?: boolean;
-  };
-  skill_attachments?: SkillAttachment[];
-}
-
-interface SkillAttachment {
-  type: 'file' | 'link';
-  url?: string;
-  filename?: string;
-}
-
-function SkillCard({ skill, index }: { skill: SkillWithPublisher; index: number }) {
-  const [copied, setCopied] = useState(false);
-  const isMarkdownSkill = !!(skill.content && skill.content.length > 0);
-
-  const copyToClipboard = async () => {
-    // Copy skill content or basic info as JSON
-    const content = skill.content || JSON.stringify({ name: skill.name, description: skill.description, licence: skill.licence }, null, 2);
-    await navigator.clipboard.writeText(content);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.03 }}
-      className={cn(
-        "p-4 rounded-xl shadow-sm dark:shadow-none flex flex-col",
-        isMarkdownSkill
-          ? "bg-white dark:bg-emerald-950/30 border-emerald-500/20 hover:border-emerald-500/40"
-          : "bg-white dark:bg-purple-950/30 border-purple-500/20 hover:border-purple-500/40",
-        "border transition-all"
-      )}
-    >
-      <div className="flex-1">
-        <div className="flex items-start justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <Zap className={cn("h-4 w-4", isMarkdownSkill ? "text-emerald-600 dark:text-emerald-400" : "text-purple-600 dark:text-purple-400")} />
-            <h4 className="min-w-0 wrap-anywhere font-medium text-neutral-900 dark:text-white">{skill.name}</h4>
-            {isMarkdownSkill && (
-              <span className="px-1.5 py-0.5 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-[10px] rounded font-medium">
-                SKILL
-              </span>
-            )}
           </div>
-          <button
-            onClick={copyToClipboard}
-            className={cn(
-              "p-1.5 rounded-lg transition-colors",
-              isMarkdownSkill
-                ? "text-neutral-400 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10"
-                : "text-neutral-400 dark:text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-500/10"
-            )}
-            title="Copy skill content"
-          >
-            {copied ? <Check className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4" />}
-          </button>
-        </div>
+        </section>
 
-        {skill.description && (
-          <p className="text-sm text-neutral-600 dark:text-slate-400 mb-3 line-clamp-2">{skill.description}</p>
-        )}
-
-        {/* Show token count for skills with content, or licence info */}
-        {isMarkdownSkill ? (
-          <div className="text-xs text-neutral-500 dark:text-slate-500 mb-2">
-            ~{Math.round((skill.content?.length || 0) / 4).toLocaleString()} tokens
-          </div>
-        ) : skill.licence && (
-          <div className="text-xs text-neutral-500 dark:text-slate-500 mb-2">
-            Licence: {skill.licence}
-          </div>
-        )}
-
-        {/* Attachments */}
-        {skill.skill_attachments && skill.skill_attachments.length > 0 && (
-          <div className="mb-3 flex flex-wrap gap-2">
-            {skill.skill_attachments.map((att: SkillAttachment, i: number) => (
-              <div
-                key={i}
-                className="flex items-center gap-1.5 px-2 py-1 bg-neutral-100 dark:bg-slate-800/50 border border-neutral-200 dark:border-slate-700/50 rounded text-xs text-neutral-600 dark:text-slate-300 max-w-full"
+        <section className={styles.closing} aria-labelledby="start-title">
+          <div className={styles.wrap}>
+            <div className={styles.closingIcon} aria-hidden="true">
+              <Layers size={36} />
+            </div>
+            <p className={styles.kicker}>{t("startEyebrow")}</p>
+            <h2 id="start-title">{t("startTitle")}</h2>
+            <p>{t("startDescription")}</p>
+            <div className={styles.actions}>
+              <Link
+                href="/dashboard"
+                prefetch={false}
+                className={styles.primary}
               >
-                {att.type === 'file' ? <FileText className="h-3 w-3" /> : <LinkIcon className="h-3 w-3" />}
-                <span className="truncate max-w-[150px]">{att.url || att.filename}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Publisher info */}
-      <div className="flex items-center justify-between mt-2 pt-2 border-t border-neutral-100 dark:border-slate-700/30">
-        {skill.publisher ? (
-          <div className="flex items-center gap-2">
-            {skill.publisher.avatar_svg ? (
-              <div className="w-5 h-5 rounded-full overflow-hidden bg-neutral-100 dark:bg-slate-700 flex items-center justify-center">
-                <PublisherAvatar value={skill.publisher.avatar_svg} />
-              </div>
-            ) : (
-              <div className="w-5 h-5 rounded-full bg-neutral-100 dark:bg-slate-700 flex items-center justify-center">
-                <User className="h-3 w-3 text-neutral-400 dark:text-slate-400" />
-              </div>
-            )}
-            <span className="text-xs text-neutral-500 dark:text-slate-400 flex items-center gap-1">
-              {skill.publisher.name}
-              {skill.publisher.is_verified && (
-                <span className="text-blue-500 dark:text-blue-400" title="Verified">✓</span>
-              )}
-            </span>
-          </div>
-        ) : skill.playbook_name && (
-          <span className="text-xs text-neutral-500 dark:text-slate-500 flex items-center gap-1">
-            <BookOpen className="h-3 w-3" />
-            {skill.playbook_name}
-          </span>
-        )}
-      </div>
-    </motion.div>
-  );
-}
-
-// Extended MCP type from API
-interface MCPWithPublisher extends MCPServer {
-  playbook_name?: string;
-  playbook_guid?: string;
-  publisher?: {
-    id: string;
-    name: string;
-    avatar_svg?: string;
-    is_verified?: boolean;
-    is_virtual?: boolean;
-  };
-}
-
-function MCPCard({ mcp, index }: { mcp: MCPWithPublisher; index: number }) {
-  const [copied, setCopied] = useState(false);
-  const [expanded, setExpanded] = useState(false);
-  const tools = Array.isArray(mcp.tools) ? mcp.tools : [];
-  const resources = Array.isArray(mcp.resources) ? mcp.resources : [];
-  const toolCount = tools.length;
-  const resourceCount = resources.length;
-  const hasDetails = toolCount > 0 || resourceCount > 0;
-
-  const copyConfig = async () => {
-    const config = JSON.stringify(mcp.transport_config || {}, null, 2);
-    await navigator.clipboard.writeText(config);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.03 }}
-      className={cn(
-        "rounded-xl overflow-hidden shadow-sm dark:shadow-none flex flex-col",
-        "bg-white dark:bg-pink-950/30",
-        "border border-pink-500/20 hover:border-pink-500/40",
-        "transition-all"
-      )}
-    >
-      <div
-        className={cn(
-          "flex items-start justify-between gap-4 p-4 flex-1",
-          hasDetails ? "cursor-pointer" : "cursor-default"
-        )}
-        onClick={() => {
-          if (!hasDetails) return;
-          setExpanded((prev) => !prev);
-        }}
-      >
-        <div className="flex items-start gap-3 flex-1 min-w-0">
-          <div className="p-2 rounded-lg bg-pink-100 dark:bg-pink-500/10 border border-pink-200 dark:border-pink-500/20">
-            <Server className="h-4 w-4 text-pink-600 dark:text-pink-400" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <h4 className="font-medium text-neutral-900 dark:text-white truncate">{mcp.name}</h4>
+                {t("create")}
+                <ArrowRight size={17} aria-hidden="true" />
+              </Link>
+              <a href="#use-cases" className={styles.closingLink}>
+                {t("browseExamples")}
+                <ArrowUpRight size={17} aria-hidden="true" />
+              </a>
             </div>
-            {mcp.description && (
-              <p className="text-sm text-neutral-600 dark:text-slate-400 line-clamp-2">{mcp.description}</p>
-            )}
-            <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-neutral-500 dark:text-slate-500">
-              <span className="flex items-center gap-1">
-                <Wrench className="h-3 w-3 text-pink-600 dark:text-pink-400" />
-                {toolCount} tools
-              </span>
-              <span className="flex items-center gap-1">
-                <FolderOpen className="h-3 w-3 text-purple-600 dark:text-purple-400" />
-                {resourceCount} resources
-              </span>
-              {mcp.transport_type && (
-                <span className="px-2 py-0.5 rounded bg-neutral-100 dark:bg-slate-700/30 text-neutral-500 dark:text-slate-500">
-                  {mcp.transport_type}
-                </span>
-              )}
-            </div>
+          </div>
+        </section>
+      </main>
+      <footer className={styles.footer}>
+        <div className={styles.wrap}>
+          <Link href="/" prefetch={false}>
+            AgentPlaybooks<span>{t("footerTagline")}</span>
+          </Link>
+          <div>
+            <Link href="/docs" prefetch={false}>
+              {t("docs")}
+            </Link>
+            <Link href="/privacy" prefetch={false}>
+              {t("privacy")}
+            </Link>
           </div>
         </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              copyConfig();
-            }}
-            className="p-1.5 text-neutral-400 dark:text-slate-400 hover:text-pink-600 dark:hover:text-pink-400 hover:bg-pink-50 dark:hover:bg-pink-500/10 rounded-lg transition-colors"
-            title="Copy MCP config"
-          >
-            {copied ? <Check className="h-4 w-4 text-green-500 dark:text-green-400" /> : <Copy className="h-4 w-4" />}
-          </button>
-          {hasDetails && (
-            <div className="text-neutral-400 dark:text-slate-500">
-              {expanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Expanded tools/resources */}
-      <AnimatePresence>
-        {expanded && hasDetails && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="overflow-hidden border-t border-neutral-100 dark:border-slate-800/60"
-          >
-            <div className="px-4 pb-4 pt-3 space-y-4">
-              {toolCount > 0 && (
-                <div className="space-y-2">
-                  <div className="text-xs uppercase tracking-wide text-neutral-500 dark:text-slate-500">Tools</div>
-                  <div className="space-y-2">
-                    {tools.map((tool, toolIndex) => (
-                      <div
-                        key={`${tool.name}-${toolIndex}`}
-                        className="rounded-lg border border-pink-200 dark:border-pink-500/10 bg-neutral-50 dark:bg-slate-900/40 px-3 py-2"
-                      >
-                        <div className="text-sm font-mono text-pink-700 dark:text-pink-300">{tool.name}</div>
-                        {tool.description && (
-                          <div className="text-xs text-neutral-600 dark:text-slate-400 mt-1">{tool.description}</div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {resourceCount > 0 && (
-                <div className="space-y-2">
-                  <div className="text-xs uppercase tracking-wide text-neutral-500 dark:text-slate-500">Resources</div>
-                  <div className="space-y-2">
-                    {resources.map((resource, resourceIndex) => (
-                      <div
-                        key={`${resource.name}-${resourceIndex}`}
-                        className="rounded-lg border border-purple-200 dark:border-purple-500/10 bg-neutral-50 dark:bg-slate-900/40 px-3 py-2"
-                      >
-                        <div className="text-sm text-purple-700 dark:text-purple-200">{resource.name}</div>
-                        <div className="text-xs text-neutral-500 dark:text-slate-500 mt-1 break-all">{resource.uri}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Publisher info */}
-      <div className="flex items-center justify-between px-4 py-3 border-t border-neutral-100 dark:border-slate-700/30 bg-neutral-50 dark:bg-slate-900/30 mt-auto">
-        {mcp.publisher ? (
-          <div className="flex items-center gap-2">
-            {mcp.publisher.avatar_svg ? (
-              <div className="w-5 h-5 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
-                <PublisherAvatar value={mcp.publisher.avatar_svg} />
-              </div>
-            ) : (
-              <div className="w-5 h-5 rounded-full bg-neutral-100 dark:bg-slate-700 flex items-center justify-center">
-                <User className="h-3 w-3 text-neutral-400 dark:text-slate-400" />
-              </div>
-            )}
-            <span className="text-xs text-neutral-500 dark:text-slate-400 flex items-center gap-1">
-              {mcp.publisher.name}
-              {mcp.publisher.is_verified && (
-                <span className="text-blue-500 dark:text-blue-400" title="Verified">✓</span>
-              )}
-            </span>
-          </div>
-        ) : mcp.playbook_name && (
-          <span className="text-xs text-neutral-500 dark:text-slate-500 flex items-center gap-1">
-            <BookOpen className="h-3 w-3" />
-            {mcp.playbook_name}
-          </span>
-        )}
-      </div>
-    </motion.div>
+      </footer>
+    </div>
   );
 }

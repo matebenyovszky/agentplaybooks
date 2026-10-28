@@ -18,8 +18,8 @@
   "landing": {
     "hero": {
       "title": "Egy playbook. Minden agent.",
-      "subtitle": "Nem újabb skill store: egyetlen, vendorfüggetlen playbook a teljes munkához — skillek, MCP szerverek, utasítások, memória, és titkok, amelyeket az agented úgy használ, hogy sosem látja őket — egy paranccsal kitelepítve Claude Code-ba, Cursorba, Codexbe, Antigravitybe és Hermesbe.",
-      "cta": "Playbook-ok felfedezése",
+      "subtitle": "Egyetlen, vendorfüggetlen playbook a teljes munkához — skillek, MCP szerverek, utasítások, memória, és titkok, amelyeket az agented úgy használ, hogy sosem látja őket — egy paranccsal kitelepítve Claude Code-ba, Cursorba, Codexbe, Antigravitybe és Hermesbe.",
+      "cta": "Felhasználási példák",
       "tryDemo": "Próbáld ki"
     },
     "whatIsPlaybook": {
@@ -103,10 +103,12 @@
       }
     },
     "publicRepo": {
-      "title": "Közösségi készlet",
-      "description": "Böngéssz és adj hozzá előre elkészített skilleket és MCP szervereket a közösségtől",
-      "browseSkills": "Skillek böngészése",
-      "browseMCP": "MCP szerverek böngészése"
+      "title": "Nézd meg, mire jó egy playbook",
+      "description": "Ismerj meg gyakorlati példákat projektátadásra, kutatásra és változtatások ellenőrzésére. Kezdj egy kis playbookkal, és alakítsd a saját munkádhoz.",
+      "badge": "Ötletek a következő feladatodhoz",
+      "cta": "Felhasználási példák",
+      "featureTitle": "Újrahasználható tudás",
+      "featureDescription": "Alakítsd a bevált munkamódszereket skillekké, amelyeket továbbvihetsz az ügynökeid között."
     },
     "useCases": {
       "title": "Ismerős?",
@@ -261,40 +263,212 @@
     }
   },
   "explore": {
-    "title": "Felfedezés",
-    "subtitle": "Fedezd fel a közösség által megosztott AI skilleket, playbookokat és MCP szervereket.",
-    "tabPlaybooks": "Playbookok",
-    "tabSkills": "Skillek",
-    "tabMCP": "MCP Szerverek",
-    "skills": "Skillek",
-    "personas": "persona",
-    "mcp": "MCP Szerverek",
-    "search": "Keresés...",
-    "searchPlaybooks": "Keresés név vagy leírás alapján...",
-    "searchSkills": "Skillek keresése név vagy leírás alapján...",
-    "searchMCP": "MCP szerverek keresése név vagy leírás alapján...",
-    "skillsAvailable": "elérhető skill",
-    "mcpAvailable": "elérhető MCP szerver",
-    "tags": "Címkék",
-    "verified": "Ellenőrzött",
-    "addToPlaybook": "Hozzáadás Playbookhoz",
-    "usageCount": "{count} alkalommal használva",
-    "playbooks": "playbook találat",
-    "sortBy": "Rendezés",
-    "mostStarred": "Legtöbb Csillag",
-    "mostRecent": "Legújabb",
-    "alphabetical": "Betűrend",
-    "download": "Letöltés",
-    "noPlaybooks": "Nem található publikus playbook",
-    "noPlaybooksDesc": "Légy te az első, aki megoszt egy playbookot a közösséggel!",
-    "noSkills": "Nem található publikus skill",
-    "noSkillsDesc": "A publikus playbookok skilljei itt fognak megjelenni.",
-    "noMCP": "Nem található publikus MCP szerver",
-    "noMCPDesc": "A publikus playbookok MCP szerverei itt fognak megjelenni.",
-    "createFirst": "Első Playbook Létrehozása",
-    "createOwn": "Hozz Létre Saját Playbookot",
-    "createOwnDesc": "Építsd és oszd meg AI konfigurációdat a világgal. Regisztrálj, hogy létrehozhasd és elmenthesd saját playbook-jaidat.",
-    "view": "Megtekintés",
-    "yours": "Saját"
+    "metaTitle": "Explore — Hozz ki többet az AI tudásából",
+    "eyebrow": "Fedezd fel az AgentPlaybooksot",
+    "fieldGuide": "Útmutató a gyakorlatból",
+    "title": "Ne kezdd újra.",
+    "titleAccent": "Építs arra, amit tudsz.",
+    "subtitle": "Adj az AI-nak egy projektet, amelyhez vissza tud térni. Tartsd egy playbookban az instrukciókat, a bevált módszereket és a döntéseket, majd vidd a szükséges kontextust a már használt eszközeidbe.",
+    "tryWorkflow": "Nézd meg működés közben",
+    "create": "Saját playbook létrehozása",
+    "heroNote": "A tudásod hordozható marad. A munkát az asszisztensed végzi.",
+    "exampleLabel": "Szemléltető projekt",
+    "onePlaybook": "Egy projekt. Egy playbook.",
+    "private": "Privát",
+    "heroRules": "Előbb ellenőrzés, aztán módosítás.",
+    "heroSkill": "Átnézés → tesztelés → átadás",
+    "heroMemory": "Belépés e-mailes linkkel. Az éles ellenőrzés hátravan.",
+    "heroContext": "Annyi kontextus, amennyi a feladathoz kell",
+    "nextSession": "A következő beszélgetés",
+    "nextSessionExample": "„Folytassuk a Northstart. Mit ellenőrizzünk most?”",
+    "clientsLabel": "Projektkontextus a már használt AI-eszközeidben",
+    "andMore": "és más kliensek",
+    "pageNavigation": "Az Explore szakaszai",
+    "navWorkflows": "Gyakorlati példák",
+    "navInside": "Mi van a playbookban?",
+    "navStart": "Első lépések",
+    "casesEyebrow": "01 / Kérdésből használható eredmény",
+    "casesTitle": "Ugyanaz az AI. Jobb kiindulópont.",
+    "casesIntro": "Válassz egy helyzetet. Nézd meg, mit kérsz, milyen háttértudás számít, és milyen lehet egy valóban hasznos válasz.",
+    "chooseWorkflow": "Válassz munkafolyamatot",
+    "workedExample": "Kidolgozott példa",
+    "requestLabel": "Ezt kéred",
+    "contextLabel": "Ezt adja a playbook",
+    "resultLabel": "Ezt készítheti az asszisztens",
+    "contextTypes": {
+      "goal": "Projektcél",
+      "skill": "Bevált módszer",
+      "memory": "Mentett háttértudás"
+    },
+    "contextNote": "Csak a szükséges részletek, nem a teljes tudástár.",
+    "illustrative": "Szemléltető eredmény, nem élő végrehajtás. A válasz az asszisztenstől, a forrásoktól és az elérhető eszközöktől függ.",
+    "openStarter": "Mintaplaybook megnyitása",
+    "starterNote": "Ezek a saját készítésű, nyilvános minták angol nyelvű, általános instrukciókat tartalmaznak. Projektadatok hozzáadása előtt készíts privát másolatot. A fenti helyzetek a személyre szabást szemléltetik.",
+    "cases": {
+      "handoff": {
+        "title": "Projekt folytatása",
+        "tagline": "Kevesebb ismétlés, több haladás.",
+        "headline": "Az új beszélgetés ne legyen tiszta lap.",
+        "description": "Térj vissza egy hét után, vagy válts másik asszisztensre anélkül, hogy minden döntést újra össze kellene szedned.",
+        "prompt": "„Folytassuk a Northstar ügyfélportált. Mi legyen a következő lépés?”",
+        "situation": "Új munkamenetet nyitottál. A korábbi beszélgetés nincs benne a kontextusában.",
+        "context": {
+          "goal": "Akadálymentes belépési folyamat az ügyfélportálhoz.",
+          "skill": "Különítsd el az igazolt eredményeket, a nyitott kérdéseket és a teendőket.",
+          "memory": "E-mailes belépési link mellett döntöttünk. A tesztkörnyezet működik, az éles még nincs ellenőrizve."
+        },
+        "resultTitle": "Használható projektátadás",
+        "results": {
+          "one": "Állapot: a feljegyzés szerint a tesztkörnyezetben működik a belépés. Az éles állapot nem igazolt.",
+          "two": "Következő ellenőrzések: levélkézbesítés, lejárt linkek és billentyűzetes navigáció.",
+          "three": "Módosítás előtt kérd el az éles környezet adatait és a szükséges jóváhagyást."
+        },
+        "starter": "Kezdj a Project Handoff mintával"
+      },
+      "research": {
+        "title": "Kutatásból döntés",
+        "tagline": "Következtetések előtt források.",
+        "headline": "Ne csak a választ tartsd meg, az érveket is.",
+        "description": "Bevált kutatási módszerrel és elmentett szempontokkal készíts olyan összefoglalót, amely vitatható és frissíthető.",
+        "prompt": "„Hasonlítsd össze ezt a két feladatkezelőt. Mit kell még tudnunk a választáshoz?”",
+        "situation": "Két forrásdokumentumot adsz. A hiányzó információkat az asszisztensnek nem szabad kitalálnia.",
+        "context": {
+          "goal": "Adatok exportálására alkalmas feladatkezelő egy kis csapatnak.",
+          "skill": "Hivatkozz a kapott forrásokra, hasonlítsd össze az állításokat, jelöld a bizonytalanságot.",
+          "memory": "Az export kötelező. A keret jóváhagyása és az SSO-igény még nyitott."
+        },
+        "resultTitle": "Forrásokra épülő döntési anyag",
+        "results": {
+          "one": "A megadott dokumentumok állításainak összevetése, forráshivatkozásokkal.",
+          "two": "Hiánylista: ellenőrizni kell az export tartalmát, a végleges árat és az SSO-csomagot.",
+          "three": "Feltételes javaslat, azokkal a feltevésekkel, amelyek megváltoztathatják."
+        },
+        "starter": "Kezdj a Research Brief mintával"
+      },
+      "review": {
+        "title": "Módosítás átnézése",
+        "tagline": "A valóban fontos kockázatok.",
+        "headline": "A saját elvárásaid is legyenek a review részei.",
+        "description": "Vidd magaddal a projektszabályokat és a korábbi döntéseket a kódellenőrzésbe, ne kelljen mindig újra leírni őket.",
+        "prompt": "„Nézd át ezt az API-cache módosítást. Mit ellenőrizzünk kiadás előtt?”",
+        "situation": "A fejlesztőasszisztens átnézheti a változásokat és tesztelhet, ha az eszközei és a jogosultságai lehetővé teszik.",
+        "context": {
+          "goal": "Gyorsabb válaszok a privát adatok kiszivárgása nélkül.",
+          "skill": "Kövesd végig a jogosultságokat, a cache-kulcsokat, az érvénytelenítést és a hibautakat.",
+          "memory": "A publikus és privát válaszok külön maradnak. Gyorsulást csak mérés után állítunk."
+        },
+        "resultTitle": "Célzott kiadási ellenőrzés",
+        "results": {
+          "one": "Ellenőrizd, hogy a cache-kulcsok minden szükséges jogosultsági határt megkülönböztetnek-e.",
+          "two": "Vizsgáld meg a jogváltozásokat, az elavult bejegyzéseket és a névtelen, illetve belépett kéréseket.",
+          "three": "Írd le az igazolt eredményeket, a megmaradt kockázatokat és a hiányzó méréseket."
+        },
+        "starter": "Kezdj a Change Review mintával"
+      }
+    },
+    "anatomyEyebrow": "02 / A playbook belülről",
+    "anatomyTitle": "Projektleírás. Emlékezettel.",
+    "anatomyIntro": "Egy playbook összefogja, amire az asszisztensnek a következetes munkához szüksége van. Kezdd az instrukciókkal, a többit akkor add hozzá, amikor kell.",
+    "contextPrinciple": "A releváns kontextus többet ér a sok kontextusnál.",
+    "contextPrincipleDetail": "A feladathoz szükséges skillt, referenciaanyagot vagy emléket kérd le. A többi maradhat a tudástárban.",
+    "anatomy": {
+      "persona": {
+        "title": "Szerepkör",
+        "description": "Határozd meg az asszisztens szerepét és nézőpontját.",
+        "example": "„Gyakorlatias projektellenőrként segíts.”"
+      },
+      "instructions": {
+        "title": "Instrukciók",
+        "description": "Célok, határok és munkaszabályok egy helyen.",
+        "example": "„Előbb ellenőrizz. Jelöld a feltevéseket.”"
+      },
+      "skills": {
+        "title": "Skillek",
+        "description": "Újrahasználható módszerek a hozzájuk tartozó segédanyagokkal.",
+        "example": "Kiadási ellenőrzőlista + review-útmutató"
+      },
+      "memory": {
+        "title": "Memória",
+        "description": "Mentsd el tudatosan a következő munkamenethez fontos döntéseket és tényeket.",
+        "example": "Döntés: belépés e-mailes linkkel"
+      },
+      "tools": {
+        "title": "Eszközkapcsolatok",
+        "description": "Hivatkozz a kliens számára szükséges munkaeszközökre.",
+        "example": "Kódtár, adatbázis, feladatkezelő"
+      },
+      "secrets": {
+        "title": "Korlátozott hozzáférésű kulcsok",
+        "description": "A hitelesítő adatokat a projektinstrukcióktól elkülönítve, szabályozott hozzáféréssel kezeld.",
+        "example": "Csak a szükséges szolgáltatásra érvényes kulcs"
+      }
+    },
+    "howEyebrow": "03 / Az első hasznos munkamenet",
+    "howTitle": "Kezdd kicsiben. Építs a valódi munkára.",
+    "howIntro": "Nem kell óriási prompt vagy eszköztár. Egy projekt, egy világos cél és egy bevált módszer elég az induláshoz.",
+    "steps": {
+      "start": {
+        "title": "Szabd a projektedre",
+        "description": "Hozz létre playbookot vagy másolj egy mintát. Add meg a célt, a korlátokat és egy ismétlődő feladatot.",
+        "outcome": "Világos munkakeret"
+      },
+      "connect": {
+        "title": "Kapcsold az asszisztensedhez",
+        "description": "Kövesd a kliensedhez tartozó útmutatót. Válassz MCP-t, helyi skillbeállítást vagy API-t a munkamódodhoz.",
+        "outcome": "Kontextus ott, ahol dolgozol"
+      },
+      "continue": {
+        "title": "Tartsd meg a tanulságokat",
+        "description": "Ha elérhetők a memóriaeszközök, kérd meg az asszisztenst a fontos döntések mentésére. Következő használat előtt ellenőrizd őket.",
+        "outcome": "Jobb kiindulópont legközelebb"
+      }
+    },
+    "connectionTitle": "Válassz a munkádhoz illő kapcsolatot.",
+    "connectionIntro": "A playbook ugyanaz marad. A kapcsolódás változhat.",
+    "connections": {
+      "chat": {
+        "title": "Beszélgetésben dolgozol",
+        "description": "Kapcsold a playbookot egy támogatott asszisztenshez, és kérd a szükséges kontextust.",
+        "label": "Kliensbeállítási útmutatók"
+      },
+      "code": {
+        "title": "Szerkesztőben dolgozol",
+        "description": "A CLI-vel importálhatod, exportálhatod és szinkronizálhatod az ügynökbeállításokat.",
+        "label": "CLI-dokumentáció"
+      },
+      "automate": {
+        "title": "Saját folyamatot építesz",
+        "description": "Az API-n keresztül scriptekből és alkalmazásokból is kezelheted a playbookokat.",
+        "label": "API-dokumentáció"
+      }
+    },
+    "faqEyebrow": "Néhány fontos különbség",
+    "questionsTitle": "Mielőtt belevágsz.",
+    "setupGuide": "Beállítási útmutató",
+    "faq": {
+      "memory": {
+        "question": "Miben más ez, mint a beszélgetési előzmény?",
+        "answer": "A playbook a kiválasztott instrukciókat, skilleket és mentett tényeket egyetlen beszélgetéstől függetlenül tárolja. Nem emlékszik automatikusan minden chatre. Az asszisztensnek be kell olvasnia a szükséges kontextust, és külön el kell mentenie, ami később fontos lehet."
+      },
+      "execution": {
+        "question": "Az AgentPlaybooks végzi el helyettem a feladatot?",
+        "answer": "A munkát az AI-kliensed és a hozzá kapcsolt eszközök végzik. Az AgentPlaybooks újrahasználható tudást és beállításokat ad hozzá. Egy mentett instrukcióból nem lesz automatikusan időzített feladat, és az asszisztens sem kap több jogosultságot."
+      },
+      "privacy": {
+        "question": "Hová kerüljenek a saját projektadataim?",
+        "answer": "A saját privát playbookodba. A nyilvános minták bárki által olvasható példák. Előbb készíts másolatot, ellenőrizd a hozzáféréseket, a hitelesítő adatokat pedig a külön titokkezelési funkciókban tárold."
+      },
+      "tools": {
+        "question": "MCP-t, skilleket vagy API-t használjak?",
+        "answer": "Válaszd azt, amit a kliensed a legjobban támogat. Az MCP strukturált eszközöket ad a beszélgetéshez, a skill újrahasználható instrukciót, a CLI és az API fájlos vagy automatizált munkához illik. A kis, célzott lekérések többet számítanak a kapcsolat nevénél."
+      }
+    },
+    "startEyebrow": "Legyen mire építeni legközelebb",
+    "startTitle": "Adj előnyt a következő ötletednek.",
+    "startDescription": "Válassz egy projektet, amelyet folyton újra elmagyarázol. Készíts belőle playbookot, és építs rá.",
+    "browseExamples": "Vissza a példákhoz",
+    "footerTagline": "Újrahasználható tudás a saját munkádhoz.",
+    "docs": "Dokumentáció",
+    "privacy": "Adatvédelem"
   }
 }

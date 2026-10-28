@@ -37,4 +37,4 @@ A Playbook egy hordozható fájl, amely a következőket tartalmazza:
 
 Készen áll első hordozható ágense megépítésére?
 
-[Fedezze fel a Közösséget](/explore) vagy [Hozza létre első Playbook-ját](/dashboard).
+[Nézd meg a felhasználási példákat](/explore) vagy [Hozd létre első playbookodat](/dashboard).

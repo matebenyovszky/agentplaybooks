@@ -122,14 +122,14 @@ export default function FavoritesPage() {
             No favorites yet
           </h2>
           <p className="text-neutral-500 dark:text-slate-500 mb-6">
-            Star playbooks from the Explore page to add them here
+            Your saved favorites will appear here. Explore practical workflows for your next playbook.
           </p>
           <Link
             href="/explore"
             className="inline-flex items-center gap-2 px-6 py-3 bg-amber-500 text-slate-900 rounded-lg font-medium hover:bg-amber-400 transition-colors"
           >
             <Globe className="h-5 w-5" />
-            Explore Playbooks
+            Explore Use Cases
           </Link>
         </div>
       ) : (
@@ -195,7 +195,7 @@ export default function FavoritesPage() {
               )}
 
               <Link
-                href={`/explore?playbook=${playbook.guid}`}
+                href={`/dashboard/playbook/${playbook.guid}`}
                 className="inline-flex items-center gap-1.5 text-sm text-amber-400 hover:text-amber-300 transition-colors"
               >
                 <ExternalLink className="h-4 w-4" />

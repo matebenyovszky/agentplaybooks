@@ -2,12 +2,15 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { PGlite } from "@electric-sql/pglite";
 import { pg_trgm } from "@electric-sql/pglite/contrib/pg_trgm";
+import { pgcrypto } from "@electric-sql/pglite/contrib/pgcrypto";
+import { ATTACHMENT_LIMITS } from "../src/lib/supabase/types";
 
 const OWNER = "00000000-0000-4000-8000-000000000001";
 const OTHER = "00000000-0000-4000-8000-000000000002";
 const PB = "00000000-0000-4000-8000-000000000003";
 const SKILL = "00000000-0000-4000-8000-000000000004";
 const migration = readFileSync("supabase/migrations/20260913173449_harden_public_functions.sql", "utf8");
+const attachmentLimitMigration = readFileSync("supabase/migrations/20261028062350_increase_skill_attachment_limit_to_25.sql", "utf8");
 // schema.sql now ends with both migrations folded in. The workflows below start
 // from the snapshot as it stood before them, so the migrations are still the
 // thing under test.
@@ -162,6 +165,25 @@ describe.each([false, true])("database workflows (hardened=%s)", (hardened) => {
     try { await expect(db.exec(migration)).rejects.toThrow(/public schema is writable/); }
     finally { await db.exec("rollback"); }
   });
+
+  it("raises the attachment limit to 25 without changing function grants", async () => {
+    const aclBefore = (await db.query("select proacl from pg_proc where oid='public.check_attachment_limit()'::regprocedure")).rows;
+    await db.exec(attachmentLimitMigration);
+    await db.exec(attachmentLimitMigration);
+    expect((await db.query("select proacl from pg_proc where oid='public.check_attachment_limit()'::regprocedure")).rows).toEqual(aclBefore);
+    expect(ATTACHMENT_LIMITS.MAX_FILES_PER_SKILL).toBe(25);
+    await asRole("authenticated", "delete from public.skill_attachments");
+    await asRole("authenticated", `insert into public.skill_attachments(skill_id,filename,file_type,content,size_bytes)
+      select '${SKILL}', 'file-' || n, 'text', 'a', 1 from generate_series(1,25) as n`);
+    expect((await db.query("select count(*)::int as n from public.skill_attachments")).rows).toEqual([{ n: 25 }]);
+    await expect(asRole("authenticated", `insert into public.skill_attachments(skill_id,filename,file_type,content,size_bytes)
+      values ('${SKILL}','overflow','text','a',1)`)).rejects.toThrow(/Maximum 25/);
+    await expect(asRole("service_role", `select public.add_skill_attachment('${SKILL}','server-overflow','text','a')`)).rejects.toThrow(/Maximum 25/);
+    await asRole("authenticated", "update public.skill_attachments set description='changed' where filename='file-25'");
+    await asRole("authenticated", "delete from public.skill_attachments where filename='file-25'");
+    await asRole("service_role", `select public.add_skill_attachment('${SKILL}','replacement','text','a')`);
+    expect((await db.query("select count(*)::int as n from public.skill_attachments")).rows).toEqual([{ n: 25 }]);
+  });
 });
 
 // A fresh self-hosted database is built from schema.sql alone. It has to carry
@@ -170,7 +192,7 @@ describe.each([false, true])("database workflows (hardened=%s)", (hardened) => {
 describe("fresh database from schema.sql", () => {
   let db: PGlite;
   beforeAll(async () => {
-    db = new PGlite({ extensions: { pg_trgm } });
+    db = new PGlite({ extensions: { pg_trgm, pgcrypto } });
     await db.exec(`
       create role anon;
       create role authenticated;
@@ -178,6 +200,7 @@ describe("fresh database from schema.sql", () => {
       create role supabase_auth_admin;
       create schema auth;
       create schema extensions;
+      create extension pgcrypto with schema extensions;
       create function extensions.uuid_generate_v4() returns uuid language sql as 'select gen_random_uuid()';
       create function auth.uid() returns uuid language sql as 'select null::uuid';
       create function auth.role() returns text language sql as 'select current_user::text';
@@ -199,5 +222,18 @@ describe("fresh database from schema.sql", () => {
       where pronamespace='public'::regnamespace and proname <> 'track_memory_history'
         and not coalesce(proconfig, '{}') @> array['search_path=pg_catalog, public, pg_temp']`);
     expect(unpinned.rows).toEqual([]);
+  });
+
+  it("allows 25 attachments and rejects a 26th on a fresh database", async () => {
+    await db.exec(`
+      insert into auth.users(id,email) values ('${OWNER}','owner@example.invalid');
+      insert into playbooks(id,user_id,guid,name) values ('${PB}','${OWNER}','attachment-limit-test','Test');
+      insert into skills(id,playbook_id,name,content) values ('${SKILL}','${PB}','Test skill','test');
+      insert into skill_attachments(skill_id,filename,file_type,content,size_bytes)
+        select '${SKILL}', 'file-' || n, 'text', 'a', 1 from generate_series(1,25) as n;
+    `);
+    expect((await db.query("select count(*)::int as n from skill_attachments")).rows).toEqual([{ n: 25 }]);
+    await expect(db.exec(`insert into skill_attachments(skill_id,filename,file_type,content,size_bytes)
+      values ('${SKILL}','overflow','text','a',1)`)).rejects.toThrow(/Maximum 25/);
   });
 });

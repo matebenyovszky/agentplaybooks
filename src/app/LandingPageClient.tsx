@@ -544,8 +544,8 @@ export default function LandingPageClient() {
             {[
               {
                 icon: <Sparkles className="h-8 w-8 text-amber-500 dark:text-amber-400" />,
-                title: "Skills Marketplace",
-                description: "Browse, share, and discover community-created skills. Like an app store, but for AI capabilities.",
+                title: t("landing.publicRepo.featureTitle"),
+                description: t("landing.publicRepo.featureDescription"),
               },
               {
                 icon: <Server className="h-8 w-8 text-blue-500 dark:text-blue-400" />,
@@ -575,7 +575,7 @@ export default function LandingPageClient() {
         </div>
       </section>
 
-      {/* Community library CTA */}
+      {/* Practical workflows */}
       <section className="py-24 px-4 bg-gradient-to-b from-white to-blue-50/50 dark:from-transparent dark:to-blue-900/10">
         <div className="max-w-4xl mx-auto text-center">
           <motion.div
@@ -585,7 +585,7 @@ export default function LandingPageClient() {
             className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/10 border border-amber-500/20 mb-6"
           >
             <Sparkles className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-            <span className="text-sm text-amber-700 dark:text-amber-300">Community Library</span>
+            <span className="text-sm text-amber-700 dark:text-amber-300">{t("landing.publicRepo.badge")}</span>
           </motion.div>
           <motion.h2
             initial={{ opacity: 0 }}
@@ -599,10 +599,9 @@ export default function LandingPageClient() {
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
-            className="text-xl text-slate-400 mb-10"
+            className="text-xl text-slate-600 dark:text-slate-400 mb-10"
           >
-            Browse public skills, personas, and MCP servers built by the community, and install
-            any of them into your own playbook. For software agents today, physical robots tomorrow.
+            {t("landing.publicRepo.description")}
           </motion.p>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -615,7 +614,7 @@ export default function LandingPageClient() {
               className="px-8 py-4 bg-gradient-to-r from-amber-600 to-amber-400 rounded-full font-semibold text-lg text-slate-900 hover:opacity-90 transition-opacity flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25"
             >
               <Sparkles className="h-5 w-5" />
-              Explore Public Skills
+              {t("landing.publicRepo.cta")}
             </Link>
             <Link
               href="/enterprise"
@@ -725,7 +724,7 @@ export default function LandingPageClient() {
             <div>
               <h4 className="font-semibold text-neutral-900 dark:text-slate-300 mb-3">Product</h4>
               <ul className="space-y-2 text-sm text-neutral-500 dark:text-slate-500">
-                <li><Link href="/explore" className="hover:text-amber-600 dark:hover:text-amber-400 transition-colors">Explore Public Skills</Link></li>
+                <li><Link href="/explore" className="hover:text-amber-600 dark:hover:text-amber-400 transition-colors">{t("landing.publicRepo.cta")}</Link></li>
                 <li><Link href="/docs" className="hover:text-amber-600 dark:hover:text-amber-400 transition-colors">Documentation</Link></li>
                 <li><Link href="/enterprise" className="hover:text-amber-600 dark:hover:text-amber-400 transition-colors">Enterprise</Link></li>
               </ul>
