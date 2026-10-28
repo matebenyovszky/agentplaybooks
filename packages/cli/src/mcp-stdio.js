@@ -8,7 +8,7 @@ const MAX_RESPONSE_BYTES = 8 * 1024 * 1024;
 export function createMcpRelay({ url, keyEnvVar = "AGENTPLAYBOOKS_API_KEY", keyHeader = "X-API-Key", env = process.env, fetchImpl = fetch, signal, allowInsecureHttp = false }) {
   const endpoint = new URL(url);
   if (endpoint.username || endpoint.password || endpoint.search || endpoint.hash ||
-      !/^\/api\/mcp\/(?:manage|[a-f0-9-]+)$/i.test(endpoint.pathname) ||
+      !/\/api\/mcp\/(?:manage|[a-f0-9-]+)$/i.test(endpoint.pathname) ||
       !(endpoint.protocol === "https:" || endpoint.protocol === "http:" && (allowInsecureHttp || ["localhost", "127.0.0.1", "[::1]"].includes(endpoint.hostname)))) {
     throw new Error("Use an AgentPlaybooks HTTPS MCP endpoint (localhost HTTP is also supported).");
   }

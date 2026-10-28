@@ -24,7 +24,8 @@ test("relay stays offline when idle and answers local ping without HTTP", async 
 
 test("actual MCP requests forward once with credentials, protocol, session and unchanged results", async () => {
   const methods = [];
-  const relay = createMcpRelay({ url, env, fetchImpl: async (_url, options) => {
+  const relay = createMcpRelay({ url: "https://example.test/hosted/api/mcp/manage", env, fetchImpl: async (_url, options) => {
+    assert.equal(_url, "https://example.test/hosted/api/mcp/manage");
     const body = JSON.parse(options.body); methods.push(body.method);
     assert.equal(options.headers["X-API-Key"], "test-secret");
     assert.equal(options.redirect, "error");
