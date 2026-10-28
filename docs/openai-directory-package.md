@@ -8,9 +8,10 @@ node scripts/pack-openai-directory.mjs --output=.tmp/agentplaybooks-openai.zip
 
 The package uses shared release metadata and the website's logo, a hosted-only
 playbook skill, and the account MCP endpoint with OAuth dynamic registration.
-The directory package selects `?toolset=full` so clients can discover the
-complete tool catalog during scanning; the server's default compact view is
-unchanged. Every call still enforces the connected account's permissions.
+Keep the MCP URL identical to the initial portal upload: existing OpenAI apps
+cannot change their MCP URL, including its query parameters. The endpoint exposes
+the compact catalog and `find_tools` for discovering additional operations.
+Every call still enforces the connected account's permissions.
 It includes no local CLI dependency, fixed bearer token, authentication headers
 or reviewer credentials. The packer rejects unexpected endpoints and server
 settings rather than copying credentials into a public archive.
@@ -21,7 +22,7 @@ draft. The packer accepts HTTPS URLs without embedded credentials.
 
 The initial 0.8.0 draft was uploaded on 2026-10-28. Upload does not mean review
 approval or publication. Track actual status in the
-[release issue](https://github.com/matebenyovszky/agentplaybooks/issues/243).
+[release issue](https://github.com/matebenyovszky/agentplaybooks/issues/245).
 
 Complete domain verification, OAuth connection, automated findings and reviewer
 materials in the portal before submitting. The public domain challenge is in
