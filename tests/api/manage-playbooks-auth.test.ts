@@ -20,6 +20,7 @@ vi.mock("@/lib/repositories/playbooks", () => ({
 }));
 
 const { getUserFromAuthOrApiKey } = await import("@/app/api/_shared/auth");
+const { listAccessiblePlaybooks } = await import("@/lib/repositories/playbooks");
 const { GET, POST } = await import("@/app/api/manage/playbooks/route");
 
 function request(body?: unknown) {
@@ -41,6 +42,14 @@ describe("GET /api/manage/playbooks", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual([{ id: "p1", guid: "office-skills" }]);
     expect(getUserFromAuthOrApiKey).toHaveBeenCalledWith(expect.anything(), "playbooks:read");
+  });
+
+  it("opts into summary rows only for the dashboard while preserving the default API", async () => {
+    vi.mocked(getUserFromAuthOrApiKey).mockResolvedValue({ id: "user-1" });
+    await GET(new Request("https://apbks.test/api/manage/playbooks?view=summary"));
+    expect(listAccessiblePlaybooks).toHaveBeenLastCalledWith("user-1", true);
+    await GET(request());
+    expect(listAccessiblePlaybooks).toHaveBeenLastCalledWith("user-1");
   });
 
   it("still refuses a credential that cannot read playbooks", async () => {

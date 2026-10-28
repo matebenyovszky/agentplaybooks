@@ -1192,6 +1192,12 @@ COMMENT ON COLUMN public.audit_logs.prev_hash IS
 COMMENT ON COLUMN public.audit_logs.hash IS
   'SHA-256 hex of the canonical JSON of this row (including prev_hash, excluding hash).';
 
+-- Full ordering lets the chain-tip lookup stop at the first valid tip.
+CREATE INDEX IF NOT EXISTS audit_logs_chain_tip_order_idx
+  ON public.audit_logs (playbook_id, created_at DESC, id DESC)
+  INCLUDE (hash)
+  WHERE hash IS NOT NULL;
+
 CREATE UNIQUE INDEX IF NOT EXISTS audit_logs_playbook_prev_hash_idx
   ON public.audit_logs (playbook_id, prev_hash)
   WHERE prev_hash IS NOT NULL;

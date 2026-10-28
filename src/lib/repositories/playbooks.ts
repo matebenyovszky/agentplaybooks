@@ -73,31 +73,40 @@ function isMissingCollaborationTable(error: { code?: string; message?: string })
     || Boolean(error.message?.includes("playbook_collaborators"));
 }
 
-const playbookListSelection = `
-  *,
+const playbookListSelection = (summary: boolean) => `
+  ${summary ? "id,guid,user_id,name,description,visibility,updated_at" : "*"},
   skills:skills(count),
   mcp_servers:mcp_servers(count),
   memories:memories(count)
 `;
 
+export type PlaybookListSummary = Pick<PlaybookListItem,
+  "id" | "guid" | "user_id" | "name" | "description" | "visibility" | "updated_at"
+  | "skill_count" | "mcp_server_count" | "memory_count" | "current_user_role"
+>;
+
+export function listAccessiblePlaybooks(userId: string): Promise<PlaybookListItem[]>;
+export function listAccessiblePlaybooks(userId: string, summary: true): Promise<PlaybookListSummary[]>;
 export async function listAccessiblePlaybooks(
   userId: string,
-): Promise<PlaybookListItem[]> {
+  summary = false,
+): Promise<PlaybookListItem[] | PlaybookListSummary[]> {
   const supabase = getServiceSupabase();
 
-  const { data: ownedData, error: ownedError } = await supabase
-    .from("playbooks")
-    .select(playbookListSelection)
-    .eq("user_id", userId)
-    .order("updated_at", { ascending: false });
-
+  // These independent reads used to cost two sequential database round trips.
+  const [ownedResult, membershipResult] = await Promise.all([
+    supabase.from("playbooks")
+      .select(playbookListSelection(summary))
+      .eq("user_id", userId)
+      .order("updated_at", { ascending: false }),
+    supabase.from("playbook_collaborators")
+      .select("playbook_id, role")
+      .eq("user_id", userId)
+      .not("accepted_at", "is", null),
+  ]);
+  const { data: ownedData, error: ownedError } = ownedResult;
+  const { data: memberships, error: membershipError } = membershipResult;
   if (ownedError) throw new Error(ownedError.message);
-
-  const { data: memberships, error: membershipError } = await supabase
-    .from("playbook_collaborators")
-    .select("playbook_id, role")
-    .eq("user_id", userId)
-    .not("accepted_at", "is", null);
 
   // Collaboration was introduced after owned playbooks. A deployment that has
   // not applied that optional migration must still show the owner's data.
@@ -116,7 +125,7 @@ export async function listAccessiblePlaybooks(
   if (sharedIds.length > 0) {
     const sharedResult = await supabase
       .from("playbooks")
-      .select(playbookListSelection)
+      .select(playbookListSelection(summary))
       .in("id", sharedIds)
       .order("updated_at", { ascending: false });
     if (sharedResult.error) throw new Error(sharedResult.error.message);
