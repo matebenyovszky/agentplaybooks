@@ -15,6 +15,70 @@ Keys** remain available for automation, CI, and clients that do not support
 OAuth. Both credentials resolve to the same AgentPlaybooks account and the
 same authorization boundaries.
 
+## Compact MCP discovery
+
+`/api/mcp/manage` advertises 15 common tools by default (`toolset=core`).
+Use `find_tools({query: "reset persona"})` to discover another operation and
+its input schema before choosing a playbook. The default is a compact catalog:
+existing direct calls still work with their original permissions.
+
+| Connection query | Advertised operations | Call restriction |
+| --- | --- | --- |
+| omitted or `?toolset=core` | 15 common tools | Existing permissions |
+| `?toolset=full` | Complete catalog, including legacy persona names | Existing permissions |
+| `?toolset=runtime` | Runtime work, excluding configuration administration | Enforced |
+| `?toolset=memory` | Memory and task planning | Enforced |
+| `?toolset=canvas` | Canvas documents and sections | Enforced |
+| `?toolset=secrets` | Secret metadata, proxy use and administration | Enforced |
+| `?toolset=admin` | Playbook, persona, skill and server administration | Enforced |
+
+Pinned views also include `list_playbooks`, `get_playbook` and `find_tools`
+for navigation. `find_tools` searches only operations allowed by the pinned
+view. A view never grants additional account or playbook permissions. Unknown
+view names fail instead of silently widening access. Query parameters are
+client-selected limits, not a substitute for issuing restricted API keys.
+
+Use `update_persona({playbook_id, name, system_prompt, metadata})` to edit
+selected persona fields. `persona_id` is optional; if supplied it must equal
+`playbook_id`. `reset_persona({playbook_id})` discards custom persona settings
+and restores Assistant. Legacy `create_persona` and `delete_persona` calls
+remain supported.
+
+Use `write_memory` for a fact or note; `create_task_graph` for a multi-step plan;
+`update_task_status` for an existing task's progress. A shared storage table
+does not make these operations interchangeable.
+
+## Measuring actual MCP use
+
+Both MCP endpoints emit `mcp.tool_usage` structured events for tool calls.
+They include the known tool name, success/error, duration and a hashed account
+or shared-credential reference. They do not contain arguments, result content,
+emails, IPs, credentials or error messages. Forwarded management calls are
+counted once; HTTP 200 JSON-RPC failures remain failures. Discovery and
+handshake traffic is separate. The existing database audit trail remains the
+source for auditable changes; these operational logs are usage observations.
+
+Set server environment variables `MCP_INTERNAL_ACCOUNT_IDS` and
+`MCP_TEST_ACCOUNT_IDS` to comma-separated verified account UUIDs to classify
+own/test traffic. Unlisted accounts remain **unclassified**, not automatically
+external customers. Playbook keys count as shared credentials, not people.
+
+Export structured Worker logs as JSONL and run:
+
+```sh
+node scripts/report-mcp-usage.mjs logs.jsonl --since 2026-10-01 --until 2026-11-01
+```
+
+The report excludes internal/test traffic and `find_tools` discovery; reports
+successful calls, error rate, active accounts and shared credentials separately;
+and counts returning accounts only when successful use appears on multiple UTC
+dates. `--exclude-actor HASH` excludes a known identity from an older export.
+It accepts Wrangler JSON tail lines too. Capture logs privately: the input may
+contain other application events even though the report does not print them.
+Keep platform sampling at 100% when complete counts are required. Log retention,
+sampling, dropped events and the export window limit coverage; this does not
+reconstruct historical active-user counts or count verified external people.
+
 ---
 
 ## User API Keys

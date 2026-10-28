@@ -1,3 +1,4 @@
+import { noteMcpUsageActor } from "./mcp-usage";
 import { hashApiKey } from "@/lib/utils";
 import { presentedApiKey } from "./api-key-header";
 import { getServiceSupabase, getSupabase } from "./supabase";
@@ -74,6 +75,7 @@ function lookupPlaybookKey(request: Request): Promise<ApiKey | null> {
     const { owner, ...key } = data as ApiKey & { owner?: { user_id?: string } | null };
     if (!owner?.user_id || !(await accountIsActive(request, owner.user_id))) return null;
     noteAuditActor(request, { type: "api_key", id: key.key_prefix || null });
+    noteMcpUsageActor(request, { kind: "playbook_key", id: key.id, accountId: owner.user_id });
     return key as ApiKey;
   })();
   playbookKeyLookups.set(request, lookup);
@@ -107,6 +109,7 @@ function lookupUserKey(request: Request): Promise<UserApiKeyData | null> {
     if (error || !data || (data.expires_at && Date.parse(data.expires_at) <= Date.now())) return null;
     if (!(await accountIsActive(request, data.user_id))) return null;
     noteAuditActor(request, { type: "api_key", id: data.key_prefix || null });
+    noteMcpUsageActor(request, { kind: "account", id: data.user_id, accountId: data.user_id });
     return data as UserApiKeyData;
   })();
   userKeyLookups.set(request, lookup);
@@ -147,6 +150,7 @@ export async function getAuthenticatedUser(request?: Request): Promise<{ id: str
     // An access token outlives a ban until it expires; refuse it now.
     if (!(await accountIsActive(request, user.id))) return null;
     noteAuditActor(request, { type: "owner", id: user.id });
+    noteMcpUsageActor(request, { kind: "account", id: user.id, accountId: user.id });
     return { id: user.id };
   })();
   userLookups.set(request, lookup);

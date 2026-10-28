@@ -1,4 +1,7 @@
 import { handle } from "hono/vercel";
+import { managementToolset } from "@/app/api/_shared/management-toolsets";
+import { searchToolCatalog } from "@/app/api/_shared/toolsets";
+import { startMcpToolUsage, succeedMcpToolUsage, skipMcpToolUsage, finishMcpToolUsage, noteMcpUsageActor } from "@/app/api/_shared/mcp-usage";
 import { createApiApp } from "@/app/api/_shared/hono";
 import { getServiceSupabase } from "@/app/api/_shared/supabase";
 import type { UserApiKeysRow, Playbook, PlaybooksUpdate } from "@/lib/supabase/types";
@@ -85,9 +88,17 @@ const MCP_TOOLS = [
   ...ACCOUNT_TOOLS,
   ...projectPlaybookToolsForUser(),
 ];
-const MCP_TOOLS_JSON = JSON.stringify(MCP_TOOLS);
+// Management discovery works before a playbook is selected. Supplying a
+// playbook_id still supports the existing scoped/federated search.
+const finder = MCP_TOOLS.find(tool => tool.name === "find_tools")!;
+finder.inputSchema = { ...finder.inputSchema, required: ["query"] };
+finder.description = "Find account and playbook operations by keyword and return their input schemas. No playbook_id is needed for the account catalog. Supply playbook_id to also search connected servers. Call returned tools directly; omitted tools remain callable in core/full. Pinned domain views search only their allowed operations.";
 
 const app = createApiApp("/api/mcp/manage");
+app.use("*", async (c, next) => {
+  try { await next(); }
+  finally { await finishMcpToolUsage(c.req.raw, c.res.status); }
+});
 
 // GET /api/mcp/manage - Return MCP server manifest
 app.get("/", async (c) => {
@@ -105,6 +116,8 @@ app.get("/", async (c) => {
     }, 401, oauthChallengeHeaders());
   }
 
+  const view = managementToolset(MCP_TOOLS, c.req.query("toolset"));
+  if ("error" in view) return c.json({ error: view.error }, 400);
   const manifest = {
     protocolVersion: LATEST_PROTOCOL_VERSION,
     serverInfo: {
@@ -116,7 +129,7 @@ app.get("/", async (c) => {
     capabilities: {
       tools: {},
     },
-    tools: MCP_TOOLS,
+    tools: view.advertised,
     _auth: {
       required: true,
       type: "oauth2",
@@ -149,6 +162,12 @@ app.post("/", async (c) => {
 
   const body = await c.req.json();
   const { method, params, id } = body;
+  const view = managementToolset(MCP_TOOLS, c.req.query("toolset"));
+  if ("error" in view) return c.json({ jsonrpc: "2.0", id, error: { code: -32602, message: view.error } }, 400);
+  if (method === "tools/call") {
+    startMcpToolUsage(c.req.raw, MCP_TOOLS.some(tool => tool.name === params?.name) ? params.name : "connected_tool", "management");
+    noteMcpUsageActor(c.req.raw, { kind: "account", id: actor.user_id, accountId: actor.user_id });
+  }
   // The `MCP-Protocol-Version` header is a modern-era mechanism and is not
   // validated here. This endpoint speaks the initialize-based revisions, and a
   // dual-era client finds that out by sending a modern request and falling back
@@ -174,7 +193,7 @@ app.post("/", async (c) => {
             version: "0.4.0",
           },
           capabilities: { tools: {} },
-          instructions: "Manage the authenticated user's portable agents. Playbook tools require playbook_id. Use list_secrets then use_secret or use_secret_write for server-side credential injection without revealing secret values.",
+          instructions: "Manage the authenticated user's portable agents. The default core list is compact; use find_tools without playbook_id to discover more operations. Use ?toolset=full for the full catalog, or pin runtime, memory, canvas, secrets or admin. Playbook operations require playbook_id. Use update_persona to edit, reset_persona to reset. Use list_secrets then use_secret or use_secret_write for server-side credential injection.",
         },
       });
 
@@ -186,7 +205,7 @@ app.post("/", async (c) => {
 
     case "tools/list":
       return c.body(
-        `{"jsonrpc":"2.0","id":${JSON.stringify(id) ?? "null"},"result":{"tools":${MCP_TOOLS_JSON}}}`,
+        `{"jsonrpc":"2.0","id":${JSON.stringify(id) ?? "null"},"result":{"tools":${JSON.stringify(view.advertised)}}}`,
         200,
         { "Content-Type": "application/json; charset=UTF-8" },
       );
@@ -196,7 +215,19 @@ app.post("/", async (c) => {
       const args = params?.arguments || {};
 
       try {
-        if (isPlaybookTool(toolName)) {
+        const federated = typeof toolName === "string" && toolName.includes("__")
+          && ["core", "full", "runtime"].includes(view.name);
+        if (!view.allows(toolName) && !federated) {
+          return c.json({ jsonrpc: "2.0", id, error: { code: -32602, message: `Tool is unknown or unavailable in toolset "${view.name}".` } });
+        }
+        if (toolName === "find_tools" && (!args.playbook_id || !["core", "full", "runtime"].includes(view.name))) {
+          if (typeof args.query !== "string" || !args.query.trim()) throw new Error("query is required");
+          const matches = searchToolCatalog(view.searchable, args.query, typeof args.limit === "number" ? args.limit : 10);
+          const result = structuredToolResult([finder], toolName, matches);
+          succeedMcpToolUsage(c.req.raw);
+          return c.json({ jsonrpc: "2.0", id, result: { content: [{ type: "text", text: JSON.stringify(result ?? matches) }], ...(result ? { structuredContent: result } : {}) } });
+        }
+        if (isPlaybookTool(toolName) || federated) {
           const playbookId = typeof args.playbook_id === "string" ? args.playbook_id : "";
           if (!playbookId) {
             return c.json({
@@ -224,6 +255,10 @@ app.post("/", async (c) => {
           delete scopedArguments.playbook_id;
           const scopedUrl = new URL(c.req.raw.url);
           scopedUrl.pathname = `/api/mcp/${encodeURIComponent(target.guid)}`;
+          // The account view was already enforced. Its canvas/secrets/core names
+          // are not playbook-endpoint policies; never forward them accidentally.
+          scopedUrl.searchParams.delete("toolset");
+          if (view.name === "runtime") scopedUrl.searchParams.set("toolset", "runtime");
           const scopedRequest = new Request(scopedUrl, {
             method: "POST",
             headers: new Headers(c.req.raw.headers),
@@ -235,10 +270,20 @@ app.post("/", async (c) => {
             }),
           });
 
-          return handleScopedPlaybookMcpPost(scopedRequest);
+          skipMcpToolUsage(c.req.raw);
+          const response = await handleScopedPlaybookMcpPost(scopedRequest);
+          if (toolName !== "find_tools" || !response.ok) return response;
+          const payload = await response.clone().json();
+          if (!payload.result?.structuredContent?.matches) return response;
+          const scopedMatches = projectPlaybookToolsForUser(payload.result.structuredContent.matches);
+          const catalog = [...view.searchable, ...scopedMatches.filter(tool => !MCP_TOOLS.some(known => known.name === tool.name))];
+          const matches = searchToolCatalog(catalog, String(args.query ?? ""), typeof args.limit === "number" ? args.limit : 10);
+          const result = structuredToolResult([finder], "find_tools", matches);
+          return c.json({ jsonrpc: "2.0", id, result: { content: [{ type: "text", text: JSON.stringify(result) }], structuredContent: result } });
         }
 
         const result = await executeManagementTool(toolName, args, actor);
+        succeedMcpToolUsage(c.req.raw);
         // A declared outputSchema is honoured with matching structuredContent;
         // see mcp-tool-hints.ts for why the two must never drift apart.
         const structured = structuredToolResult(ACCOUNT_TOOLS, toolName, result);
@@ -251,6 +296,7 @@ app.post("/", async (c) => {
           },
         });
       } catch (error: unknown) {
+        succeedMcpToolUsage(c.req.raw, true);
         const message =
           error instanceof Error
             ? error.message
@@ -453,11 +499,9 @@ async function executeManagementTool(
         metadata?: Record<string, unknown>;
       };
 
-      if (!playbook_id || !persona_id) {
-        throw new Error("playbook_id and persona_id are required");
-      }
-      // Persona is a singleton; we use playbook_id as persona_id
-      if (persona_id !== playbook_id) {
+      if (!playbook_id) throw new Error("playbook_id is required");
+      // Old callers may still send persona_id; reject a conflicting identity.
+      if (persona_id !== undefined && persona_id !== playbook_id) {
         throw new Error("Invalid persona_id (persona is a singleton and uses playbook_id)");
       }
 
@@ -479,6 +523,7 @@ async function executeManagementTool(
       return playbookToPersona(data);
     }
 
+    case "reset_persona":
     case "delete_persona": {
       if (!hasPermission(actor, "personas:write")) {
         throw new Error("Permission denied: personas:write required");
@@ -489,10 +534,10 @@ async function executeManagementTool(
         persona_id: string;
       };
 
-      if (!playbook_id || !persona_id) {
-        throw new Error("playbook_id and persona_id are required");
+      if (!playbook_id || (toolName === "delete_persona" && !persona_id)) {
+        throw new Error("playbook_id and (for legacy delete_persona) persona_id are required");
       }
-      if (persona_id !== playbook_id) {
+      if (persona_id !== undefined && persona_id !== playbook_id) {
         throw new Error("Invalid persona_id (persona is a singleton and uses playbook_id)");
       }
 
