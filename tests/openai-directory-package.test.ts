@@ -7,11 +7,11 @@ describe('hosted OpenAI directory package', () => {
     const files = await collectDirectoryFiles();
     const unpacked = listZipStore(buildZipStore([...files].map(([name, data]) => ({ name, data }))));
     expect(unpacked.map((file: { name: string }) => file.name)).toContain('mcp.json');
-    const mcp = JSON.parse(files.get('mcp.json').toString());
+    const mcp = JSON.parse(files.get('mcp.json')!.toString());
     expect(mcp.mcpServers['agentplaybooks-account'].extensions['com.openai'].auth).toEqual({ type: 'oauth', client: { mode: 'dcr' } });
-    const plugin = JSON.parse(files.get('plugin.json').toString());
+    const plugin = JSON.parse(files.get('plugin.json')!.toString());
     expect(files.has(plugin.extensions['com.openai'].onboardingSkill.replace(/^\.\//, ''))).toBe(true);
-    const skill = files.get('skills/playbooks/SKILL.md').toString();
+    const skill = files.get('skills/playbooks/SKILL.md')!.toString();
     expect(skill).toContain('find_tools');
     expect(skill).not.toMatch(/CLAUDE_PLUGIN_ROOT|node packages|\/mcp|agentplaybooks-servers/);
   });
