@@ -26,7 +26,10 @@ export async function GET(request: Request) {
   }
 
   try {
-    return Response.json(await listAccessiblePlaybooks(user.id));
+    const summary = new URL(request.url).searchParams.get("view") === "summary";
+    return Response.json(summary
+      ? await listAccessiblePlaybooks(user.id, true)
+      : await listAccessiblePlaybooks(user.id));
   } catch (error) {
     const message = error instanceof Error ? error.message : "Database error";
     return Response.json({ error: message }, { status: 500 });
