@@ -14,6 +14,12 @@ calls that route's handler **in the local process**, retaining its API-key,
 ownership and permission checks. It does not proxy a hosted MCP endpoint.
 Standard output is reserved for MCP messages.
 
+The default catalog contains 15 common tools, including `find_tools` for discovering
+additional operations. Set `AGENTPLAYBOOKS_TOOLSET=full` to advertise all tools for
+clients that require every schema in the initial list. The `runtime`, `memory`,
+`canvas`, `secrets`, and `admin` views also restrict calls to the chosen domain;
+normal account permissions still apply. Unknown values fail startup.
+
 Initialize, ping and tools/list work without a database or credentials. Calls
 return an explicit configuration error until the instance is configured. To
 operate on your own Supabase project, supply these environment variables:

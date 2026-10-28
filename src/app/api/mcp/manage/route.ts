@@ -14,6 +14,7 @@ import {
 import { POST as handleScopedPlaybookMcpPost } from "@/app/api/mcp/[guid]/route";
 import { createPlaybook, listAccessiblePlaybooks } from "@/lib/repositories/playbooks";
 import { ACCOUNT_TOOLS } from "@/app/api/_shared/account-tools";
+import { managementTools } from "@/app/api/_shared/management-tools";
 import { structuredToolResult } from "@/app/api/_shared/mcp-tool-hints";
 import {
   LATEST_PROTOCOL_VERSION,
@@ -84,15 +85,8 @@ function playbookToPersona(playbook: PersonaSource) {
   };
 }
 
-const MCP_TOOLS = [
-  ...ACCOUNT_TOOLS,
-  ...projectPlaybookToolsForUser(),
-];
-// Management discovery works before a playbook is selected. Supplying a
-// playbook_id still supports the existing scoped/federated search.
+const MCP_TOOLS = managementTools();
 const finder = MCP_TOOLS.find(tool => tool.name === "find_tools")!;
-finder.inputSchema = { ...finder.inputSchema, required: ["query"] };
-finder.description = "Find account and playbook operations by keyword and return their input schemas. No playbook_id is needed for the account catalog. Supply playbook_id to also search connected servers. Call returned tools directly; omitted tools remain callable in core/full. Pinned domain views search only their allowed operations.";
 
 const app = createApiApp("/api/mcp/manage");
 app.use("*", async (c, next) => {
