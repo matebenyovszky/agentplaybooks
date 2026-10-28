@@ -14,6 +14,34 @@ export function usageEvents(value) {
   return [...usageEvents(value.logs), ...usageEvents(value.message)];
 }
 
+/** Wrangler pretty-prints JSON across lines; exports may instead be JSONL or an array. */
+export async function* jsonRecords(lines) {
+  let buffer = "", depth = 0, quoted = false, escaped = false, oversized = false;
+  for await (const line of lines) {
+    for (const char of `${line}\n`) {
+      if (depth === 0) {
+        if (char !== "{" && char !== "[") continue;
+        buffer = ""; quoted = false; escaped = false; oversized = false;
+      }
+      if (!oversized) {
+        buffer += char;
+        if (buffer.length > 2_000_000) { oversized = true; buffer = ""; }
+      }
+      if (quoted) {
+        if (escaped) escaped = false;
+        else if (char === "\\") escaped = true;
+        else if (char === '"') quoted = false;
+      } else if (char === '"') quoted = true;
+      else if (char === "{" || char === "[") depth++;
+      else if (char === "}" || char === "]") depth--;
+      if (depth === 0 && !oversized) {
+        try { yield JSON.parse(buffer); } catch { /* Ignore non-JSON console chatter. */ }
+        buffer = "";
+      }
+    }
+  }
+}
+
 export function createUsageReport({ since = 0, until = Infinity, excludeActors = [] } = {}) {
   const excluded = new Set(excludeActors);
   const accounts = new Set(), credentials = new Set(), accountDays = new Map(), tools = new Map();
@@ -81,8 +109,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       }
       const report = createUsageReport(options);
       const input = file === "-" ? process.stdin : createReadStream(file);
-      for await (const line of createInterface({ input, crlfDelay: Infinity })) {
-        for (const event of usageEvents(line)) report.add(event);
+      for await (const record of jsonRecords(createInterface({ input, crlfDelay: Infinity }))) {
+        for (const event of usageEvents(record)) report.add(event);
       }
       console.log(JSON.stringify(report.result(), null, 2));
     } catch {

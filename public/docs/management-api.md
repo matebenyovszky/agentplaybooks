@@ -21,6 +21,8 @@ same authorization boundaries.
 Use `find_tools({query: "reset persona"})` to discover another operation and
 its input schema before choosing a playbook. The default is a compact catalog:
 existing direct calls still work with their original permissions.
+Clients that can invoke only tools registered during their initial discovery
+should use `?toolset=full` or select a domain view covering their workflow.
 
 | Connection query | Advertised operations | Call restriction |
 | --- | --- | --- |
