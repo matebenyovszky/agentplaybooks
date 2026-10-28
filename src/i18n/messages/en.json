@@ -474,5 +474,11 @@
     "footerTagline": "Reusable knowledge for the way you work.",
     "docs": "Documentation",
     "privacy": "Privacy"
+  },
+  "auth": {
+    "emailLinkUse": "Sign in with an email link",
+    "passwordUse": "Sign in with a password",
+    "emailLinkSend": "Send sign-in link",
+    "emailLinkSent": "Check your inbox for the sign-in link."
   }
 }

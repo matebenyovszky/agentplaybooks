@@ -474,5 +474,11 @@
     "footerTagline": "Újrahasználható tudás a saját munkádhoz.",
     "docs": "Dokumentáció",
     "privacy": "Adatvédelem"
+  },
+  "auth": {
+    "emailLinkUse": "Bejelentkezés e-mailben kapott linkkel",
+    "passwordUse": "Bejelentkezés jelszóval",
+    "emailLinkSend": "Belépési link küldése",
+    "emailLinkSent": "A belépési linket elküldtük az e-mail-címedre."
   }
 }
