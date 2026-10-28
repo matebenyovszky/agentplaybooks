@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { createBrowserClient } from "@/lib/supabase/client";
+import { useDashboardAuth } from "../../DashboardAuthContext";
 import { authFetch } from "@/lib/auth-fetch";
 import { cn } from "@/lib/utils";
 import { createSupabaseAdapter } from "@/lib/storage";
@@ -85,6 +85,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
   const { id } = use(params);
   const t = useTranslations();
   const router = useRouter();
+  const { user } = useDashboardAuth();
 
   // State
   const [playbook, setPlaybook] = useState<PlaybookWithAccess | null>(null);
@@ -108,7 +109,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
   const [hasChanges, setHasChanges] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
   const [canEdit, setCanEdit] = useState(false);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const currentUserId = user?.id || null;
   const [forking, setForking] = useState(false);
   const [forkSuccess, setForkSuccess] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -140,12 +141,9 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
   }, []);
 
   const loadPlaybook = useCallback(async () => {
-    const supabase = createBrowserClient();
-
-    // Get current user first
-    const { data: { user } } = await supabase.auth.getUser();
+    // The dashboard layout already validated this user. API routes still
+    // independently authorize every request.
     const userId = user?.id || null;
-    setCurrentUserId(userId);
 
     const playbookResponse = await authFetch(`/api/playbooks/${id}`);
 
@@ -165,25 +163,28 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
     // Now fetch related data using the actual playbook ID
     const owner = userId !== null && pb.user_id === userId;
     const loadStorage = createSupabaseAdapter(playbookId, pb.guid);
-    const [playbookResData, memoryData, keyData, runsData, canvasesData, secretsData] = await Promise.all([
-      authFetch(`/api/manage/playbooks/${playbookId}`),
+    const runsRequest = loadStorage.getRuns();
+    // Reuse the run list instead of fetching it again inside getCanvases().
+    const canvasesRequest = runsRequest.then(async (loadedRuns) =>
+      (await Promise.all(loadedRuns.map(run => loadStorage.getCanvases(run.id)))).flat(),
+    );
+    const [memoryData, keyData, runsData, canvasesData, secretsData] = await Promise.all([
       authFetch(`/api/manage/playbooks/${playbookId}/memory`),
       (owner || pb.current_user_role === "editor") ? authFetch(`/api/playbooks/${playbookId}/api-keys`) : Promise.resolve(null),
-      loadStorage.getRuns(),
-      loadStorage.getCanvases(),
+      runsRequest,
+      canvasesRequest,
       owner ? loadStorage.getSecrets() : Promise.resolve([]),
     ]);
 
-    const playbookData = await playbookResData.json().catch(() => null);
     const memoriesData = await memoryData.json().catch(() => null);
     const apiKeysData = keyData ? await keyData.json().catch(() => null) : [];
-    const skillsFromApi = (playbookData?.skills as Skill[]) || (pb as { skills?: Skill[] })?.skills || [];
-    const mcpFromApi = (playbookData?.mcp_servers as MCPServer[]) || (pb as { mcp_servers?: MCPServer[] })?.mcp_servers || [];
+    const skillsFromApi = (pb as { skills?: Skill[] }).skills || [];
+    const mcpFromApi = (pb as { mcp_servers?: MCPServer[] }).mcp_servers || [];
 
     setPlaybook(pb);
     // Check if current user is the owner
     setIsOwner(owner);
-    setCanEdit(owner || pb.current_user_role === "editor" || playbookData?.current_user_role === "editor");
+    setCanEdit(owner || pb.current_user_role === "editor");
     // 1 Playbook = 1 Persona (stored on playbook)
     setPersonas([buildPersonaFromPlaybook(pb)]);
 
@@ -195,7 +196,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
     setMemories(Array.isArray(memoriesData) ? memoriesData as Memory[] : []);
     setApiKeys(Array.isArray(apiKeysData) ? apiKeysData as ApiKey[] : []);
     setLoading(false);
-  }, [id, buildPersonaFromPlaybook]);
+  }, [id, user?.id, buildPersonaFromPlaybook]);
 
   useEffect(() => {
     loadPlaybook();

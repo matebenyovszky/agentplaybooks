@@ -15,17 +15,10 @@ import {
   Database,
   UsersRound
 } from "lucide-react";
-import type { Playbook } from "@/lib/supabase/types";
+import type { PlaybookListSummary } from "@/lib/repositories/playbooks";
 import { authFetch } from "@/lib/auth-fetch";
 
-// API returns Playbook rows enriched with computed counts
-type PlaybookWithCounts = Playbook & {
-  skill_count?: number;
-  mcp_server_count?: number;
-  persona_count?: number;
-  memory_count?: number;
-  current_user_role?: "owner" | "editor" | "auditor";
-};
+type PlaybookWithCounts = PlaybookListSummary;
 
 export default function DashboardPage() {
   const t = useTranslations();
@@ -40,7 +33,7 @@ export default function DashboardPage() {
     let active = true;
     const loadPlaybooks = async () => {
       try {
-        const res = await authFetch("/api/manage/playbooks");
+        const res = await authFetch("/api/manage/playbooks?view=summary");
         const data = await res.json().catch(() => null);
 
         if (!active) return;
@@ -163,7 +156,7 @@ export default function DashboardPage() {
               key={playbook.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.1 }}
+              transition={{ delay: Math.min(idx * 0.03, 0.15) }}
             >
               <Link
                 href={`/dashboard/playbook/${playbook.id}`}

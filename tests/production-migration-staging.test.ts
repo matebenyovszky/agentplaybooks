@@ -58,6 +58,7 @@ it("stages the #216 migrations after the last version already on production", ()
       "20261026090000_account_offboarding.sql",
       "20261026212458_optimize_rls_and_foreign_key_indexes.sql",
       "20261028062350_increase_skill_attachment_limit_to_25.sql",
+      "20261028101338_audit_chain_tip_order_index.sql",
     ]);
     expect(log).toContain("20261025124500_audit_logs_tamper_resistance.sql");
     expect(log).not.toContain("20261025120000_audit_logs_tamper_resistance.sql");
