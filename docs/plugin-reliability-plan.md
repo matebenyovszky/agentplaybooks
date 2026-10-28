@@ -14,6 +14,12 @@ OpenAI review fixes. The hosted directory packer now follows upstream's distinct
 agentplaybooks-hosted identity with full discovery from its first upload; it does
 not rewrite an existing registered app's MCP URL. The normal CLI endpoint stays
 unchanged. Explicit pinned views outrank the discovery header.
+Main 27ce859 subsequently adds the enforced public directory profile. Retain
+that separate, fixed-operation profile (39 tools with get_profile), excluding
+secret handling and connected-service dispatchers. The complete private/custom
+Codex/MCP connection retains its full capabilities; do not describe the public
+directory variant as an arbitrary API/secret proxy. Existing registered app URLs
+are still not rewritten.
 
 ## Today's implementation
 
@@ -93,7 +99,7 @@ Official references checked on 2026-10-28:
 
 ## Verified results
 
-- Application suite after latest integration: 996 tests passed; production Cloudflare
+- Application suite after latest integration: 997 tests passed; production Cloudflare
   Worker build passed. TypeScript, lint (33 existing warnings, no errors) and
   production dependency audit passed.
 - CLI suite after review: 249 tests passed (including ROS 2, deleted managed

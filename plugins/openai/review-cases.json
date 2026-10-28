@@ -15,19 +15,19 @@
     {
       "description": "Read a reusable skill",
       "prompt": "Read the code-review-checklist skill in Reviewer demo: Team handbook.",
-      "tools_triggered": "find_tools, list_skills, get_skill",
-      "expected_behavior": "Discover tool schemas when needed and return the existing code-review-checklist skill from the demo playbook. Do not invent missing skill content."
+      "tools_triggered": "list_skills, get_skill",
+      "expected_behavior": "Use the listed tool schemas and return the existing code-review-checklist skill from the demo playbook. Do not invent missing skill content."
     },
     {
       "description": "Retrieve shared project knowledge",
       "prompt": "Find the release policy in the memory of Reviewer demo: Team handbook.",
-      "tools_triggered": "find_tools, search_memory",
+      "tools_triggered": "search_memory",
       "expected_behavior": "Return the seeded decision/release-cadence entry: releases are every second Tuesday; hotfixes can go out any day with two approvals. Stay within the selected playbook."
     },
     {
       "description": "Retain an explicitly requested sample decision",
       "prompt": "In Reviewer demo: Team handbook, remember under demo/review-note that the review uses synthetic data only.",
-      "tools_triggered": "find_tools, write_memory",
+      "tools_triggered": "write_memory",
       "expected_behavior": "Write the requested synthetic note to the selected demo playbook and confirm the tool result. Do not modify other playbooks or claim success after a denied write."
     }
   ],

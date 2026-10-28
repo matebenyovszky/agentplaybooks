@@ -199,7 +199,9 @@ app.post("/", async (c) => {
             version: "0.4.0",
           },
           capabilities: { tools: {} },
-          instructions: "Manage the authenticated user's portable agents. The default core list is compact; use find_tools without playbook_id to discover more operations. Use ?toolset=full for the full catalog, or pin runtime, memory, canvas, secrets or admin. Playbook operations require playbook_id. Use update_persona to edit, reset_persona to reset. Use list_secrets then use_secret or use_secret_write for server-side credential injection.",
+          instructions: view.name === "directory"
+            ? "Manage the authenticated user's playbooks, instructions, skills, memory, canvas and workflow runs using the individually listed tools. Playbook operations require playbook_id. Use update_persona to edit and reset_persona to reset. This directory profile does not expose connected-service dispatchers, secret handling or dynamic tool discovery. Account and playbook permissions apply to every operation."
+            : "Manage the authenticated user's portable agents. The default core list is compact; use find_tools without playbook_id to discover more operations. Use ?toolset=full for the full catalog, or pin runtime, memory, canvas, secrets or admin. Playbook operations require playbook_id. Use update_persona to edit, reset_persona to reset. Use list_secrets then use_secret or use_secret_write for server-side credential injection.",
         },
       });
 

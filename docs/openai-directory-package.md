@@ -10,7 +10,11 @@ The package uses shared release metadata and the website's logo, a hosted-only
 playbook skill, and the account MCP endpoint with OAuth dynamic registration.
 Its package identifier is `agentplaybooks-hosted`, separate from the CLI package
 and the earlier unpublished draft whose MCP configuration cannot be changed.
-The first upload must use `?toolset=full` so each operation is exposed upfront.
+The first upload must use `?toolset=directory` so each of the 38 supported
+knowledge/document operations is exposed upfront. This enforced allowlist excludes
+generic third-party dispatchers, secret handling, discovery and legacy aliases.
+Excluded calls, including federated tool names, are rejected before forwarding.
+The standard core/full profiles keep their existing bridge functionality.
 Existing OpenAI apps cannot change their MCP URL, including query parameters;
 the portal also rejects nonempty server headers. A draft created with the compact
 endpoint must be recreated before human review. Other clients may select a view

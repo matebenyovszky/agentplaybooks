@@ -25,6 +25,9 @@ describe("playbook operation projections", () => {
       "write_memory",
       "create_run",
       "write_canvas",
+      "patch_canvas_section",
+      "update_mcp_server",
+      "update_run",
       "create_mcp_server",
       "call_connected_tool",
       "store_secret",
@@ -157,6 +160,7 @@ describe("hosted MCP tool definition quality", () => {
     expect(openWorld.map((tool) => tool.name).sort()).toEqual([
       "call_connected_tool",
       "create_playbook",
+      "update_playbook",
       "use_secret",
       "use_secret_write",
     ]);

@@ -369,7 +369,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
       },
       required: ["run_id", "slug", "section_id", "content"],
     },
-    annotations: IDEMPOTENT_WRITE_CLOSED,
+    annotations: DESTRUCTIVE_CLOSED,
   },
   {
     name: "get_canvas_toc",
@@ -508,7 +508,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
         instructions: { type: "string", description: "New always-on project instructions (the AGENTS.md / CLAUDE.md content). Kept separate from the persona: the persona is who the agent is, these are the rules of this project." },
       },
     },
-    annotations: DESTRUCTIVE_CLOSED,
+    annotations: { ...DESTRUCTIVE_CLOSED, openWorldHint: true },
   },
   // ===== Connected MCP Servers =====
   {
@@ -568,7 +568,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
       },
       required: ["server_id"],
     },
-    annotations: IDEMPOTENT_WRITE_CLOSED,
+    annotations: DESTRUCTIVE_CLOSED,
   },
   {
     name: "delete_mcp_server",
@@ -619,7 +619,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
       },
       required: ["run_id"],
     },
-    annotations: IDEMPOTENT_WRITE_CLOSED,
+    annotations: DESTRUCTIVE_CLOSED,
   },
   {
     name: "delete_run",
