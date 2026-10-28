@@ -31,6 +31,11 @@ export async function collectDirectoryFiles() {
     'Call an API with a vault secret without revealing it.',
   ];
   openai.onboardingSkill = './skills/playbooks/SKILL.md';
+  openai.review = {
+    test_cases: JSON.parse(await readFile(path.join(root, 'plugins/openai/review-cases.json'), 'utf8')),
+    commerce: false,
+    commerce_description: 'The plugin manages agent configuration and knowledge; it does not process purchases or payments.',
+  };
   const mcp = directoryMcp(JSON.parse(await readFile(path.join(root, 'packages/cli/mcp.json'), 'utf8')));
   const files = new Map([
     ['plugin.json', Buffer.from(JSON.stringify(plugin, null, 2) + '\n')],

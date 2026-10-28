@@ -10,6 +10,8 @@ describe('hosted OpenAI directory package', () => {
     const mcp = JSON.parse(files.get('mcp.json')!.toString());
     expect(mcp.mcpServers['agentplaybooks-account'].extensions['com.openai'].auth).toEqual({ type: 'oauth', client: { mode: 'dcr' } });
     const plugin = JSON.parse(files.get('plugin.json')!.toString());
+    expect(plugin.extensions['com.openai'].review.test_cases.positive).toHaveLength(5);
+    expect(plugin.extensions['com.openai'].review.test_cases.negative).toHaveLength(3);
     expect(files.has(plugin.extensions['com.openai'].onboardingSkill.replace(/^\.\//, ''))).toBe(true);
     const skill = files.get('skills/playbooks/SKILL.md')!.toString();
     expect(skill).toContain('find_tools');

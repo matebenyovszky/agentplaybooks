@@ -21,6 +21,13 @@ materials in the portal before submitting. The public domain challenge is in
 `public/.well-known/openai-apps-challenge`; it is an ownership proof, not an
 API key. Keep private reviewer credentials out of this repository and ZIP.
 
+`plugins/openai/review-cases.json` contains the five positive and three negative
+review scenarios imported by the package. These are planned scenarios, not a
+record of successful execution. Seed a dedicated reviewer account with the
+private `AgentPlaybooks Review Demo` playbook, a `release-checklist` skill and
+the `demo/release-policy` memory entry described by those cases, then execute
+the cases against that account. Add an accessible recording URL before review.
+
 This is separate from the [skills-only archive](./openai-skills-directory-zip.md).
 Include MCP from the initial upload for a hosted integration; OpenAI currently
 does not support adding MCP to an existing skills-only listing.
