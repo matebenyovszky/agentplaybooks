@@ -23,8 +23,8 @@ const authenticatedUserKey = {
   created_at: "2026-01-01T00:00:00.000Z",
 };
 
-function mcpRequest(body: Record<string, unknown>, headers: Record<string, string> = {}) {
-  return new Request("http://localhost/api/mcp/manage", {
+function mcpRequest(body: Record<string, unknown>, headers: Record<string, string> = {}, query = "") {
+  return new Request(`http://localhost/api/mcp/manage${query}`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...headers },
     body: JSON.stringify({ jsonrpc: "2.0", ...body }),
@@ -123,7 +123,7 @@ describe("AgentPlaybooks management MCP transport", () => {
   });
 
   it("projects every playbook operation with an explicit playbook_id", async () => {
-    const response = await POST(mcpRequest({ id: 4, method: "tools/list" }));
+    const response = await POST(mcpRequest({ id: 4, method: "tools/list" }, {}, "?toolset=full"));
     const payload = await response.json();
     const tools = payload.result.tools as Array<{
       name: string;

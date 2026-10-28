@@ -124,6 +124,7 @@ export function searchToolCatalog(
   limit = 10,
 ): Array<{ name: string; description: string; inputSchema: unknown }> {
   const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+  const boundedLimit = Number.isFinite(limit) ? Math.max(1, Math.min(Math.floor(limit), 25)) : 10;
   if (terms.length === 0) return [];
 
   const scored = tools.map((tool) => {
@@ -140,7 +141,7 @@ export function searchToolCatalog(
   return scored
     .filter((entry) => entry.score > 0)
     .sort((a, b) => b.score - a.score || a.tool.name.localeCompare(b.tool.name))
-    .slice(0, Math.max(1, Math.min(limit, 25)))
+    .slice(0, boundedLimit)
     .map(({ tool }) => ({
       name: tool.name,
       description: tool.description || tool.name,
