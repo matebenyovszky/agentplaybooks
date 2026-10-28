@@ -1,6 +1,6 @@
 # AgentPlaybooks CLI
 
-## Chat-first plugin use (next release)
+## Chat-first plugin use (0.9.0)
 
 The Codex/OpenAI plugin primarily uses hosted playbooks, skills, memory, canvas,
 vault-backed API calls, and connected MCP/OpenAPI tools directly in conversation.
@@ -16,7 +16,7 @@ Compact `get_playbook` memory defaults to 20 metadata entries with
 and canvas-section reads instead of routine full exports. Known IDs and secret
 names can be used directly without prerequisite listing calls.
 
-## Connection self-check and cloud use (next release)
+## Connection self-check and cloud use (0.9.0)
 
 `apb connection check --json` runs an on-demand, bounded check of OAuth
 resource metadata, MCP initialize, initialized notification, tools/list, and
@@ -45,7 +45,7 @@ profile (`?toolset=directory`). That variant does not expose secret handling or
 connected-service dispatchers. The complete remote ZIP and private/custom
 account connection retain those capabilities; the two packages are not equivalent.
 
-## Managed skill updates (next release)
+## Managed skill updates (0.9.0)
 
 Sync records hashes of newly generated skill files in
 `.agentplaybooks/sync-state.json`. Later source changes update untouched generated
@@ -54,7 +54,7 @@ preview stop apply. Existing files without recorded state are not adopted or
 overwritten automatically. MCP definitions and custom-agent conflicts retain
 their existing conservative behavior; remote deletions are not mirrored.
 
-## ROS 2 inspection (next release)
+## ROS 2 inspection (0.9.0)
 
 `apb doctor <workspace> --target=ros2 --json` inventories `package.xml` metadata
 and launch-file paths without executing launch code, importing Python, running

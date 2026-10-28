@@ -1,7 +1,9 @@
 # CLI 0.9.0 — plugin reliability and chat-first hosted access
 
-Release candidate. Publication and authenticated host acceptance are separate
-gates; do not infer either from this document or the package version.
+Verification: 997 application tests, 249 CLI tests and 24 Hermes tests passed.
+The maintainer explicitly authorized release on 2026-10-28 with authenticated
+ChatGPT/Codex cloud acceptance deferred. That host test is not claimed as passed.
+Publication is tracked by the GitHub release and npm package, not this file.
 
 - On-demand `apb connection check`: OAuth discovery, MCP initialize/catalog and
   account identity, with bounded requests and redacted failures.
@@ -12,6 +14,10 @@ gates; do not infer either from this document or the package version.
   account switching on the consent screen. Existing MCP URL stays unchanged.
 - Compact name-filtered playbook pages and bounded memory metadata pages.
   Core management discovery stays compact (16 tools); full remains 53 tools.
+- The separate public directory integration uses an enforced 39-operation
+  knowledge/document profile. Secret-backed APIs and connected-service
+  dispatchers remain available on complete private/custom MCP connections,
+  not on that public-directory profile.
 - Safe updates of generated skill files using sync state, backup hashes and
   preview revalidation. Local edits and deletions remain conflicts; symlinked
   backup paths are refused. Custom-agent/MCP entry updates remain future work.
@@ -23,6 +29,6 @@ gates; do not infer either from this document or the package version.
   duplicate suppression, and authenticated-request cooldown. Writes recheck
   private visibility; profile reinitialization discards clients and recall state.
 
-For acceptance evidence and outstanding cloud consent, see
+For acceptance evidence and deferred host verification, see
 [the reliability plan](../plugin-reliability-plan.md) and
 [the rollout checklist](../plugin-reliability-review.md).

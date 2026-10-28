@@ -1,5 +1,11 @@
 # Plugin reliability delivery — 2026-10-28
 
+Release decision: the maintainer explicitly authorized merge, deployment and
+release on 2026-10-28 without blocking on authenticated ChatGPT/Codex cloud
+acceptance. That acceptance remains deferred, not passed. The earlier test and
+rollout records below are pre-release snapshots; live publication is recorded in
+the GitHub release, distribution checklist and npm registry.
+
 Base: origin/main at e5ab04732c3bd116efd53562737c08d4860addb1 (CLI 0.7.0).
 Work happens in a separate checkout; the earlier OAuth checkout has unrelated
 uncommitted changes and is preserved.
