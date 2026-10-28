@@ -8,6 +8,7 @@ import { createBrowserClient } from "@/lib/supabase/client";
 import { ArrowLeft, Mail, Lock, Loader2 } from "lucide-react";
 import { fetchAuthSettings, type AuthSettings, type OAuthProvider, type OAuthProviderId } from "@/lib/auth-providers";
 import { postAuthPath } from "@/lib/auth-redirect";
+import { emailLinkCredentials } from "@/lib/email-link-auth";
 
 const PROVIDER_ICONS: Record<OAuthProviderId, React.ReactNode> = {
   azure: (
@@ -50,6 +51,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
+  const [useEmailLink, setUseEmailLink] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -69,6 +71,7 @@ export default function LoginPage() {
 
   const options = auth ?? EMAIL_ONLY;
   const signingUp = isSignUp && options.signup;
+  const usingEmailLink = useEmailLink && !signingUp;
 
   const getPostAuthPath = () => {
     const requested = new URLSearchParams(window.location.search).get("next");
@@ -84,7 +87,13 @@ export default function LoginPage() {
     const supabase = createBrowserClient();
 
     try {
-      if (signingUp) {
+      if (usingEmailLink) {
+        const { error } = await supabase.auth.signInWithOtp(emailLinkCredentials(
+          email, new URLSearchParams(window.location.search).get("next"), window.location.origin,
+        ));
+        if (error) throw error;
+        setSuccess(t("auth.emailLinkSent"));
+      } else if (signingUp) {
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -205,7 +214,7 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <div>
+              {!usingEmailLink && <div>
                 <label className="block text-sm text-neutral-600 dark:text-slate-400 mb-2">Password</label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-neutral-400 dark:text-slate-500" />
@@ -219,7 +228,7 @@ export default function LoginPage() {
                     minLength={6}
                   />
                 </div>
-              </div>
+              </div>}
 
               {error && (
                 <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
@@ -239,8 +248,21 @@ export default function LoginPage() {
                 className="w-full py-3 bg-gradient-to-r from-amber-600 to-amber-400 text-slate-900 rounded-lg font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25"
               >
                 {loading && <Loader2 className="h-5 w-5 animate-spin" />}
-                {signingUp ? t("common.signUp") : t("common.signIn")}
+                {usingEmailLink ? t("auth.emailLinkSend") : signingUp ? t("common.signUp") : t("common.signIn")}
               </button>
+              {!signingUp && <button
+                type="button"
+                disabled={loading}
+                onClick={() => {
+                  setUseEmailLink(!useEmailLink);
+                  setPassword("");
+                  setError(null);
+                  setSuccess(null);
+                }}
+                className="w-full text-sm text-neutral-600 dark:text-slate-400 hover:text-amber-500 disabled:opacity-50"
+              >
+                {usingEmailLink ? t("auth.passwordUse") : t("auth.emailLinkUse")}
+              </button>}
             </form>
           )}
 
@@ -256,6 +278,7 @@ export default function LoginPage() {
               <button
                 onClick={() => {
                   setIsSignUp(!isSignUp);
+                  setUseEmailLink(false);
                   setError(null);
                   setSuccess(null);
                 }}

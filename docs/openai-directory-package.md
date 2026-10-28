@@ -21,6 +21,11 @@ materials in the portal before submitting. The public domain challenge is in
 `src/app/.well-known/openai-apps-challenge/route.ts`; it is an ownership proof, not an
 API key. Keep private reviewer credentials out of this repository and ZIP.
 
+The package requests OpenID, email, basic profile and offline access scopes;
+it does not request phone access. A reviewer using email-link sign-in can open
+the login page, choose **Sign in with an email link**, and use the invited email
+address. This sign-in path never creates a new account automatically.
+
 `plugins/openai/review-cases.json` contains the five positive and three negative
 review scenarios imported by the package. These are planned scenarios, not a
 record of successful execution. The existing `npm run seed:reviewer` script

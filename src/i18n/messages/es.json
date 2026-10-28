@@ -474,5 +474,11 @@
     "addNew": "Nuevo documento",
     "untitled": "Documento sin título",
     "lastModified": "Última modificación"
+  },
+  "auth": {
+    "emailLinkUse": "Iniciar sesión con un enlace por correo",
+    "passwordUse": "Iniciar sesión con contraseña",
+    "emailLinkSend": "Enviar enlace de acceso",
+    "emailLinkSent": "Revisa tu correo para abrir el enlace de acceso."
   }
 }

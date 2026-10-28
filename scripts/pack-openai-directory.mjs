@@ -16,7 +16,10 @@ export function directoryMcp(source) {
     throw new Error('Expected the public account endpoint without credentials or headers.');
   }
   return { ...source, mcpServers: { 'agentplaybooks-account': {
-    ...server, extensions: { 'com.openai': { auth: { type: 'oauth', client: { mode: 'dcr' } } } },
+    ...server, extensions: { 'com.openai': { auth: {
+      type: 'oauth', client: { mode: 'dcr' },
+      defaultScopes: ['openid', 'email', 'profile', 'offline_access'],
+    } } },
   } } };
 }
 

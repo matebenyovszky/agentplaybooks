@@ -66,7 +66,7 @@ export const PRIVACY_SECTIONS: readonly LegalSection[] = [
     heading: "Who else sees it",
     blocks: [
       [
-        "Supabase stores the database and runs authentication, in the EU (Frankfurt, Germany).",
+        "Supabase stores the database and runs authentication in the EU (Ireland).",
         "Cloudflare hosts the application and delivers every request through its global network, so requests can be processed in data centres outside the EU.",
         "People you share with: collaborators see the playbooks you invite them to. A public playbook is visible to everyone, and an unlisted one to anyone with its link.",
         "Services you direct us to: when you call a connected server or use a secret against an API, the request — with the secret injected — goes to the destination you chose.",

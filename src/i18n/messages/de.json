@@ -474,5 +474,11 @@
     "addNew": "Neues Dokument",
     "untitled": "Unbenanntes Dokument",
     "lastModified": "Zuletzt geändert"
+  },
+  "auth": {
+    "emailLinkUse": "Mit E-Mail-Link anmelden",
+    "passwordUse": "Mit Passwort anmelden",
+    "emailLinkSend": "Anmeldelink senden",
+    "emailLinkSent": "Prüfen Sie Ihr Postfach auf den Anmeldelink."
   }
 }
