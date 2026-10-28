@@ -18,7 +18,7 @@ approval or publication. Track actual status in the
 
 Complete domain verification, OAuth connection, automated findings and reviewer
 materials in the portal before submitting. The public domain challenge is in
-`public/.well-known/openai-apps-challenge`; it is an ownership proof, not an
+`src/app/.well-known/openai-apps-challenge/route.ts`; it is an ownership proof, not an
 API key. Keep private reviewer credentials out of this repository and ZIP.
 
 `plugins/openai/review-cases.json` contains the five positive and three negative

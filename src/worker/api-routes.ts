@@ -22,6 +22,7 @@ export const apiRoutes: ApiRoute[] = [
   { basePath: "/.well-known", segments: ["mcp-registry-auth"], methods: ["GET"], handlers: () => import("../app/.well-known/mcp-registry-auth/route") as unknown as Promise<ApiHandlers> },
   { basePath: "/.well-known", segments: ["oauth-authorization-server","[[...path]]"], methods: ["GET"], handlers: () => import("../app/.well-known/oauth-authorization-server/[[...path]]/route") as unknown as Promise<ApiHandlers> },
   { basePath: "/.well-known", segments: ["oauth-protected-resource","[[...path]]"], methods: ["GET"], handlers: () => import("../app/.well-known/oauth-protected-resource/[[...path]]/route") as unknown as Promise<ApiHandlers> },
+  { basePath: "/.well-known", segments: ["openai-apps-challenge"], methods: ["GET"], handlers: () => import("../app/.well-known/openai-apps-challenge/route") as unknown as Promise<ApiHandlers> },
   { basePath: "/api", segments: ["playbooks","[guid]","audit","export"], methods: ["GET"], handlers: () => import("../app/api/playbooks/[guid]/audit/export/route") as unknown as Promise<ApiHandlers> },
   { basePath: "/api", segments: ["playbooks","[guid]","audit","purge"], methods: ["POST"], handlers: () => import("../app/api/playbooks/[guid]/audit/purge/route") as unknown as Promise<ApiHandlers> },
   { basePath: "/api", segments: ["playbooks","[guid]","audit","verify"], methods: ["GET"], handlers: () => import("../app/api/playbooks/[guid]/audit/verify/route") as unknown as Promise<ApiHandlers> },
