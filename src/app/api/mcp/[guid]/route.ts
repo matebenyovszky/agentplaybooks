@@ -1,3 +1,4 @@
+import { startMcpToolUsage, succeedMcpToolUsage, finishMcpToolUsage } from "@/app/api/_shared/mcp-usage";
 import { handle } from "hono/vercel";
 import { logMcpDiscovery } from "@/app/api/_shared/mcp-observability";
 import { startMcpPerformance, parsedMcpPerformance, authorizedMcpPerformance, finishMcpPerformance } from "@/app/api/_shared/mcp-performance";
@@ -294,7 +295,7 @@ app.use("*", async (c, next) => {
   if (c.req.method !== "POST") return next();
   startMcpPerformance(c.req.raw);
   try { await next(); }
-  finally { finishMcpPerformance(c.req.raw, c.res.status); }
+  finally { finishMcpPerformance(c.req.raw, c.res.status); await finishMcpToolUsage(c.req.raw, c.res.status); }
 });
 
 // GET /api/mcp/:guid - Return MCP server manifest
@@ -440,6 +441,8 @@ app.post("/", async (c) => {
   const body = await c.req.json();
 
   const { method, params: rpcParams, id } = body;
+  if (method === "tools/call") startMcpToolUsage(c.req.raw,
+    PLAYBOOK_TOOLS.some(tool => tool.name === rpcParams?.name) ? rpcParams.name : "connected_tool", "playbook");
   parsedMcpPerformance(c.req.raw, method, method === "tools/call"
     && PLAYBOOK_TOOLS.some(tool => tool.name === rpcParams?.name) ? rpcParams.name : undefined);
 
@@ -1170,6 +1173,7 @@ use_secret_write({
             args,
             { ...await federationOptions(server, playbook.id, c.req.header("cf-ray") || c.req.header("x-request-id")), readOnly: anonymousPublic },
           );
+          succeedMcpToolUsage(c.req.raw, typeof result === "object" && result !== null && "isError" in result && result.isError === true);
           return c.json({
             jsonrpc: "2.0",
             id,
@@ -3005,6 +3009,7 @@ use_secret_write({
         // A tool that declares an outputSchema must deliver structuredContent
         // to match — a strict client validates the result against the promise.
         // The text block mirrors the same value, as the spec asks.
+        succeedMcpToolUsage(c.req.raw, typeof result === "object" && result !== null && "isError" in result && result.isError === true);
         const structured = structuredToolResult(PLAYBOOK_TOOLS, toolName, result);
         return c.json({
           jsonrpc: "2.0",
@@ -3015,6 +3020,7 @@ use_secret_write({
           },
         });
       } catch (error: unknown) {
+        succeedMcpToolUsage(c.req.raw, true);
         const message =
           error instanceof Error
             ? error.message
