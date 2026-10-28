@@ -35,9 +35,9 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
-// ../../node_modules/yaml/dist/nodes/identity.js
+// node_modules/yaml/dist/nodes/identity.js
 var require_identity = __commonJS({
-  "../../node_modules/yaml/dist/nodes/identity.js"(exports) {
+  "node_modules/yaml/dist/nodes/identity.js"(exports) {
     "use strict";
     var ALIAS = /* @__PURE__ */ Symbol.for("yaml.alias");
     var DOC = /* @__PURE__ */ Symbol.for("yaml.document");
@@ -92,9 +92,9 @@ var require_identity = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/visit.js
+// node_modules/yaml/dist/visit.js
 var require_visit = __commonJS({
-  "../../node_modules/yaml/dist/visit.js"(exports) {
+  "node_modules/yaml/dist/visit.js"(exports) {
     "use strict";
     var identity = require_identity();
     var BREAK = /* @__PURE__ */ Symbol("break visit");
@@ -250,9 +250,9 @@ var require_visit = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/doc/directives.js
+// node_modules/yaml/dist/doc/directives.js
 var require_directives = __commonJS({
-  "../../node_modules/yaml/dist/doc/directives.js"(exports) {
+  "node_modules/yaml/dist/doc/directives.js"(exports) {
     "use strict";
     var identity = require_identity();
     var visit = require_visit();
@@ -421,9 +421,9 @@ var require_directives = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/doc/anchors.js
+// node_modules/yaml/dist/doc/anchors.js
 var require_anchors = __commonJS({
-  "../../node_modules/yaml/dist/doc/anchors.js"(exports) {
+  "node_modules/yaml/dist/doc/anchors.js"(exports) {
     "use strict";
     var identity = require_identity();
     var visit = require_visit();
@@ -491,9 +491,9 @@ var require_anchors = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/doc/applyReviver.js
+// node_modules/yaml/dist/doc/applyReviver.js
 var require_applyReviver = __commonJS({
-  "../../node_modules/yaml/dist/doc/applyReviver.js"(exports) {
+  "node_modules/yaml/dist/doc/applyReviver.js"(exports) {
     "use strict";
     function applyReviver(reviver, obj, key, val) {
       if (val && typeof val === "object") {
@@ -541,9 +541,9 @@ var require_applyReviver = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/nodes/toJS.js
+// node_modules/yaml/dist/nodes/toJS.js
 var require_toJS = __commonJS({
-  "../../node_modules/yaml/dist/nodes/toJS.js"(exports) {
+  "node_modules/yaml/dist/nodes/toJS.js"(exports) {
     "use strict";
     var identity = require_identity();
     function toJS(value, arg, ctx) {
@@ -571,9 +571,9 @@ var require_toJS = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/nodes/Node.js
+// node_modules/yaml/dist/nodes/Node.js
 var require_Node = __commonJS({
-  "../../node_modules/yaml/dist/nodes/Node.js"(exports) {
+  "node_modules/yaml/dist/nodes/Node.js"(exports) {
     "use strict";
     var applyReviver = require_applyReviver();
     var identity = require_identity();
@@ -612,9 +612,9 @@ var require_Node = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/nodes/Alias.js
+// node_modules/yaml/dist/nodes/Alias.js
 var require_Alias = __commonJS({
-  "../../node_modules/yaml/dist/nodes/Alias.js"(exports) {
+  "node_modules/yaml/dist/nodes/Alias.js"(exports) {
     "use strict";
     var anchors = require_anchors();
     var visit = require_visit();
@@ -730,9 +730,9 @@ var require_Alias = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/nodes/Scalar.js
+// node_modules/yaml/dist/nodes/Scalar.js
 var require_Scalar = __commonJS({
-  "../../node_modules/yaml/dist/nodes/Scalar.js"(exports) {
+  "node_modules/yaml/dist/nodes/Scalar.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Node = require_Node();
@@ -760,9 +760,9 @@ var require_Scalar = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/doc/createNode.js
+// node_modules/yaml/dist/doc/createNode.js
 var require_createNode = __commonJS({
-  "../../node_modules/yaml/dist/doc/createNode.js"(exports) {
+  "node_modules/yaml/dist/doc/createNode.js"(exports) {
     "use strict";
     var Alias = require_Alias();
     var identity = require_identity();
@@ -835,9 +835,9 @@ var require_createNode = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/nodes/Collection.js
+// node_modules/yaml/dist/nodes/Collection.js
 var require_Collection = __commonJS({
-  "../../node_modules/yaml/dist/nodes/Collection.js"(exports) {
+  "node_modules/yaml/dist/nodes/Collection.js"(exports) {
     "use strict";
     var createNode = require_createNode();
     var identity = require_identity();
@@ -978,9 +978,9 @@ var require_Collection = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/stringify/stringifyComment.js
+// node_modules/yaml/dist/stringify/stringifyComment.js
 var require_stringifyComment = __commonJS({
-  "../../node_modules/yaml/dist/stringify/stringifyComment.js"(exports) {
+  "node_modules/yaml/dist/stringify/stringifyComment.js"(exports) {
     "use strict";
     var stringifyComment = (str) => str.replace(/^(?!$)(?: $)?/gm, "#");
     function indentComment(comment, indent) {
@@ -995,9 +995,9 @@ var require_stringifyComment = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/stringify/foldFlowLines.js
+// node_modules/yaml/dist/stringify/foldFlowLines.js
 var require_foldFlowLines = __commonJS({
-  "../../node_modules/yaml/dist/stringify/foldFlowLines.js"(exports) {
+  "node_modules/yaml/dist/stringify/foldFlowLines.js"(exports) {
     "use strict";
     var FOLD_FLOW = "flow";
     var FOLD_BLOCK = "block";
@@ -1131,9 +1131,9 @@ ${indent}${text.slice(fold + 1, end2)}`;
   }
 });
 
-// ../../node_modules/yaml/dist/stringify/stringifyString.js
+// node_modules/yaml/dist/stringify/stringifyString.js
 var require_stringifyString = __commonJS({
-  "../../node_modules/yaml/dist/stringify/stringifyString.js"(exports) {
+  "node_modules/yaml/dist/stringify/stringifyString.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var foldFlowLines = require_foldFlowLines();
@@ -1414,9 +1414,9 @@ ${indent}`);
   }
 });
 
-// ../../node_modules/yaml/dist/stringify/stringify.js
+// node_modules/yaml/dist/stringify/stringify.js
 var require_stringify = __commonJS({
-  "../../node_modules/yaml/dist/stringify/stringify.js"(exports) {
+  "node_modules/yaml/dist/stringify/stringify.js"(exports) {
     "use strict";
     var anchors = require_anchors();
     var identity = require_identity();
@@ -1538,9 +1538,9 @@ ${ctx.indent}${str}`;
   }
 });
 
-// ../../node_modules/yaml/dist/stringify/stringifyPair.js
+// node_modules/yaml/dist/stringify/stringifyPair.js
 var require_stringifyPair = __commonJS({
-  "../../node_modules/yaml/dist/stringify/stringifyPair.js"(exports) {
+  "node_modules/yaml/dist/stringify/stringifyPair.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Scalar = require_Scalar();
@@ -1671,9 +1671,9 @@ ${ctx.indent}`;
   }
 });
 
-// ../../node_modules/yaml/dist/log.js
+// node_modules/yaml/dist/log.js
 var require_log = __commonJS({
-  "../../node_modules/yaml/dist/log.js"(exports) {
+  "node_modules/yaml/dist/log.js"(exports) {
     "use strict";
     var node_process = __require("process");
     function debug(logLevel, ...messages) {
@@ -1693,9 +1693,9 @@ var require_log = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/schema/yaml-1.1/merge.js
+// node_modules/yaml/dist/schema/yaml-1.1/merge.js
 var require_merge = __commonJS({
-  "../../node_modules/yaml/dist/schema/yaml-1.1/merge.js"(exports) {
+  "node_modules/yaml/dist/schema/yaml-1.1/merge.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Scalar = require_Scalar();
@@ -1753,9 +1753,9 @@ var require_merge = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/nodes/addPairToJSMap.js
+// node_modules/yaml/dist/nodes/addPairToJSMap.js
 var require_addPairToJSMap = __commonJS({
-  "../../node_modules/yaml/dist/nodes/addPairToJSMap.js"(exports) {
+  "node_modules/yaml/dist/nodes/addPairToJSMap.js"(exports) {
     "use strict";
     var log = require_log();
     var merge = require_merge();
@@ -1817,9 +1817,9 @@ var require_addPairToJSMap = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/nodes/Pair.js
+// node_modules/yaml/dist/nodes/Pair.js
 var require_Pair = __commonJS({
-  "../../node_modules/yaml/dist/nodes/Pair.js"(exports) {
+  "node_modules/yaml/dist/nodes/Pair.js"(exports) {
     "use strict";
     var createNode = require_createNode();
     var stringifyPair = require_stringifyPair();
@@ -1857,9 +1857,9 @@ var require_Pair = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/stringify/stringifyCollection.js
+// node_modules/yaml/dist/stringify/stringifyCollection.js
 var require_stringifyCollection = __commonJS({
-  "../../node_modules/yaml/dist/stringify/stringifyCollection.js"(exports) {
+  "node_modules/yaml/dist/stringify/stringifyCollection.js"(exports) {
     "use strict";
     var identity = require_identity();
     var stringify4 = require_stringify();
@@ -2008,9 +2008,9 @@ ${indent}${end}`;
   }
 });
 
-// ../../node_modules/yaml/dist/nodes/YAMLMap.js
+// node_modules/yaml/dist/nodes/YAMLMap.js
 var require_YAMLMap = __commonJS({
-  "../../node_modules/yaml/dist/nodes/YAMLMap.js"(exports) {
+  "node_modules/yaml/dist/nodes/YAMLMap.js"(exports) {
     "use strict";
     var stringifyCollection = require_stringifyCollection();
     var addPairToJSMap = require_addPairToJSMap();
@@ -2152,9 +2152,9 @@ var require_YAMLMap = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/schema/common/map.js
+// node_modules/yaml/dist/schema/common/map.js
 var require_map = __commonJS({
-  "../../node_modules/yaml/dist/schema/common/map.js"(exports) {
+  "node_modules/yaml/dist/schema/common/map.js"(exports) {
     "use strict";
     var identity = require_identity();
     var YAMLMap = require_YAMLMap();
@@ -2174,9 +2174,9 @@ var require_map = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/nodes/YAMLSeq.js
+// node_modules/yaml/dist/nodes/YAMLSeq.js
 var require_YAMLSeq = __commonJS({
-  "../../node_modules/yaml/dist/nodes/YAMLSeq.js"(exports) {
+  "node_modules/yaml/dist/nodes/YAMLSeq.js"(exports) {
     "use strict";
     var createNode = require_createNode();
     var stringifyCollection = require_stringifyCollection();
@@ -2290,9 +2290,9 @@ var require_YAMLSeq = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/schema/common/seq.js
+// node_modules/yaml/dist/schema/common/seq.js
 var require_seq = __commonJS({
-  "../../node_modules/yaml/dist/schema/common/seq.js"(exports) {
+  "node_modules/yaml/dist/schema/common/seq.js"(exports) {
     "use strict";
     var identity = require_identity();
     var YAMLSeq = require_YAMLSeq();
@@ -2312,9 +2312,9 @@ var require_seq = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/schema/common/string.js
+// node_modules/yaml/dist/schema/common/string.js
 var require_string = __commonJS({
-  "../../node_modules/yaml/dist/schema/common/string.js"(exports) {
+  "node_modules/yaml/dist/schema/common/string.js"(exports) {
     "use strict";
     var stringifyString = require_stringifyString();
     var string = {
@@ -2331,9 +2331,9 @@ var require_string = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/schema/common/null.js
+// node_modules/yaml/dist/schema/common/null.js
 var require_null = __commonJS({
-  "../../node_modules/yaml/dist/schema/common/null.js"(exports) {
+  "node_modules/yaml/dist/schema/common/null.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var nullTag = {
@@ -2349,9 +2349,9 @@ var require_null = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/schema/core/bool.js
+// node_modules/yaml/dist/schema/core/bool.js
 var require_bool = __commonJS({
-  "../../node_modules/yaml/dist/schema/core/bool.js"(exports) {
+  "node_modules/yaml/dist/schema/core/bool.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var boolTag = {
@@ -2373,9 +2373,9 @@ var require_bool = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/stringify/stringifyNumber.js
+// node_modules/yaml/dist/stringify/stringifyNumber.js
 var require_stringifyNumber = __commonJS({
-  "../../node_modules/yaml/dist/stringify/stringifyNumber.js"(exports) {
+  "node_modules/yaml/dist/stringify/stringifyNumber.js"(exports) {
     "use strict";
     function stringifyNumber({ format, minFractionDigits, tag, value }) {
       if (typeof value === "bigint")
@@ -2400,9 +2400,9 @@ var require_stringifyNumber = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/schema/core/float.js
+// node_modules/yaml/dist/schema/core/float.js
 var require_float = __commonJS({
-  "../../node_modules/yaml/dist/schema/core/float.js"(exports) {
+  "node_modules/yaml/dist/schema/core/float.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var stringifyNumber = require_stringifyNumber();
@@ -2446,9 +2446,9 @@ var require_float = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/schema/core/int.js
+// node_modules/yaml/dist/schema/core/int.js
 var require_int = __commonJS({
-  "../../node_modules/yaml/dist/schema/core/int.js"(exports) {
+  "node_modules/yaml/dist/schema/core/int.js"(exports) {
     "use strict";
     var stringifyNumber = require_stringifyNumber();
     var intIdentify = (value) => typeof value === "bigint" || Number.isInteger(value);
@@ -2491,9 +2491,9 @@ var require_int = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/schema/core/schema.js
+// node_modules/yaml/dist/schema/core/schema.js
 var require_schema = __commonJS({
-  "../../node_modules/yaml/dist/schema/core/schema.js"(exports) {
+  "node_modules/yaml/dist/schema/core/schema.js"(exports) {
     "use strict";
     var map = require_map();
     var _null = require_null();
@@ -2519,9 +2519,9 @@ var require_schema = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/schema/json/schema.js
+// node_modules/yaml/dist/schema/json/schema.js
 var require_schema2 = __commonJS({
-  "../../node_modules/yaml/dist/schema/json/schema.js"(exports) {
+  "node_modules/yaml/dist/schema/json/schema.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var map = require_map();
@@ -2586,9 +2586,9 @@ var require_schema2 = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/schema/yaml-1.1/binary.js
+// node_modules/yaml/dist/schema/yaml-1.1/binary.js
 var require_binary = __commonJS({
-  "../../node_modules/yaml/dist/schema/yaml-1.1/binary.js"(exports) {
+  "node_modules/yaml/dist/schema/yaml-1.1/binary.js"(exports) {
     "use strict";
     var node_buffer = __require("buffer");
     var Scalar = require_Scalar();
@@ -2652,9 +2652,9 @@ var require_binary = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/schema/yaml-1.1/pairs.js
+// node_modules/yaml/dist/schema/yaml-1.1/pairs.js
 var require_pairs = __commonJS({
-  "../../node_modules/yaml/dist/schema/yaml-1.1/pairs.js"(exports) {
+  "node_modules/yaml/dist/schema/yaml-1.1/pairs.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Pair = require_Pair();
@@ -2730,9 +2730,9 @@ ${cn.comment}` : item.comment;
   }
 });
 
-// ../../node_modules/yaml/dist/schema/yaml-1.1/omap.js
+// node_modules/yaml/dist/schema/yaml-1.1/omap.js
 var require_omap = __commonJS({
-  "../../node_modules/yaml/dist/schema/yaml-1.1/omap.js"(exports) {
+  "node_modules/yaml/dist/schema/yaml-1.1/omap.js"(exports) {
     "use strict";
     var identity = require_identity();
     var toJS = require_toJS();
@@ -2808,9 +2808,9 @@ var require_omap = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/schema/yaml-1.1/bool.js
+// node_modules/yaml/dist/schema/yaml-1.1/bool.js
 var require_bool2 = __commonJS({
-  "../../node_modules/yaml/dist/schema/yaml-1.1/bool.js"(exports) {
+  "node_modules/yaml/dist/schema/yaml-1.1/bool.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     function boolStringify({ value, source }, ctx) {
@@ -2840,9 +2840,9 @@ var require_bool2 = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/schema/yaml-1.1/float.js
+// node_modules/yaml/dist/schema/yaml-1.1/float.js
 var require_float2 = __commonJS({
-  "../../node_modules/yaml/dist/schema/yaml-1.1/float.js"(exports) {
+  "node_modules/yaml/dist/schema/yaml-1.1/float.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var stringifyNumber = require_stringifyNumber();
@@ -2889,9 +2889,9 @@ var require_float2 = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/schema/yaml-1.1/int.js
+// node_modules/yaml/dist/schema/yaml-1.1/int.js
 var require_int2 = __commonJS({
-  "../../node_modules/yaml/dist/schema/yaml-1.1/int.js"(exports) {
+  "node_modules/yaml/dist/schema/yaml-1.1/int.js"(exports) {
     "use strict";
     var stringifyNumber = require_stringifyNumber();
     var intIdentify = (value) => typeof value === "bigint" || Number.isInteger(value);
@@ -2968,9 +2968,9 @@ var require_int2 = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/schema/yaml-1.1/set.js
+// node_modules/yaml/dist/schema/yaml-1.1/set.js
 var require_set = __commonJS({
-  "../../node_modules/yaml/dist/schema/yaml-1.1/set.js"(exports) {
+  "node_modules/yaml/dist/schema/yaml-1.1/set.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Pair = require_Pair();
@@ -3057,9 +3057,9 @@ var require_set = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/schema/yaml-1.1/timestamp.js
+// node_modules/yaml/dist/schema/yaml-1.1/timestamp.js
 var require_timestamp = __commonJS({
-  "../../node_modules/yaml/dist/schema/yaml-1.1/timestamp.js"(exports) {
+  "node_modules/yaml/dist/schema/yaml-1.1/timestamp.js"(exports) {
     "use strict";
     var stringifyNumber = require_stringifyNumber();
     function parseSexagesimal(str, asBigInt) {
@@ -3145,9 +3145,9 @@ var require_timestamp = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/schema/yaml-1.1/schema.js
+// node_modules/yaml/dist/schema/yaml-1.1/schema.js
 var require_schema3 = __commonJS({
-  "../../node_modules/yaml/dist/schema/yaml-1.1/schema.js"(exports) {
+  "node_modules/yaml/dist/schema/yaml-1.1/schema.js"(exports) {
     "use strict";
     var map = require_map();
     var _null = require_null();
@@ -3189,9 +3189,9 @@ var require_schema3 = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/schema/tags.js
+// node_modules/yaml/dist/schema/tags.js
 var require_tags = __commonJS({
-  "../../node_modules/yaml/dist/schema/tags.js"(exports) {
+  "node_modules/yaml/dist/schema/tags.js"(exports) {
     "use strict";
     var map = require_map();
     var _null = require_null();
@@ -3283,9 +3283,9 @@ var require_tags = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/schema/Schema.js
+// node_modules/yaml/dist/schema/Schema.js
 var require_Schema = __commonJS({
-  "../../node_modules/yaml/dist/schema/Schema.js"(exports) {
+  "node_modules/yaml/dist/schema/Schema.js"(exports) {
     "use strict";
     var identity = require_identity();
     var map = require_map();
@@ -3315,9 +3315,9 @@ var require_Schema = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/stringify/stringifyDocument.js
+// node_modules/yaml/dist/stringify/stringifyDocument.js
 var require_stringifyDocument = __commonJS({
-  "../../node_modules/yaml/dist/stringify/stringifyDocument.js"(exports) {
+  "node_modules/yaml/dist/stringify/stringifyDocument.js"(exports) {
     "use strict";
     var identity = require_identity();
     var stringify4 = require_stringify();
@@ -3395,9 +3395,9 @@ var require_stringifyDocument = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/doc/Document.js
+// node_modules/yaml/dist/doc/Document.js
 var require_Document = __commonJS({
-  "../../node_modules/yaml/dist/doc/Document.js"(exports) {
+  "node_modules/yaml/dist/doc/Document.js"(exports) {
     "use strict";
     var Alias = require_Alias();
     var Collection = require_Collection();
@@ -3704,9 +3704,9 @@ var require_Document = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/errors.js
+// node_modules/yaml/dist/errors.js
 var require_errors = __commonJS({
-  "../../node_modules/yaml/dist/errors.js"(exports) {
+  "node_modules/yaml/dist/errors.js"(exports) {
     "use strict";
     var YAMLError = class extends Error {
       constructor(name, pos, code, message) {
@@ -3769,9 +3769,9 @@ ${pointer}
   }
 });
 
-// ../../node_modules/yaml/dist/compose/resolve-props.js
+// node_modules/yaml/dist/compose/resolve-props.js
 var require_resolve_props = __commonJS({
-  "../../node_modules/yaml/dist/compose/resolve-props.js"(exports) {
+  "node_modules/yaml/dist/compose/resolve-props.js"(exports) {
     "use strict";
     function resolveProps(tokens, { flow, indicator, next, offset, onError, parentIndent, startOnNewline }) {
       let spaceBefore = false;
@@ -3903,9 +3903,9 @@ var require_resolve_props = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/compose/util-contains-newline.js
+// node_modules/yaml/dist/compose/util-contains-newline.js
 var require_util_contains_newline = __commonJS({
-  "../../node_modules/yaml/dist/compose/util-contains-newline.js"(exports) {
+  "node_modules/yaml/dist/compose/util-contains-newline.js"(exports) {
     "use strict";
     function containsNewline(key) {
       if (!key)
@@ -3945,9 +3945,9 @@ var require_util_contains_newline = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/compose/util-flow-indent-check.js
+// node_modules/yaml/dist/compose/util-flow-indent-check.js
 var require_util_flow_indent_check = __commonJS({
-  "../../node_modules/yaml/dist/compose/util-flow-indent-check.js"(exports) {
+  "node_modules/yaml/dist/compose/util-flow-indent-check.js"(exports) {
     "use strict";
     var utilContainsNewline = require_util_contains_newline();
     function flowIndentCheck(indent, fc, onError) {
@@ -3963,9 +3963,9 @@ var require_util_flow_indent_check = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/compose/util-map-includes.js
+// node_modules/yaml/dist/compose/util-map-includes.js
 var require_util_map_includes = __commonJS({
-  "../../node_modules/yaml/dist/compose/util-map-includes.js"(exports) {
+  "node_modules/yaml/dist/compose/util-map-includes.js"(exports) {
     "use strict";
     var identity = require_identity();
     function mapIncludes(ctx, items, search) {
@@ -3979,9 +3979,9 @@ var require_util_map_includes = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/compose/resolve-block-map.js
+// node_modules/yaml/dist/compose/resolve-block-map.js
 var require_resolve_block_map = __commonJS({
-  "../../node_modules/yaml/dist/compose/resolve-block-map.js"(exports) {
+  "node_modules/yaml/dist/compose/resolve-block-map.js"(exports) {
     "use strict";
     var Pair = require_Pair();
     var YAMLMap = require_YAMLMap();
@@ -4087,9 +4087,9 @@ var require_resolve_block_map = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/compose/resolve-block-seq.js
+// node_modules/yaml/dist/compose/resolve-block-seq.js
 var require_resolve_block_seq = __commonJS({
-  "../../node_modules/yaml/dist/compose/resolve-block-seq.js"(exports) {
+  "node_modules/yaml/dist/compose/resolve-block-seq.js"(exports) {
     "use strict";
     var YAMLSeq = require_YAMLSeq();
     var resolveProps = require_resolve_props();
@@ -4138,9 +4138,9 @@ var require_resolve_block_seq = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/compose/resolve-end.js
+// node_modules/yaml/dist/compose/resolve-end.js
 var require_resolve_end = __commonJS({
-  "../../node_modules/yaml/dist/compose/resolve-end.js"(exports) {
+  "node_modules/yaml/dist/compose/resolve-end.js"(exports) {
     "use strict";
     function resolveEnd(end, offset, reqSpace, onError) {
       let comment = "";
@@ -4181,9 +4181,9 @@ var require_resolve_end = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/compose/resolve-flow-collection.js
+// node_modules/yaml/dist/compose/resolve-flow-collection.js
 var require_resolve_flow_collection = __commonJS({
-  "../../node_modules/yaml/dist/compose/resolve-flow-collection.js"(exports) {
+  "node_modules/yaml/dist/compose/resolve-flow-collection.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Pair = require_Pair();
@@ -4375,9 +4375,9 @@ var require_resolve_flow_collection = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/compose/compose-collection.js
+// node_modules/yaml/dist/compose/compose-collection.js
 var require_compose_collection = __commonJS({
-  "../../node_modules/yaml/dist/compose/compose-collection.js"(exports) {
+  "node_modules/yaml/dist/compose/compose-collection.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Scalar = require_Scalar();
@@ -4440,9 +4440,9 @@ var require_compose_collection = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/compose/resolve-block-scalar.js
+// node_modules/yaml/dist/compose/resolve-block-scalar.js
 var require_resolve_block_scalar = __commonJS({
-  "../../node_modules/yaml/dist/compose/resolve-block-scalar.js"(exports) {
+  "node_modules/yaml/dist/compose/resolve-block-scalar.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     function resolveBlockScalar(ctx, scalar, onError) {
@@ -4623,9 +4623,9 @@ var require_resolve_block_scalar = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/compose/resolve-flow-scalar.js
+// node_modules/yaml/dist/compose/resolve-flow-scalar.js
 var require_resolve_flow_scalar = __commonJS({
-  "../../node_modules/yaml/dist/compose/resolve-flow-scalar.js"(exports) {
+  "node_modules/yaml/dist/compose/resolve-flow-scalar.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var resolveEnd = require_resolve_end();
@@ -4844,9 +4844,9 @@ var require_resolve_flow_scalar = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/compose/compose-scalar.js
+// node_modules/yaml/dist/compose/compose-scalar.js
 var require_compose_scalar = __commonJS({
-  "../../node_modules/yaml/dist/compose/compose-scalar.js"(exports) {
+  "node_modules/yaml/dist/compose/compose-scalar.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Scalar = require_Scalar();
@@ -4925,9 +4925,9 @@ var require_compose_scalar = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/compose/util-empty-scalar-position.js
+// node_modules/yaml/dist/compose/util-empty-scalar-position.js
 var require_util_empty_scalar_position = __commonJS({
-  "../../node_modules/yaml/dist/compose/util-empty-scalar-position.js"(exports) {
+  "node_modules/yaml/dist/compose/util-empty-scalar-position.js"(exports) {
     "use strict";
     function emptyScalarPosition(offset, before, pos) {
       if (before) {
@@ -4955,9 +4955,9 @@ var require_util_empty_scalar_position = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/compose/compose-node.js
+// node_modules/yaml/dist/compose/compose-node.js
 var require_compose_node = __commonJS({
-  "../../node_modules/yaml/dist/compose/compose-node.js"(exports) {
+  "node_modules/yaml/dist/compose/compose-node.js"(exports) {
     "use strict";
     var Alias = require_Alias();
     var identity = require_identity();
@@ -5061,9 +5061,9 @@ var require_compose_node = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/compose/compose-doc.js
+// node_modules/yaml/dist/compose/compose-doc.js
 var require_compose_doc = __commonJS({
-  "../../node_modules/yaml/dist/compose/compose-doc.js"(exports) {
+  "node_modules/yaml/dist/compose/compose-doc.js"(exports) {
     "use strict";
     var Document = require_Document();
     var composeNode = require_compose_node();
@@ -5104,9 +5104,9 @@ var require_compose_doc = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/compose/composer.js
+// node_modules/yaml/dist/compose/composer.js
 var require_composer = __commonJS({
-  "../../node_modules/yaml/dist/compose/composer.js"(exports) {
+  "node_modules/yaml/dist/compose/composer.js"(exports) {
     "use strict";
     var node_process = __require("process");
     var directives = require_directives();
@@ -5312,9 +5312,9 @@ ${end.comment}` : end.comment;
   }
 });
 
-// ../../node_modules/yaml/dist/parse/cst-scalar.js
+// node_modules/yaml/dist/parse/cst-scalar.js
 var require_cst_scalar = __commonJS({
-  "../../node_modules/yaml/dist/parse/cst-scalar.js"(exports) {
+  "node_modules/yaml/dist/parse/cst-scalar.js"(exports) {
     "use strict";
     var resolveBlockScalar = require_resolve_block_scalar();
     var resolveFlowScalar = require_resolve_flow_scalar();
@@ -5497,9 +5497,9 @@ var require_cst_scalar = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/parse/cst-stringify.js
+// node_modules/yaml/dist/parse/cst-stringify.js
 var require_cst_stringify = __commonJS({
-  "../../node_modules/yaml/dist/parse/cst-stringify.js"(exports) {
+  "node_modules/yaml/dist/parse/cst-stringify.js"(exports) {
     "use strict";
     var stringify4 = (cst) => "type" in cst ? stringifyToken(cst) : stringifyItem(cst);
     function stringifyToken(token) {
@@ -5558,9 +5558,9 @@ var require_cst_stringify = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/parse/cst-visit.js
+// node_modules/yaml/dist/parse/cst-visit.js
 var require_cst_visit = __commonJS({
-  "../../node_modules/yaml/dist/parse/cst-visit.js"(exports) {
+  "node_modules/yaml/dist/parse/cst-visit.js"(exports) {
     "use strict";
     var BREAK = /* @__PURE__ */ Symbol("break visit");
     var SKIP = /* @__PURE__ */ Symbol("skip children");
@@ -5620,9 +5620,9 @@ var require_cst_visit = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/parse/cst.js
+// node_modules/yaml/dist/parse/cst.js
 var require_cst = __commonJS({
-  "../../node_modules/yaml/dist/parse/cst.js"(exports) {
+  "node_modules/yaml/dist/parse/cst.js"(exports) {
     "use strict";
     var cstScalar = require_cst_scalar();
     var cstStringify = require_cst_stringify();
@@ -5722,9 +5722,9 @@ var require_cst = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/parse/lexer.js
+// node_modules/yaml/dist/parse/lexer.js
 var require_lexer = __commonJS({
-  "../../node_modules/yaml/dist/parse/lexer.js"(exports) {
+  "node_modules/yaml/dist/parse/lexer.js"(exports) {
     "use strict";
     var cst = require_cst();
     function isEmpty(ch) {
@@ -6311,9 +6311,9 @@ var require_lexer = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/parse/line-counter.js
+// node_modules/yaml/dist/parse/line-counter.js
 var require_line_counter = __commonJS({
-  "../../node_modules/yaml/dist/parse/line-counter.js"(exports) {
+  "node_modules/yaml/dist/parse/line-counter.js"(exports) {
     "use strict";
     var LineCounter = class {
       constructor() {
@@ -6342,9 +6342,9 @@ var require_line_counter = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/parse/parser.js
+// node_modules/yaml/dist/parse/parser.js
 var require_parser = __commonJS({
-  "../../node_modules/yaml/dist/parse/parser.js"(exports) {
+  "node_modules/yaml/dist/parse/parser.js"(exports) {
     "use strict";
     var node_process = __require("process");
     var cst = require_cst();
@@ -7216,9 +7216,9 @@ var require_parser = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/public-api.js
+// node_modules/yaml/dist/public-api.js
 var require_public_api = __commonJS({
-  "../../node_modules/yaml/dist/public-api.js"(exports) {
+  "node_modules/yaml/dist/public-api.js"(exports) {
     "use strict";
     var composer = require_composer();
     var Document = require_Document();
@@ -7313,9 +7313,9 @@ var require_public_api = __commonJS({
   }
 });
 
-// ../../node_modules/yaml/dist/index.js
+// node_modules/yaml/dist/index.js
 var require_dist = __commonJS({
-  "../../node_modules/yaml/dist/index.js"(exports) {
+  "node_modules/yaml/dist/index.js"(exports) {
     "use strict";
     var composer = require_composer();
     var Document = require_Document();
@@ -7365,11 +7365,106 @@ var require_dist = __commonJS({
   }
 });
 
+// src/mcp-stdio.js
+import readline from "node:readline";
+var MAX_RESPONSE_BYTES = 8 * 1024 * 1024;
+function createMcpRelay({ url, keyEnvVar = "AGENTPLAYBOOKS_API_KEY", keyHeader = "X-API-Key", env = process.env, fetchImpl = fetch, signal, allowInsecureHttp = false }) {
+  const endpoint = new URL(url);
+  if (endpoint.username || endpoint.password || endpoint.search || endpoint.hash || !/^\/api\/mcp\/(?:manage|[a-f0-9-]+)$/i.test(endpoint.pathname) || !(endpoint.protocol === "https:" || endpoint.protocol === "http:" && (allowInsecureHttp || ["localhost", "127.0.0.1", "[::1]"].includes(endpoint.hostname)))) {
+    throw new Error("Use an AgentPlaybooks HTTPS MCP endpoint (localhost HTTP is also supported).");
+  }
+  if (!/^[A-Z_][A-Z0-9_]*$/.test(keyEnvVar) || !["X-API-Key", "Authorization"].includes(keyHeader)) throw new Error("Invalid credential reference or header.");
+  let session, protocol;
+  return async (message) => {
+    const hasId = Object.hasOwn(message ?? {}, "id");
+    const id = hasId ? message.id : null;
+    const error = (code, text) => ({ jsonrpc: "2.0", id, error: { code, message: text } });
+    if (!message || Array.isArray(message) || message.jsonrpc !== "2.0" || typeof message.method !== "string") return error(-32600, "Invalid JSON-RPC request.");
+    if (message.method === "ping") return hasId ? { jsonrpc: "2.0", id, result: {} } : null;
+    const key = env[keyEnvVar];
+    if (!key) return hasId ? error(-32001, `Configure ${keyEnvVar} in the selected profile's secret environment.`) : null;
+    const headers = { "Content-Type": "application/json", Accept: "application/json", [keyHeader]: key };
+    if (session) headers["Mcp-Session-Id"] = session;
+    if (protocol) headers["MCP-Protocol-Version"] = protocol;
+    try {
+      const timeout = AbortSignal.timeout(9e4);
+      const response = await fetchImpl(endpoint.href, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(message),
+        redirect: "error",
+        signal: signal ? AbortSignal.any([signal, timeout]) : timeout
+      });
+      if (!response.ok) {
+        await response.body?.cancel();
+        return hasId ? error(-32e3, `AgentPlaybooks HTTP ${response.status}.`) : null;
+      }
+      session = response.headers.get("mcp-session-id") ?? session;
+      if (!hasId) {
+        await response.body?.cancel();
+        return null;
+      }
+      const reader = response.body.getReader();
+      const chunks = [];
+      let size = 0;
+      try {
+        for (; ; ) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          size += value.byteLength;
+          if (size > MAX_RESPONSE_BYTES) throw new Error("Response too large");
+          chunks.push(value);
+        }
+      } finally {
+        await reader.cancel();
+      }
+      const result = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+      if (result.jsonrpc !== "2.0" || result.id !== id || !("result" in result || "error" in result)) throw new Error("Invalid response");
+      if (message.method === "initialize" && result.result?.protocolVersion) protocol = result.result.protocolVersion;
+      return result;
+    } catch {
+      return hasId ? error(-32e3, "AgentPlaybooks connection failed or returned an invalid response; no automatic retry was made.") : null;
+    }
+  };
+}
+async function runMcpStdio(options = {}) {
+  const input = options.input ?? process.stdin, output = options.output ?? process.stdout;
+  const controller = new AbortController();
+  const relay = createMcpRelay({ ...options, signal: controller.signal });
+  const lines = readline.createInterface({ input, crlfDelay: Infinity });
+  const pending = /* @__PURE__ */ new Set();
+  const send = (message) => {
+    if (message) output.write(JSON.stringify(message) + "\n");
+  };
+  try {
+    for await (const line of lines) {
+      if (!line.trim()) continue;
+      let message;
+      try {
+        message = JSON.parse(line);
+      } catch {
+        send({ jsonrpc: "2.0", id: null, error: { code: -32700, message: "Invalid JSON." } });
+        continue;
+      }
+      if (pending.size >= 16) {
+        if (Object.hasOwn(message ?? {}, "id")) send({ jsonrpc: "2.0", id: message.id, error: { code: -32e3, message: "Too many concurrent requests." } });
+        continue;
+      }
+      const task = relay(message).then(send).finally(() => pending.delete(task));
+      pending.add(task);
+    }
+  } finally {
+    controller.abort();
+    await Promise.allSettled(pending);
+    lines.close();
+  }
+}
+
 // src/cli.js
 import os7 from "node:os";
 import { readFile as readFile14 } from "node:fs/promises";
 import path17 from "node:path";
-import readline2 from "node:readline";
+import readline3 from "node:readline";
 
 // src/checks.js
 var import_yaml3 = __toESM(require_dist(), 1);
@@ -11093,6 +11188,7 @@ function hermesInstallHint(plan) {
 // src/connect.js
 import { readFile as readFile8 } from "node:fs/promises";
 import path11 from "node:path";
+import { fileURLToPath } from "node:url";
 import { createHash as createHash4 } from "node:crypto";
 var GUID_PATTERN = /^[0-9a-f]{8,}$/i;
 var UUID_PATTERN2 = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -11107,10 +11203,15 @@ function accountEndpoint(baseUrl) {
 function defaultKeyEnvVar(entryName) {
   return `APBKS_KEY_${entryName.replace(/[^A-Za-z0-9]+/g, "_").toUpperCase()}`;
 }
-var TARGETS_WITHOUT_TYPE = /* @__PURE__ */ new Set(["hermes"]);
 function serverDefinition({ url, keyEnvVar, keyHeader = DEFAULT_KEY_HEADER, target = "claude" }) {
-  const headers = { [keyHeader]: `\${${keyEnvVar}}` };
-  return TARGETS_WITHOUT_TYPE.has(target) ? { url, headers } : { type: "http", url, headers };
+  if (target === "hermes") {
+    return {
+      command: process.execPath,
+      args: [fileURLToPath(new URL("../bin/agentplaybooks.js", import.meta.url)), "mcp", "stdio", "--url", url, "--key-env", keyEnvVar, "--key-header", keyHeader],
+      env: { [keyEnvVar]: `\${${keyEnvVar}}` }
+    };
+  }
+  return { type: "http", url, headers: { [keyHeader]: `\${${keyEnvVar}}` } };
 }
 async function readIfPresent(absolutePath) {
   try {
@@ -11449,7 +11550,7 @@ var import_yaml6 = __toESM(require_dist(), 1);
 import { readFile as readFile10 } from "node:fs/promises";
 import { createHash as createHash6 } from "node:crypto";
 import path13 from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath as fileURLToPath2 } from "node:url";
 var GUID = /^(?:[a-f\d]{8,}|[a-f\d]{8}(?:-[a-f\d]{4}){3}-[a-f\d]{12})$/i;
 var PROVIDER = "agentplaybooks-memory";
 var LEGACY_PROVIDER = "agentplaybooks";
@@ -11520,8 +11621,8 @@ async function planHermesMemory(options = {}) {
   if (Object.entries(desired).some(([key, value]) => settings[key] !== value)) {
     add(settingsName, oldSettings, JSON.stringify({ ...settings, ...desired }, null, 2) + "\n");
   }
-  const bundled = fileURLToPath(new URL("../hermes-plugin/", import.meta.url));
-  const source = fileURLToPath(new URL("../../hermes-memory/agentplaybooks/", import.meta.url));
+  const bundled = fileURLToPath2(new URL("../hermes-plugin/", import.meta.url));
+  const source = fileURLToPath2(new URL("../../hermes-memory/agentplaybooks/", import.meta.url));
   const pluginDirectory = options.pluginDirectory ?? (await readOptional2(path13.join(bundled, "plugin.yaml")) !== null ? bundled : source);
   for (const name of PLUGIN_FILES) {
     const relative = `plugins/${PROVIDER}/${name}`;
@@ -12391,7 +12492,7 @@ async function readManifestSecrets(root) {
 }
 
 // src/prompt.js
-import readline from "node:readline";
+import readline2 from "node:readline";
 import { Writable } from "node:stream";
 async function readToEnd(input) {
   const chunks = [];
@@ -12416,7 +12517,7 @@ async function promptForKey(question, { input = process.stdin, output = process.
   const discard = new Writable({ write(_chunk, _encoding, callback) {
     callback();
   } });
-  const rl = readline.createInterface({ input, output: discard, terminal: true, historySize: 0 });
+  const rl = readline2.createInterface({ input, output: discard, terminal: true, historySize: 0 });
   try {
     return await readLine(rl, "");
   } finally {
@@ -12425,7 +12526,7 @@ async function promptForKey(question, { input = process.stdin, output = process.
 }
 async function promptForLine(question, { input = process.stdin, output = process.stdout } = {}) {
   if (!input.isTTY) return readToEnd(input);
-  return readLine(readline.createInterface({ input, output }), question);
+  return readLine(readline2.createInterface({ input, output }), question);
 }
 
 // src/audit.js
@@ -12540,6 +12641,7 @@ Usage:
   agentplaybooks memory setup <guid> --target=hermes [--hermes-home=<directory>]
                              [--profile=<bot>] [--shared=<guids>] [--team=<guids>] [--url=<base>] [--allow-insecure-http]
                              [--apply] [--json]
+  agentplaybooks mcp stdio --url=<MCP endpoint> [--key-env=<variable>]
   agentplaybooks hermes setup <guid> [path] [--profile=<bot>] [--hermes-home=<directory>]
                              [--tools-only] [--key-env=<VAR>] [--url=<base>] [--hermes-bin=<path>]
                              [--allow-insecure-http] [--apply] [--check] [--json]
@@ -12693,7 +12795,7 @@ async function confirm(question) {
   if (!process.stdin.isTTY) {
     throw new Error(`${question} Refusing to continue without an interactive confirmation; pass --yes if you mean it.`);
   }
-  const rl = readline2.createInterface({ input: process.stdin, output: process.stdout });
+  const rl = readline3.createInterface({ input: process.stdin, output: process.stdout });
   try {
     const answer = await new Promise((resolve) => rl.question(`${question} Type 'yes' to continue: `, resolve));
     return answer.trim().toLowerCase() === "yes";
@@ -13029,6 +13131,11 @@ async function run(args) {
   }
   if (!command || flags.has("--help") || command === "help") {
     console.log(HELP);
+    return;
+  }
+  if (command === "mcp" && positional[0] === "stdio") {
+    for (const flag of flags.keys()) if (!["--url", "--key-env", "--key-header", "--allow-insecure-http"].includes(flag)) throw new Error(`Unknown option ${flag} for mcp stdio.`);
+    await runMcpStdio({ url: flags.get("--url"), keyEnvVar: flags.get("--key-env"), keyHeader: flags.get("--key-header"), allowInsecureHttp: flags.has("--allow-insecure-http") });
     return;
   }
   const common = ["--json", "--apply", "--url", "--profile", "--hermes-home"];

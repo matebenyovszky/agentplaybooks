@@ -1,7 +1,7 @@
 {
   "name": "agentplaybooks",
   "displayName": "AgentPlaybooks",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "Your portable agent setup in Claude: playbooks with persona, instructions, skills, memory, canvas, connected tools, and a secret vault that never reveals values.",
   "author": {
     "name": "AgentPlaybooks",

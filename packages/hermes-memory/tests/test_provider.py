@@ -192,8 +192,9 @@ class ProviderTests(unittest.TestCase):
         self.assertNotIn("case/lead", self.service.books[A]["entries"])
         self.assertNotIn("note", self.service.books[C]["entries"])
         self.assertEqual(self.call(p, "read", key="case/lead", source=C)["value"], "Company X is the lead tenderer")
-        self.assertIn("tenderer", p.prefetch("tenderer"))
-        self.assertIn(C, p.prefetch("tenderer"))
+        recalled = p.prefetch("tenderer")
+        self.assertIn("tenderer", recalled)
+        self.assertIn(C, recalled)
         self.call(p, "archive", key="case/lead", source=C)
         self.assertTrue(self.service.books[C]["entries"]["case/lead"]["is_archived"])
         self.call(p, "delete", key="case/lead", source=C)
@@ -220,6 +221,51 @@ class ProviderTests(unittest.TestCase):
         self.service.books[A]["visibility"] = "public"
         self.assertIn("error", self.call(p, "write", key="secret", value="must not upload"))
         self.assertNotIn("secret", self.service.books[A]["entries"])
+
+    def test_recall_skips_acknowledgements_repeats_and_resets_after_write(self):
+        p = self.provider()
+        self.service.calls.clear()
+        for text in ("Köszönöm!", "Rendben.", "Szia", "oké", "Thank you"):
+            self.assertEqual(p.prefetch(text), "")
+        self.assertEqual(self.service.calls, [])
+        p.prefetch("coffee", session_id="one")
+        self.assertEqual(len(self.service.calls), 1)
+        p.prefetch("coffee", session_id="one")
+        self.assertEqual(len(self.service.calls), 1)
+        p.prefetch("coffee", session_id="two")
+        self.assertEqual(len(self.service.calls), 2)
+        self.call(p, "write", key="coffee", value="coffee preference")
+        self.service.calls.clear()
+        self.assertIn("coffee", p.prefetch("coffee", session_id="one"))
+        self.assertEqual(len(self.service.calls), 1)
+
+    def test_recall_failure_stops_source_and_cools_down_without_blocking_explicit_search(self):
+        p = self.provider()
+        now = [100.0]
+        p.recall.clock = lambda: now[0]
+        with patch.object(p.client, "search", side_effect=MemoryAPIError("offline")) as search:
+            p.prefetch("coffee project deadlines preferences")
+            self.assertEqual(search.call_count, 1)
+            p.prefetch("another different question")
+            self.assertEqual(search.call_count, 1)
+            self.call(p, "search", query="coffee")
+            self.assertEqual(search.call_count, 2)
+            now[0] += 61
+            p.prefetch("coffee project deadlines preferences")
+            self.assertEqual(search.call_count, 3)
+
+    def test_recall_repeat_window_expires_and_history_is_bounded(self):
+        p = self.provider()
+        now = [100.0]
+        p.recall.clock = lambda: now[0]
+        with patch.object(p.client, "search", return_value=[]) as search:
+            p.prefetch("coffee")
+            now[0] += 31
+            p.prefetch("coffee")
+            self.assertEqual(search.call_count, 2)
+            for i in range(70):
+                p.prefetch("coffee " + str(i))
+            self.assertLessEqual(len(p.recall.recent), 64)
 
     def test_registration_and_availability_are_offline(self):
         collected = []

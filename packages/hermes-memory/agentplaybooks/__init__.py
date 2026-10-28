@@ -153,7 +153,7 @@ class AgentPlaybooksMemoryProvider(MemoryProvider):
     def prefetch(self, query, *, session_id=""):
         if not self.client or not query.strip():
             return ""
-        return self.recall.fetch([self.client, *self.teams.values()], query)
+        return self.recall.fetch([self.client, *self.teams.values()], query, session_id=session_id or self.session_id)
 
     def get_tool_schemas(self):
         return TOOLS
@@ -230,6 +230,8 @@ class AgentPlaybooksMemoryProvider(MemoryProvider):
                     result = source.write(args["key"], {**body, "is_archived": True})
                 else:
                     result = source.delete(args["key"])
+            if writes:
+                self.recall.invalidate()
             return json.dumps(result, ensure_ascii=False)
         except (MemoryAPIError, ValueError, TypeError, KeyError) as exc:
             return json.dumps({"error": str(exc)}, ensure_ascii=False)
@@ -268,6 +270,7 @@ class AgentPlaybooksMemoryProvider(MemoryProvider):
                 "metadata": {**self._provenance(metadata.get("session_id")), "target": target,
                              "mirrored_text": content, "write_origin": metadata.get("write_origin", "memory_tool")}})
 
+        self.recall.invalidate()
 
 def register(ctx):
     ctx.register_memory_provider(AgentPlaybooksMemoryProvider())
