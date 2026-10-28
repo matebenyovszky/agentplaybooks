@@ -25,6 +25,7 @@ export function directoryMcp(source) {
 
 export async function collectDirectoryFiles({ recordingUrl } = {}) {
   const plugin = JSON.parse(await readFile(path.join(root, 'packages/cli/plugin.json'), 'utf8'));
+  plugin.name = 'agentplaybooks-hosted';
   const openai = plugin.extensions['com.openai'];
   openai.interface.longDescription = 'Keep your agents and project knowledge under your control. Manage portable playbooks, skills, shared memory, canvas documents, connected MCP/OpenAPI tools and vault-backed API requests through your AgentPlaybooks account. Sign in with OAuth; access follows your account and playbook permissions.';
   openai.interface.supportURL = 'https://github.com/matebenyovszky/agentplaybooks/issues';

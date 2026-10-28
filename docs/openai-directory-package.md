@@ -8,6 +8,8 @@ node scripts/pack-openai-directory.mjs --output=.tmp/agentplaybooks-openai.zip
 
 The package uses shared release metadata and the website's logo, a hosted-only
 playbook skill, and the account MCP endpoint with OAuth dynamic registration.
+Its package identifier is `agentplaybooks-hosted`, separate from the CLI package
+and the earlier unpublished draft whose MCP configuration cannot be changed.
 Keep the MCP URL identical to the initial portal upload: existing OpenAI apps
 cannot change their MCP URL, including its query parameters. The directory package
 uses the non-secret `X-AgentPlaybooks-Toolset: full` header so each operation is

@@ -14,6 +14,7 @@ describe('hosted OpenAI directory package', () => {
       type: 'oauth', client: { mode: 'dcr' }, defaultScopes: ['openid', 'email', 'profile', 'offline_access'],
     });
     const plugin = JSON.parse(files.get('plugin.json')!.toString());
+    expect(plugin.name).toBe('agentplaybooks-hosted');
     expect(plugin.extensions['com.openai'].review.test_cases.positive).toHaveLength(5);
     expect(plugin.extensions['com.openai'].review.test_cases.negative).toHaveLength(3);
     expect(files.has(plugin.extensions['com.openai'].onboardingSkill.replace(/^\.\//, ''))).toBe(true);
