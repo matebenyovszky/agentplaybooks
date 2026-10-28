@@ -2234,3 +2234,20 @@ GRANT EXECUTE ON FUNCTION public.account_is_active(uuid) TO service_role;
 GRANT EXECUTE ON FUNCTION public.revoke_account_credentials(uuid) TO service_role;
 
 COMMIT;
+
+-- Folded in from 20261028062350_increase_skill_attachment_limit_to_25.sql
+-- Keep the database ceiling aligned with ATTACHMENT_LIMITS.MAX_FILES_PER_SKILL.
+-- CREATE OR REPLACE preserves the existing trigger and function EXECUTE grants.
+CREATE OR REPLACE FUNCTION public.check_attachment_limit()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = pg_catalog, public, pg_temp
+AS $function$
+BEGIN
+  IF (SELECT COUNT(*) FROM public.skill_attachments WHERE skill_id = NEW.skill_id) >= 25 THEN
+    RAISE EXCEPTION 'Maximum 25 attachments per skill allowed';
+  END IF;
+  RETURN NEW;
+END;
+$function$;
