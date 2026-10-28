@@ -44,10 +44,10 @@ installations may need a catalog refresh or update to see the new entry.
 
 ### Install through the AgentPlaybooks CLI
 
-Install CLI 0.7.0, then preview and apply the profile-scoped setup:
+Install CLI 0.8.0, then preview and apply the profile-scoped setup:
 
 ```bash
-npm install -g @agentplaybooks/cli@0.7.0
+npm install -g @agentplaybooks/cli@0.8.0
 apb memory setup PRIVATE_PLAYBOOK_GUID --target=hermes --profile=work
 apb memory setup PRIVATE_PLAYBOOK_GUID --target=hermes --profile=work --apply
 HERMES_HOME=~/.hermes/profiles/work hermes memory setup

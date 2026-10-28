@@ -4,7 +4,7 @@
 
 **Közönség:** ügyfél információbiztonságért felelős személye (IBF), kockázatkezelés, jog, üzemeltetés. Készült magyar állami / önkormányzati beszállítói értékeléshez és EIR biztonsági osztályba soroláshoz.
 
-**Ellenőrzés dátuma:** 2026-10-25. A kódbeli állítások a `main` ág akkor aktuális forrására vonatkoznak (benne a merge-elt [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200), [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201), [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202), [#203](https://github.com/matebenyovszky/agentplaybooks/pull/203), [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204), [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205), [#207](https://github.com/matebenyovszky/agentplaybooks/pull/207), [#216](https://github.com/matebenyovszky/agentplaybooks/pull/216), [#220](https://github.com/matebenyovszky/agentplaybooks/pull/220)). Párhuzamos, még nem merge-elt PR-ek a gap listában **Folyamatban / In progress** jelöléssel szerepelnének; ezen a napon nincs ilyen.
+**Ellenőrzés dátuma:** 2026-10-28. A kódbeli állítások a `main` ág akkor aktuális forrására vonatkoznak (benne a merge-elt [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200), [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201), [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202), [#203](https://github.com/matebenyovszky/agentplaybooks/pull/203), [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204), [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205), [#207](https://github.com/matebenyovszky/agentplaybooks/pull/207), [#216](https://github.com/matebenyovszky/agentplaybooks/pull/216), [#220](https://github.com/matebenyovszky/agentplaybooks/pull/220)). Párhuzamos, még nem merge-elt PR-ek a gap listában **Folyamatban / In progress** jelöléssel szerepelnének; csak merge-elt biztonsági változások számítanak késznek.
 
 > **Jogi ellenőrzés szükséges.** Ez a csomag nem jogi tanács, nem tanúsítvány, és nem helyettesíti az ügyfél saját kockázatelemzését vagy a 7/2024. (VI. 24.) MK rendelet szerinti védelmi intézkedés-kiválasztást. Minden hatály-, osztályba sorolási, felelősségmegosztási és jogértelmezési megjegyzést az ügyfél jogászának és IBF-jének jóvá kell hagynia éles bevezetés előtt.
 
@@ -72,10 +72,18 @@ Ezek a gapek a `main`-en záródtak. A fehérkönyv sorai a merge-elt PR-ekre hi
 
 ## Párhuzamos PR-ek (nincsenek a `main`-en)
 
-A kódállítás alapja a `main`. A nyitott PR-ek itt **Folyamatban / In progress** jelöléssel szerepelnének, merge után a fenti táblába kerülnek. 2026-10-25-én nincs ilyen.
+A kódállítás alapja a `main`. A nyitott PR-ek itt **Folyamatban / In progress** jelöléssel szerepelnének, merge után a fenti táblába kerülnek. Itt csak merge-elt biztonsági változások számítanak késznek.
 
 ## Amit ez a csomag nem állít
 
 A termék **nem** tanúsított a 7/2024. MK rendelet egyetlen biztonsági osztályára sem. Az osztályba sorolás (alap / jelentős / magas) az ügyfél EIR-jére vonatkozik, nem a beszállító marketingjére — **jogi ellenőrzés szükséges**.
 
 A fehérkönyv csak azt állítja, amit a forráskód ténylegesen csinál. A hiányosságok listája szándékosan őszinte; lásd [whitepaper.hu.md — Ismert hiányosságok](./whitepaper.hu.md#ismert-hiányosságok).
+
+## Frissített kontrollok — 2026-10-28
+
+- [#219](https://github.com/matebenyovszky/agentplaybooks/pull/219): kikényszerített CSP és saját Auth-origin.
+- [#222](https://github.com/matebenyovszky/agentplaybooks/pull/222): memória- és vászonírások naplózása.
+- [#227](https://github.com/matebenyovszky/agentplaybooks/pull/227): fiókellenőrzés, üzemeltetői kiléptetés, auditálatlan plaintext-kiadás tiltása és HMAC-hitelesített mentés.
+
+A maradék hiányok a whitepaperben és a kockázati CSV-ben szerepelnek. Ez forrásellenőrzés, nem külső tanúsítás.

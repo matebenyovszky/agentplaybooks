@@ -20,7 +20,7 @@ The Hermes catalog package is named `agentplaybooks-tools`:
 ```bash
 hermes plugins install agentplaybooks-tools --no-enable
 hermes plugins enable agentplaybooks-tools
-npm install -g @agentplaybooks/cli@0.7.0
+npm install -g @agentplaybooks/cli@0.8.0
 apb --version
 ```
 
@@ -28,7 +28,7 @@ The CLI requires Node.js 20 or newer. For a remote Hermes gateway, install
 Node.js and `apb` on the gateway host/container. Installing this skill into a
 remote profile does not install the CLI on your Mac or gateway.
 
-## Guided setup (CLI 0.7.0)
+## Guided setup (CLI 0.8.0)
 
 Run these commands on the gateway host/container, in the project directory.
 `--profile=work` selects a named profile beneath the installation home;

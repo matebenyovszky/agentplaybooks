@@ -20,7 +20,7 @@ This skill does not install software or run commands by itself.
 
 ## Guided setup
 
-Requires `@agentplaybooks/cli@0.7.0` or later. Run on the gateway host/container.
+Requires `@agentplaybooks/cli@0.8.0` or later. Run on the gateway host/container.
 Choose the profile explicitly using `--profile=<name>` and, when needed,
 `--hermes-home=<installation-directory>`; keep that selection on every command.
 

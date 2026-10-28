@@ -41,13 +41,16 @@ jobs:
         working-directory: packages/cli
     steps:
       - uses: actions/checkout@v5
-      - name: Check release manifests and logo
-        run: node scripts/check-release-distribution.mjs
-        working-directory: .
       - uses: actions/setup-node@v5
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org
+      - name: Install release validation dependencies from the lockfile
+        run: npm ci --ignore-scripts
+        working-directory: .
+      - name: Check release manifests and logo
+        run: node scripts/check-release-distribution.mjs
+        working-directory: .
 
       # Trusted publishing needs npm >= 11.5.1. Node 24 ships a new enough npm
       # today; failing loudly beats falling back to a tokenless publish attempt
@@ -63,7 +66,7 @@ jobs:
           echo "npm $npm_version"
 
       # Install the CLI's runtime deps (currently yaml) so tests can import them.
-      - run: npm install
+      - run: npm ci
       - run: node --test
 
       - name: Verify the tag matches package.json

@@ -67,7 +67,7 @@ export default function DashboardPage() {
   }, [user]);
 
   const handleCreatePlaybook = async () => {
-    const name = prompt("Enter playbook name:");
+    const name = prompt(t("dashboard.playbookNamePrompt"));
     if (!name || !user) return;
 
     const res = await authFetch("/api/manage/playbooks", {
@@ -85,7 +85,7 @@ export default function DashboardPage() {
 
     const data = await res.json().catch(() => null);
     if (!res.ok || !data) {
-      alert("Error creating playbook");
+      alert(t("dashboard.createError"));
       return;
     }
 
@@ -146,14 +146,14 @@ export default function DashboardPage() {
             {t("dashboard.noPlaybooks")}
           </h2>
           <p className="text-neutral-500 dark:text-slate-500 mb-6">
-            Create your first playbook to get started
+            {t("dashboard.emptyDescription")}
           </p>
           <button
             onClick={handleCreatePlaybook}
             className="px-6 py-3 bg-gradient-to-r from-amber-600 to-amber-400 text-slate-900 rounded-lg font-semibold inline-flex items-center gap-2 shadow-lg shadow-amber-500/25"
           >
             <Plus className="h-5 w-5" />
-            {t("dashboard.createPlaybook")}
+            {t("dashboard.createFirstPlaybook")}
           </button>
         </motion.div>
       ) : (

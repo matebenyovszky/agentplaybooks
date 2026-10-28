@@ -25,7 +25,7 @@ Was das konkret heißt:
 - Anmeldung lässt sich mit **Microsoft Entra ID** auf Ihren Tenant begrenzen (`GOTRUE_EXTERNAL_AZURE_*` an GoTrue). Es gibt keine Anwendungs-MFA; MFA ist eine IdP-Kontrolle.
 - Verschlüsseltes On-Prem-Backup und eine Restore-Übung auf leerer Maschine sind dokumentiert. Der Masterschlüssel liegt **nie** im Archiv.
 
-**Audit-Spur.** **`audit_logs`** zeichnet Tresoroperationen (`secret.*`) und föderierte MCP-Aufrufe auf. Eine Ablehnung ist ein Ereignis. Zeilen behalten einen Hostnamen, keine volle URL und keinen Secret-Wert. Skills-, Memory- und Canvas-Schreibvorgänge werden nicht protokolliert.
+**Audit-Spur.** **`audit_logs`** zeichnet Tresoroperationen (`secret.*`) und föderierte MCP-Aufrufe auf. Eine Ablehnung ist ein Ereignis. Zeilen behalten einen Hostnamen, keine volle URL und keinen Secret-Wert. Skills-, Memory- und Canvas-Schreibvorgänge werden protokolliert; Anmeldungen und Audit-Lesezugriffe benötigen eine separate Erfassung.
 
 - **Hash-Kette / Manipulationshinweis** — SHA-256-Kette pro Playbook (`hash = sha256(kanonisches JSON einschließlich prev_hash)`). Die erste Zeile verkettet sich an 64 Null-Hexziffern. Ein Insert-Trigger setzt das Glied; Updates werden abgelehnt, die Zeilen bleiben unveränderlich. `GET /api/playbooks/:guid/audit/verify` und `apb audit verify` antworten mit HTTP 409, wenn ein Glied gebrochen ist.
 - **Export** — `format` json, jsonl oder csv an `GET /api/playbooks/:guid/audit`. `GET /api/playbooks/:guid/audit/export` liefert standardmäßig JSONL. CLI: `apb audit export`.
@@ -61,7 +61,7 @@ Das ist eine Lesehilfe, keine ISO-27001- oder NIST-Bewertung.
 | Thema | Produktseite |
 | --- | --- |
 | Kryptografie (ISO 27001 A.8.24 / NIST SC) | AES-256-GCM, HKDF pro Benutzer, AAD-gebundenes v2-Ciphertext. Kein KMS |
-| Protokollierung (A.8.15 / AU) | `audit_logs` mit Hash-Kette, Export, optionaler Aufbewahrung, Auditor-Rolle, SIEM/Syslog. Skills-, Memory- und Canvas-Schreibvorgänge werden nicht protokolliert |
+| Protokollierung (A.8.15 / AU) | `audit_logs` mit Hash-Kette, Export, optionaler Aufbewahrung, Auditor-Rolle, SIEM/Syslog. Skills-, Memory- und Canvas-Schreibvorgänge werden protokolliert; Anmeldungen und Audit-Lesezugriffe benötigen eine separate Erfassung |
 | Backup (A.8.13 / CP) | Verschlüsselter Dump + Restore-Drill; RPO/RTO setzen Sie |
 | Zugang (A.5.15 / AC, IA) | owner / editor / auditor; Entra OIDC; Self-Host-mTLS über vertrauenswürdigen Proxy |
 | Lieferkette (A.5.21 / SR, SI) | Lockfiles, CodeQL, CycloneDX, Cosign von SBOM-Blobs |
@@ -78,7 +78,7 @@ Die Software erledigt das nicht für Sie:
 - **Infrastrukturhärtung** — TLS-Terminierung, Netzisolation, Patchfenster, Räume, IdP-MFA. Compose startet die App auf Port 3000; es terminiert kein TLS und startet kein Supabase.
 - **DSFA und DSGVO-Rollen** — im Self-Host entscheiden Sie in der Regel über Zwecke und Mittel. DSFA, Verarbeitungsverzeichnis und Art.-13-Hinweise sind Ihre, wenn personenbezogene Daten im Spiel sind.
 
-Ehrliche Lücken: kein KMS/HSM, keine Neuverschlüsselung beim Masterkey-Wechsel, keine App-MFA, kein SAML, kein signiertes Container-Registry-Image, CSP ist Report-Only, Skills-/Memory-/Canvas-Schreibvorgänge werden nicht protokolliert.
+Ehrliche Lücken: kein KMS/HSM, keine Neuverschlüsselung beim Masterkey-Wechsel, keine App-MFA, kein SAML, kein signiertes Container-Registry-Image, die CSP wird durchgesetzt, erlaubt aber noch Inline-Skripte und eval, Anmeldungen und Audit-Lesezugriffe benötigen eine separate Erfassung.
 
 ## Lokal bereitstellen
 

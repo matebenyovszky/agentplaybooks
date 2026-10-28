@@ -47,11 +47,11 @@ telepítésnél katalógusfrissítés vagy programfrissítés kellhet a megjelen
 
 ### Telepítés az AgentPlaybooks CLI-vel
 
-A CLI 0.7.0 a memória plugint is tartalmazza. A gateway gépén vagy
+A CLI 0.8.0 a memória plugint is tartalmazza. A gateway gépén vagy
 konténerében, a Hermest futtató felhasználóval futtasd:
 
 ```bash
-npm install -g @agentplaybooks/cli@0.7.0
+npm install -g @agentplaybooks/cli@0.8.0
 apb memory setup PRIVATE_PLAYBOOK_GUID --target=hermes --profile=work
 apb memory setup PRIVATE_PLAYBOOK_GUID --target=hermes --profile=work --apply
 HERMES_HOME="$HOME/.hermes/profiles/work" hermes memory setup
@@ -148,7 +148,7 @@ szavakat szűr; a keresés nem szemantikus és nem végez szótövezést. Az exp
 A 0.3.0-s plugin tükrözéskor a Hermes pontos `previous_content` mezőjét
 használja. Hiányzó vagy többértelmű egyezésnél nem módosít távoli emléket;
 ilyenkor kézi egyeztetés kell. A `memory setup --profile=work` ugyanúgy választ
-profilt, mint a `connect` és az új `hermes setup`. A CLI kiadása 0.7.0.
+profilt, mint a `connect` és az új `hermes setup`. A CLI kiadása 0.8.0.
 
 A 0.3.1-es memóriaplugin egy hitelesített `private_check=1` API-kéréssel
 ellenőrzi a privát állapotot és a memória-hozzáférést, így az új szerveren
