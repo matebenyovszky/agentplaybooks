@@ -79,9 +79,19 @@ jobs:
                 manifest.remotes?.[0]?.url !== 'https://agentplaybooks.ai/api/mcp/manage') {
               throw new Error('Release package, registry namespace, endpoint, or versions do not match.');
             }
-            const response = await fetch(`https://registry.npmjs.org/@agentplaybooks%2Fcli/${encodeURIComponent(version)}`);
-            if (!response.ok || (await response.json()).version !== version) {
-              throw new Error('Publish to npm before publishing its MCP Registry metadata.');
+            // npm's successful publish can precede availability on its read replicas.
+            // Retry only propagation/transient errors; never bypass version validation.
+            for (let attempt = 0; ; attempt++) {
+              const response = await fetch(`https://registry.npmjs.org/@agentplaybooks%2Fcli/${encodeURIComponent(version)}`);
+              if (response.ok) {
+                if ((await response.json()).version !== version) throw new Error('npm returned a different release version.');
+                break;
+              }
+              if (attempt === 5 || ![404, 429, 500, 502, 503, 504].includes(response.status)) {
+                throw new Error(`Publish to npm before publishing its MCP Registry metadata (HTTP ${response.status}).`);
+              }
+              core.info(`Waiting for npm release propagation (${attempt + 1}/5).`);
+              await new Promise(resolve => setTimeout(resolve, 10000));
             }
             const registryUrl = `https://registry.modelcontextprotocol.io/v0.1/servers/${encodeURIComponent(manifest.name)}/versions/${encodeURIComponent(version)}`;
             const existing = await fetch(registryUrl);

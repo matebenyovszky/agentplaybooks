@@ -3,11 +3,15 @@
 This is an in-repo checklist. It does **not** claim a listing in the ChatGPT
 Plugins Directory, the official Claude marketplace, or any other catalog.
 
-Do not submit from this PR. Verified identity (Mate) is outside this change.
+Verified publisher identity is completed by the account owner in the OpenAI portal.
+Keep portal drafts, submissions, approvals and public listings distinct in the release issue.
 
 The **Skills-only** ZIP (plugin.json + SKILL.md, no account MCP) is a separate
-upload path. How to build it, what it contains, and the Mate-yes hold for
-listing copy: [`openai-skills-directory-zip.md`](./openai-skills-directory-zip.md).
+upload path. How to build it and what it contains:
+[`openai-skills-directory-zip.md`](./openai-skills-directory-zip.md).
+For the complete hosted integration, include MCP in the initial submission;
+OpenAI currently cannot add MCP to an existing skills-only listing.
+See the [official submission guide](https://developers.openai.com/plugins/deploy/submission).
 
 ## Remote MCP (hosted)
 
@@ -69,10 +73,12 @@ Use a valid user API key with at least `playbooks:read`, `skills:read`, and
    `method: "POST"` (or PUT/PATCH/DELETE). Expect refusal. Writes go through
    `use_secret_write` only (`method` enum GET/HEAD on `use_secret`).
 
-## Other blockers (not this PR)
+## Submission evidence
 
 - Live privacy URL after deploy: `https://agentplaybooks.ai/privacy` (must be
   HTTP 200, not 404). Same path on `apbks.com` if it is the same worker.
-- Directory identity verification is Mate’s, not this PR.
-- Marketing does not submit Cursor Marketplace, Claude Console, or the ChatGPT
-  directory from this change.
+- Directory identity verification is completed by Mate in the owning organization.
+- Remote MCP review also needs a dedicated sample-data reviewer account, executed
+  review cases and an accessible demonstration recording. Keep reviewer credentials
+  outside the package and public issue.
+- Record each catalog's verified live status separately in the release issue.
