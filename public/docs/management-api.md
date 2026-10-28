@@ -691,8 +691,8 @@ Content-Type: application/json
 - `text`, `cursorrules`, `shell`
 
 **Limits:**
-- Max file size: 50KB
-- Max files per skill: 10
+- Max file size: 256KB
+- Max files per skill: 25
 - Max filename length: 100 characters
 
 ### Update Attachment

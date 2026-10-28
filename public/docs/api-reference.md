@@ -1141,7 +1141,7 @@ Content-Type: application/json
 
 **Supported file types:** `typescript`, `javascript`, `python`, `go`, `rust`, `sql`, `markdown`, `json`, `yaml`, `text`, `cursorrules`, `shell`
 
-**Limits:** 50KB per file, 10 files per skill
+**Limits:** 256KB per file, 25 files per skill
 
 ### Update Attachment
 
