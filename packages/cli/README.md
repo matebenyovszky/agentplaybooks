@@ -39,6 +39,12 @@ existing `pack:openai-skills` remains skills-only. The full package still needs
 host registration/account consent and a real cloud smoke test. A local
 marketplace installation or working CLI alone does not establish cloud access.
 
+The repository's separate `scripts/pack-openai-directory.mjs` builds the public
+`agentplaybooks-hosted` directory variant with an enforced knowledge/document
+profile (`?toolset=directory`). That variant does not expose secret handling or
+connected-service dispatchers. The complete remote ZIP and private/custom
+account connection retain those capabilities; the two packages are not equivalent.
+
 ## Managed skill updates (next release)
 
 Sync records hashes of newly generated skill files in
