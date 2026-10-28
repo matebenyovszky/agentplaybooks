@@ -378,7 +378,7 @@ export type SkillAttachmentsUpdate = Partial<Omit<SkillAttachmentsRow, 'id' | 's
 // the database then rejects.
 export const ATTACHMENT_LIMITS = {
   MAX_FILE_SIZE: 262144, // 256KB
-  MAX_FILES_PER_SKILL: 10,
+  MAX_FILES_PER_SKILL: 25,
   MAX_FILENAME_LENGTH: 100,
 } as const;
 
