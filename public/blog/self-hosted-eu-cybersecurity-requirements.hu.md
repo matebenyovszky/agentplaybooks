@@ -25,7 +25,7 @@ Gyakorlatban:
 - A belépés a saját tenanszra szűkíthető **Microsoft Entra ID**-vel (`GOTRUE_EXTERNAL_AZURE_*` a GoTrue-n). Alkalmazásszintű MFA nincs; az MFA az identitásszolgáltató feladata.
 - A helyszíni titkosított mentés és az üres gépre visszaállítás gyakorlata dokumentált. A mesterkulcs **soha** nincs az archívumban.
 
-**Audit-nyomvonal.** Az **`audit_logs`** a széf műveleteit (`secret.*`) és a föderált MCP-hívásokat rögzíti. Az elutasítás is esemény. A sor hostname-et tart, teljes URL-t és titokértéket nem. A skill-, memória- és canvas-írások nincsenek naplózva.
+**Audit-nyomvonal.** Az **`audit_logs`** a széf műveleteit (`secret.*`) és a föderált MCP-hívásokat rögzíti. Az elutasítás is esemény. A sor hostname-et tart, teljes URL-t és titokértéket nem. A skill-, memória- és canvas-írások naplózottak; a bejelentkezések és auditolvasások külön lefedést igényelnek.
 
 - **Hash-lánc / hamisításjelzés** — playbookonkénti SHA-256 lánc (`hash = sha256(kanonikus JSON, benne a prev_hash)`). Az első sor 64 nulla hex karakterhez láncolódik. Beszúró trigger írja a láncszemet; a módosítás elutasított, a sorok megváltoztathatatlanok. A `GET /api/playbooks/:guid/audit/verify` és az `apb audit verify` HTTP 409-et ad, ha a lánc törik.
 - **Export** — `format` json, jsonl vagy csv a `GET /api/playbooks/:guid/audit` végponton. A `GET /api/playbooks/:guid/audit/export` alapértelmezése JSONL. CLI: `apb audit export`.
@@ -67,7 +67,7 @@ Ez olvasási segédlet, nem ISO 27001- vagy NIST-értékelés.
 | Téma | Termékoldal |
 | --- | --- |
 | Kriptográfia (ISO 27001 A.8.24 / NIST SC) | AES-256-GCM, felhasználónkénti HKDF, AAD-kötött v2 ciphertext. Nincs KMS |
-| Naplózás (A.8.15 / AU) | `audit_logs` hash-lánccal, exporttal, opcionális megőrzéssel, auditor szereppel, SIEM/sysloggal. A skill-, memória- és canvas-írások nincsenek naplózva |
+| Naplózás (A.8.15 / AU) | `audit_logs` hash-lánccal, exporttal, opcionális megőrzéssel, auditor szereppel, SIEM/sysloggal. A skill-, memória- és canvas-írások naplózottak; a bejelentkezések és auditolvasások külön lefedést igényelnek |
 | Mentés (A.8.13 / CP) | Titkosított dump + visszaállítási gyakorlat; az RPO/RTO a tiéd |
 | Hozzáférés (A.5.15 / AC, IA) | owner / editor / auditor; Entra OIDC; self-host mTLS megbízható proxy-n |
 | Ellátási lánc (A.5.21 / SR, SI) | lockfile, CodeQL, CycloneDX, SBOM-blobok cosign aláírása |
@@ -84,7 +84,7 @@ A szoftver ezeket nem végzi el helyetted:
 - **Infrastruktúra megerősítése** — TLS-lezárás, hálózati izoláció, javítási ablakok, fizikai védelem, IdP MFA. A compose a 3000-es porton indítja az appot; nem zár TLS-t, és nem indítja a Supabase-t.
 - **DPIA és GDPR-szerepek** — saját hosztoláskor általában te döntöd el a célokat és az eszközöket. A hatásvizsgálat, a kezelési nyilvántartás és a 13. cikk szerinti tájékoztatás a tiéd, ha személyes adat van a rendszerben.
 
-Őszinte hiányok: nincs KMS/HSM, nincs újratitkosítás a mesterkulcs cseréjekor, nincs alkalmazás-MFA, nincs SAML, nincs aláírt konténer-registry image, a CSP jelenleg Report-Only, a skill-, memória- és canvas-írások nincsenek naplózva.
+Őszinte hiányok: nincs KMS/HSM, nincs újratitkosítás a mesterkulcs cseréjekor, nincs alkalmazás-MFA, nincs SAML, nincs aláírt konténer-registry image, a CSP kikényszerített, de az inline szkriptek és eval még megengedettek, a bejelentkezések és auditolvasások külön lefedést igényelnek.
 
 ## Hogyan telepítsd helyben
 

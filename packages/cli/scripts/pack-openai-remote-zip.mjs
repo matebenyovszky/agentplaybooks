@@ -11,7 +11,9 @@ export async function packOpenAiRemoteZip({ root = packageRoot, outputPath } = {
   const config = JSON.parse(mcp);
   const entries = Object.values(config.mcpServers ?? {});
   if (entries.length !== 1 || entries[0].url !== "https://agentplaybooks.ai/api/mcp/manage"
-      || entries[0].type !== "streamable-http" || entries[0].extensions?.["com.openai"]?.auth?.type !== "oauth") {
+      || entries[0].type !== "streamable-http"
+      || Object.keys(entries[0]).some(key => !["type", "url", "extensions"].includes(key))
+      || JSON.stringify(entries[0].extensions) !== JSON.stringify({ "com.openai": { auth: { type: "oauth" } } })) {
     throw new Error("The hosted plugin must declare the canonical remote MCP endpoint and OAuth authentication.");
   }
   if (containsLiteralCredential(mcp.toString("utf8"))) throw new Error("Refusing to package credentials.");

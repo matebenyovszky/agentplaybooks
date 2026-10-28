@@ -4,6 +4,13 @@ Reviewed against main e5ab047 and the current OpenAI plugin/authentication
 documentation on 2026-10-28. These findings describe source and reproducible
 tests, not an authenticated production ChatGPT conversation.
 
+Release review integrated main b58337c (CLI 0.8.1) before preparing 0.9.0.
+It preserves the registered MCP URL, compact core/full and pinned domain views,
+stdio bridge, and upstream Hermes per-source cooldown. The new profile tool is
+advertised in core and pinned navigation; full discovery is 53 tools and core 16.
+Review also added protection against resurrecting locally deleted managed skill
+files, backup symlink escapes, and unexpected headers in the full plugin ZIP.
+
 ## Hermes traffic
 
 The memory provider had no periodic polling timer. It did perform a privacy

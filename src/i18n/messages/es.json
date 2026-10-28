@@ -173,7 +173,11 @@
     "favorites": "Favoritos",
     "signOut": "Cerrar Sesión",
     "createPlaybook": "Crear Playbook",
-    "noPlaybooks": "Aún no tienes playbooks",
+    "noPlaybooks": "Tu panel está vacío",
+    "emptyDescription": "Aún no tienes ningún playbook. Crea tu primer playbook para empezar.",
+    "createFirstPlaybook": "Crear tu primer playbook",
+    "playbookNamePrompt": "Introduce un nombre para tu playbook:",
+    "createError": "No se pudo crear el playbook. Inténtalo de nuevo.",
     "playbookCard": {
       "personas": "personas",
       "skills": "habilidades",
@@ -470,5 +474,11 @@
     "addNew": "Nuevo documento",
     "untitled": "Documento sin título",
     "lastModified": "Última modificación"
+  },
+  "auth": {
+    "emailLinkUse": "Iniciar sesión con un enlace por correo",
+    "passwordUse": "Iniciar sesión con contraseña",
+    "emailLinkSend": "Enviar enlace de acceso",
+    "emailLinkSent": "Revisa tu correo para abrir el enlace de acceso."
   }
 }

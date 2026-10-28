@@ -33,6 +33,8 @@ It is not another skill store or MCP registry. Skills and MCP connections are pa
 - Federation: other MCP servers and OpenAPI services become tools on your
   playbook, with their credentials resolved from that same vault by name
 - Audit trail: every federated call and every vault operation, refusals included
+- Audit evidence from the CLI: export JSONL/CSV, verify the per-playbook hash
+  chain, and explicitly confirm retention purges with `apb audit`.
 
 **Getting it into your tools**
 

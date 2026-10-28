@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, symlink, unlink, writeFile } from "node:fs/promises";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -255,4 +255,32 @@ test("three-way skill sync preserves local changes and refuses stale previews", 
   await put(root, target, "concurrent editor change");
   await assert.rejects(applySync(plan), /changed after preview/);
   assert.equal(await readFile(path.join(root, target), "utf8"), "concurrent editor change");
+});
+
+test("three-way sync preserves locally deleted managed skill files", async () => {
+  const root = await fixture();
+  const target = ".cursor/skills/hello/SKILL.md";
+  await put(root, ".agents/skills/hello/SKILL.md", HELLO_SKILL);
+  await applySync(await planSync(root, { targets: ["cursor"] }));
+  await unlink(path.join(root, target));
+  const plan = await planSync(root, { targets: ["cursor"] });
+  assert.ok(plan.conflicts.some(item => item.reason.includes("deleted locally")));
+  assert.ok(!plan.fileActions.some(action => action.path === target));
+  await applySync(plan);
+  await assert.rejects(readFile(path.join(root, target)), { code: "ENOENT" });
+});
+
+test("sync refuses a backup directory symlink before writing updated files", async () => {
+  const root = await fixture();
+  const outside = await fixture();
+  const source = ".agents/skills/hello/SKILL.md";
+  const target = ".cursor/skills/hello/SKILL.md";
+  await put(root, source, HELLO_SKILL);
+  await applySync(await planSync(root, { targets: ["cursor"] }));
+  await symlink(outside, path.join(root, ".agentplaybooks/backups"), "dir");
+  await put(root, source, HELLO_SKILL.replace("Say hello.", "Source update."));
+  const plan = await planSync(root, { targets: ["cursor"] });
+  await assert.rejects(applySync(plan), /symlink/);
+  assert.deepEqual(await readdir(outside), []);
+  assert.equal(await readFile(path.join(root, target), "utf8"), HELLO_SKILL);
 });

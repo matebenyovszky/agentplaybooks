@@ -20,7 +20,7 @@ The Hermes catalog package is named `agentplaybooks-tools`:
 ```bash
 hermes plugins install agentplaybooks-tools --no-enable
 hermes plugins enable agentplaybooks-tools
-npm install -g @agentplaybooks/cli@0.7.0
+npm install -g @agentplaybooks/cli@0.9.0
 apb --version
 ```
 
@@ -28,7 +28,7 @@ The CLI requires Node.js 20 or newer. For a remote Hermes gateway, install
 Node.js and `apb` on the gateway host/container. Installing this skill into a
 remote profile does not install the CLI on your Mac or gateway.
 
-## Guided setup (CLI 0.7.0)
+## Guided setup (CLI 0.8.0)
 
 Run these commands on the gateway host/container, in the project directory.
 `--profile=work` selects a named profile beneath the installation home;
@@ -100,3 +100,17 @@ applying it. Public skills can also be installed directly from a playbook's
 
 For details about the CLI and authentication scopes, see the
 [CLI guide](./cli.md) and [Hermes Memory guide](./hermes-memory.md).
+
+## Hermes connections without idle HTTP traffic
+
+CLI 0.8.1 creates Hermes connections through `apb mcp stdio`. Hermes communicates
+with this local process over stdin/stdout; the relay contacts the AgentPlaybooks
+JSON MCP endpoint only for actual requests. Local `ping` requests never reach
+the hosted server. There is no network keepalive, polling or automatic retry.
+Keys come from the selected profile's environment, never command arguments.
+
+Existing direct HTTP entries are reported as conflicts, not silently replaced.
+To migrate, back up the profile configuration and replace only the chosen entry
+with the reviewed stdio definition from `apb connect --target=hermes`. Keep its
+credential variable and endpoint. Restart the gateway/dashboard after migration.
+Do not set HTTP `keepalive_interval: 0`: Hermes 0.22.5 clamps that to five seconds.

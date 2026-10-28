@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-import time
 import uuid
 from pathlib import Path
 
@@ -166,17 +165,9 @@ class AgentPlaybooksMemoryProvider(MemoryProvider):
     def prefetch(self, query, *, session_id=""):
         if self.recall_mode != "automatic" or not self.primary or not self.client or not query.strip():
             return ""
-        clients = []
-        deadline = time.monotonic() + self.recall.budget
-        for client in [self.client, *self.teams.values()][:8]:
-            if time.monotonic() >= deadline:
-                break
-            try:
-                self._ensure_private(client, timeout=max(0.05, min(0.5, deadline - time.monotonic())))
-                clients.append(client)
-            except MemoryAPIError:
-                continue
-        return self.recall.fetch(clients, query, deadline=deadline)
+        return self.recall.fetch([self.client, *self.teams.values()], query,
+                                 session_id=session_id or self.session_id,
+                                 ensure_private=self._ensure_private)
 
     def _ensure_private(self, client, timeout=15):
         if client.guid not in self._validated_sources:
@@ -261,7 +252,7 @@ class AgentPlaybooksMemoryProvider(MemoryProvider):
                 else:
                     result = source.delete(args["key"])
             if writes:
-                self.recall.reset()
+                self.recall.invalidate()
             return json.dumps(result, ensure_ascii=False)
         except (MemoryAPIError, ValueError, TypeError, KeyError) as exc:
             return json.dumps({"error": str(exc)}, ensure_ascii=False)
@@ -301,6 +292,7 @@ class AgentPlaybooksMemoryProvider(MemoryProvider):
                 "metadata": {**self._provenance(metadata.get("session_id")), "target": target,
                              "mirrored_text": content, "write_origin": metadata.get("write_origin", "memory_tool")}})
 
+        self.recall.invalidate()
 
 def register(ctx):
     ctx.register_memory_provider(AgentPlaybooksMemoryProvider())

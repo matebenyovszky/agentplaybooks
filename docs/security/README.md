@@ -4,7 +4,7 @@
 
 **Audience:** the customer's information-security officer (IBF), risk, legal, and operations teams. Written for a Hungarian public-sector supplier assessment and EIR security classification.
 
-**Verified against source:** 2026-10-25, on the `main` branch as of that date (includes merged [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200), [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201), [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202), [#203](https://github.com/matebenyovszky/agentplaybooks/pull/203), [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204), [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205), [#207](https://github.com/matebenyovszky/agentplaybooks/pull/207), [#216](https://github.com/matebenyovszky/agentplaybooks/pull/216), [#220](https://github.com/matebenyovszky/agentplaybooks/pull/220)). Parallel open PRs that are not on `main` yet are marked **Folyamatban / In progress** on the gap list; none is open at this date.
+**Verified against source:** 2026-10-28, on the `main` branch as of that date (includes merged [#200](https://github.com/matebenyovszky/agentplaybooks/pull/200), [#201](https://github.com/matebenyovszky/agentplaybooks/pull/201), [#202](https://github.com/matebenyovszky/agentplaybooks/pull/202), [#203](https://github.com/matebenyovszky/agentplaybooks/pull/203), [#204](https://github.com/matebenyovszky/agentplaybooks/pull/204), [#205](https://github.com/matebenyovszky/agentplaybooks/pull/205), [#207](https://github.com/matebenyovszky/agentplaybooks/pull/207), [#216](https://github.com/matebenyovszky/agentplaybooks/pull/216), [#220](https://github.com/matebenyovszky/agentplaybooks/pull/220)). Parallel open PRs that are not on `main` yet are marked **Folyamatban / In progress** on the gap list; only merged security changes are counted.
 
 > **jogi ellenőrzés szükséges.** This pack is not legal advice, not a certification, and not a substitute for the customer's own risk analysis or control selection under 7/2024. (VI. 24.) MK rendelet. Every note on scope, classification, responsibility split, or legal interpretation must be approved by the customer's counsel and IBF before production use.
 
@@ -72,10 +72,18 @@ These gaps closed on `main`. Whitepaper rows keep the merged PR links.
 
 ## Parallel PRs (not on `main`)
 
-Code claims follow `main`. Open PRs would be listed here as **Folyamatban / In progress** and flipped to the table above after merge. None is open at 2026-10-25.
+Code claims follow `main`. Open PRs would be listed here as **Folyamatban / In progress** and flipped to the table above after merge. Only merged security changes are counted here.
 
 ## What this pack does not claim
 
 The product is **not** certified to any security class of 7/2024 MK rendelet. Classification (alap / jelentős / magas) applies to the customer's EIR, not to vendor marketing — **jogi ellenőrzés szükséges**.
 
 The whitepaper only claims what the source code does. The gap list is intentionally honest; see [whitepaper.md — Known gaps](./whitepaper.md#known-gaps).
+
+## Updated controls — 2026-10-28
+
+- [#219](https://github.com/matebenyovszky/agentplaybooks/pull/219): enforced CSP and custom Auth origins.
+- [#222](https://github.com/matebenyovszky/agentplaybooks/pull/222): memory and canvas write auditing.
+- [#227](https://github.com/matebenyovszky/agentplaybooks/pull/227): account checks, operator offboarding, refusal of unaudited plaintext releases and HMAC-authenticated backups.
+
+Remaining gaps are in the whitepaper and risk CSV. This is a source review, not external certification.

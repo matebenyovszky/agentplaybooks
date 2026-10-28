@@ -222,6 +222,53 @@ class ProviderTests(unittest.TestCase):
         self.assertIn("error", self.call(p, "write", key="secret", value="must not upload"))
         self.assertNotIn("secret", self.service.books[A]["entries"])
 
+    def test_recall_skips_acknowledgements_repeats_and_resets_after_write(self):
+        p = self.provider()
+        self.service.calls.clear()
+        for text in ("Köszönöm!", "Rendben.", "Szia", "oké", "Thank you"):
+            self.assertEqual(p.prefetch(text), "")
+        self.assertEqual(self.service.calls, [])
+        # First use includes the legacy private-memory proof, not startup or
+        # acknowledgement traffic. Later turns reuse that read proof.
+        p.prefetch("coffee", session_id="one")
+        self.assertEqual(len(self.service.calls), 3)
+        p.prefetch("coffee", session_id="one")
+        self.assertEqual(len(self.service.calls), 3)
+        p.prefetch("coffee", session_id="two")
+        self.assertEqual(len(self.service.calls), 4)
+        self.call(p, "write", key="coffee", value="coffee preference")
+        self.service.calls.clear()
+        self.assertIn("coffee", p.prefetch("coffee", session_id="one"))
+        self.assertEqual(len(self.service.calls), 1)
+
+    def test_recall_failure_stops_source_and_cools_down_without_blocking_explicit_search(self):
+        p = self.provider()
+        now = [100.0]
+        p.recall.clock = lambda: now[0]
+        with patch.object(p.client, "search", side_effect=MemoryAPIError("offline")) as search:
+            p.prefetch("coffee project deadlines preferences")
+            self.assertEqual(search.call_count, 1)
+            p.prefetch("another different question")
+            self.assertEqual(search.call_count, 1)
+            self.call(p, "search", query="coffee")
+            self.assertEqual(search.call_count, 2)
+            now[0] += 61
+            p.prefetch("coffee project deadlines preferences")
+            self.assertEqual(search.call_count, 3)
+
+    def test_recall_repeat_window_expires_and_history_is_bounded(self):
+        p = self.provider()
+        now = [100.0]
+        p.recall.clock = lambda: now[0]
+        with patch.object(p.client, "search", return_value=[]) as search:
+            p.prefetch("coffee")
+            now[0] += 31
+            p.prefetch("coffee")
+            self.assertEqual(search.call_count, 2)
+            for i in range(70):
+                p.prefetch("coffee " + str(i))
+            self.assertLessEqual(len(p.recall.recent), 64)
+
     def test_registration_and_availability_are_offline(self):
         collected = []
         register(types.SimpleNamespace(register_memory_provider=collected.append))

@@ -232,13 +232,18 @@ async function skillActions(report, targetIds, conflicts, { root, syncState = { 
         const absolutePath = path.join(targetRoot, ...member.split("/"));
         if (planned.has(absolutePath)) continue;
         const [content, existing] = await Promise.all([readFile(sourceFile), readBufferIfExists(absolutePath)]);
+        if (existing === null && syncState.files[relativePath]) {
+          conflicts.push(conflict(target, member === "SKILL.md" ? "skill" : "skill-resource", name,
+            `${relativePath} was deleted locally; restore it or explicitly reset its sync state before recreating it.`, [canonical.source, relativePath]));
+          continue;
+        }
         if (existing !== null) {
           if (!sameFileContent(existing, content)) {
             if (syncState.files[relativePath]?.digest === fileHash(existing)
                 && syncState.files[relativePath]?.from === canonical.source) {
               planned.add(absolutePath);
               actions.push({ kind: member === "SKILL.md" ? "skill" : "skill-resource", target, name,
-                action: "merge", path: relativePath, absolutePath, content, from: canonical.source });
+                action: "merge", path: relativePath, absolutePath, content, from: canonical.source, expectedHash: fileHash(existing) });
             } else {
               conflicts.push(conflict(target, member === "SKILL.md" ? "skill" : "skill-resource", name, `${relativePath} differs from the portable skill and was not overwritten.`, [canonical.source, relativePath]));
             }
@@ -255,6 +260,7 @@ async function skillActions(report, targetIds, conflicts, { root, syncState = { 
           absolutePath,
           content,
           from: canonical.source,
+          expectedHash: null,
         });
       }
     }

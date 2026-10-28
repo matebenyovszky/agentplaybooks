@@ -132,7 +132,7 @@ insecure MCP URLs, cross-platform drift, and a 0-100 health score.
    and skipped — never overwritten. Replaced files are backed up under
    `.agentplaybooks/backups/`.
 
-## Hermes 0.7.0 workflow
+## Hermes 0.8.0 workflow
 
 Run on the host/container serving the Hermes profile:
 
@@ -486,3 +486,17 @@ installation's own and merges the playbook's MCP servers in.
 Later changes: re-run `pull` and `export hermes`, then `hermes profile update
 research`. Distribution files are replaced; sessions, memories and
 configuration are not.
+
+## Hermes connections without idle HTTP traffic
+
+CLI 0.8.1 creates Hermes connections through `apb mcp stdio`. Hermes communicates
+with this local process over stdin/stdout; the relay contacts the AgentPlaybooks
+JSON MCP endpoint only for actual requests. Local `ping` requests never reach
+the hosted server. There is no network keepalive, polling or automatic retry.
+Keys come from the selected profile's environment, never command arguments.
+
+Existing direct HTTP entries are reported as conflicts, not silently replaced.
+To migrate, back up the profile configuration and replace only the chosen entry
+with the reviewed stdio definition from `apb connect --target=hermes`. Keep its
+credential variable and endpoint. Restart the gateway/dashboard after migration.
+Do not set HTTP `keepalive_interval: 0`: Hermes 0.22.5 clamps that to five seconds.

@@ -1,0 +1,93 @@
+name: Repair MCP Registry latest
+
+on:
+  workflow_dispatch:
+    inputs:
+      expected_version:
+        description: "Already published active release, for example 0.8.0"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcp-registry-publish
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: mcp-registry-publish
+    steps:
+      # No checkout or release-branch code runs with the publisher key.
+      - name: Verify the replacement release and accidental historical record
+        uses: actions/github-script@v9
+        env:
+          EXPECTED_VERSION: ${{ inputs.expected_version }}
+        with:
+          script: |
+            const version = process.env.EXPECTED_VERSION;
+            if (!/^0\.\d+\.\d+$/.test(version)) throw new Error('Expected an existing 0.x release.');
+            const base = 'https://registry.modelcontextprotocol.io/v0.1/servers/ai.agentplaybooks%2Fagentplaybooks/versions/';
+            const replacement = await fetch(base + encodeURIComponent(version));
+            if (!replacement.ok) throw new Error('Publish the replacement release first.');
+            const entry = await replacement.json();
+            if (entry.server.version !== version || entry._meta?.['io.modelcontextprotocol.registry/official']?.status !== 'active') {
+              throw new Error('The replacement release must be active.');
+            }
+            const historical = await fetch(base + '1.0.0?include_deleted=true');
+            if (!historical.ok) throw new Error('Historical record is unavailable; inspect it manually.');
+            const old = await historical.json();
+            const status = old._meta?.['io.modelcontextprotocol.registry/official']?.status;
+            if (old.server.name !== 'ai.agentplaybooks/agentplaybooks' || old.server.version !== '1.0.0' || !['deprecated', 'deleted'].includes(status)) {
+              throw new Error('Refusing to hide any active or unexpected record.');
+            }
+
+      - name: Install the checksum-pinned official publisher
+        working-directory: ${{ runner.temp }}
+        run: |
+          mkdir -p registry-repair
+          cd registry-repair
+          curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 \
+            https://github.com/modelcontextprotocol/registry/releases/download/v1.8.4/mcp-publisher_linux_amd64.tar.gz \
+            --output publisher.tar.gz
+          printf '%s  publisher.tar.gz\n' 5dc2fd415369c73551259f31cd33e2aacc9e0d1021e7f08fef1492d93b781628 | sha256sum --check --strict
+          tar xzf publisher.tar.gz mcp-publisher
+
+      - name: Hide only the accidental 1.0.0 record
+        working-directory: ${{ runner.temp }}/registry-repair
+        env:
+          MCP_REGISTRY_PRIVATE_KEY: ${{ secrets.MCP_REGISTRY_PRIVATE_KEY }}
+        run: |
+          test -n "$MCP_REGISTRY_PRIVATE_KEY"
+          ./mcp-publisher login http --domain agentplaybooks.ai --private-key "$MCP_REGISTRY_PRIVATE_KEY"
+          ./mcp-publisher status --status deleted --message "Accidental historical version; use the active release." ai.agentplaybooks/agentplaybooks 1.0.0
+
+      - name: Verify active latest and retained history
+        uses: actions/github-script@v9
+        env:
+          EXPECTED_VERSION: ${{ inputs.expected_version }}
+        with:
+          script: |
+            const base = 'https://registry.modelcontextprotocol.io/v0.1/servers/ai.agentplaybooks%2Fagentplaybooks/versions/';
+            const response = await fetch(base + 'latest');
+            if (!response.ok) throw new Error(`Latest lookup failed: ${response.status}`);
+            const entry = await response.json();
+            const official = entry._meta?.['io.modelcontextprotocol.registry/official'];
+            if (entry.server.version !== process.env.EXPECTED_VERSION || official?.status !== 'active' || official.isLatest !== true) {
+              throw new Error('Registry latest was not repaired; record the result for registry maintainers.');
+            }
+            const history = await (await fetch(base + '1.0.0?include_deleted=true')).json();
+            if (history._meta?.['io.modelcontextprotocol.registry/official']?.status !== 'deleted') {
+              throw new Error('The accidental record was not hidden.');
+            }
+            await core.summary.addHeading(`Verified active latest: ${entry.server.version}`).addLink('Live registry entry', base + 'latest').write();
+
+      - name: Remove the short-lived publisher login
+        if: always()
+        working-directory: ${{ runner.temp }}
+        run: |
+          if [ -x registry-repair/mcp-publisher ]; then registry-repair/mcp-publisher logout; fi

@@ -53,7 +53,7 @@ Only its public proof belongs in the `/.well-known/mcp-registry-auth` route.
 For an existing release, dispatch from `main`:
 
 ```sh
-gh workflow run publish-mcp-registry.yml --ref main -f release_tag=cli-v0.7.0
+gh workflow run publish-mcp-registry.yml --ref main -f release_tag=cli-v0.8.0
 ```
 
 Deploy the matching public proof before running the workflow. When rotating the
@@ -73,3 +73,21 @@ Invoke-RestMethod "https://registry.modelcontextprotocol.io/v0.1/servers?search=
 
 Do not commit the private key. The proof file contains only the corresponding
 public key and is safe to deploy.
+
+## Repair the accidental historical latest record
+
+The early `1.0.0` record was published by mistake. Deprecating it leaves it
+eligible for the registry's highest-version selection. After publishing and
+verifying an active replacement, the manual **Repair MCP Registry latest**
+workflow can hide only that historical record and verify the result:
+
+```sh
+gh workflow run repair-mcp-registry-latest.yml --ref main -f expected_version=0.8.0
+```
+
+The workflow checks that the replacement is active and that `1.0.0` is already
+deprecated or deleted. It uses the protected publisher environment, runs no
+release-branch code, retains the historical record with `include_deleted=true`,
+and fails unless `latest` resolves to the expected active release. It does not
+delete the namespace or any active version. Normal publishing stays in the
+separate automatic workflow.

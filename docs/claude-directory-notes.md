@@ -147,7 +147,7 @@ Negative:
 
 - **Privacy policy — written.** `src/lib/legal-copy.ts` covers what the
   directory lists: collection, use and legal basis, processors (Supabase in
-  Frankfurt, Cloudflare), sharing, retention, rights, contact, and account
+  Ireland, Cloudflare), sharing, retention, rights, contact, and account
   deletion. The contact is the repository's issue tracker, not an email
   address — the owner's decision. The directory asks for "contact
   information"; if a reviewer finds a repository link insufficient, that is the

@@ -7365,11 +7365,106 @@ var require_dist = __commonJS({
   }
 });
 
+// src/mcp-stdio.js
+import readline from "node:readline";
+var MAX_RESPONSE_BYTES = 8 * 1024 * 1024;
+function createMcpRelay({ url, keyEnvVar = "AGENTPLAYBOOKS_API_KEY", keyHeader = "X-API-Key", env = process.env, fetchImpl = fetch, signal, allowInsecureHttp = false }) {
+  const endpoint = new URL(url);
+  if (endpoint.username || endpoint.password || endpoint.search || endpoint.hash || !/\/api\/mcp\/(?:manage|[a-f0-9-]+)$/i.test(endpoint.pathname) || !(endpoint.protocol === "https:" || endpoint.protocol === "http:" && (allowInsecureHttp || ["localhost", "127.0.0.1", "[::1]"].includes(endpoint.hostname)))) {
+    throw new Error("Use an AgentPlaybooks HTTPS MCP endpoint (localhost HTTP is also supported).");
+  }
+  if (!/^[A-Z_][A-Z0-9_]*$/.test(keyEnvVar) || !["X-API-Key", "Authorization"].includes(keyHeader)) throw new Error("Invalid credential reference or header.");
+  let session, protocol;
+  return async (message) => {
+    const hasId = Object.hasOwn(message ?? {}, "id");
+    const id = hasId ? message.id : null;
+    const error = (code, text) => ({ jsonrpc: "2.0", id, error: { code, message: text } });
+    if (!message || Array.isArray(message) || message.jsonrpc !== "2.0" || typeof message.method !== "string") return error(-32600, "Invalid JSON-RPC request.");
+    if (message.method === "ping") return hasId ? { jsonrpc: "2.0", id, result: {} } : null;
+    const key = env[keyEnvVar];
+    if (!key) return hasId ? error(-32001, `Configure ${keyEnvVar} in the selected profile's secret environment.`) : null;
+    const headers = { "Content-Type": "application/json", Accept: "application/json", [keyHeader]: key };
+    if (session) headers["Mcp-Session-Id"] = session;
+    if (protocol) headers["MCP-Protocol-Version"] = protocol;
+    try {
+      const timeout = AbortSignal.timeout(9e4);
+      const response = await fetchImpl(endpoint.href, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(message),
+        redirect: "error",
+        signal: signal ? AbortSignal.any([signal, timeout]) : timeout
+      });
+      if (!response.ok) {
+        await response.body?.cancel();
+        return hasId ? error(-32e3, `AgentPlaybooks HTTP ${response.status}.`) : null;
+      }
+      session = response.headers.get("mcp-session-id") ?? session;
+      if (!hasId) {
+        await response.body?.cancel();
+        return null;
+      }
+      const reader = response.body.getReader();
+      const chunks = [];
+      let size = 0;
+      try {
+        for (; ; ) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          size += value.byteLength;
+          if (size > MAX_RESPONSE_BYTES) throw new Error("Response too large");
+          chunks.push(value);
+        }
+      } finally {
+        await reader.cancel();
+      }
+      const result = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+      if (result.jsonrpc !== "2.0" || result.id !== id || !("result" in result || "error" in result)) throw new Error("Invalid response");
+      if (message.method === "initialize" && result.result?.protocolVersion) protocol = result.result.protocolVersion;
+      return result;
+    } catch {
+      return hasId ? error(-32e3, "AgentPlaybooks connection failed or returned an invalid response; no automatic retry was made.") : null;
+    }
+  };
+}
+async function runMcpStdio(options = {}) {
+  const input = options.input ?? process.stdin, output = options.output ?? process.stdout;
+  const controller = new AbortController();
+  const relay = createMcpRelay({ ...options, signal: controller.signal });
+  const lines = readline.createInterface({ input, crlfDelay: Infinity });
+  const pending = /* @__PURE__ */ new Set();
+  const send = (message) => {
+    if (message) output.write(JSON.stringify(message) + "\n");
+  };
+  try {
+    for await (const line of lines) {
+      if (!line.trim()) continue;
+      let message;
+      try {
+        message = JSON.parse(line);
+      } catch {
+        send({ jsonrpc: "2.0", id: null, error: { code: -32700, message: "Invalid JSON." } });
+        continue;
+      }
+      if (pending.size >= 16) {
+        if (Object.hasOwn(message ?? {}, "id")) send({ jsonrpc: "2.0", id: message.id, error: { code: -32e3, message: "Too many concurrent requests." } });
+        continue;
+      }
+      const task = relay(message).then(send).finally(() => pending.delete(task));
+      pending.add(task);
+    }
+  } finally {
+    controller.abort();
+    await Promise.allSettled(pending);
+    lines.close();
+  }
+}
+
 // src/cli.js
 import os7 from "node:os";
 import { readFile as readFile16 } from "node:fs/promises";
 import path19 from "node:path";
-import readline2 from "node:readline";
+import readline3 from "node:readline";
 
 // src/checks.js
 var import_yaml3 = __toESM(require_dist(), 1);
@@ -9032,6 +9127,16 @@ async function skillActions(report, targetIds, conflicts, { root, syncState = { 
         const absolutePath = path6.join(targetRoot, ...member.split("/"));
         if (planned.has(absolutePath)) continue;
         const [content, existing] = await Promise.all([readFile4(sourceFile), readBufferIfExists(absolutePath)]);
+        if (existing === null && syncState.files[relativePath]) {
+          conflicts.push(conflict(
+            target,
+            member === "SKILL.md" ? "skill" : "skill-resource",
+            name,
+            `${relativePath} was deleted locally; restore it or explicitly reset its sync state before recreating it.`,
+            [canonical.source, relativePath]
+          ));
+          continue;
+        }
         if (existing !== null) {
           if (!sameFileContent(existing, content)) {
             if (syncState.files[relativePath]?.digest === fileHash(existing) && syncState.files[relativePath]?.from === canonical.source) {
@@ -9044,7 +9149,8 @@ async function skillActions(report, targetIds, conflicts, { root, syncState = { 
                 path: relativePath,
                 absolutePath,
                 content,
-                from: canonical.source
+                from: canonical.source,
+                expectedHash: fileHash(existing)
               });
             } else {
               conflicts.push(conflict(target, member === "SKILL.md" ? "skill" : "skill-resource", name, `${relativePath} differs from the portable skill and was not overwritten.`, [canonical.source, relativePath]));
@@ -9061,7 +9167,8 @@ async function skillActions(report, targetIds, conflicts, { root, syncState = { 
           path: relativePath,
           absolutePath,
           content,
-          from: canonical.source
+          from: canonical.source,
+          expectedHash: null
         });
       }
     }
@@ -9620,7 +9727,9 @@ async function planFrom(report, manifestPath, options = {}) {
   enableRequestedTargets(manifest, requested);
   const manifestChanged = !existing || JSON.stringify(comparableManifest(existing)) !== JSON.stringify(comparableManifest(manifest));
   const adapters = await planAdapters(report, adapterWriteTargets(manifest, requested), { ...options, syncState });
-  for (const action of adapters.actions) action.expectedHash = await hashFile(action.absolutePath);
+  for (const action of adapters.actions) {
+    if (!Object.hasOwn(action, "expectedHash")) action.expectedHash = await hashFile(action.absolutePath);
+  }
   const writableTargets = manifest.spec.targets.filter((target) => target.enabled && ADAPTER_TARGET_TYPES.includes(target.type));
   const suggestedTargets = writableTargets.length === 0 ? (await detectInstalledTargets(options.homedir, options.env, options.platform)).filter(
     (type) => !manifest.spec.targets.some((target) => target.type === type && target.enabled)
@@ -9698,6 +9807,7 @@ async function applySync(plan) {
     if (await hashFile(action.absolutePath) !== action.expectedHash) throw new Error(`Sync target changed after preview: ${action.path}`);
   }
   const backupDirectory = path8.join(path8.dirname(plan.manifestPath), ".agentplaybooks", "backups", timestampForPath());
+  await assertSafeSyncPath(path8.dirname(plan.manifestPath), path8.relative(path8.dirname(plan.manifestPath), backupDirectory));
   let backupPath = null;
   if (plan.manifestChanged && plan.existing) {
     await mkdir3(backupDirectory, { recursive: true, mode: 448 });
@@ -11445,6 +11555,7 @@ function hermesInstallHint(plan) {
 // src/connect.js
 import { readFile as readFile10 } from "node:fs/promises";
 import path13 from "node:path";
+import { fileURLToPath } from "node:url";
 import { createHash as createHash6 } from "node:crypto";
 var GUID_PATTERN = /^[0-9a-f]{8,}$/i;
 var UUID_PATTERN2 = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -11459,10 +11570,15 @@ function accountEndpoint(baseUrl) {
 function defaultKeyEnvVar(entryName) {
   return `APBKS_KEY_${entryName.replace(/[^A-Za-z0-9]+/g, "_").toUpperCase()}`;
 }
-var TARGETS_WITHOUT_TYPE = /* @__PURE__ */ new Set(["hermes"]);
 function serverDefinition({ url, keyEnvVar, keyHeader = DEFAULT_KEY_HEADER, target = "claude" }) {
-  const headers = { [keyHeader]: `\${${keyEnvVar}}` };
-  return TARGETS_WITHOUT_TYPE.has(target) ? { url, headers } : { type: "http", url, headers };
+  if (target === "hermes") {
+    return {
+      command: process.execPath,
+      args: [fileURLToPath(new URL("../bin/agentplaybooks.js", import.meta.url)), "mcp", "stdio", "--url", url, "--key-env", keyEnvVar, "--key-header", keyHeader],
+      env: { [keyEnvVar]: `\${${keyEnvVar}}` }
+    };
+  }
+  return { type: "http", url, headers: { [keyHeader]: `\${${keyEnvVar}}` } };
 }
 async function readIfPresent(absolutePath) {
   try {
@@ -11801,7 +11917,7 @@ var import_yaml6 = __toESM(require_dist(), 1);
 import { readFile as readFile12 } from "node:fs/promises";
 import { createHash as createHash8 } from "node:crypto";
 import path15 from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath as fileURLToPath2 } from "node:url";
 var GUID = /^(?:[a-f\d]{8,}|[a-f\d]{8}(?:-[a-f\d]{4}){3}-[a-f\d]{12})$/i;
 var PROVIDER = "agentplaybooks-memory";
 var LEGACY_PROVIDER = "agentplaybooks";
@@ -11872,8 +11988,8 @@ async function planHermesMemory(options = {}) {
   if (Object.entries(desired).some(([key, value]) => settings[key] !== value)) {
     add(settingsName, oldSettings, JSON.stringify({ ...settings, ...desired }, null, 2) + "\n");
   }
-  const bundled = fileURLToPath(new URL("../hermes-plugin/", import.meta.url));
-  const source = fileURLToPath(new URL("../../hermes-memory/agentplaybooks/", import.meta.url));
+  const bundled = fileURLToPath2(new URL("../hermes-plugin/", import.meta.url));
+  const source = fileURLToPath2(new URL("../../hermes-memory/agentplaybooks/", import.meta.url));
   const pluginDirectory = options.pluginDirectory ?? (await readOptional2(path15.join(bundled, "plugin.yaml")) !== null ? bundled : source);
   for (const name of PLUGIN_FILES) {
     const relative = `plugins/${PROVIDER}/${name}`;
@@ -12743,7 +12859,7 @@ async function readManifestSecrets(root) {
 }
 
 // src/prompt.js
-import readline from "node:readline";
+import readline2 from "node:readline";
 import { Writable } from "node:stream";
 async function readToEnd(input) {
   const chunks = [];
@@ -12768,7 +12884,7 @@ async function promptForKey(question, { input = process.stdin, output = process.
   const discard = new Writable({ write(_chunk, _encoding, callback) {
     callback();
   } });
-  const rl = readline.createInterface({ input, output: discard, terminal: true, historySize: 0 });
+  const rl = readline2.createInterface({ input, output: discard, terminal: true, historySize: 0 });
   try {
     return await readLine(rl, "");
   } finally {
@@ -12777,7 +12893,7 @@ async function promptForKey(question, { input = process.stdin, output = process.
 }
 async function promptForLine(question, { input = process.stdin, output = process.stdout } = {}) {
   if (!input.isTTY) return readToEnd(input);
-  return readLine(readline.createInterface({ input, output }), question);
+  return readLine(readline2.createInterface({ input, output }), question);
 }
 
 // src/audit.js
@@ -12893,6 +13009,7 @@ Usage:
   agentplaybooks memory setup <guid> --target=hermes [--hermes-home=<directory>]
                              [--profile=<bot>] [--shared=<guids>] [--team=<guids>] [--url=<base>] [--allow-insecure-http]
                              [--apply] [--json]
+  agentplaybooks mcp stdio --url=<MCP endpoint> [--key-env=<variable>]
   agentplaybooks hermes setup <guid> [path] [--profile=<bot>] [--hermes-home=<directory>]
                              [--tools-only] [--key-env=<VAR>] [--url=<base>] [--hermes-bin=<path>]
                              [--allow-insecure-http] [--apply] [--check] [--json]
@@ -13047,7 +13164,7 @@ async function confirm(question) {
   if (!process.stdin.isTTY) {
     throw new Error(`${question} Refusing to continue without an interactive confirmation; pass --yes if you mean it.`);
   }
-  const rl = readline2.createInterface({ input: process.stdin, output: process.stdout });
+  const rl = readline3.createInterface({ input: process.stdin, output: process.stdout });
   try {
     const answer = await new Promise((resolve) => rl.question(`${question} Type 'yes' to continue: `, resolve));
     return answer.trim().toLowerCase() === "yes";
@@ -13383,6 +13500,11 @@ async function run(args) {
   }
   if (!command || flags.has("--help") || command === "help") {
     console.log(HELP);
+    return;
+  }
+  if (command === "mcp" && positional[0] === "stdio") {
+    for (const flag of flags.keys()) if (!["--url", "--key-env", "--key-header", "--allow-insecure-http"].includes(flag)) throw new Error(`Unknown option ${flag} for mcp stdio.`);
+    await runMcpStdio({ url: flags.get("--url"), keyEnvVar: flags.get("--key-env"), keyHeader: flags.get("--key-header"), allowInsecureHttp: flags.has("--allow-insecure-http") });
     return;
   }
   const common = ["--json", "--apply", "--url", "--profile", "--hermes-home"];

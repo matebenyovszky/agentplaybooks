@@ -266,7 +266,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   {
     name: "create_task_graph",
     title: "Create task graph",
-    description: "Create a hierarchical task plan in one call: a parent plan memory plus a child node per subtask. Upserts by key, so repeating the same plan_key overwrites the previous graph. Requires memory:write or full permission. Use write_memory for a single node, update_task_status to move a node through pending/running/completed, and get_memory_tree to inspect the graph.",
+    description: "Create a multi-step task plan with one parent and child tasks. Example: plan_key=release, tasks=[test, deploy]. This stores a hierarchy in memory; use write_memory for an ordinary fact or one independent note. Upserts by key, so repeating the same plan_key overwrites the previous graph. Requires memory:write or full permission. Use write_memory for a single node, update_task_status to move a node through pending/running/completed, and get_memory_tree to inspect the graph.",
     inputSchema: {
       type: "object",
       properties: {
@@ -296,7 +296,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   {
     name: "update_task_status",
     title: "Update task status",
-    description: "Update the status of a task node in a hierarchical plan. When all children of a parent are completed, the parent is auto-updated. Returns the current subtree state. Requires memory:write or full permission. Use create_task_graph to build the plan, not this tool.",
+    description: "Change an existing task to pending, running or completed. Example: mark the test task completed after its checks pass. This changes task progress, not the task's stored content; use write_memory to edit content. When all children of a parent are completed, the parent is auto-updated. Returns the current subtree state. Requires memory:write or full permission. Use create_task_graph to build the plan, not this tool.",
     inputSchema: {
       type: "object",
       properties: {

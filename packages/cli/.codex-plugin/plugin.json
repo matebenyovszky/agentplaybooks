@@ -1,7 +1,7 @@
 {
   "name": "agentplaybooks",
   "description": "Use playbooks, skills, memory, canvas, connected tools, and vault secrets in chat; sync portable agent configuration across clients.",
-  "version": "0.7.0",
+  "version": "0.9.0",
   "author": {
     "name": "AgentPlaybooks",
     "url": "https://agentplaybooks.ai"
@@ -26,7 +26,7 @@
   },
   "interface": {
     "displayName": "AgentPlaybooks",
-    "shortDescription": "Playbooks, skills, memory, canvas, and secret proxy",
+    "shortDescription": "Skills, memory & tools",
     "longDescription": "Use playbooks, skills, memory, collaborative canvas, connected MCP/OpenAPI tools, workflows, and vault-backed API calls directly in chat through one account connection. Also audit, sync, and back up portable agent configuration across clients.",
     "developerName": "AgentPlaybooks",
     "category": "Productivity",
@@ -42,7 +42,7 @@
       "Find the right skill and memory for this task.",
       "Call an API with a vault secret without revealing it."
     ],
-    "brandColor": "#7C3AED",
+    "brandColor": "#2563EB",
     "logo": "./assets/icon.svg",
     "composerIcon": "./assets/icon.svg"
   }

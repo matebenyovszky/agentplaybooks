@@ -19,7 +19,16 @@ def folded(text):
     return "".join(c for c in unicodedata.normalize("NFKD", text.casefold()) if not unicodedata.combining(c))
 
 
+ACKNOWLEDGEMENTS = {
+    "koszonom", "koszi", "koszonjuk", "kosz", "rendben", "oke", "ok", "igen", "nem",
+    "szia", "sziasztok", "folytasd", "mehet", "jo", "ertem", "nagyon koszonom",
+    "thanks", "thank you", "hello", "hi", "yes", "no", "okay", "continue", "got it",
+}
+
+
 def search_terms(query):
+    if re.sub(r"[\W_]+", " ", folded(query)).strip() in ACKNOWLEDGEMENTS:
+        return []
     # Bound both request count and text sent in each request. Keep original accents
     # for the server's literal search; normalization is only for stopwords/ranking.
     words = re.findall(r"[^\W_]+(?:[-_][^\W_]+)*", query[:2000], flags=re.UNICODE)
@@ -31,54 +40,91 @@ def search_terms(query):
 
 
 class Recall:
-    def __init__(self, budget=4.0, max_chars=8000):
+    def __init__(self, budget=4.0, max_chars=8000, *, clock=time.monotonic):
         self.budget = budget
         self.max_chars = max_chars
+        self.clock = clock
+        self.state_lock = threading.Lock()
+        self.recent = {}
+        self.failed_until = {}
+        self.active_sources = set()
         # Slots stay occupied until an HTTP call really returns, even after the
         # caller's deadline; repeated turns cannot spawn unbounded stuck workers.
         self.slots = threading.BoundedSemaphore(4)
-        self.last_query = None
-        self.last_query_at = 0.0
 
-    def reset(self):
-        self.last_query = None
-        self.last_query_at = 0.0
+    def invalidate(self):
+        """A successful explicit mutation must be visible to the next recall."""
+        with self.state_lock:
+            self.recent.clear()
+            self.failed_until.clear()
 
-    def fetch(self, clients, query, *, deadline=None):
+    reset = invalidate
+
+    def fetch(self, clients, query, *, session_id="", ensure_private=None):
         terms = search_terms(query)
         if not terms:
             return ""
-        # Store only a digest, never a query or recalled contents. Repeated
-        # prefetch callbacks must not multiply identical network requests.
         clients = list(clients)[:8]
-        signature = hashlib.sha256(json.dumps([terms, [(c.base_url, c.guid) for c in clients]]).encode()).hexdigest()
-        now = time.monotonic()
-        if signature == self.last_query and now - self.last_query_at < 30:
-            return ""
-        self.last_query, self.last_query_at = signature, now
-        deadline = deadline if deadline is not None else time.monotonic() + self.budget
+        # Remember only a digest, never a transcript or recalled content. A duplicate
+        # returns no new injection; it does not replay potentially stale memories.
+        signature = (session_id, tuple((getattr(c, "base_url", ""), c.guid) for c in clients),
+                     hashlib.sha256(query.strip().casefold().encode()).digest())
+        with self.state_lock:
+            now = self.clock()
+            self.recent = {key: expiry for key, expiry in self.recent.items() if expiry > now}
+            if signature in self.recent:
+                return ""
+            while len(self.recent) >= 64:
+                self.recent.pop(next(iter(self.recent)))
+            self.recent[signature] = now + 30
+        deadline = time.monotonic() + self.budget
         jobs, results = queue.Queue(), queue.Queue()
-        # Fairly try each source before the second keyword. Eight sources and
-        # four terms bound fan-out; explicit tools can query any configured source.
-        for term in terms:
-            for client in clients:
-                if jobs.qsize() >= 8:
-                    break
-                jobs.put((client, term))
+        request_budget = [8]
+        # One worker owns a source: a failed first keyword cannot fan out into
+        # three more failed requests. Different sources still progress in parallel.
+        for client in clients:
+            jobs.put(client)
 
         def worker():
             try:
                 while time.monotonic() < deadline:
                     try:
-                        client, term = jobs.get_nowait()
+                        client = jobs.get_nowait()
                     except queue.Empty:
                         return
+                    source = (getattr(client, "base_url", ""), client.guid)
+                    with self.state_lock:
+                        if source in self.active_sources or self.failed_until.get(source, 0) > self.clock():
+                            continue
+                        self.active_sources.add(source)
                     try:
-                        entries = client.search(search=term, limit=10, timeout=max(0.05, min(2.5, deadline - time.monotonic())))
-                        if isinstance(entries, list):
-                            results.put((client.guid, entries))
+                        if ensure_private:
+                            remaining = deadline - time.monotonic()
+                            if remaining <= 0:
+                                continue
+                            ensure_private(client, timeout=max(0.01, min(0.5, remaining / 2)))
+                        for term in terms:
+                            remaining = deadline - time.monotonic()
+                            if remaining <= 0:
+                                break
+                            with self.state_lock:
+                                if request_budget[0] <= 0:
+                                    break
+                                request_budget[0] -= 1
+                            try:
+                                entries = client.search(search=term, limit=10, timeout=min(2.5, remaining))
+                                if isinstance(entries, list):
+                                    results.put((client.guid, entries))
+                            except MemoryAPIError:
+                                with self.state_lock:
+                                    self.failed_until[source] = self.clock() + 60
+                                break
                     except MemoryAPIError:
-                        continue
+                        with self.state_lock:
+                            self.failed_until[source] = self.clock() + 60
+                    finally:
+                        with self.state_lock:
+                            self.active_sources.discard(source)
             finally:
                 self.slots.release()
 

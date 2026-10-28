@@ -173,7 +173,11 @@
     "favorites": "Kedvencek",
     "signOut": "Kijelentkezés",
     "createPlaybook": "Playbook Létrehozása",
-    "noPlaybooks": "Még nincsenek playbookjaid",
+    "noPlaybooks": "Az irányítópultod most üres",
+    "emptyDescription": "Még nincs egyetlen playbookod sem. A kezdéshez hozd létre az első playbookodat.",
+    "createFirstPlaybook": "Első playbook létrehozása",
+    "playbookNamePrompt": "Add meg a playbook nevét:",
+    "createError": "Nem sikerült létrehozni a playbookot. Próbáld újra.",
     "playbookCard": {
       "personas": "persona",
       "skills": "skill",
@@ -470,5 +474,11 @@
     "footerTagline": "Újrahasználható tudás a saját munkádhoz.",
     "docs": "Dokumentáció",
     "privacy": "Adatvédelem"
+  },
+  "auth": {
+    "emailLinkUse": "Bejelentkezés e-mailben kapott linkkel",
+    "passwordUse": "Bejelentkezés jelszóval",
+    "emailLinkSend": "Belépési link küldése",
+    "emailLinkSent": "A belépési linket elküldtük az e-mail-címedre."
   }
 }

@@ -92,7 +92,7 @@ export const ACCOUNT_TOOLS: McpTool[] = [
   },
   {
     name: "create_persona",
-    title: "Create persona",
+    title: "Set persona (legacy)",
     description: "Set the playbook's singleton persona name and system prompt. This does not add a second persona; it is a backward-compatible alias that overwrites those fields. Requires personas:write or full permission. Prefer update_persona to change a subset of fields. Use update_playbook only when you also need playbook name, visibility, config, or project instructions. Do not use delete_persona unless you intend to reset to the default Assistant.",
     inputSchema: {
       type: "object",
@@ -109,7 +109,7 @@ export const ACCOUNT_TOOLS: McpTool[] = [
   {
     name: "update_persona",
     title: "Update persona",
-    description: "Update the singleton persona's name, system prompt, or metadata without resetting to defaults. persona_id must equal playbook_id because the persona is stored on the playbook row. Requires personas:write or full permission. Use create_persona to replace name and system prompt together, delete_persona to reset to the default Assistant, and update_playbook when changing playbook-level fields as well.",
+    description: "Edit the playbook's one persona: name, system prompt or metadata. Omitted fields stay unchanged. Example: {playbook_id, system_prompt: 'Review Python code'}. Requires personas:write or full. Use reset_persona only to discard custom persona settings. Use update_playbook for project name, visibility or instructions. Legacy persona_id is optional and must equal playbook_id if supplied.",
     inputSchema: {
       type: "object",
       properties: {
@@ -119,13 +119,13 @@ export const ACCOUNT_TOOLS: McpTool[] = [
         system_prompt: { type: "string", description: "New system prompt" },
         metadata: { type: "object", description: "New metadata" },
       },
-      required: ["playbook_id", "persona_id"],
+      required: ["playbook_id"],
     },
     annotations: IDEMPOTENT_WRITE_CLOSED,
   },
   {
     name: "delete_persona",
-    title: "Delete persona",
+    title: "Reset persona (legacy)",
     description: "Reset the playbook's singleton persona to the default Assistant name and system prompt. Despite the delete_* name, this is not a hard delete: each playbook always keeps exactly one logical persona, so the fields are overwritten rather than removed. persona_id must equal playbook_id because the persona is stored on the playbook row. Custom name, system prompt, and metadata are permanently replaced and cannot be undone. Requires personas:write or full permission. Use update_persona to change fields without resetting, create_persona to set a new identity, and delete_playbook only when the entire playbook should be removed.",
     inputSchema: {
       type: "object",
@@ -135,6 +135,13 @@ export const ACCOUNT_TOOLS: McpTool[] = [
       },
       required: ["playbook_id", "persona_id"],
     },
+    annotations: DESTRUCTIVE_CLOSED,
+  },
+  {
+    name: "reset_persona",
+    title: "Reset persona",
+    description: "Reset this playbook's persona to Assistant with the default system prompt and empty metadata. Discards custom persona settings; keeps the playbook, skills and memories. Requires personas:write or full and write access. Use update_persona to edit selected fields instead.",
+    inputSchema: { type: "object", properties: { playbook_id: { type: "string", description: "UUID of the playbook" } }, required: ["playbook_id"] },
     annotations: DESTRUCTIVE_CLOSED,
   },
 ];

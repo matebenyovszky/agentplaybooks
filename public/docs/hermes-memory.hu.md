@@ -47,11 +47,11 @@ telepítésnél katalógusfrissítés vagy programfrissítés kellhet a megjelen
 
 ### Telepítés az AgentPlaybooks CLI-vel
 
-A CLI 0.7.0 a memória plugint is tartalmazza. A gateway gépén vagy
+A CLI 0.8.0 a memória plugint is tartalmazza. A gateway gépén vagy
 konténerében, a Hermest futtató felhasználóval futtasd:
 
 ```bash
-npm install -g @agentplaybooks/cli@0.7.0
+npm install -g @agentplaybooks/cli@0.8.1
 apb memory setup PRIVATE_PLAYBOOK_GUID --target=hermes --profile=work
 apb memory setup PRIVATE_PLAYBOOK_GUID --target=hermes --profile=work --apply
 HERMES_HOME="$HOME/.hermes/profiles/work" hermes memory setup
@@ -153,7 +153,7 @@ szavakat szűr; a keresés nem szemantikus és nem végez szótövezést. Az exp
 A 0.3.0-s plugin tükrözéskor a Hermes pontos `previous_content` mezőjét
 használja. Hiányzó vagy többértelmű egyezésnél nem módosít távoli emléket;
 ilyenkor kézi egyeztetés kell. A `memory setup --profile=work` ugyanúgy választ
-profilt, mint a `connect` és az új `hermes setup`. A CLI kiadása 0.7.0.
+profilt, mint a `connect` és az új `hermes setup`. A CLI kiadása 0.8.0.
 
 A 0.3.1-es memóriaplugin egy hitelesített `private_check=1` API-kéréssel
 ellenőrzi a privát állapotot és a memória-hozzáférést, így az új szerveren
@@ -175,3 +175,14 @@ a megvalósítást a [provider forráskódja és tesztjei](https://github.com/ma
 részletezik. Az automatizált tesztek a REST-működést és a valódi Hermes
 betöltőjét, Desktop-sémáját, eszközeit, memóriaírási eseményeit és profilváltását
 ellenőrzik helyi HTTP-tesztszerverrel, éles fiók használata nélkül.
+
+## Felesleges forgalom csökkentése (0.3.2)
+
+Nincs időzített lekérdezés. A rövid magyar és angol visszajelzések (például
+„köszönöm”, „rendben”, „oké”) nem indítanak felidézést. Ugyanazt a kérdést ugyanabban
+a munkamenetben, ugyanazokon a forrásokon 30 másodpercig nem keresi újra. Csak
+a kérdés lenyomatát tárolja átmenetileg; memóriatartalmat nem gyorsítótáraz.
+Sikeres memóriaírás után ismét kereshet. Az explicit keresés és olvasás végig működik.
+
+Hibánál az adott forrást azonnal abbahagyja és 60 másodpercig kihagyja az automatikus
+felidézésből. A többi forrás ettől még működik. Nincs háttérben ütemezett újrapróbálkozás.

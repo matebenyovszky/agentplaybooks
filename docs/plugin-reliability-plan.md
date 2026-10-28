@@ -4,6 +4,12 @@ Base: origin/main at e5ab04732c3bd116efd53562737c08d4860addb1 (CLI 0.7.0).
 Work happens in a separate checkout; the earlier OAuth checkout has unrelated
 uncommitted changes and is preserved.
 
+Release integration: merged origin/main b58337c (published CLI 0.8.1), preserving
+its compact management views, direct federated-tool routing, per-source Hermes
+failure isolation, stdio bridge and registered OpenAI MCP URL. This delivery
+prepares CLI 0.9.0 and Hermes memory 0.4.0; package versions are not proof of
+publication. Core discovery has 16 tools, including get_profile; full has 53.
+
 ## Today's implementation
 
 1. Make Hermes memory registration and initialization offline. Default recall
@@ -82,14 +88,20 @@ Official references checked on 2026-10-28:
 
 ## Verified results
 
-- Application suite: 959 tests passed; production Next.js build passed.
-- CLI suite: 240 tests passed (including ROS 2). Node 24 was also verified
+- Application suite after integration: 989 tests passed; production Cloudflare
+  Worker build passed. TypeScript, lint (33 existing warnings, no errors) and
+  production dependency audit passed.
+- CLI suite after review: 248 tests passed (including ROS 2, deleted managed
+  files and backup symlink rejection). Node 24 was also verified
   before the ROS 2 extension (239 tests); terminal tests require TERM=xterm
   rather than the tool host's TERM=dumb.
-- Hermes provider: 21 tests passed both with host stubs and real upstream
+- Hermes provider: 24 tests passed with real upstream
   imports. The complete real-Hermes HTTP contract passed against upstream
   ee7e0f51 (2026-10-28), including A -> B -> A isolation and offline initialize.
 - Live anonymous check: OAuth metadata passed; initialize returned HTTP 401,
   as expected without a credential. No private tool or write was invoked.
 - Full remote OpenAI ZIP built locally. Host registration, account consent,
   deployment and a real ChatGPT/Codex cloud conversation remain rollout steps.
+- Cloud test preparation: the available Chrome ChatGPT Plugins page is signed
+  out, and plugin discovery has no available AgentPlaybooks connector. User
+  sign-in/consent is required before claiming an actual cloud round-trip.

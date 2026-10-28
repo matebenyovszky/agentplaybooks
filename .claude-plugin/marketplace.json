@@ -13,7 +13,7 @@
       "name": "agentplaybooks",
       "source": "./plugins/agentplaybooks",
       "description": "Every playbook in your AgentPlaybooks account in Claude — persona, instructions, skills, memory, canvas, connected tools, and the secret proxy — plus local doctor and sync commands.",
-      "version": "0.7.0",
+      "version": "0.9.0",
       "author": {
         "name": "AgentPlaybooks",
         "url": "https://agentplaybooks.ai"

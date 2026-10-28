@@ -69,7 +69,9 @@ async function planFrom(report, manifestPath, options = {}) {
   enableRequestedTargets(manifest, requested);
   const manifestChanged = !existing || JSON.stringify(comparableManifest(existing)) !== JSON.stringify(comparableManifest(manifest));
   const adapters = await planAdapters(report, adapterWriteTargets(manifest, requested), { ...options, syncState });
-  for (const action of adapters.actions) action.expectedHash = await hashFile(action.absolutePath);
+  for (const action of adapters.actions) {
+    if (!Object.hasOwn(action, "expectedHash")) action.expectedHash = await hashFile(action.absolutePath);
+  }
 
   // A project pulled onto a fresh machine holds only the portable store, which
   // is not a deployment target — without a hint, sync would look broken.
@@ -174,6 +176,7 @@ export async function applySync(plan) {
   }
 
   const backupDirectory = path.join(path.dirname(plan.manifestPath), ".agentplaybooks", "backups", timestampForPath());
+  await assertSafeSyncPath(path.dirname(plan.manifestPath), path.relative(path.dirname(plan.manifestPath), backupDirectory));
 
   let backupPath = null;
   if (plan.manifestChanged && plan.existing) {
