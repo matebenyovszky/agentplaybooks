@@ -32,7 +32,9 @@ It is not another skill store or MCP registry. Skills and MCP connections are pa
   would use it.
 - Federation: other MCP servers and OpenAPI services become tools on your
   playbook, with their credentials resolved from that same vault by name
-- Audit trail: every federated call and every vault operation, refusals included
+- Audit trail: federated calls and vault operations (including refusals), plus
+  configuration changes and memory/canvas writes, without copying secret values
+  or document bodies into the log
 - Audit evidence from the CLI: export JSONL/CSV, verify the per-playbook hash
   chain, and explicitly confirm retention purges with `apb audit`.
 
@@ -60,9 +62,33 @@ It is not another skill store or MCP registry. Skills and MCP connections are pa
 
 - API keys: role-based access control (Viewer, Coworker, Admin)
 - Team collaboration: one-time editor invites without sharing human credentials or agent API keys
-- Explore: practical use cases, setup guidance, and curated AgentPlaybooks starters
+- [Explore](https://agentplaybooks.ai/explore): practical use cases, setup guidance,
+  curated starters, and a [searchable public playbook catalog](https://agentplaybooks.ai/explore#public-playbooks)
 - Sharing: public or unlisted playbooks; keep project context in private copies
 - Theme: system-aware Light and Dark modes
+
+## Self-hosting, security & audit
+
+Keep agent configuration and credentials on your infrastructure, with controls
+you can inspect in the source. The [Self-host page](https://agentplaybooks.ai/enterprise#security)
+introduces the available features; the [deployment guide](https://agentplaybooks.ai/docs/self-hosting)
+covers setup.
+
+| Control | Available today |
+| --- | --- |
+| Encrypted credentials | AES-256-GCM with per-user derived keys, server-side injection, enforced expiry, and optional destination host allow-lists |
+| Scoped access | Owner, editor, and read-only auditor roles; scoped agent API keys; an optional private-instance mode that enforces private playbooks |
+| Audit coverage | Vault operations, federated calls, playbook and access configuration changes, and memory/canvas writes; metadata without secret values or content bodies |
+| Verifiable evidence | Per-playbook SHA-256 hash chains, protected append-only history that survives playbook deletion, JSONL/CSV export, and CLI verification |
+| Forwarding & retention | Optional signed HTTPS SIEM webhooks or Node syslog, configurable retention, and checkpoints that preserve verification after a purge |
+| Self-host operations | mTLS behind a trusted TLS proxy, encrypted backup/restore tooling and restore drills, CodeQL, CycloneDX SBOMs, and signed SBOM blobs |
+
+See the [audit guide](https://agentplaybooks.ai/docs/audit-logs),
+[self-hosted mTLS guide](https://agentplaybooks.ai/docs/self-hosted-mtls), and
+[security documentation](https://agentplaybooks.ai/docs/security) for configuration,
+evidence, and limits. Forwarding is optional and best-effort; retention requires
+an operator-scheduled call. Hash chains provide tamper evidence, not a digital
+signature.
 
 ## Tech Stack
 
@@ -338,8 +364,10 @@ GET    /api/playbooks/:guid/audit?operation=secret.
 
 Every vault operation is recorded, refusals included: what was done, to which secret, by the
 owner or by which API key prefix, and for `secret.use` the destination host. An entry never
-holds a secret value, a full outbound URL, or a key. Owner access only — a playbook API key
-performs vault operations but cannot read the record of them.
+holds a secret value, a full outbound URL, or a key. Owners and read-only auditors can
+read, export, and verify the trail. An agent key that performs vault operations cannot
+read the trail unless separately granted the auditor role. See the
+[audit access model](https://agentplaybooks.ai/docs/audit-logs).
 
 ### User profile and user API keys (Management)
 
@@ -521,7 +549,7 @@ agentplaybooks/
 
 - playbooks: core entity (includes visibility enum: private, public, unlisted; persona fields for agent identity and `instructions` for always-on project rules)
 - secrets: the vault — AES-256-GCM ciphertext, per-secret host allow-list, reveal flag, rotation and usage accounting
-- audit_logs: owner-readable audit trail for federated MCP calls and secrets vault operations (`secret.*`); never holds values, full URLs or keys. Renamed from `mcp_proxy_audit_logs`.
+- audit_logs: owner/auditor-readable hash-chained history for federated calls, vault operations, configuration changes, and memory/canvas writes; no secret values, content bodies, full outbound URLs, or API keys. Renamed from `mcp_proxy_audit_logs`.
 - skills: skill definitions and optional SKILL.md content
 - skill_attachments: secure attachment storage for skills
 - mcp_servers: MCP tools and resources

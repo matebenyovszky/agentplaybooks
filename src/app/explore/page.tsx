@@ -20,6 +20,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { FloatingNav } from "@/components/ui/floating-navbar";
+import { PublicPlaybookCatalog } from "./PublicPlaybookCatalog";
 import styles from "./explore.module.css";
 
 // Hosted first-party starters belong to the demo/system account. These links
@@ -72,6 +73,11 @@ export default async function ExplorePage() {
                   <Check size={15} aria-hidden="true" />
                   {t("heroNote")}
                 </p>
+                <a href="#public-playbooks" className={styles.catalogLink}>
+                  <BookOpen size={16} aria-hidden="true" />
+                  {t("catalog.browse")}
+                  <ArrowRight size={16} aria-hidden="true" />
+                </a>
               </div>
 
               <figure className={styles.diagram}>
@@ -177,12 +183,16 @@ export default async function ExplorePage() {
               <span>01</span>
               {t("navWorkflows")}
             </a>
-            <a href="#inside">
+            <a href="#public-playbooks">
               <span>02</span>
+              {t("catalog.nav")}
+            </a>
+            <a href="#inside">
+              <span>03</span>
               {t("navInside")}
             </a>
             <a href="#how-it-works">
-              <span>03</span>
+              <span>04</span>
               {t("navStart")}
             </a>
           </div>
@@ -312,6 +322,23 @@ export default async function ExplorePage() {
               <ShieldCheck size={17} aria-hidden="true" />
               {t("starterNote")}
             </p>
+          </div>
+        </section>
+
+        <section
+          id="public-playbooks"
+          className={styles.section}
+          aria-labelledby="public-playbooks-title"
+        >
+          <div className={styles.wrap}>
+            <div className={styles.sectionHeading}>
+              <div>
+                <p className={styles.kicker}>{t("catalog.eyebrow")}</p>
+                <h2 id="public-playbooks-title">{t("catalog.title")}</h2>
+              </div>
+              <p>{t("catalog.intro")}</p>
+            </div>
+            <PublicPlaybookCatalog />
           </div>
         </section>
 

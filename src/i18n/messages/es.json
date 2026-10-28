@@ -361,7 +361,7 @@
         "starter": "Empieza con Change Review"
       }
     },
-    "anatomyEyebrow": "02 / Dentro del playbook",
+    "anatomyEyebrow": "03 / Dentro del playbook",
     "anatomyTitle": "Un plan de trabajo. Con memoria.",
     "anatomyIntro": "Un playbook reúne lo que necesita un asistente para trabajar con coherencia. Empieza con instrucciones y añade el resto cuando haga falta.",
     "contextPrinciple": "El contexto relevante vale más que acumular contexto.",
@@ -398,7 +398,7 @@
         "example": "Clave limitada al servicio necesario"
       }
     },
-    "howEyebrow": "03 / Tu primera sesión útil",
+    "howEyebrow": "04 / Tu primera sesión útil",
     "howTitle": "Empieza pequeño. Aprende del trabajo real.",
     "howIntro": "No necesitas un prompt enorme ni una biblioteca de herramientas. Basta con un proyecto, un objetivo claro y un método útil.",
     "steps": {
@@ -464,7 +464,32 @@
     "browseExamples": "Volver a los ejemplos",
     "footerTagline": "Conocimiento reutilizable para tu trabajo.",
     "docs": "Documentación",
-    "privacy": "Privacidad"
+    "privacy": "Privacidad",
+    "catalog": {
+      "browse": "Explorar playbooks públicos",
+      "nav": "Playbooks públicos",
+      "eyebrow": "02 / Encuentra tu punto de partida",
+      "title": "Descubre playbooks públicos.",
+      "intro": "Busca playbooks compartidos, revisa sus skills y conexiones, y crea una copia privada para adaptarla a tu trabajo.",
+      "searchLabel": "Buscar un playbook",
+      "searchPlaceholder": "Buscar por nombre o descripción…",
+      "sortLabel": "Ordenar por",
+      "sortStars": "Más estrellas",
+      "sortNewest": "Más recientes",
+      "sortName": "Nombre A–Z",
+      "loading": "Cargando playbooks públicos…",
+      "results": "{count, plural, one {# playbook mostrado} other {# playbooks mostrados}}",
+      "error": "No se pudo cargar el catálogo público. Inténtalo de nuevo.",
+      "retry": "Reintentar",
+      "noMatches": "No hay playbooks que coincidan. Prueba otro nombre o tema.",
+      "empty": "Todavía no se han compartido playbooks públicos en esta instancia.",
+      "clear": "Borrar búsqueda",
+      "noDescription": "Abre este playbook para ver sus instrucciones, skills y conexiones.",
+      "skills": "{count, plural, one {# skill} other {# skills}}",
+      "tools": "{count, plural, one {# conexión} other {# conexiones}}",
+      "stars": "estrellas",
+      "loadMore": "Mostrar más playbooks"
+    }
   },
   "canvas": {
     "title": "Documentos Canvas",
@@ -480,5 +505,41 @@
     "passwordUse": "Iniciar sesión con contraseña",
     "emailLinkSend": "Enviar enlace de acceso",
     "emailLinkSent": "Revisa tu correo para abrir el enlace de acceso."
+  },
+  "selfHostSecurity": {
+    "jumpLink": "Ver funciones de seguridad y auditoría",
+    "eyebrow": "Disponible en la aplicación de código abierto",
+    "title": "Mantén el control y las evidencias.",
+    "intro": "Aloja el sistema en tu infraestructura con credenciales cifradas, acceso limitado y un registro de auditoría que puedes inspeccionar, verificar y exportar.",
+    "features": {
+      "secrets": {
+        "title": "Credenciales con límites",
+        "description": "Cifrado AES-256-GCM con claves derivadas por usuario. Inserta credenciales en el servidor, aplica su caducidad y restringe los hosts de destino permitidos."
+      },
+      "access": {
+        "title": "Separa el acceso por roles",
+        "description": "Claves API limitadas para agentes y acceso de solo lectura para auditores. Activa el modo de instancia privada cuando todos los playbooks deban ser privados."
+      },
+      "audit": {
+        "title": "Rastrea cambios y uso de credenciales",
+        "description": "Registra operaciones del vault, llamadas federadas, cambios de configuración y escrituras de memoria y canvas. Conserva resultados y metadatos del actor sin copiar secretos ni contenidos."
+      },
+      "evidence": {
+        "title": "Verifica y exporta el registro",
+        "description": "Cadenas SHA-256 por playbook e historial protegido de solo adición que sobrevive al borrado del playbook. Verifica por API o CLI y exporta en JSONL o CSV."
+      },
+      "forwarding": {
+        "title": "Integra tus procesos de auditoría",
+        "description": "Reenvía opcionalmente eventos de la aplicación a un webhook SIEM HTTPS firmado o a syslog en Node. Configura retención y purgas programadas con puntos de control que conservan la verificación."
+      },
+      "operations": {
+        "title": "Opera en tu infraestructura",
+        "description": "Usa mTLS mediante un proxy TLS de confianza. Las herramientas de copia cifrada y restauración, con simulacros de recuperación, ayudan a planificar y verificar la recuperación."
+      }
+    },
+    "auditGuide": "Guía de auditoría",
+    "securityDocs": "Documentación de seguridad",
+    "mtlsGuide": "mTLS en alojamiento propio",
+    "operationsNote": "La documentación detalla la configuración y los límites, las comprobaciones CodeQL, los SBOM CycloneDX y las evidencias SBOM firmadas. El reenvío SIEM es opcional y de mejor esfuerzo; tú programas la retención."
   }
 }

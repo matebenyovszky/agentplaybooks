@@ -370,7 +370,7 @@
         "starter": "Start with Change Review"
       }
     },
-    "anatomyEyebrow": "02 / Inside the playbook",
+    "anatomyEyebrow": "03 / Inside the playbook",
     "anatomyTitle": "A working brief. With a memory.",
     "anatomyIntro": "A playbook brings together the pieces an assistant needs to work consistently. Start with instructions; add the rest when your workflow needs them.",
     "contextPrinciple": "Relevant context beats more context.",
@@ -407,7 +407,7 @@
         "example": "A key scoped to the required service"
       }
     },
-    "howEyebrow": "03 / Your first useful session",
+    "howEyebrow": "04 / Your first useful session",
     "howTitle": "Start small. Build on real work.",
     "howIntro": "You don’t need a giant prompt or a library of tools. One project, a clear goal and one useful method are enough to begin.",
     "steps": {
@@ -473,12 +473,73 @@
     "browseExamples": "Explore the examples",
     "footerTagline": "Reusable knowledge for the way you work.",
     "docs": "Documentation",
-    "privacy": "Privacy"
+    "privacy": "Privacy",
+    "catalog": {
+      "browse": "Browse public playbooks",
+      "nav": "Public playbooks",
+      "eyebrow": "02 / Find your starting point",
+      "title": "Explore public playbooks.",
+      "intro": "Search shared playbooks, inspect their skills and tool connections, and make a private copy to adapt to your work.",
+      "searchLabel": "Find a playbook",
+      "searchPlaceholder": "Search by name or description…",
+      "sortLabel": "Sort by",
+      "sortStars": "Most starred",
+      "sortNewest": "Newest first",
+      "sortName": "Name A–Z",
+      "loading": "Loading public playbooks…",
+      "results": "{count, plural, one {# playbook shown} other {# playbooks shown}}",
+      "error": "The public catalog could not be loaded. Please try again.",
+      "retry": "Try again",
+      "noMatches": "No playbooks match this search. Try a different name or topic.",
+      "empty": "No public playbooks have been shared on this instance yet.",
+      "clear": "Clear search",
+      "noDescription": "Open this playbook to see its instructions, skills, and connections.",
+      "skills": "{count, plural, one {# skill} other {# skills}}",
+      "tools": "{count, plural, one {# connection} other {# connections}}",
+      "stars": "stars",
+      "loadMore": "Show more playbooks"
+    }
   },
   "auth": {
     "emailLinkUse": "Sign in with an email link",
     "passwordUse": "Sign in with a password",
     "emailLinkSend": "Send sign-in link",
     "emailLinkSent": "Check your inbox for the sign-in link."
+  },
+  "selfHostSecurity": {
+    "jumpLink": "See security & audit features",
+    "eyebrow": "Available in the open-source application",
+    "title": "Keep control. Keep the evidence.",
+    "intro": "Self-host with encrypted credentials, scoped access, and an audit trail you can inspect, verify, and export.",
+    "features": {
+      "secrets": {
+        "title": "Credentials with boundaries",
+        "description": "AES-256-GCM encryption with per-user derived keys. Inject credentials server-side, enforce expiry, and restrict the destination hosts a secret can reach."
+      },
+      "access": {
+        "title": "Separate access by role",
+        "description": "Give agents scoped API keys and reviewers read-only auditor access. Enable private-instance mode when every playbook must stay private."
+      },
+      "audit": {
+        "title": "Trace changes and credential use",
+        "description": "Record vault operations, federated calls, configuration changes, and memory/canvas writes. Keep outcomes and actor metadata without copying secret values or content bodies."
+      },
+      "evidence": {
+        "title": "Verify and export the trail",
+        "description": "Per-playbook SHA-256 hash chains and protected append-only history survive playbook deletion. Verify from the API or CLI, and export JSONL or CSV for review."
+      },
+      "forwarding": {
+        "title": "Fit your audit operations",
+        "description": "Optionally forward application audit events to a signed HTTPS SIEM webhook or Node syslog. Configure retention and schedule purges with checkpoints that preserve chain verification."
+      },
+      "operations": {
+        "title": "Run on your infrastructure",
+        "description": "Use mTLS through a trusted TLS proxy on your own deployment. Encrypted backup and restore tooling, with restore drills, helps you plan and verify recovery."
+      }
+    },
+    "auditGuide": "Audit guide",
+    "securityDocs": "Security documentation",
+    "mtlsGuide": "Self-hosted mTLS",
+    "operationsNote": "Inspect the security documentation for configuration and limits, plus CodeQL checks, CycloneDX SBOMs, and signed SBOM evidence. SIEM forwarding is optional and best-effort; retention runs on your schedule."
   }
 }

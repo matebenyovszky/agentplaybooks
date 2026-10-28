@@ -1,0 +1,199 @@
+.catalog {
+  padding: clamp(20px, 3vw, 36px);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--card);
+}
+.controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(160px, 220px);
+  gap: 20px;
+}
+.controls label {
+  display: block;
+  margin-bottom: 9px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.search > div {
+  position: relative;
+}
+.search svg {
+  position: absolute;
+  top: 16px;
+  left: 15px;
+  color: var(--muted);
+}
+.controls input,
+.controls select {
+  width: 100%;
+  min-height: 50px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 12px 14px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+}
+.controls input {
+  padding-left: 43px;
+}
+.controls input::placeholder {
+  color: var(--muted);
+}
+.catalog input:focus-visible,
+.catalog select:focus-visible,
+.catalog button:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+.status {
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.spinner {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+.card {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 23px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  overflow-wrap: anywhere;
+}
+.cardTop,
+.cardTop > span,
+.counts,
+.counts > span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.cardTop {
+  justify-content: space-between;
+  margin-bottom: 20px;
+  color: var(--accent);
+}
+.cardTop > span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.card h3 {
+  font-size: 18px;
+  line-height: 1.4;
+  font-weight: 650;
+}
+.card h3 a {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.card h3 a:hover {
+  color: var(--accent);
+}
+.card h3 svg {
+  margin-top: 4px;
+}
+.publisher {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.description {
+  margin-block: 15px 19px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.7;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.tags {
+  margin-top: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.tags span {
+  padding: 3px 7px;
+  border-radius: 4px;
+  background: var(--soft);
+  color: var(--muted);
+  font-size: 10px;
+}
+.counts {
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 11px;
+}
+.empty,
+.more {
+  text-align: center;
+  padding-block: 30px 12px;
+}
+.empty {
+  display: grid;
+  justify-items: center;
+  gap: 16px;
+  color: var(--muted);
+  font-size: 14px;
+}
+.catalog button {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 11px 20px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--soft);
+}
+.catalog button:hover {
+  border-color: var(--accent);
+}
+.catalog button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+@media (max-width: 1050px) {
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .controls,
+  .grid { grid-template-columns: 1fr; }
+  .card { padding: 20px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spinner { animation: none; }
+}

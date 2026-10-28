@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useTranslations } from "next-intl";
 import {
   CheckCircle2,
   ArrowRight,
@@ -22,6 +23,12 @@ import {
   Play,
   Eye,
   Wand2,
+  KeyRound,
+  Fingerprint,
+  FileCheck2,
+  ScrollText,
+  Radio,
+  LockKeyhole,
 } from "lucide-react";
 import { GithubIcon } from "@/components/ui/brand-icons";
 import Link from "next/link";
@@ -48,9 +55,9 @@ const whyOpenSource = [
   },
   {
     icon: Shield,
-    title: "Audit & Compliance",
+    title: "Inspectable Security",
     description:
-      "Review every line of code. Meet regulatory requirements with full transparency. No black boxes.",
+      "Review the code, inspect the documented controls, and assess how they fit your own deployment requirements.",
   },
   {
     icon: RefreshCw,
@@ -123,7 +130,17 @@ const workflowFeatures = [
   },
 ];
 
+const securityFeatures = [
+  { key: "secrets", icon: KeyRound },
+  { key: "access", icon: LockKeyhole },
+  { key: "audit", icon: ScrollText },
+  { key: "evidence", icon: FileCheck2 },
+  { key: "forwarding", icon: Radio },
+  { key: "operations", icon: Fingerprint },
+] as const;
+
 export default function EnterprisePage() {
+  const t = useTranslations("selfHostSecurity");
   return (
     <div className="min-h-screen bg-background text-foreground">
       <FloatingNav />
@@ -153,13 +170,19 @@ export default function EnterprisePage() {
 
             <p className="text-xl text-neutral-600 dark:text-slate-400 max-w-3xl mx-auto mb-6">
               A single validated source of truth for the skills, tools, instructions, and secrets
-              your team&apos;s agents run on — with roles, one-time editor invites, and no credentials
-              on anyone&apos;s disk. Platform-independent, from ChatGPT to physical robots.
+              your team&apos;s agents use — with scoped access, encrypted credentials, and verifiable
+              audit history. Run it on your infrastructure and connect the agent clients your team uses.
             </p>
 
             <p className="text-lg text-amber-600 dark:text-amber-400 max-w-2xl mx-auto mb-10 font-medium">
               Open source. Self-hostable. Zero vendor lock-in.
             </p>
+
+            <a href="#security" className="inline-flex items-center gap-2 mb-8 text-sm font-semibold text-green-700 dark:text-green-400 hover:underline">
+              <Shield className="w-4 h-4" aria-hidden="true" />
+              {t("jumpLink")}
+              <ArrowRight className="w-4 h-4" aria-hidden="true" />
+            </a>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
@@ -197,6 +220,40 @@ export default function EnterprisePage() {
               ))}
             </motion.div>
           </motion.div>
+        </div>
+      </section>
+
+      <section id="security" aria-labelledby="security-title" className="py-20 scroll-mt-24 border-t border-neutral-200 dark:border-blue-900/30 bg-green-500/[0.03]">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="max-w-3xl mb-10">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20 text-green-700 dark:text-green-300 text-sm mb-5">
+              <Shield className="w-4 h-4" aria-hidden="true" />
+              {t("eyebrow")}
+            </div>
+            <h2 id="security-title" className="text-3xl md:text-4xl font-bold mb-4">{t("title")}</h2>
+            <p className="text-lg text-neutral-600 dark:text-slate-400">{t("intro")}</p>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {securityFeatures.map(({ key, icon: Icon }) => (
+              <article key={key} className="p-6 rounded-xl bg-white dark:bg-blue-950/30 border border-neutral-200 dark:border-blue-900/50">
+                <Icon className="w-8 h-8 text-green-700 dark:text-green-400 mb-5" aria-hidden="true" />
+                <h3 className="text-lg font-semibold mb-3">{t(`features.${key}.title`)}</h3>
+                <p className="text-sm leading-relaxed text-neutral-600 dark:text-slate-400">{t(`features.${key}.description`)}</p>
+              </article>
+            ))}
+          </div>
+          <div className="mt-8 flex flex-wrap gap-4">
+            {[
+              { href: "/docs/audit-logs", label: "auditGuide" },
+              { href: "/docs/security", label: "securityDocs" },
+              { href: "/docs/self-hosted-mtls", label: "mtlsGuide" },
+            ].map(({ href, label }) => (
+              <Link key={href} href={href} className="inline-flex items-center gap-2 rounded-lg border border-neutral-200 dark:border-blue-800 px-4 py-3 text-sm font-medium hover:border-green-500">
+                {t(label)}<ArrowRight className="w-4 h-4" aria-hidden="true" />
+              </Link>
+            ))}
+          </div>
+          <p className="mt-6 text-sm text-neutral-600 dark:text-slate-400">{t("operationsNote")}</p>
         </div>
       </section>
 
