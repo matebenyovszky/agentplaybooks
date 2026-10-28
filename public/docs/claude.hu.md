@@ -147,7 +147,7 @@ szervert kiszolgál, amelyhez a CLI-vel felhasználói API-kulcsot tároltál �
 OAuth-szerver nem kell hozzá, és annyi szerver lehet, ahányra bejelentkezel:
 
 ```bash
-npx --yes @agentplaybooks/cli@0.8.0 login --url=https://<szervered>
+npx --yes @agentplaybooks/cli@0.8.1 login --url=https://<szervered>
 ```
 
 A CLI a kulcsot az `AGENTPLAYBOOKS_API_KEY`-ből veszi, vagy úgy kéri be, hogy

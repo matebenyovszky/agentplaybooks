@@ -47,7 +47,7 @@ installations may need a catalog refresh or update to see the new entry.
 Install CLI 0.8.0, then preview and apply the profile-scoped setup:
 
 ```bash
-npm install -g @agentplaybooks/cli@0.8.0
+npm install -g @agentplaybooks/cli@0.8.1
 apb memory setup PRIVATE_PLAYBOOK_GUID --target=hermes --profile=work
 apb memory setup PRIVATE_PLAYBOOK_GUID --target=hermes --profile=work --apply
 HERMES_HOME=~/.hermes/profiles/work hermes memory setup
@@ -147,11 +147,25 @@ matching, not embeddings or morphological/semantic search. Explicit
 `apb_memory_search` remains literal and unchanged.
 
 The plugin does not upload full conversations, extract facts automatically,
-bulk-import existing local memories, or add a cache, offline queue, retries, or
-circuit breaker. Failed API operations are reported rather than queued for later.
+bulk-import existing local memories, or add a persistent content cache, offline queue or automatic retries. Failed API operations are reported rather than queued for later.
 
 See the [memory API guide](./memory.md) for tiers, timestamps, history, and
 archiving, and the [provider source and tests](https://github.com/matebenyovszky/agentplaybooks/tree/main/packages/hermes-memory)
 for implementation details. The automated checks exercise the REST contract and
 the real Hermes loader, Desktop schema, tool injection, memory-write hooks, and
 profile switching against a local HTTP test server; they do not use a live account.
+
+## Avoiding unnecessary traffic (0.3.2)
+
+There is no polling timer. Short English/Hungarian acknowledgements (including
+`köszönöm`, `rendben`, and `oké`) skip automatic recall. The same query in the same
+session and source set is suppressed for 30 seconds; only a bounded in-memory
+digest is kept, and no recalled content is cached or replayed. A successful
+explicit memory mutation clears this suppression. Explicit search/read tools
+always remain available.
+
+Automatic recall serializes keywords within each source while searching different
+sources in parallel. A failed source stops immediately and is skipped for 60
+seconds, so a failure does not fan out into four requests. Other sources continue.
+The next user-triggered recall after that interval can try again; no background
+retry is scheduled. Private visibility is still checked afresh before every write.

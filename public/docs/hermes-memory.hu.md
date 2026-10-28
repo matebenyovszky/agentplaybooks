@@ -51,7 +51,7 @@ A CLI 0.8.0 a memória plugint is tartalmazza. A gateway gépén vagy
 konténerében, a Hermest futtató felhasználóval futtasd:
 
 ```bash
-npm install -g @agentplaybooks/cli@0.8.0
+npm install -g @agentplaybooks/cli@0.8.1
 apb memory setup PRIVATE_PLAYBOOK_GUID --target=hermes --profile=work
 apb memory setup PRIVATE_PLAYBOOK_GUID --target=hermes --profile=work --apply
 HERMES_HOME="$HOME/.hermes/profiles/work" hermes memory setup
@@ -160,7 +160,7 @@ kell ehhez: a szerver telepítése önmagában nem frissíti a klienseket.
 
 A plugin nem tölti fel a teljes beszélgetéseket, nem nyer ki automatikusan
 tényeket, nem importálja tömegesen a helyi memóriát, és nem ad gyorsítótárat,
-offline várólistát, újrapróbálkozást vagy circuit breakert. A sikertelen API-
+offline várólistát vagy automatikus újrapróbálkozást. A sikertelen API-
 műveleteket jelzi, nem teszi félre későbbre.
 
 A szinteket, időbélyegeket és előzményeket a [memória-API útmutatója](./memory.md),
@@ -168,3 +168,14 @@ a megvalósítást a [provider forráskódja és tesztjei](https://github.com/ma
 részletezik. Az automatizált tesztek a REST-működést és a valódi Hermes
 betöltőjét, Desktop-sémáját, eszközeit, memóriaírási eseményeit és profilváltását
 ellenőrzik helyi HTTP-tesztszerverrel, éles fiók használata nélkül.
+
+## Felesleges forgalom csökkentése (0.3.2)
+
+Nincs időzített lekérdezés. A rövid magyar és angol visszajelzések (például
+„köszönöm”, „rendben”, „oké”) nem indítanak felidézést. Ugyanazt a kérdést ugyanabban
+a munkamenetben, ugyanazokon a forrásokon 30 másodpercig nem keresi újra. Csak
+a kérdés lenyomatát tárolja átmenetileg; memóriatartalmat nem gyorsítótáraz.
+Sikeres memóriaírás után ismét kereshet. Az explicit keresés és olvasás végig működik.
+
+Hibánál az adott forrást azonnal abbahagyja és 60 másodpercig kihagyja az automatikus
+felidézésből. A többi forrás ettől még működik. Nincs háttérben ütemezett újrapróbálkozás.

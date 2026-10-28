@@ -1,3 +1,4 @@
+import { runMcpStdio } from "./mcp-stdio.js";
 import os from "node:os";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -87,6 +88,7 @@ Usage:
   agentplaybooks memory setup <guid> --target=hermes [--hermes-home=<directory>]
                              [--profile=<bot>] [--shared=<guids>] [--team=<guids>] [--url=<base>] [--allow-insecure-http]
                              [--apply] [--json]
+  agentplaybooks mcp stdio --url=<MCP endpoint> [--key-env=<variable>]
   agentplaybooks hermes setup <guid> [path] [--profile=<bot>] [--hermes-home=<directory>]
                              [--tools-only] [--key-env=<VAR>] [--url=<base>] [--hermes-bin=<path>]
                              [--allow-insecure-http] [--apply] [--check] [--json]
@@ -661,6 +663,11 @@ export async function run(args) {
     return;
   }
 
+  if (command === "mcp" && positional[0] === "stdio") {
+    for (const flag of flags.keys()) if (!["--url", "--key-env", "--key-header", "--allow-insecure-http"].includes(flag)) throw new Error(`Unknown option ${flag} for mcp stdio.`);
+    await runMcpStdio({ url: flags.get("--url"), keyEnvVar: flags.get("--key-env"), keyHeader: flags.get("--key-header"), allowInsecureHttp: flags.has("--allow-insecure-http") });
+    return;
+  }
   const common = ["--json", "--apply", "--url", "--profile", "--hermes-home"];
   const allowed = command === "connect" ? [...common, "--account", "--target", "--name", "--key-env", "--key-header"]
     : command === "memory" ? [...common, "--target", "--shared", "--team", "--allow-insecure-http"]

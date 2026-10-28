@@ -20,7 +20,7 @@ This skill does not install software or run commands by itself.
 
 ## Guided setup
 
-Requires `@agentplaybooks/cli@0.8.0` or later. Run on the gateway host/container.
+Requires `@agentplaybooks/cli@0.8.1` or later. Run on the gateway host/container.
 Choose the profile explicitly using `--profile=<name>` and, when needed,
 `--hermes-home=<installation-directory>`; keep that selection on every command.
 
@@ -85,3 +85,12 @@ must not ask the user to reveal the upstream secret in chat.
 
 See the [CLI guide](https://github.com/matebenyovszky/agentplaybooks/tree/main/packages/cli)
 and [Hermes integration guide](https://agentplaybooks.ai/docs/hermes-portable-agents).
+
+## Idle traffic
+
+CLI 0.8.1 uses a local `apb mcp stdio` connection for Hermes. This forwards actual
+requests only and answers local ping without HTTP. Do not add a keepalive timer.
+For existing HTTP entries, show the conflicting entry and the replacement stdio
+plan, then migrate the selected entry after authorization, preserving the endpoint
+and key variable. Back up configuration and restart the selected profile.
+Never use `keepalive_interval: 0` to disable HTTP keepalive in Hermes 0.22.5.

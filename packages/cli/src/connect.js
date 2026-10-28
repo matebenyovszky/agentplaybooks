@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
 import { applyAdapters, planHermesMcpServersAction, planMcpServersAction } from "./adapters.js";
 import { resolveBaseUrl } from "./remote.js";
@@ -57,13 +58,17 @@ export function defaultKeyEnvVar(entryName) {
  * and refuses anything else, so sending `type` there would have the entry
  * rejected as unrepresentable — correctly, but for a key we added ourselves.
  */
-const TARGETS_WITHOUT_TYPE = new Set(["hermes"]);
+
 
 export function serverDefinition({ url, keyEnvVar, keyHeader = DEFAULT_KEY_HEADER, target = "claude" }) {
-  const headers = { [keyHeader]: `\${${keyEnvVar}}` };
-  return TARGETS_WITHOUT_TYPE.has(target)
-    ? { url, headers }
-    : { type: "http", url, headers };
+  if (target === "hermes") {
+    return {
+      command: process.execPath,
+      args: [fileURLToPath(new URL("../bin/agentplaybooks.js", import.meta.url)), "mcp", "stdio", "--url", url, "--key-env", keyEnvVar, "--key-header", keyHeader],
+      env: { [keyEnvVar]: `\${${keyEnvVar}}` },
+    };
+  }
+  return { type: "http", url, headers: { [keyHeader]: `\${${keyEnvVar}}` } };
 }
 
 async function readIfPresent(absolutePath) {
