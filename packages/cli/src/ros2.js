@@ -28,7 +28,9 @@ export async function inspectRos2(root) {
       }
       // This is a structural inventory, not a full XML schema validator. It
       // never resolves XML entities, URLs, includes, or Python launch code.
-      const xml = (await readFile(absolute, "utf8")).replace(/<!--[\s\S]*?-->/g, "");
+      // Preserve a separator: deleting comments outright can join malformed
+      // fragments into a tag that was never present in the source document.
+      const xml = (await readFile(absolute, "utf8")).replace(/<!--[\s\S]*?-->/g, " ");
       const field = tag => new RegExp(`<${tag}(?:\\s[^>]*)?>([^<]*)</${tag}>`).exec(xml)?.[1]?.trim();
       const name = field("name");
       if (!/<package(?:\s[^>]*)?>/.test(xml) || !/<\/package>/.test(xml) || !name || !/^[a-z][a-z0-9_]*$/.test(name)) {

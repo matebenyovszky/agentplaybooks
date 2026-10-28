@@ -20,3 +20,15 @@ test("ROS 2 Doctor inventories without executing launch code and reports unsafe 
   assert.deepEqual(report.robotics.launchFiles, ["src/robot_demo/robot.launch.py"]);
   assert.ok(report.findings.some(item => item.code === "ros2.policy.emergency-stop-missing"));
 });
+
+test("ROS 2 inventory does not assemble XML tags across removed comments", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "apb-ros2-comments-"));
+  const filename = path.join(root, "package.xml");
+  await writeFile(filename, '<package><na<!-- comment -->me>not_a_real_name_tag</name></package>');
+  const invalid = publicReport(await runDoctor(root, { robotics: true }));
+  assert.deepEqual(invalid.robotics.packages, []);
+  assert.ok(invalid.findings.some(item => item.code === "ros2.package.invalid"));
+  await writeFile(filename, '<package><!-- <name>ignored</name> --><name>real_robot</name></package>');
+  const valid = publicReport(await runDoctor(root, { robotics: true }));
+  assert.equal(valid.robotics.packages[0].name, "real_robot");
+});

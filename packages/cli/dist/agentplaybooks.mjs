@@ -8328,7 +8328,7 @@ async function inspectRos2(root) {
         findings.push({ source, severity: "high", code: "ros2.package.too-large", message: "Package metadata exceeds the scan limit." });
         continue;
       }
-      const xml = (await readFile2(absolute, "utf8")).replace(/<!--[\s\S]*?-->/g, "");
+      const xml = (await readFile2(absolute, "utf8")).replace(/<!--[\s\S]*?-->/g, " ");
       const field = (tag) => new RegExp(`<${tag}(?:\\s[^>]*)?>([^<]*)</${tag}>`).exec(xml)?.[1]?.trim();
       const name = field("name");
       if (!/<package(?:\s[^>]*)?>/.test(xml) || !/<\/package>/.test(xml) || !name || !/^[a-z][a-z0-9_]*$/.test(name)) {

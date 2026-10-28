@@ -93,10 +93,10 @@ Official references checked on 2026-10-28:
 
 ## Verified results
 
-- Application suite after integration: 989 tests passed; production Cloudflare
+- Application suite after latest integration: 996 tests passed; production Cloudflare
   Worker build passed. TypeScript, lint (33 existing warnings, no errors) and
   production dependency audit passed.
-- CLI suite after review: 248 tests passed (including ROS 2, deleted managed
+- CLI suite after review: 249 tests passed (including ROS 2, deleted managed
   files and backup symlink rejection). Node 24 was also verified
   before the ROS 2 extension (239 tests); terminal tests require TERM=xterm
   rather than the tool host's TERM=dumb.
@@ -110,3 +110,7 @@ Official references checked on 2026-10-28:
 - Cloud test preparation: the available Chrome ChatGPT Plugins page is signed
   out, and plugin discovery has no available AgentPlaybooks connector. User
   sign-in/consent is required before claiming an actual cloud round-trip.
+- GitHub review caught a comment-deletion pattern in ROS 2 inventory (and its
+  generated bundle). Comment masking now preserves a separator, with a regression
+  test that malformed fragments cannot become a valid name tag. CI is rerun
+  for this fix; no CodeQL finding is dismissed or bypassed.
