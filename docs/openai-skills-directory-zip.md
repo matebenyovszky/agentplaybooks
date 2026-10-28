@@ -3,9 +3,13 @@
 Prepare a **Skills-only** upload for the OpenAI Plugins Directory (shared by
 ChatGPT and Codex). This is packaging only.
 
-**Do not submit** from this change. Listing copy waits for Mate yes. Identity
-verification is Mate’s. The full product plugin with account MCP stays on npm
-and in `.codex-plugin/`; this ZIP is the directory Skills-only variant.
+This ZIP is the directory Skills-only variant. The full product plugin with
+account MCP stays on npm and in `.codex-plugin/`. Publisher identity verification
+is completed by the account owner in the OpenAI portal.
+
+For the complete hosted integration, use a package containing MCP from its first
+upload. OpenAI currently cannot add MCP to an existing skills-only listing.
+See the [official submission guide](https://developers.openai.com/plugins/deploy/submission).
 
 The MCP / Bearer reviewer checklist is unchanged in
 [`chatgpt-directory-notes.md`](./chatgpt-directory-notes.md).
@@ -65,19 +69,13 @@ invent privacy pages:
 - Website: `https://agentplaybooks.ai`
 
 Those URLs are already in `plugin.json` → `extensions.com.openai.interface`.
-Directory identity verification and **listing copy** (display name, short
-description, long description, starter prompts) stay on hold until Mate yeses.
-The packer copies the current manifest as-is so we are not blocked on ZIP
-mechanics.
+The packer copies the current manifest as-is. The CLI 0.8.0 listing subtitle is
+“Your agents. Every platform.” and the release validator enforces the portal's
+30-character limit.
 
-OpenAI’s **final** directory submit also caps short description at 30
-characters. The current `shortDescription` is longer than that package-upload
-limit’s stricter sibling; do not rewrite it here. Mate decides listing text
-before anyone uploads.
+## Portal steps
 
-## Submit is held
-
-1. Mate yeses listing copy (and any short-description trim).
-2. Someone with Apps Management write access and verified identity uploads via
-   the OpenAI plugin portal **Skills only** path — not this repository, not CI.
-3. Do not npm publish from this packaging change. Do not bump versions for it.
+1. Select the organization and project that will own the listing.
+2. Complete publisher verification and upload the intended package variant.
+3. Resolve automated findings and complete review materials before submission.
+4. Record the actual draft, review, approval or publication state in the release issue.
