@@ -33,6 +33,36 @@ Model turns, cached MCP discovery, shell process startup, schema context,
 OAuth connection/refresh and the execution host's network are excluded. Both
 transports use Node fetch from the same process with connection reuse.
 
+### Token estimate
+
+Counting the same responses and live schemas with `o200k_base` gives the
+following illustrative counts. This is a tokenizer proxy, not measured billing
+or the actual context sent by a particular host/model.
+
+| Serialized material | Estimated tokens |
+|---|---:|
+| Complete MCP wire response | 988 |
+| REST response | 423 |
+| MCP structured result alone | 423 |
+| MCP text result alone | 496 |
+| MCP single `list_skills` tool definition | 330 |
+| REST single OpenAPI operation | 384 |
+| MCP compact core catalog (16 tools) | 5281 |
+| Complete management OpenAPI document | 24410 |
+
+The MCP wire response carries both structured and text forms. A host need not
+show both to the model, so comparing raw wire envelopes exaggerates a possible
+REST advantage. The equivalent structured data costs the same. Loading the
+entire OpenAPI specification is substantially more expensive than focused
+operation discovery; the same principle applies to loading every MCP schema.
+
+For interactive model use, prefer native MCP with deferred/focused schemas,
+bounded results and the workflow skill. A CLI/REST wrapper is useful when it
+filters or aggregates many authorized operations before returning a small
+result. That saving comes from controlling context and model turns, not from
+REST itself. [OpenAI tool search](https://developers.openai.com/api/docs/guides/tools-tool-search)
+documents deferred loading and cache preservation for this purpose.
+
 ## Choosing a surface
 
 | Concern | Native MCP with skill | Local CLI/REST with skill |
