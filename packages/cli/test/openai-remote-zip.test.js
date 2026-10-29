@@ -8,6 +8,7 @@ import { listZipStore } from "../scripts/pack-openai-skills-zip.mjs";
 import { packageRoot } from "../scripts/pack-openai-skills-zip.mjs";
 
 test("full cloud ZIP includes OAuth remote MCP and skills, with no local process dependency", async () => {
+  const portableBefore = await readFile(path.join(packageRoot, "mcp.json"));
   const outputPath = path.join(await mkdtemp(path.join(os.tmpdir(), "apb-remote-plugin-")), "remote.zip");
   await packOpenAiRemoteZip({ outputPath });
   const entries = listZipStore(await readFile(outputPath));
@@ -21,6 +22,7 @@ test("full cloud ZIP includes OAuth remote MCP and skills, with no local process
   const before = await readFile(outputPath);
   await packOpenAiRemoteZip({ outputPath });
   assert.deepEqual(await readFile(outputPath), before);
+  assert.deepEqual(await readFile(path.join(packageRoot, "mcp.json")), portableBefore);
 });
 
 test("full cloud ZIP rejects unexpected server headers even with environment-only credentials", async () => {

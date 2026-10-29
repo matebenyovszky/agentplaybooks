@@ -26,6 +26,7 @@ vi.mock("./supabase", () => ({
 vi.mock("./account-status", () => ({ accountIsActive: vi.fn(async () => true) }));
 
 import { storedDisplayPrefix, validateApiKey, validateUserApiKey } from "./auth";
+import { DEFAULT_USER_API_KEY_PERMISSIONS } from "@/lib/user-api-key-permissions";
 
 type QueryResult = {
   data: Record<string, unknown> | null;
@@ -49,6 +50,28 @@ describe("API key authentication", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     hashApiKeyMock.mockResolvedValue("hashed-key");
+  });
+
+  it("authenticates a default account key without granting opt-in vault access", async () => {
+    const key = {
+      id: "account-key", user_id: "owner", key_prefix: "apb_test",
+      permissions: [...DEFAULT_USER_API_KEY_PERMISSIONS], is_active: true,
+      expires_at: null, last_used_at: null,
+    };
+    const query = createTableQuery({ data: key, error: null });
+    getServiceSupabaseMock.mockReturnValue({ from: () => query });
+    const request = new Request("https://example.test/api/mcp/manage", {
+      headers: { "X-API-Key": "apb_test_credential" },
+    });
+    await expect(validateUserApiKey(request, "playbooks:read")).resolves.toMatchObject({ id: key.id });
+    await expect(validateUserApiKey(request, "secrets:read")).resolves.toBeNull();
+    await expect(validateUserApiKey(request, "secrets:write")).resolves.toBeNull();
+    // An explicit grant on a separate credential is checked freshly.
+    const allowed = createTableQuery({ data: { ...key, permissions: [...key.permissions, "secrets:read"] }, error: null });
+    getServiceSupabaseMock.mockReturnValue({ from: () => allowed });
+    const next = new Request(request);
+    await expect(validateUserApiKey(next, "secrets:read")).resolves.toMatchObject({ id: key.id });
+    await expect(validateUserApiKey(next, "secrets:write")).resolves.toBeNull();
   });
 
   it("validates a playbook API key through the service client", async () => {

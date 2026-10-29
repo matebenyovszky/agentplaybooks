@@ -12,12 +12,15 @@ export async function packOpenAiRemoteZip({ root = packageRoot, outputPath } = {
   const entries = Object.values(config.mcpServers ?? {});
   if (entries.length !== 1 || entries[0].url !== "https://agentplaybooks.ai/api/mcp/manage"
       || entries[0].type !== "streamable-http"
-      || Object.keys(entries[0]).some(key => !["type", "url", "extensions"].includes(key))
-      || JSON.stringify(entries[0].extensions) !== JSON.stringify({ "com.openai": { auth: { type: "oauth" } } })) {
+      || Object.keys(entries[0]).some(key => !["type", "url"].includes(key))) {
     throw new Error("The hosted plugin must declare the canonical remote MCP endpoint and OAuth authentication.");
   }
   if (containsLiteralCredential(mcp.toString("utf8"))) throw new Error("Refusing to package credentials.");
-  files.set("mcp.json", mcp);
+  // Codex desktop currently rejects server-level extensions in the installed
+  // portable package. Only the separately uploaded remote ZIP needs this
+  // explicit declaration; desktop discovers OAuth from the HTTPS endpoint.
+  entries[0].extensions = { "com.openai": { auth: { type: "oauth" } } };
+  files.set("mcp.json", Buffer.from(`${JSON.stringify(config, null, 2)}\n`));
   const names = [...files.keys()].sort();
   const zip = buildZipStore(names.map(name => ({ name, data: files.get(name) })));
   const target = outputPath ?? path.join(root, "dist", "agentplaybooks-openai-remote.zip");

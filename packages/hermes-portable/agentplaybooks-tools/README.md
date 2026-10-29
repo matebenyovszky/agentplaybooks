@@ -16,7 +16,7 @@ Hermes profile setup. Review each plan before applying it.
 ```bash
 hermes plugins install matebenyovszky/agentplaybooks/packages/hermes-portable/agentplaybooks-tools --no-enable
 hermes plugins enable agentplaybooks-tools
-npm install -g @agentplaybooks/cli@0.9.0
+npm install -g @agentplaybooks/cli@0.9.1
 apb --version
 ```
 
