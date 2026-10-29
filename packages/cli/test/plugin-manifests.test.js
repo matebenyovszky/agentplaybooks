@@ -23,6 +23,15 @@ test("Codex plugin uses OAuth discovery for the account MCP", async () => {
   assert.equal(account.headers, undefined);
 });
 
+test("portable MCP remains compatible with the Codex desktop loader", async () => {
+  const config = await readJson("mcp.json");
+  assert.deepEqual(Object.keys(config.mcpServers), ["agentplaybooks-account"]);
+  assert.deepEqual(config.mcpServers["agentplaybooks-account"], {
+    type: "streamable-http",
+    url: "https://agentplaybooks.ai/api/mcp/manage",
+  });
+});
+
 test("Claude plugin uses OAuth discovery and bundles the account MCP", async () => {
   const [manifest, packageJson] = await Promise.all([
     readJson(".claude-plugin/plugin.json"),
