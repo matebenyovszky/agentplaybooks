@@ -498,7 +498,7 @@ export function McpServerEditor({ mcpServer, playbookGuid, storage, onUpdate, on
                       readOnly={isReadOnly}
                       onChange={(event) => setTransportConfigJson(event.target.value)}
                       className={cn(
-                        "w-full h-56 p-3 rounded-lg bg-slate-900/70 border font-mono text-sm text-slate-200",
+                        "w-full h-56 resize-y p-3 rounded-lg bg-slate-900/70 border font-mono text-sm text-slate-200",
                         jsonError ? "border-red-500/50" : "border-slate-700/50"
                       )}
                       placeholder={'{"url":"https://example.com/mcp","timeout_ms":15000,"access":"playbook_api_key","auth":{"type":"bearer","token_secret":"token"}}'}

@@ -612,7 +612,7 @@ export function SkillEditor({ skill, storage, onUpdate, onDelete, readOnly = fal
                         {/* Expanded content */}
                         {expandedAttachment === attachment.id && (
                           <div className="border-t border-slate-700/50">
-                            <pre className="p-4 text-xs font-mono text-slate-300 overflow-x-auto max-h-64 overflow-y-auto bg-slate-950/50">
+                            <pre className="p-4 text-xs font-mono text-slate-300 whitespace-pre-wrap [overflow-wrap:anywhere] max-h-64 overflow-y-auto bg-slate-950/50">
                               {attachment.content}
                             </pre>
                           </div>
