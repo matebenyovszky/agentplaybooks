@@ -21,6 +21,30 @@ const variants = await Promise.all([
   ".cursor-plugin/marketplace.json",
 ].map(json));
 
+const apiContract = await json("src/lib/api-contract.json");
+const pluginApi = await json("packages/cli/skills/agentplaybooks/references/api-compatibility.json");
+const semver = value => typeof value === "string" && /^\d+\.\d+\.\d+$/.test(value);
+const compare = (left, right) => {
+  const a = left.split(".").map(Number); const b = right.split(".").map(Number);
+  return a[0] - b[0] || a[1] - b[1] || a[2] - b[2];
+};
+check(semver(apiContract.api_version), "API contract must have a SemVer revision.");
+check(apiContract.versions?.[String(apiContract.default_major)] === apiContract.api_version, "Default API major and revision disagree.");
+check(apiContract.unversioned_alias_major === 1, "Unversioned legacy endpoints must remain pinned to API v1.");
+check(pluginApi.schema_version === 1, "Unsupported plugin API compatibility manifest schema.");
+check(apiContract.supported_majors.includes(pluginApi.api.major), "Plugin requires an unsupported API major.");
+check(semver(pluginApi.api.minimum_version) && semver(pluginApi.api.maximum_version_exclusive), "Plugin API bounds must be SemVer.");
+const selectedApiVersion = apiContract.versions?.[String(pluginApi.api.major)];
+check(semver(selectedApiVersion), "Missing revision for the plugin’s required API major.");
+if (semver(selectedApiVersion) && semver(pluginApi.api.minimum_version) && semver(pluginApi.api.maximum_version_exclusive)) {
+  check(compare(selectedApiVersion, pluginApi.api.minimum_version) >= 0 && compare(selectedApiVersion, pluginApi.api.maximum_version_exclusive) < 0, "Server API falls outside the plugin compatibility range.");
+}
+for (const [feature, since] of Object.entries(pluginApi.optional_features)) {
+  check(apiContract.features[feature] === since, `Plugin and server disagree on API feature ${feature}.`);
+}
+check(pluginApi.rest_base_path === `/api/v${pluginApi.api.major}`, "Plugin REST path must pin its API major.");
+check(pluginApi.mcp_endpoint === mcp.mcpServers?.["agentplaybooks-account"]?.url, "API compatibility manifest must preserve the OAuth MCP resource URL.");
+
 check(/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(cli.version), "CLI version must be SemVer.");
 check(packageLock.version === cli.version, "CLI package-lock version differs.");
 check(packageLock.packages?.[""]?.version === cli.version, "CLI package-lock root package version differs.");
@@ -129,5 +153,5 @@ if (failures.length) {
   for (const failure of failures) process.stderr.write(`FAIL ${failure}\n`);
   process.exitCode = 1;
 } else {
-  process.stdout.write(`Release distribution manifests aligned at ${cli.version}; logo and ${skillNames.length} skill directory entries checked.\n`);
+  process.stdout.write(`Release distribution manifests aligned at ${cli.version}; logo and ${skillNames.length} skill directory entries checked. API ${selectedApiVersion} satisfies >=${pluginApi.api.minimum_version} <${pluginApi.api.maximum_version_exclusive}.\n`);
 }

@@ -49,7 +49,12 @@ export const apiRoutes: ApiRoute[] = [
   { basePath: "/api", segments: ["playbooks","[guid]"], methods: ["GET","PUT","DELETE"], handlers: () => import("../app/api/playbooks/[guid]/route") as unknown as Promise<ApiHandlers> },
   { basePath: "/api", segments: ["playbooks"], methods: ["GET","POST"], handlers: () => import("../app/api/playbooks/route") as unknown as Promise<ApiHandlers> },
   { basePath: "/.well-known", segments: ["skills","[[...path]]"], methods: ["GET","OPTIONS"], handlers: () => import("../app/.well-known/skills/[[...path]]/route") as unknown as Promise<ApiHandlers> },
+  { basePath: "/api", segments: ["tools","[name]"], methods: ["GET"], handlers: () => import("../app/api/tools/[name]/route") as unknown as Promise<ApiHandlers> },
+  { basePath: "/api", segments: ["tools"], methods: ["GET"], handlers: () => import("../app/api/tools/route") as unknown as Promise<ApiHandlers> },
   { basePath: "/.well-known", segments: ["traffic-advice"], methods: ["GET"], handlers: () => import("../app/.well-known/traffic-advice/route") as unknown as Promise<ApiHandlers> },
+  { basePath: "/api", segments: ["v1","control","[operation]"], methods: ["POST"], handlers: () => import("../app/api/v1/control/[operation]/route") as unknown as Promise<ApiHandlers> },
+  { basePath: "/api", segments: ["v1","playbooks","[guid]","operations","[operation]"], methods: ["POST"], handlers: () => import("../app/api/v1/playbooks/[guid]/operations/[operation]/route") as unknown as Promise<ApiHandlers> },
+  { basePath: "/api", segments: ["versions"], methods: ["GET"], handlers: () => import("../app/api/versions/route") as unknown as Promise<ApiHandlers> },
   { basePath: "/playbooks", segments: ["[guid]",".well-known","skills","[[...path]]"], methods: ["GET","OPTIONS"], handlers: () => import("../app/playbooks/[guid]/.well-known/skills/[[...path]]/route") as unknown as Promise<ApiHandlers> },
   { basePath: "/api", segments: ["[[...route]]"], methods: ["GET","POST","PUT","DELETE","OPTIONS"], handlers: () => import("../app/api/[[...route]]/route") as unknown as Promise<ApiHandlers> },
 ];

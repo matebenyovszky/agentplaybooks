@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { API_MAJOR_HEADER, API_REVISION_HEADER, apiVersionHeaders, apiVersionRefusal } from "@/lib/api-contract";
 import { runWithAuditRequest } from "@/lib/audit-context";
 
 /**
@@ -76,15 +77,23 @@ export function createApiApp(basePath?: string) {
       "Authorization",
       "X-API-Key",
       "X-AgentPlaybooks-Toolset",
+      API_MAJOR_HEADER,
       "MCP-Protocol-Version",
       "Mcp-Session-Id",
       "Mcp-Method",
       "Mcp-Name",
       "Last-Event-ID",
     ],
+    exposeHeaders: [API_MAJOR_HEADER, API_REVISION_HEADER],
     credentials: true,
     maxAge: 86400,
   }));
+  app.use("*", async (c, next) => {
+    const refusal = apiVersionRefusal(c.req.raw);
+    if (refusal) return refusal;
+    await next();
+    for (const [name, value] of Object.entries(apiVersionHeaders())) c.header(name, value);
+  });
   // Database writes made while handling this request are attributed to the
   // caller the handler authenticates (see src/lib/audit-context.ts).
   app.use("*", (c, next) => runWithAuditRequest(c.req.raw, next));

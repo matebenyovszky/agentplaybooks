@@ -1,6 +1,6 @@
 {
   "name": "@agentplaybooks/cli",
-  "version": "0.9.1",
+  "version": "0.10.0",
   "description": "Sync vendor-neutral agent configuration and connect skills, MCP tools, memory, canvas, and secret-backed APIs",
   "type": "module",
   "license": "MIT",

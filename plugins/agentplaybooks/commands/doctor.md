@@ -6,7 +6,7 @@ argument-hint: "[path]"
 Audit the project's agent configuration with the AgentPlaybooks doctor. It
 only reads files and never writes.
 
-1. Run: `npx --yes @agentplaybooks/cli@0.9.1 doctor $ARGUMENTS --json`
+1. Run: `npx --yes @agentplaybooks/cli@0.10.0 doctor $ARGUMENTS --json`
    (default to the current project root when no path is given).
 2. Report the health score and the finding counts by severity.
 3. For each finding, show the source file and line where present, and a

@@ -20,6 +20,8 @@ const EXPECTED_NAMES = [
   "assets/icon.svg",
   "plugin.json",
   "skills/agentplaybooks/SKILL.md",
+  "skills/agentplaybooks/references/api-compatibility.json",
+  "skills/agentplaybooks/references/hosted-api.md",
   "skills/agentplaybooks/references/local-cli.md",
 ];
 

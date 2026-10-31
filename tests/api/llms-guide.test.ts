@@ -75,9 +75,11 @@ describe("one-shot examples from schemas", () => {
 describe("the guide itself", () => {
   it("leads with the calling convention and runnable examples", () => {
     const text = guide();
-    expect(text).toContain("POST https://agentplaybooks.ai/api/mcp/abc123/tools/TOOL_NAME");
+    expect(text).toContain("POST https://agentplaybooks.ai/api/playbooks/abc123/operations/TOOL_NAME");
     expect(text).toContain("curl -s -X POST");
     expect(text).toContain("import os, requests");
+    expect(text).toContain("return response.json()");
+    expect(text).not.toContain('response.json()["result"]');
     // The key comes from the environment in both examples, never inline.
     expect(text).toContain("$APBKS_KEY");
     expect(text).toContain("os.environ[\"APBKS_KEY\"]");

@@ -1,3 +1,4 @@
+import { API_VERSION } from "@/lib/api-contract";
 import type { Playbook, Skill, MCPServer, Persona } from "@/lib/supabase/types";
 import { skillDemonstrationsMarkdown } from "@/lib/demonstrations";
 import { PLAYBOOK_TOOLS } from "@/app/api/_shared/playbook-tools";
@@ -54,7 +55,7 @@ export function formatAsOpenAPI(playbook: PlaybookWithExports) {
         info: {
             title: playbook.name,
             description: `${personaHeader}${playbook.description || `API for ${playbook.name} playbook`}`,
-            version: "1.0.0",
+            version: API_VERSION,
         },
         servers: [{ url: `${baseUrl}/api` }],
         paths: {

@@ -21,7 +21,7 @@ A Hermes-katalógus csomagneve `agentplaybooks-tools`:
 ```bash
 hermes plugins install agentplaybooks-tools --no-enable
 hermes plugins enable agentplaybooks-tools
-npm install -g @agentplaybooks/cli@0.9.1
+npm install -g @agentplaybooks/cli@0.10.0
 apb --version
 ```
 
