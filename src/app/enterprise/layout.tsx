@@ -3,8 +3,8 @@ import { absoluteUrl } from "@/lib/site-url";
 
 export const metadata: Metadata = {
     alternates: { canonical: absoluteUrl("/enterprise") },
-    title: "Self-Hosted Agent Configuration for Teams | AgentPlaybooks Enterprise",
-    description: "Standardize how your team works with AI. One validated source of truth for agent skills, tools, instructions, and secrets — with roles, one-time editor invites, and no credentials on disk. Self-host it on your own infrastructure.",
+    title: "Self-Hosted Agents, Security & Audit | AgentPlaybooks",
+    description: "Self-host your team's agent skills, memory, tools, and encrypted credentials. Inspect hash-chained audit logs, JSONL/CSV exports, auditor access, SIEM forwarding, retention controls, and mTLS deployment guides.",
     keywords: [
         "enterprise AI", "self-hosted AI", "on-premise AI", "AI governance",
         "agent configuration management", "agent orchestration", "AI compliance",
@@ -12,8 +12,8 @@ export const metadata: Metadata = {
         "AI vendor lock-in", "SSO", "role-based access control"
     ],
     openGraph: {
-        title: "Self-Hosted Agent Configuration for Teams",
-        description: "One validated source of truth for your team's agent skills, tools, instructions, and secrets — self-hosted, with roles and audit.",
+        title: "Self-Hosted Agents, Security & Audit",
+        description: "Portable agent configuration with encrypted secrets, scoped access, verifiable audit history, export, and optional SIEM forwarding.",
         type: "website",
         url: absoluteUrl("/enterprise"),
     },

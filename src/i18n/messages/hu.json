@@ -370,7 +370,7 @@
         "starter": "Kezdj a Change Review mintával"
       }
     },
-    "anatomyEyebrow": "02 / A playbook belülről",
+    "anatomyEyebrow": "03 / A playbook belülről",
     "anatomyTitle": "Projektleírás. Emlékezettel.",
     "anatomyIntro": "Egy playbook összefogja, amire az asszisztensnek a következetes munkához szüksége van. Kezdd az instrukciókkal, a többit akkor add hozzá, amikor kell.",
     "contextPrinciple": "A releváns kontextus többet ér a sok kontextusnál.",
@@ -407,7 +407,7 @@
         "example": "Csak a szükséges szolgáltatásra érvényes kulcs"
       }
     },
-    "howEyebrow": "03 / Az első hasznos munkamenet",
+    "howEyebrow": "04 / Az első hasznos munkamenet",
     "howTitle": "Kezdd kicsiben. Építs a valódi munkára.",
     "howIntro": "Nem kell óriási prompt vagy eszköztár. Egy projekt, egy világos cél és egy bevált módszer elég az induláshoz.",
     "steps": {
@@ -473,12 +473,73 @@
     "browseExamples": "Vissza a példákhoz",
     "footerTagline": "Újrahasználható tudás a saját munkádhoz.",
     "docs": "Dokumentáció",
-    "privacy": "Adatvédelem"
+    "privacy": "Adatvédelem",
+    "catalog": {
+      "browse": "Nyilvános playbookok böngészése",
+      "nav": "Nyilvános playbookok",
+      "eyebrow": "02 / Találd meg a kiindulópontot",
+      "title": "Fedezd fel a nyilvános playbookokat.",
+      "intro": "Keress a megosztott playbookok között, nézd meg a skilljeiket és eszközkapcsolataikat, majd készíts saját munkádhoz igazítható privát másolatot.",
+      "searchLabel": "Playbook keresése",
+      "searchPlaceholder": "Keresés név vagy leírás alapján…",
+      "sortLabel": "Rendezés",
+      "sortStars": "Legtöbb csillag",
+      "sortNewest": "Legújabbak elöl",
+      "sortName": "Név szerint A–Z",
+      "loading": "Nyilvános playbookok betöltése…",
+      "results": "{count} playbook látható",
+      "error": "A nyilvános katalógus nem tölthető be. Próbáld újra.",
+      "retry": "Újrapróbálás",
+      "noMatches": "Nincs a keresésnek megfelelő playbook. Próbálj másik nevet vagy témát.",
+      "empty": "Ezen a példányon még nem osztottak meg nyilvános playbookot.",
+      "clear": "Keresés törlése",
+      "noDescription": "Nyisd meg a playbookot az instrukciók, skillek és kapcsolatok megtekintéséhez.",
+      "skills": "{count} skill",
+      "tools": "{count} kapcsolat",
+      "stars": "csillag",
+      "loadMore": "További playbookok"
+    }
   },
   "auth": {
     "emailLinkUse": "Bejelentkezés e-mailben kapott linkkel",
     "passwordUse": "Bejelentkezés jelszóval",
     "emailLinkSend": "Belépési link küldése",
     "emailLinkSent": "A belépési linket elküldtük az e-mail-címedre."
+  },
+  "selfHostSecurity": {
+    "jumpLink": "Biztonsági és audit funkciók",
+    "eyebrow": "Elérhető a nyílt forrású alkalmazásban",
+    "title": "Tartsd kézben. Kövesd vissza.",
+    "intro": "Saját infrastruktúrán, titkosított hitelesítő adatokkal, szabályozott hozzáféréssel és megtekinthető, ellenőrizhető, exportálható auditnaplóval.",
+    "features": {
+      "secrets": {
+        "title": "Korlátozható hitelesítő adatok",
+        "description": "AES-256-GCM titkosítás felhasználónként származtatott kulcsokkal. Szerveroldali beillesztés, kikényszerített lejárat és beállítható célhosztok a secretek használatához."
+      },
+      "access": {
+        "title": "Szerepkörök szerinti hozzáférés",
+        "description": "Adj az agenteknek korlátozott API-kulcsot, az ellenőröknek csak olvasó auditor hozzáférést. Privát példánymódban minden playbook kötelezően privát marad."
+      },
+      "audit": {
+        "title": "Változások és kulcshasználat követése",
+        "description": "Naplózott vaultműveletek, federált hívások, konfigurációváltozások, valamint memória- és canvasírások. Eredmények és szereplőadatok secretértékek és dokumentumtartalmak másolása nélkül."
+      },
+      "evidence": {
+        "title": "Ellenőrizhető, exportálható napló",
+        "description": "Playbookonkénti SHA-256 hash-lánc és védett, csak bővíthető napló, amely a playbook törlését is túléli. API- és CLI-ellenőrzés, JSONL- és CSV-export."
+      },
+      "forwarding": {
+        "title": "Illeszkedik az auditfolyamataidhoz",
+        "description": "Az alkalmazás auditeseményei opcionálisan aláírt HTTPS SIEM webhookra vagy Node syslogba továbbíthatók. Beállítható megőrzés és ütemezhető törlés a hash-lánc ellenőrizhetőségét megőrző checkpointokkal."
+      },
+      "operations": {
+        "title": "Működtetés saját infrastruktúrán",
+        "description": "mTLS megbízható TLS-proxyn keresztül saját telepítésen. Titkosított mentési és visszaállítási eszközök, valamint visszaállítási próbák segítik a helyreállítás tervezését és ellenőrzését."
+      }
+    },
+    "auditGuide": "Audit útmutató",
+    "securityDocs": "Biztonsági dokumentáció",
+    "mtlsGuide": "mTLS saját telepítésen",
+    "operationsNote": "A biztonsági dokumentáció bemutatja a beállításokat és korlátokat, a CodeQL-ellenőrzéseket, a CycloneDX SBOM-okat és az aláírt SBOM-bizonyítékokat. A SIEM-továbbítás opcionális, best-effort; a megőrzéshez te ütemezed a futást."
   }
 }

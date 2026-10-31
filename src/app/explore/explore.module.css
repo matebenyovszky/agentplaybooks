@@ -28,6 +28,18 @@
   margin-inline: auto;
   padding-inline: clamp(20px, 5vw, 64px);
 }
+.catalogLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+}
+.catalogLink:hover {
+  text-decoration: underline;
+}
 .page svg {
   flex-shrink: 0;
 }

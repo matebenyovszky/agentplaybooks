@@ -361,7 +361,7 @@
         "starter": "Mit Change Review beginnen"
       }
     },
-    "anatomyEyebrow": "02 / Im Playbook",
+    "anatomyEyebrow": "03 / Im Playbook",
     "anatomyTitle": "Ein Arbeitsbriefing. Mit Gedächtnis.",
     "anatomyIntro": "Ein Playbook bündelt, was ein Assistent für konsistente Arbeit braucht. Beginne mit Anweisungen und ergänze weitere Bausteine nach Bedarf.",
     "contextPrinciple": "Relevanter Kontext ist besser als mehr Kontext.",
@@ -398,7 +398,7 @@
         "example": "Schlüssel nur für den benötigten Dienst"
       }
     },
-    "howEyebrow": "03 / Die erste hilfreiche Sitzung",
+    "howEyebrow": "04 / Die erste hilfreiche Sitzung",
     "howTitle": "Klein anfangen. Mit echter Arbeit wachsen.",
     "howIntro": "Du brauchst weder einen riesigen Prompt noch eine Werkzeugsammlung. Ein Projekt, ein klares Ziel und eine hilfreiche Methode reichen für den Anfang.",
     "steps": {
@@ -464,7 +464,32 @@
     "browseExamples": "Zurück zu den Beispielen",
     "footerTagline": "Wiederverwendbares Wissen für deine Arbeit.",
     "docs": "Dokumentation",
-    "privacy": "Datenschutz"
+    "privacy": "Datenschutz",
+    "catalog": {
+      "browse": "Öffentliche Playbooks durchsuchen",
+      "nav": "Öffentliche Playbooks",
+      "eyebrow": "02 / Den Einstieg finden",
+      "title": "Öffentliche Playbooks entdecken.",
+      "intro": "Durchsuche geteilte Playbooks, sieh dir Skills und Werkzeugverbindungen an und erstelle eine private Kopie für deine Arbeit.",
+      "searchLabel": "Playbook suchen",
+      "searchPlaceholder": "Nach Name oder Beschreibung suchen…",
+      "sortLabel": "Sortieren nach",
+      "sortStars": "Meiste Sterne",
+      "sortNewest": "Neueste zuerst",
+      "sortName": "Name A–Z",
+      "loading": "Öffentliche Playbooks werden geladen…",
+      "results": "{count, plural, one {# Playbook angezeigt} other {# Playbooks angezeigt}}",
+      "error": "Der öffentliche Katalog konnte nicht geladen werden. Bitte versuche es erneut.",
+      "retry": "Erneut versuchen",
+      "noMatches": "Keine passenden Playbooks. Versuche einen anderen Namen oder ein anderes Thema.",
+      "empty": "Auf dieser Instanz wurden noch keine öffentlichen Playbooks geteilt.",
+      "clear": "Suche zurücksetzen",
+      "noDescription": "Öffne dieses Playbook, um Anweisungen, Skills und Verbindungen anzusehen.",
+      "skills": "{count, plural, one {# Skill} other {# Skills}}",
+      "tools": "{count, plural, one {# Verbindung} other {# Verbindungen}}",
+      "stars": "Sterne",
+      "loadMore": "Weitere Playbooks anzeigen"
+    }
   },
   "canvas": {
     "title": "Canvas-Dokumente",
@@ -480,5 +505,41 @@
     "passwordUse": "Mit Passwort anmelden",
     "emailLinkSend": "Anmeldelink senden",
     "emailLinkSent": "Prüfen Sie Ihr Postfach auf den Anmeldelink."
+  },
+  "selfHostSecurity": {
+    "jumpLink": "Sicherheits- und Auditfunktionen ansehen",
+    "eyebrow": "In der Open-Source-Anwendung verfügbar",
+    "title": "Kontrolle behalten. Nachweise sichern.",
+    "intro": "Selbst hosten mit verschlüsselten Zugangsdaten, begrenzten Zugriffsrechten und einem Auditprotokoll, das du einsehen, prüfen und exportieren kannst.",
+    "features": {
+      "secrets": {
+        "title": "Zugangsdaten mit Grenzen",
+        "description": "AES-256-GCM mit pro Nutzer abgeleiteten Schlüsseln. Zugangsdaten serverseitig einsetzen, Ablaufzeiten durchsetzen und erlaubte Zielhosts begrenzen."
+      },
+      "access": {
+        "title": "Zugriff nach Rollen trennen",
+        "description": "Begrenzte API-Schlüssel für Agenten und reinen Lesezugriff für Auditoren. Im privaten Instanzmodus müssen alle Playbooks privat bleiben."
+      },
+      "audit": {
+        "title": "Änderungen und Nutzung verfolgen",
+        "description": "Vault-Vorgänge, föderierte Aufrufe, Konfigurationsänderungen sowie Speicher- und Canvas-Schreibvorgänge protokollieren. Ergebnisse und Akteursmetadaten ohne Geheimniswerte oder Dokumentinhalte."
+      },
+      "evidence": {
+        "title": "Protokolle prüfen und exportieren",
+        "description": "SHA-256-Hashketten je Playbook und geschützte, nur erweiterbare Protokolle bleiben nach dem Löschen eines Playbooks erhalten. Prüfung per API oder CLI, Export als JSONL oder CSV."
+      },
+      "forwarding": {
+        "title": "In deine Auditabläufe integrieren",
+        "description": "Anwendungsereignisse optional an einen signierten HTTPS-SIEM-Webhook oder Node-Syslog weiterleiten. Aufbewahrung und geplante Löschungen mit Prüfpunkten für die weitere Kettenprüfung konfigurieren."
+      },
+      "operations": {
+        "title": "Auf eigener Infrastruktur betreiben",
+        "description": "mTLS über einen vertrauenswürdigen TLS-Proxy nutzen. Werkzeuge für verschlüsselte Sicherung und Wiederherstellung sowie Wiederherstellungsübungen helfen bei der Planung und Prüfung."
+      }
+    },
+    "auditGuide": "Audit-Anleitung",
+    "securityDocs": "Sicherheitsdokumentation",
+    "mtlsGuide": "Selbst gehostetes mTLS",
+    "operationsNote": "Die Sicherheitsdokumentation beschreibt Konfiguration und Grenzen sowie CodeQL-Prüfungen, CycloneDX-SBOMs und signierte SBOM-Nachweise. SIEM-Weiterleitung ist optional und nach bestem Bemühen; Aufbewahrungsläufe planst du selbst."
   }
 }

@@ -103,7 +103,10 @@ export async function installPublicReadMocks(page: Page) {
   });
 
   await page.route("**/api/public/**", async (route) => {
-    await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
+    const playbooks = new URL(route.request().url()).pathname === "/api/public/playbooks"
+      ? [{ ...DEMO_PLAYBOOK, skills_count: 1, mcp_servers_count: 1, publisher: { name: "Demo publisher" } }]
+      : [];
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(playbooks) });
   });
   await page.route("**/api/user/**", async (route) => {
     await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
@@ -206,7 +209,11 @@ export async function runLiveOverflowSuite(page: Page, viewport: ViewportCase) {
       await expect(page.locator("#workflow-title-review")).toBeVisible();
       await expect(page.locator("#workflow-title-research")).toBeHidden();
       await assertPageFits(page, "explore-review", viewport);
-      await page.getByRole("link", { name: "03 Get started" }).click();
+      await page.locator('nav a[href="#public-playbooks"]').click();
+      await expect(page.locator("#public-playbook-results article")).toHaveCount(1);
+      await expect(page.locator("#public-playbook-results").getByRole("link", { name: DEMO_PLAYBOOK.name })).toBeVisible();
+      await assertPageFits(page, "explore-catalog", viewport);
+      await page.locator('nav a[href="#how-it-works"]').click();
       await expect(page.locator("#how-it-works")).toBeInViewport();
       await page.locator("summary").filter({ hasText: "Where do my project details belong?" }).click();
       await expect(page.getByText("In your own private playbook.", { exact: false })).toBeVisible();
@@ -214,7 +221,9 @@ export async function runLiveOverflowSuite(page: Page, viewport: ViewportCase) {
       await assertPageFits(page, "explore-guide", viewport);
       await assertNoCspViolations(page, cspErrors);
       page.off("request", recordCatalogRequest);
-      expect(catalogRequests, "Explore should not load catalogs or star lists").toEqual([]);
+      expect(catalogRequests.length, "Explore should load the public playbook catalog").toBeGreaterThan(0);
+      expect(catalogRequests.every(url => new URL(url).pathname === "/api/public/playbooks"),
+        "Explore should only load the public playbook catalog").toBe(true);
     }
   }
 }

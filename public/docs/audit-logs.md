@@ -1,7 +1,8 @@
 # Audit logs (export, retention, tamper evidence)
 
-The `audit_logs` table is the playbook audit trail: federated MCP calls and
-vault operations (`secret.*`) in one place, read at
+The `audit_logs` table is the playbook audit trail: federated MCP calls,
+vault operations (`secret.*`), configuration changes, and memory/canvas writes
+in one place, read at
 `GET /api/playbooks/:guid/audit`. A row never holds a secret value, a full
 outbound URL, or an API key.
 
