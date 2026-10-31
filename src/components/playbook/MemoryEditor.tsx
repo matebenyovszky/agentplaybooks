@@ -114,6 +114,7 @@ function MemoryTreeNode({
   onCopy,
   copiedKey,
   readOnly,
+  wrapText,
 }: {
   memory: Memory;
   childrenMap: Map<string, Memory[]>;
@@ -128,6 +129,7 @@ function MemoryTreeNode({
   onCopy: (text: string, key: string) => void;
   copiedKey: string | null;
   readOnly: boolean;
+  wrapText: boolean;
 }) {
   const children = childrenMap.get(memory.key) || [];
   const hasChildren = children.length > 0;
@@ -228,7 +230,7 @@ function MemoryTreeNode({
           )}
 
           {/* Value preview */}
-          <pre className={cn("p-3 rounded-lg overflow-x-auto ml-7", "bg-slate-900/70 border border-slate-700/50", "text-sm text-slate-300 font-mono max-h-40 overflow-y-auto")}>
+          <pre className={cn("p-3 rounded-lg ml-7 max-w-full", "bg-slate-900/70 border border-slate-700/50", "text-sm text-slate-300 font-mono max-h-40 overflow-y-auto", wrapText ? "whitespace-pre-wrap break-words [overflow-wrap:anywhere]" : "whitespace-pre overflow-x-auto")}>
             {JSON.stringify(memory.value, null, 2)}
           </pre>
 
@@ -264,6 +266,7 @@ function MemoryTreeNode({
               onCopy={onCopy}
               copiedKey={copiedKey}
               readOnly={readOnly}
+              wrapText={wrapText}
             />
           ))}
         </div>
@@ -273,6 +276,7 @@ function MemoryTreeNode({
 }
 
 export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: MemoryEditorProps) {
+  const [wrapText, setWrapText] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [entries, setEntries] = useState<Memory[]>(memories);
   const [scope, setScope] = useState<MemoryScope>("active");
@@ -555,6 +559,11 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
           />
         </div>
 
+        <label className="inline-flex items-center gap-2 text-sm text-neutral-700 dark:text-slate-300">
+          <input type="checkbox" checked={wrapText} onChange={(event) => setWrapText(event.target.checked)} className="accent-teal-500" />
+          Wrap text
+        </label>
+
         {/* Tier filter */}
         <div className="relative">
           <select
@@ -699,6 +708,7 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
                 onCopy={copyToClipboard}
                 copiedKey={copiedKey}
                 readOnly={readOnly}
+                wrapText={wrapText}
               />
             ))}
           </AnimatePresence>
@@ -893,6 +903,7 @@ export function MemoryEditor({ storage, memories, onUpdate, readOnly = false }: 
                     <textarea
                       value={editValue}
                       onChange={(e) => setEditValue(e.target.value)}
+                      wrap={wrapText ? "soft" : "off"}
                       className={cn(
                         "w-full h-48 p-3 rounded-lg",
                         "bg-slate-900/70 border",

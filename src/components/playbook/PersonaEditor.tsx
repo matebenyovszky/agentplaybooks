@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import {
@@ -47,7 +47,6 @@ export function PersonaEditor({ persona, storage, onUpdate, onDelete, readOnly =
   const [metadata, setMetadata] = useState(JSON.stringify(persona.metadata || {}, null, 2));
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Whether the editor holds unsaved edits is a comparison, not a fact worth
   // storing: every input to it is already state or a prop. Computing it during
@@ -98,14 +97,6 @@ export function PersonaEditor({ persona, storage, onUpdate, onDelete, readOnly =
 
     save();
   }, [debouncedPrompt, debouncedName, debouncedMetadata, hasChanges, metadata, onUpdate, persona.id, persona.metadata, storage]);
-
-  // Auto-resize textarea
-  useEffect(() => {
-    if (textareaRef.current && expanded) {
-      textareaRef.current.style.height = "auto";
-      textareaRef.current.style.height = textareaRef.current.scrollHeight + "px";
-    }
-  }, [systemPrompt, expanded]);
 
   const copyToClipboard = useCallback(() => {
     navigator.clipboard.writeText(systemPrompt);
@@ -222,7 +213,6 @@ export function PersonaEditor({ persona, storage, onUpdate, onDelete, readOnly =
                   System Prompt
                 </label>
                 <textarea
-                  ref={textareaRef}
                   value={systemPrompt}
                   onChange={(e) => !readOnly && setSystemPrompt(e.target.value)}
                   readOnly={readOnly}
