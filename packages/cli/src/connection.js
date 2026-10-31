@@ -50,7 +50,7 @@ export async function checkConnection(base, { apiKey, fetchImpl = fetch, timeout
   const resource = new URL(endpoint);
   const metadataUrl = `${resource.origin}/.well-known/oauth-protected-resource${resource.pathname}`;
   const report = { endpoint, ok: false, stages: [], nextSteps: [] };
-  const headers = { "Content-Type": "application/json", Accept: "application/json, text/event-stream" };
+  const headers = { "Content-Type": "application/json", Accept: "application/json, text/event-stream", "X-AgentPlaybooks-API-Version": "1" };
   if (apiKey) headers["X-API-Key"] = apiKey;
   let nextId = 0;
   const fetchAt = (url, options) => fetchImpl(url, { ...options, redirect: "error", signal: AbortSignal.timeout(timeoutMs) });
@@ -113,7 +113,14 @@ export async function checkConnection(base, { apiKey, fetchImpl = fetch, timeout
         return {};
       }
       const message = await messageFrom(response, id);
-      if (message.jsonrpc !== "2.0" || message.id !== id || message.error || !message.result) throw new Error("invalid-mcp-response");
+      if (message.jsonrpc !== "2.0" || message.id !== id) throw new Error("invalid-mcp-response");
+      if (message.error) {
+        report.stages.push({ stage, status: "failed", reason: "server-rpc-error",
+          ...(Number.isInteger(message.error.code) ? { rpcCode: message.error.code } : {}) });
+        report.nextSteps.push("The request reached the MCP server and returned an RPC error. Check the active toolset, required arguments and connection permissions. Error bodies are omitted from this credential-safe report.");
+        return null;
+      }
+      if (!message.result) throw new Error("invalid-mcp-response");
       report.stages.push({ stage, status: "ok" });
       return message.result;
     } catch {
@@ -133,6 +140,13 @@ export async function checkConnection(base, { apiKey, fetchImpl = fetch, timeout
   }
   headers["MCP-Protocol-Version"] = init.protocolVersion;
   report.protocolVersion = init.protocolVersion;
+  const apiVersion = init._meta?.["ai.agentplaybooks/apiVersion"];
+  if (typeof apiVersion === "string" && /^\d+\.\d+\.\d+$/.test(apiVersion)) report.apiVersion = apiVersion;
+  const revision = init._meta?.["ai.agentplaybooks/catalogRevision"];
+  if (typeof revision === "string" && /^[a-zA-Z0-9_.-]{1,100}$/.test(revision)) report.serverCatalogRevision = revision;
+  if (init.serverInfo && [init.serverInfo.name, init.serverInfo.version].every(value => typeof value === "string" && /^[a-zA-Z0-9_. -]{1,100}$/.test(value))) {
+    report.serverInfo = { name: init.serverInfo.name, version: init.serverInfo.version };
+  }
   if (!await call("initialized", "notifications/initialized", undefined, true)) return report;
   const listed = await call("tools/list", "tools/list");
   if (!listed) return report;
@@ -143,6 +157,11 @@ export async function checkConnection(base, { apiKey, fetchImpl = fetch, timeout
   report.toolCount = listed.tools.length;
   report.toolCatalogDigest = `sha256:${createHash("sha256").update(JSON.stringify(listed.tools)).digest("hex")}`;
   report.moreTools = Boolean(listed.nextCursor);
+  report.advertisedCapabilities = Object.fromEntries(["get_connection_info", "get_secret_status", "list_secrets", "use_secret", "use_secret_write", "reveal_secret"]
+    .map(name => [name, listed.tools.some(tool => tool.name === name)]));
+  if (!report.advertisedCapabilities.list_secrets || !report.advertisedCapabilities.reveal_secret) {
+    report.nextSteps.push("Compact/pinned catalogs can intentionally omit secret tools. Use find_tools(include_schemas=false) for short discovery, then true for the selected schema or public /api/tools/{name}; use the authenticated REST operation route if available. A missing host function proves neither absence of a secret nor a reveal-policy denial. Do not switch to a full catalog automatically.");
+  }
   if (report.toolCount === 0) {
     report.nextSteps.push("The server returned an empty tool catalog. Check server permissions and refresh tools in the host, then start a new conversation.");
     return report;
@@ -163,7 +182,10 @@ export async function checkConnection(base, { apiKey, fetchImpl = fetch, timeout
 
 export function printConnection(report, log = console.log) {
   log(`AgentPlaybooks connection: ${report.endpoint}`);
-  for (const stage of report.stages) log(`  ${stage.stage}: ${stage.status}${stage.httpStatus ? ` (HTTP ${stage.httpStatus})` : ""}${stage.reason ? ` (${stage.reason})` : ""}`);
+  for (const stage of report.stages) log(`  ${stage.stage}: ${stage.status}${stage.httpStatus ? ` (HTTP ${stage.httpStatus})` : ""}${stage.reason ? ` (${stage.reason})` : ""}${stage.rpcCode !== undefined ? ` (RPC ${stage.rpcCode})` : ""}`);
+  if (report.apiVersion) log(`  AgentPlaybooks API: ${report.apiVersion} (requested major 1)`);
+  if (report.serverCatalogRevision) log(`  Catalog revision: ${report.serverCatalogRevision}`);
+  if (report.serverInfo) log(`  Server: ${report.serverInfo.name} ${report.serverInfo.version}`);
   if (report.toolCount !== undefined) log(`  Tools: ${report.toolCount}${report.moreTools ? "+ (paginated)" : ""}`);
   if (report.profile) log(`  Account: ${report.profile.email ?? report.profile.name ?? report.profile.id}`);
   for (const step of report.nextSteps) log(`  ${step}`);

@@ -116,6 +116,18 @@ describe("searching the tool catalog", () => {
     expect(match.annotations).toMatchObject({ readOnlyHint: false, openWorldHint: true });
   });
 
+  it("prioritizes a whole intent and labels partial keyword matches", () => {
+    const fixtures = [
+      { name: "secret_reader", description: "Secret secret secret", inputSchema: { type: "object" } },
+      { name: "reveal_secret", description: "Return a raw value", inputSchema: { type: "object" } },
+    ];
+    const matches = searchToolCatalog(fixtures, "secret reveal", 10, { includeSchemas: false });
+    expect(matches[0]).toMatchObject({ name: "reveal_secret", match: "all_terms" });
+    expect(matches[1]).toMatchObject({ name: "secret_reader", match: "partial", missing_terms: ["reveal"] });
+    expect(matches[0].inputSchema).toBeUndefined();
+    expect(searchToolCatalog(fixtures, "reveal_secret")[0].match).toBe("exact");
+  });
+
   it("finds every real builtin by a word from its own name", () => {
     for (const tool of PLAYBOOK_TOOLS) {
       const term = tool.name.split("_").findLast((part) => part.length > 2) ?? tool.name;

@@ -3,12 +3,7 @@
   "mcpServers": {
     "agentplaybooks-account": {
       "type": "streamable-http",
-      "url": "https://agentplaybooks.ai/api/mcp/manage",
-      "extensions": {
-        "com.openai": {
-          "auth": { "type": "oauth" }
-        }
-      }
+      "url": "https://agentplaybooks.ai/api/mcp/manage"
     }
   }
 }

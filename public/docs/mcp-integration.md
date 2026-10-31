@@ -18,7 +18,7 @@ control plane that can create a playbook and immediately apply it.
 The third row is for agents that write code instead of calling tools one at a
 time — some of them cannot call MCP tools from inside their scripts at all.
 `llms.txt` is one fetch that explains authentication and the one-POST calling
-convention (`POST /api/mcp/YOUR_GUID/tools/TOOL_NAME` with JSON arguments), with a
+convention (`POST /api/playbooks/YOUR_GUID/operations/TOOL_NAME` with JSON arguments), with a
 one-shot example per tool. The dashboard's Integrations tab shows all three.
 
 OAuth 2.1 with PKCE is the default for interactive clients. The endpoint
@@ -250,7 +250,7 @@ The MCP server exposes built-in tools for interacting with the playbook. Skills 
 | **Canvas** | `list_canvas`, `read_canvas`, `write_canvas`, `patch_canvas_section`, `get_canvas_toc`, `lock_canvas_section`, `unlock_canvas_section` |
 | **Workflow runs** | `list_runs`, `create_run`, `update_run`, `delete_run` |
 | **Connected MCP/OpenAPI** | `list_mcp_servers`, `create_mcp_server`, `update_mcp_server`, `delete_mcp_server`, `call_connected_tool` |
-| **Secrets** | `list_secrets`, `use_secret`, `store_secret`, `rotate_secret`, `delete_secret` |
+| **Secrets** | `list_secrets`, `use_secret`, `use_secret_write`, `reveal_secret`, `store_secret`, `rotate_secret`, `delete_secret` |
 | **Playbook** | `update_playbook` |
 | **Discovery** | `find_tools` |
 
@@ -277,11 +277,126 @@ https://agentplaybooks.ai/api/mcp/YOUR_GUID?toolset=runtime
 One connection is enough. On an unpinned connection the agent discovers what it
 needs with `find_tools(query)` — keyword search over the full catalog, built-in
 and federated alike, returning name, description, and input schema — and then
-calls the result directly, whether or not it was advertised. Add the same
+calls the result if the host exposes it. The server accepts supported names
+even when they are omitted from its advertised view, but schemas returned by
+`find_tools` do not register new functions in the host. Clients that call only
+advertised tools can use the authenticated REST operation route when an HTTP
+executor is available. The full catalog remains an opt-in compatibility fallback. Add the same
 playbook twice only when you *want* differently scoped connections: a pinned
 toolset is a deliberate boundary, and `find_tools` on a pinned connection
 searches only within it. An unknown toolset name is a 400, never a silent
 fallback to `full`.
+
+### API contract versioning
+
+Plugin releases, AgentPlaybooks API contracts and MCP wire-protocol versions
+are independent. The existing operation contract is the `1.0.0` baseline;
+the additive discovery and secret diagnostics are API `1.1.0`.
+
+| Surface | Version selection | Compatibility |
+|---------|-------------------|---------------|
+| Released plugin `0.9.1` | Existing URL, no API header | API `1.x`; captured legacy contract tests remain required |
+| Plugin compatibility manifest | Minimum `1.0.0`, maximum exclusive `2.0.0` | New optional features declare their own `since` version |
+| REST operations | `/api/v1/control/{operation}` or `/api/v1/playbooks/{guid}/operations/{operation}` | Explicitly pinned to major `1`; same handlers and permission checks |
+| MCP | Existing canonical endpoint plus optional `X-AgentPlaybooks-API-Version: 1` | No OAuth resource URL change; omitted header remains pinned to v1 |
+
+`GET /api/versions` is a small public compatibility document. It reports the
+current API revision, supported majors, the permanent unversioned-v1 alias,
+feature introduction versions, and the versioning policy. It contains no tool
+schemas, account data or vault data. `get_connection_info` also reports this
+information on demand. Neither endpoint can establish which plugin version a
+host actually installed.
+
+Request `X-AgentPlaybooks-API-Version: 1` to select the **major**, not the
+full revision. Responses report the major in that header and the full revision
+in `X-AgentPlaybooks-API-Revision: 1.1.0`. The unrelated
+`MCP-Protocol-Version` selects the MCP transport protocol; it does not select
+the AgentPlaybooks operation contract. Unsupported API majors fail before
+execution with `reason=unsupported_api_version`, supported majors and a next
+step. A v1 path with a conflicting header fails with `api_version_conflict`.
+There is no silent downgrade or credential-bearing redirect.
+
+Each packaged plugin includes
+`skills/agentplaybooks/references/api-compatibility.json`, alongside its own
+plugin release version. This declares its API bounds and optional capabilities
+without using unsupported fields in host-owned MCP manifests. Release checks
+reject a plugin/server API-range mismatch or disagreement on feature versions.
+A server without API metadata is reported as unversioned/unknown, not assumed
+to support every new feature.
+
+Breaking changes require a new major **and separate handlers** plus contract
+tests; adding a number to the supported list is not a migration. Existing v1
+URLs, permissions, required arguments, response envelopes and defaults remain
+stable. Additive capabilities use minor releases; compatible bug fixes use
+patch releases. Plugin releases can change independently while their declared
+API range stays the same. Upstream connected services retain their own API
+contracts; their changing schemas or permissions are not covered by the APB
+version number. Deprecation requires advance documentation and an
+explicit migration; the unversioned aliases must never silently follow v2.
+
+### Compatibility with existing plugins
+
+Existing MCP endpoints, OAuth resources, tool names, required arguments and
+response envelopes remain supported. The compact view retains the previously
+advertised tools and their input/output schemas. New diagnostics are additive.
+Legacy `find_tools` calls without `include_schemas` still return full schemas;
+short results are requested explicitly with `include_schemas=false`. Existing
+REST operation status codes and text-result precedence are preserved, with
+additional diagnostic fields in error bodies. New secret operations require a
+catalog refresh or updated skill to discover, not a credential migration.
+
+### Account connection diagnostics
+
+The account endpoint `/api/mcp/manage` defaults to 17 common operations with
+short descriptions. Existing input/output schemas and safety annotations are
+retained for compatibility; full descriptions are loaded on demand; the full view currently has 56 operations. Safety annotations
+remain present in both views. A pinned domain view still restricts calls; the
+public `directory` profile excludes secret handling and catalog diagnostics.
+
+`find_tools({query, include_schemas:false})` returns short summaries and effect
+annotations. Request `include_schemas=true` only for the selected operation.
+For backward compatibility, omitting the option returns full schemas as before. Exact operation
+names rank first, then coverage of query terms; partial matches report
+`match=partial` and `missing_terms` instead of implying full support.
+
+Public documentation is available without an account:
+
+- `/api/tools?query=secret&limit=5` — short built-in summaries, paged by offset.
+- `/api/tools/get_secret_status` — the complete schema for one operation.
+- Add `?format=markdown` for a web-readable explanation, or `?format=openapi`
+  for just that operation's OpenAPI document.
+
+These public endpoints never inspect accounts, connected private servers,
+playbooks or secrets. The short catalog links to deeper documentation rather
+than loading it into every MCP connection.
+
+When a host cannot register a discovered MCP function, a credentialed HTTP
+executor can call `POST /api/control/{operation}` with the same arguments,
+including `playbook_id` for scoped operations. A direct playbook credential can
+use `POST /api/playbooks/{guid}/operations/{operation}` without `playbook_id`.
+These routes share the MCP permission checks and return its structured failure
+reasons. Do not copy host-owned OAuth tokens or change transport to bypass a
+denial. Without an authorized HTTP executor, a full catalog and host refresh
+remain a compatibility option rather than the default.
+
+After a failure, `get_connection_info` reports `catalog_revision`, `toolset`,
+`credential_kind`, `account_permissions`, `advertised_tools` and `callable_tools`.
+The server reports host registration as unknown: a local `TypeError: ... is not
+a function` means the host sent no request. It does not establish a server,
+permission or reveal-policy failure.
+
+`apb connection check --json` checks the HTTP/MCP path and reports server
+identity/version, advertised secret capabilities and RPC error codes without
+copying error bodies. It does not inspect the desktop OAuth token store or
+prove that the host registered a particular function. Missing secret tools
+from the compact startup catalog are expected; load the selected documentation
+only when the operation is needed.
+
+Tool execution failures include `error.data.catalog_revision`, `phase`,
+`reason` and `next_steps`. Secret diagnostics distinguish `secrets_read_required`,
+`proxy_only`, `expired`, `secret_not_found`, `secret_metadata_query_failed`,
+`secret_query_failed`, `secret_decryption_failed` and `audit_unavailable`.
+Legacy failures without a specific classification use `tool_execution_failed`.
 
 ## Available Resources
 
@@ -400,13 +515,40 @@ For incremental model output, browsers and HTTP clients can bypass MCP using [`P
 3. Server makes the HTTP request with the secret injected as a header
 4. Only the HTTP response is returned to the agent
 
-This ensures credentials never appear in agent context, logs, or conversation history.
+Proxy use keeps the credential out of the tool result. Optional reveal explicitly
+returns a raw value and therefore requires a separate decision about raw access.
+
+### Optional raw access
+
+`get_secret_status({secret_name})` checks one known name without decrypting
+it. After authorization, a missing name returns `exists=false` and
+`reason=secret_not_found`. If the lookup is refused or fails, existence is
+unknown; it must not be reported as absence. For an existing secret,
+`capabilities.reveal.reason=proxy_only` identifies disabled reveal and includes
+a next step the agent can discuss with the user.
+
+`list_secrets` never decrypts a value. Its `capabilities.reveal` reports
+`supported`, `allowed`, `reason` and `next_steps`; proxy eligibility is reported
+separately, and the requested destination still has to pass `allowed_hosts`
+and network checks. `allow_api_key_reveal=false` produces `proxy_only`, even
+for owner OAuth through MCP. Proxy requests do not require reveal.
+
+Use `reveal_secret({secret_name})` only when the user needs raw access. The owner
+or an editor must first enable **Allow API keys to reveal the raw value** in the
+vault UI. MCP also refuses expired secrets and withholds plaintext if the audit
+write fails. The dashboard retains its owner/editor recovery behavior for
+expired or proxy-only secrets; that exception does not apply to MCP.
+Do not echo or persist revealed values. Header injection is separate from web
+form login, which additionally needs a suitable client workflow.
 
 ### Available MCP Tools
 
 | Tool | Description |
 |------|-------------|
-| `list_secrets` | List secret names and metadata (never values) |
+| `get_secret_status` | Check one name without decryption: authorized absence, existing policy, or unknown existence on a permission/server error |
+| `list_secrets` | Names, metadata, `allow_api_key_reveal`, `allowed_hosts`, and value-free proxy/reveal capabilities |
+| `reveal_secret` | Return a raw value only with per-secret opt-in, secrets:read access, valid expiry and a successful audit write |
+| `use_secret_write` | POST/PUT/PATCH/DELETE with server-side credential injection |
 | `use_secret` | Make HTTP request with secret injected server-side |
 | `store_secret` | Store a new encrypted secret |
 | `rotate_secret` | Replace a secret's value |

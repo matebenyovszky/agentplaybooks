@@ -126,8 +126,10 @@ Substitute your variant for `apb` in the commands below.
 - **"Call an API without revealing its key"** → use `list_secrets` to discover
   names, then `use_secret` for GET/HEAD. Use `use_secret_write` for
   POST/PUT/PATCH/DELETE only after the user approves the external mutation.
-  Both inject the credential server-side and must never reveal or request its
-  value. The account MCP form also needs the target `playbook_id`.
+  Both inject the credential server-side without revealing its value. For an
+  explicitly requested raw-value workflow, inspect `list_secrets` capabilities
+  first and use the optional `reveal_secret` only when allowed. Never echo or
+  persist the returned value. The account MCP form also needs the target `playbook_id`.
 - **"Connect these playbooks only"** → pass a comma-separated GUID list to
   `apb connect`. The CLI creates a separate, stable MCP entry for each and
   merges them into the target configuration atomically.

@@ -26,6 +26,13 @@ export const ACCOUNT_TOOLS: McpTool[] = [
     _meta: { "openai/profile": true },
   },
   {
+    name: "get_connection_info",
+    title: "Diagnose this connection",
+    description: "Inspect this authenticated connection without reading secrets or changing data. Returns server catalog revision, active toolset, credential kind, account permissions, advertised and server-callable built-in names, and host-refresh guidance. Server support does not prove the host registered a callable function. Account permissions do not establish access to a particular playbook; list_secrets checks that separately and reports per-secret reveal policy. Use after a failure or on request, not before every task.",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    annotations: READ_CLOSED,
+  },
+  {
     name: "list_playbooks",
     title: "List playbooks",
     description: "Find playbooks owned by or shared with the authenticated user by a literal name fragment. Returns compact metadata, access roles and counts, not instructions, persona prompts or config. Default 50 results, newest first; use offset for the next page. Supports the first 1000 matches; narrow query for larger accounts. Read-only; requires playbooks:read or full. Reuse a known ID instead of listing before every operation; get_playbook retrieves one playbook's context.",

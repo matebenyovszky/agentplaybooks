@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "api": {
+    "major": 1,
+    "minimum_version": "1.0.0",
+    "maximum_version_exclusive": "2.0.0"
+  },
+  "rest_base_path": "/api/v1",
+  "mcp_endpoint": "https://agentplaybooks.ai/api/mcp/manage",
+  "discovery_url": "https://agentplaybooks.ai/api/versions",
+  "optional_features": {
+    "compact_discovery": "1.1.0",
+    "secret_status": "1.1.0",
+    "optional_secret_reveal": "1.1.0",
+    "structured_diagnostics": "1.1.0",
+    "public_tool_catalog": "1.1.0"
+  }
+}

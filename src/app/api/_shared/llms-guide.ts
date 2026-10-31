@@ -80,6 +80,7 @@ export function buildAgentGuide(options: {
 }): string {
   const { baseUrl, guid, playbookName, description, tools, servers } = options;
   const endpoint = `${baseUrl}/api/mcp/${guid}`;
+  const operations = `${baseUrl}/api/playbooks/${guid}/operations`;
   const exampleTool = tools.find((tool) => tool.name === "read_memory") ?? tools[0];
   const exampleArgs = exampleTool ? JSON.stringify(exampleArgumentsFor(exampleTool)) : "{}";
 
@@ -110,16 +111,16 @@ export function buildAgentGuide(options: {
     "## Call any tool with one POST",
     "",
     "```text",
-    `POST ${endpoint}/tools/TOOL_NAME`,
+    `POST ${operations}/TOOL_NAME`,
     "Content-Type: application/json",
     "",
     "{ ...tool arguments as JSON... }",
     "```",
     "",
-    "The response is `{\"tool\": name, \"result\": ...}`. One-shot example:",
+    "The response is the operation result JSON directly. One-shot example:",
     "",
     "```bash",
-    `curl -s -X POST '${endpoint}/tools/${exampleTool?.name ?? "read_memory"}' \\`,
+    `curl -s -X POST '${operations}/${exampleTool?.name ?? "read_memory"}' \\`,
     "  -H \"X-API-Key: $APBKS_KEY\" -H 'Content-Type: application/json' \\",
     `  -d '${exampleArgs}'`,
     "```",
@@ -128,12 +129,12 @@ export function buildAgentGuide(options: {
     "",
     "```python",
     "import os, requests",
-    `BASE = "${endpoint}/tools/"`,
+    `BASE = "${operations}/"`,
     "def call(tool, **arguments):",
     "    response = requests.post(BASE + tool, json=arguments,",
     "        headers={\"X-API-Key\": os.environ[\"APBKS_KEY\"]}, timeout=30)",
     "    response.raise_for_status()",
-    "    return response.json()[\"result\"]",
+    "    return response.json()",
     "",
     `result = call(${JSON.stringify(exampleTool?.name ?? "read_memory")}, **${exampleArgs})`,
     "```",
@@ -155,8 +156,10 @@ export function buildAgentGuide(options: {
     "## Built-in tools",
     "",
     "Each entry: what it does, and a one-shot example body for",
-    "`POST .../tools/<name>`. Full schemas come from MCP `tools/list` or the",
-    "`find_tools` tool.",
+    "`POST .../operations/<name>`. Full schemas come from MCP `tools/list` or the",
+    "`find_tools` with include_schemas=false for short discovery, then true for the selected schema. Public",
+    "built-in documentation is also available at /api/tools/<name>; avoid",
+    "loading every schema before a task needs it.",
     "",
   ];
 

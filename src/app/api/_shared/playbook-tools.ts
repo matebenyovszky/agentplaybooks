@@ -21,12 +21,13 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   {
     name: "find_tools",
     title: "Find tools",
-    description: "Search this playbook's complete tool catalog by keyword: the built-in playbook tools (memory, skills, canvas, workflow runs, secrets) and every connected server's federated tools (names like supabase__execute_sql or cloudflare__search). Matches against tool names and descriptions; a name match ranks above a description match. Returns up to `limit` (default 10, max 25) entries with name, description, full input schema, and effect annotations when supplied. Every returned tool can be called directly by name even when it is absent from tools/list — the advertised list is a view, not a boundary, unless this connection was pinned with ?toolset=. Read-only and free of side effects. Use this when the tool you need is not in your current list, before concluding a capability is missing.",
+    description: "Find operations by keyword; set include_schemas=false for short summaries. Omitted include_schemas preserves the legacy full-schema response. Exact names rank first; partial matches report missing_terms. Search covers this playbook’s built-in and connected tools, within the active toolset. A schema does not register a host function: use an exposed tool or the authenticated REST operations endpoint. Never infer secret absence or policy from a missing host function.",
     inputSchema: {
       type: "object",
       properties: {
         query: { type: "string", description: "Keywords to match against tool names and descriptions, e.g. 'sql tables' or 'archive memory'" },
         limit: { type: "number", description: "Maximum matches to return (default 10, max 25)" },
+        include_schemas: { type: "boolean", default: true, description: "Legacy default includes schemas; set false for compact names and summaries, then true for selected details" },
       },
       required: ["query"],
     },
@@ -635,12 +636,11 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
     annotations: DESTRUCTIVE_CLOSED,
   },
   // ===== Secrets Tools =====
-  // Security: agents NEVER see secret values. They reference secrets by name
-  // and use_secret injects them server-side into HTTP requests.
+  // Proxy calls keep values server-side. Explicit reveal requires per-secret opt-in.
   {
     name: "list_secrets",
     title: "List secrets",
-    description: "List all secret names and metadata in this playbook. Does not return values — secret values are never exposed to agents. Requires secrets:read or full permission. Use use_secret to make an authenticated HTTP request, store_secret to add a value, and rotate_secret to replace one. Do not use this tool expecting plaintext credentials.",
+    description: "List all secret names and metadata in this playbook. Never returns values. Includes allow_api_key_reveal, allowed_hosts and capabilities with reveal/proxy availability and reasons. Reveal is optional and separate from proxy use; use reveal_secret only when the user needs raw access. Requires secrets:read or full permission. Use use_secret to make an authenticated HTTP request, store_secret to add a value, and rotate_secret to replace one. Do not use this tool expecting plaintext credentials.",
     inputSchema: {
       type: "object",
       properties: {
@@ -648,6 +648,40 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
       },
     },
     outputSchema: secretListOutputSchema,
+    annotations: READ_CLOSED,
+  },
+  {
+    name: "get_secret_status",
+    title: "Check a secret without revealing it",
+    description: "Check one named secret without decrypting it. Requires secrets:read or full and access to this playbook. Reports exists=false only after authorization; existing secrets report reveal/proxy policy, expiry, and next steps. Permission or lookup failures mean existence is unknown. Use this to ask the user whether to confirm the name, add a missing credential, or enable optional reveal. Never enable reveal automatically.",
+    inputSchema: {
+      type: "object",
+      properties: { secret_name: { type: "string", description: "Exact vault secret name" } },
+      required: ["secret_name"], additionalProperties: false,
+    },
+    outputSchema: {
+      type: "object",
+      properties: {
+        name: { type: "string" }, exists: { type: "boolean" },
+        allow_api_key_reveal: { type: "boolean" },
+        expires_at: { type: ["string", "null"] },
+        capabilities: { type: "object" }, reason: { type: "string" },
+        next_steps: { type: "array", items: { type: "string" } },
+      },
+      required: ["name", "exists"],
+    },
+    annotations: READ_CLOSED,
+  },
+  {
+    name: "reveal_secret",
+    title: "Reveal an opted-in secret",
+    description: "Return a raw secret value only when the user explicitly needs raw access. Requires secrets:read or full, per-secret allow_api_key_reveal=true, an unexpired secret, and a successful audit write. These conditions also apply to owner OAuth connections through MCP. Prefer use_secret/use_secret_write for server-side header injection. Inspect list_secrets capabilities first to explain a refusal without reading a value. Never enable reveal automatically or include revealed values in chat, logs, files or persistent memory.",
+    inputSchema: {
+      type: "object",
+      properties: { secret_name: { type: "string", description: "Name of the opted-in secret" } },
+      required: ["secret_name"],
+      additionalProperties: false,
+    },
     annotations: READ_CLOSED,
   },
   {

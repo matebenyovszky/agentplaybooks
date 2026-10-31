@@ -43,7 +43,7 @@ Hermes is available here, and what Claude learns is available there.
   server the tool calls you approve, and receives your playbook data in return.
 - **Claude Code commands:** `/agentplaybooks:doctor` and `/agentplaybooks:sync`
   run the open-source AgentPlaybooks CLI, pinned to an exact version, through
-  `npx` (`@agentplaybooks/cli@0.9.0` from the npm registry). `doctor` only reads
+  `npx` (`@agentplaybooks/cli@0.10.0` from the npm registry). `doctor` only reads
   local files. `sync` writes local files only after you approve its plan. Neither
   sends project files anywhere.
 - **Local MCP server, in Claude Code and in Cowork on your computer:**
@@ -81,7 +81,7 @@ user API key for it with the CLI, then reconnecting `agentplaybooks-servers`
 from `/mcp`:
 
 ```bash
-npx --yes @agentplaybooks/cli@0.9.0 login --url=https://playbooks.example.org
+npx --yes @agentplaybooks/cli@0.10.0 login --url=https://playbooks.example.org
 ```
 
 The CLI takes the key from `AGENTPLAYBOOKS_API_KEY`, or prompts for it without

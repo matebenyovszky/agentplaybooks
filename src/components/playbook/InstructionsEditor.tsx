@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -48,7 +48,6 @@ export function InstructionsEditor({ instructions, storage, onUpdate, readOnly =
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const hasChanges = !readOnly && content !== savedValue;
 
@@ -79,14 +78,6 @@ export function InstructionsEditor({ instructions, storage, onUpdate, readOnly =
 
     save();
   }, [debouncedContent, savedValue, onUpdate, readOnly, storage]);
-
-  // Auto-resize textarea
-  useEffect(() => {
-    if (textareaRef.current && expanded) {
-      textareaRef.current.style.height = "auto";
-      textareaRef.current.style.height = textareaRef.current.scrollHeight + "px";
-    }
-  }, [content, expanded]);
 
   const copyToClipboard = useCallback(() => {
     navigator.clipboard.writeText(content);
@@ -168,7 +159,6 @@ export function InstructionsEditor({ instructions, storage, onUpdate, readOnly =
                   {t("editor.instructions.label")}
                 </label>
                 <textarea
-                  ref={textareaRef}
                   value={content}
                   onChange={(e) => !readOnly && setContent(e.target.value)}
                   readOnly={readOnly}
