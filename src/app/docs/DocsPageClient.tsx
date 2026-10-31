@@ -413,7 +413,7 @@ function parseMarkdown(md: string): string {
 
   // Wrap tables
   html = html.replace(/(<tr>.*?<\/tr>\n?)+/g, (match) => {
-    return `<div class="overflow-x-auto mb-6"><table class="min-w-[40rem] border-collapse">${match}</table></div>`;
+    return `<div class="overflow-x-auto mb-6"><table class="w-[40rem] min-w-[40rem] table-fixed border-collapse">${match}</table></div>`;
   });
 
   // Step 4: Restore inline code blocks
