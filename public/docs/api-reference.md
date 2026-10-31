@@ -2,6 +2,25 @@
 
 Complete reference for all AgentPlaybooks API endpoints.
 
+## API contract versions
+
+AgentPlaybooks API contracts are versioned independently from plugin releases
+and the MCP wire protocol. `GET /api/versions` returns small public compatibility
+metadata; the current contract revision is `1.1.0`, within major `1`.
+
+Use `POST /api/v1/control/:operation` for account operations or
+`POST /api/v1/playbooks/:guid/operations/:operation` for a direct playbook
+credential. Existing unversioned operation routes remain aliases for API v1.
+For MCP, keep the registered OAuth endpoint and optionally send
+`X-AgentPlaybooks-API-Version: 1`. Response headers expose the selected major
+and full revision (`X-AgentPlaybooks-API-Revision`). This is separate from
+`MCP-Protocol-Version`. An unsupported major is refused before execution.
+
+Plugin packages declare minimum/maximum API versions and optional feature
+versions in `skills/agentplaybooks/references/api-compatibility.json`.
+See [API versioning and compatibility](./mcp-integration.md#api-contract-versioning)
+for the version policy and the legacy-plugin compatibility table.
+
 ## Base URL
 
 ```
@@ -813,6 +832,42 @@ Authorization: Bearer <jwt_or_api_key>
 ```
 
 Returns the decrypted value. If called with an API key, the request will only succeed if the secret has `allow_api_key_reveal` set to true. Otherwise, it will return a 403 Forbidden error (Proxy Only mode).
+
+### On-demand operation documentation
+
+`GET /api/tools` lists short public built-in summaries (query, limit and offset
+are optional). `GET /api/tools/:name` returns only that operation's schema and
+REST path; append `?format=markdown` for web-readable text or `?format=openapi`
+for its single-operation OpenAPI document. No account, playbook, connected-server
+or secret data is included. The actual operations require authentication.
+
+`POST /api/control/:operation` executes the shared account operation handler;
+playbook operations include `playbook_id` in the JSON body. A direct playbook
+credential can use `POST /api/playbooks/:guid/operations/:operation`.
+Structured REST errors preserve `data.reason`, `data.next_steps`, and
+`data.existence=unknown` for secret permission/lookup failures. Authenticated
+operation responses use `Cache-Control: no-store`.
+
+### Optional MCP reveal and diagnostics
+
+On the account MCP endpoint, pass `playbook_id` to `get_secret_status`,
+`list_secrets` and `reveal_secret`. On a direct playbook MCP connection, omit it.
+`list_secrets` returns metadata only, including `allow_api_key_reveal`,
+`allowed_hosts`, and per-secret `capabilities.proxy` / `capabilities.reveal`.
+It never decrypts values. For one known name, `get_secret_status` distinguishes
+authorized absence (`exists=false`), existing proxy-only policy, and unknown
+existence on a permission or lookup failure. The agent can ask the user the
+appropriate follow-up without revealing a value. `reveal_secret({secret_name})` requires secrets:read,
+per-secret reveal opt-in, a valid expiry and a successful audit write, including
+when the MCP caller authenticates as the owner through OAuth.
+Proxy-only mode does not block `use_secret` or `use_secret_write`.
+
+Use `get_connection_info` on the account connection to inspect catalog revision,
+active toolset and account scopes. Account scopes do not establish a particular
+playbook role. A tool schema returned by `find_tools` does not create a callable
+host function; refresh the client catalog when it is missing. See
+[MCP connection diagnostics](./mcp-integration.md#account-connection-diagnostics)
+for structured failure reasons and the CLI connection report.
 
 ### Load Runtime Secrets
 

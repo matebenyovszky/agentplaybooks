@@ -11,7 +11,7 @@ export function managementTools() {
   // playbook_id still supports the existing scoped/federated search.
   const finder = tools.find(tool => tool.name === "find_tools")!;
   finder.inputSchema = { ...finder.inputSchema, required: ["query"] };
-  finder.description = "Find account and playbook operations by keyword and return their input schemas. No playbook_id is needed for the account catalog. Supply playbook_id to also search connected servers. Call returned tools directly; omitted tools remain callable in core/full. Pinned domain views search only their allowed operations.";
+  finder.description = "Find operations by keyword; set include_schemas=false for short summaries. Omitted include_schemas preserves the legacy full-schema response. No playbook_id is needed for built-ins; supply one for connected tools. Partial matches report missing_terms. Schemas do not register host functions: use an exposed tool or POST /api/control/{name} with the same authorized arguments. Public built-in documentation is available at /api/tools/{name}; private data and execution require authentication. Pinned domain views remain enforced.";
 
   return tools.map(tool => ({ ...tool, securitySchemes: tool.securitySchemes ?? [{ type: "oauth2", scopes: [] }] }));
 }

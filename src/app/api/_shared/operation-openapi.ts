@@ -1,5 +1,26 @@
 import type { McpTool } from "@/lib/supabase/types";
 
+const operationErrorSchema = {
+  type: "object",
+  required: ["error"],
+  properties: {
+    error: { type: "string" }, code: { type: "integer" },
+    data: {
+      type: "object",
+      properties: {
+        catalog_revision: { type: "string" }, phase: { type: "string" },
+        reason: { type: "string", description: "Machine-readable cause; distinguishes missing secrets, disabled reveal, permission and server failures" },
+        existence: { type: "string", enum: ["unknown"], description: "Permission or lookup failures do not establish secret absence" },
+        next_steps: { type: "array", items: { type: "string" } },
+      },
+    },
+  },
+};
+
+function operationFailure(description: string) {
+  return { description, content: { "application/json": { schema: operationErrorSchema } } };
+}
+
 export function operationPathsFromTools(
   tools: McpTool[],
   pathForTool: (tool: McpTool) => string,
@@ -26,14 +47,15 @@ export function operationPathsFromTools(
             description: "Operation completed",
             content: {
               "application/json": {
-                schema: {},
+                schema: tool.outputSchema ?? {},
               },
             },
           },
-          "400": { description: "Invalid operation arguments" },
-          "401": { description: "Authentication required" },
-          "403": { description: "Insufficient permission or playbook access" },
-          "404": { description: "Playbook or resource not found" },
+          "400": operationFailure("Invalid operation arguments"),
+          "401": operationFailure("Authentication required"),
+          "403": operationFailure("Insufficient permission or playbook access"),
+          "404": operationFailure("Playbook or resource not found"),
+          "422": operationFailure("Legacy operation error status; data.reason distinguishes permission, reveal policy, expiry, missing secrets, database, decryption and audit failures"),
         },
         "x-mcp-tool": tool.name,
       },

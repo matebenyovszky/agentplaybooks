@@ -1,0 +1,19 @@
+{
+  "api_version": "1.1.0",
+  "default_major": 1,
+  "supported_majors": [
+    1
+  ],
+  "unversioned_alias_major": 1,
+  "scope": "AgentPlaybooks MCP and REST operation contracts",
+  "features": {
+    "compact_discovery": "1.1.0",
+    "secret_status": "1.1.0",
+    "optional_secret_reveal": "1.1.0",
+    "structured_diagnostics": "1.1.0",
+    "public_tool_catalog": "1.1.0"
+  },
+  "versions": {
+    "1": "1.1.0"
+  }
+}

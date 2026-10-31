@@ -10,7 +10,7 @@ terminal. Run it through npm with the version pinned, which is the version
 this plugin was released and tested with:
 
 ```
-npx --yes @agentplaybooks/cli@0.9.1 <command>
+npx --yes @agentplaybooks/cli@0.10.0 <command>
 ```
 
 In chat or Cowork, where there is no project directory, use the connected
@@ -36,7 +36,7 @@ it again with `--apply` only after the user agrees.
 
 - `doctor` and `sync` are local and need no account.
 - `playbooks`, `pull`, `push`, and `backups` need a stored key. If one is
-  missing, the user runs `npx --yes @agentplaybooks/cli@0.9.1 login` in their
+  missing, the user runs `npx --yes @agentplaybooks/cli@0.10.0 login` in their
   own terminal; it prompts for the key and stores it in the user's private
   credential file. Never ask for the key in chat, and never print, read, or
   copy that file.

@@ -1,3 +1,4 @@
+import { shortToolDescription } from "./tool-discovery";
 import type { McpTool } from "@/lib/supabase/types";
 
 /**
@@ -20,8 +21,9 @@ import type { McpTool } from "@/lib/supabase/types";
  *                      compatible default.
  *
  * One playbook, one connection: an agent on the default view discovers what it
- * needs through find_tools and calls it directly, advertised or not. Pinning a
- * view is the *policy* case — a deliberately narrowed connection — which is the
+ * needs through find_tools. The server accepts omitted names, but a client
+ * must still register a callable tool; discovery schemas cannot do that. Pinning
+ * a view is the *policy* case — a deliberately narrowed connection — which is the
  * only reason to add the same playbook twice.
  */
 
@@ -109,43 +111,43 @@ export function viewCarriesFindTools(view: ToolsetView): boolean {
   return view.name === "full" || view.name === "runtime";
 }
 
-/**
- * Keyword search over the tool catalog, for the find_tools tool.
- *
- * Deliberately plain substring scoring: the catalog is at most a few hundred
- * entries, the caller is a model that writes reasonable keywords, and a
- * cleverer ranker would be more code defending against a problem this corpus
- * does not have. Name matches outrank description matches because the name is
- * the part the model will repeat back in a call.
+/** Rank exact operation names, query coverage, then name/description matches.
+ * Compact results label partial matches; full schemas are loaded only on request.
  */
 export function searchToolCatalog(
   tools: McpTool[],
   query: string,
   limit = 10,
-): Array<Pick<McpTool, "name" | "description" | "inputSchema" | "annotations">> {
-  const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+  options: { includeSchemas?: boolean; browse?: boolean; offset?: number } = {},
+) {
+  const normalized = query.toLowerCase().trim().replace(/[_\s-]+/g, " ");
+  const terms = [...new Set(normalized.split(/\s+/).filter(Boolean))];
   const boundedLimit = Number.isFinite(limit) ? Math.max(1, Math.min(Math.floor(limit), 25)) : 10;
-  if (terms.length === 0) return [];
+  const offset = Number.isFinite(options.offset) ? Math.max(0, Math.min(Math.floor(options.offset!), 1000)) : 0;
+  if (terms.length === 0 && !options.browse) return [];
 
   const scored = tools.map((tool) => {
     const name = tool.name.toLowerCase();
     const description = (tool.description || "").toLowerCase();
-    let score = 0;
-    for (const term of terms) {
-      if (name.includes(term)) score += 3;
-      else if (description.includes(term)) score += 1;
-    }
-    return { tool, score };
+    const matched = terms.filter(term => name.includes(term) || description.includes(term));
+    const exact = Boolean(normalized) && name.replace(/[_\s-]+/g, " ") === normalized;
+    const score = terms.reduce((sum, term) => sum + (name.includes(term) ? 3 : description.includes(term) ? 1 : 0), 0);
+    return { tool, matched, exact, score };
   });
 
   return scored
-    .filter((entry) => entry.score > 0)
-    .sort((a, b) => b.score - a.score || a.tool.name.localeCompare(b.tool.name))
-    .slice(0, boundedLimit)
-    .map(({ tool }) => ({
+    .filter(entry => entry.matched.length > 0 || options.browse && terms.length === 0)
+    .sort((a, b) => Number(b.exact) - Number(a.exact)
+      || b.matched.length - a.matched.length || b.score - a.score || a.tool.name.localeCompare(b.tool.name))
+    .slice(offset, offset + boundedLimit)
+    .map(({ tool, matched, exact }) => ({
       name: tool.name,
-      description: tool.description || tool.name,
-      inputSchema: tool.inputSchema || { type: "object", properties: {} },
+      description: options.includeSchemas === false ? shortToolDescription(tool) : tool.description || tool.name,
+      ...(options.includeSchemas !== false ? { inputSchema: tool.inputSchema || { type: "object", properties: {} } } : {}),
       ...(tool.annotations ? { annotations: tool.annotations } : {}),
+      ...(terms.length ? {
+        match: exact ? "exact" : matched.length === terms.length ? "all_terms" : "partial",
+        ...(matched.length < terms.length ? { missing_terms: terms.filter(term => !matched.includes(term)) } : {}),
+      } : {}),
     }));
 }

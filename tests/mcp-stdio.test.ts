@@ -38,7 +38,7 @@ describe("local AgentPlaybooks MCP transport", () => {
     expect(tools.some((tool) => tool.name === "list_playbooks")).toBe(true);
     const skill = tools.find((tool) => tool.name === "get_skill");
     expect(skill?.inputSchema.required).toContain("playbook_id");
-    expect(tools).toHaveLength(16);
+    expect(tools).toHaveLength(17);
     expect(tools.find(tool => tool.name === "find_tools")?.inputSchema.required).toEqual(["query"]);
     expect(tools.some(tool => tool.name === "delete_playbook")).toBe(false);
     expect(validateUserApiKey).not.toHaveBeenCalled();
@@ -48,10 +48,41 @@ describe("local AgentPlaybooks MCP transport", () => {
   it("offers the full catalog for strict clients and rejects invalid views", async () => {
     vi.stubEnv("AGENTPLAYBOOKS_TOOLSET", "full");
     const { tools } = await (await connect()).listTools();
-    expect(tools).toHaveLength(53);
+    expect(tools).toHaveLength(56);
     expect(tools.find(tool => tool.name === "reset_persona")?.annotations?.destructiveHint).toBe(true);
     vi.stubEnv("AGENTPLAYBOOKS_TOOLSET", "memroy");
     expect(() => createStdioServer()).toThrow("Unknown management toolset");
+  });
+
+  it("serves full schemas to a legacy stdio client that omits the new option", async () => {
+    vi.stubEnv("AGENTPLAYBOOKS_API_KEY", "stdio-test-user-key");
+    validateUserApiKey.mockResolvedValue({ user_id: "reader-id", permissions: ["playbooks:read"] });
+    const client = await connect();
+    const result = await client.callTool({ name: "find_tools", arguments: { query: "get_skill" } });
+    expect(result.isError).not.toBe(true);
+    const legacy = result.structuredContent as { matches: Array<{ name: string; inputSchema: { required: string[] } }> };
+    expect(legacy.matches[0].name).toBe("get_skill");
+    expect(legacy.matches[0].inputSchema.required).toEqual(["playbook_id", "skill_id"]);
+    const compact = await client.callTool({ name: "find_tools", arguments: { query: "get_skill", include_schemas: false } });
+    expect((compact.structuredContent as { matches: Array<{ inputSchema?: unknown }> }).matches[0].inputSchema).toBeUndefined();
+  });
+
+  it("returns connection diagnostics through the same authenticated handler", async () => {
+    vi.stubEnv("AGENTPLAYBOOKS_API_KEY", "stdio-test-user-key");
+    validateUserApiKey.mockResolvedValue({ user_id: "reader-id", permissions: ["playbooks:read"] });
+    const result = await (await connect()).callTool({ name: "get_connection_info", arguments: {} });
+    expect(result.isError).not.toBe(true);
+    expect(result.structuredContent).toMatchObject({ toolset: "core", account_permissions: ["playbooks:read"], host_registration: "unknown_to_server" });
+    expect(JSON.stringify(result)).not.toContain("stdio-test-user-key");
+  });
+
+  it("preserves structured failure reasons across stdio", async () => {
+    vi.stubEnv("AGENTPLAYBOOKS_API_KEY", "stdio-test-user-key");
+    validateUserApiKey.mockResolvedValue({ user_id: "reader-id", permissions: ["playbooks:read"] });
+    const result = await (await connect()).callTool({ name: "list_secrets", arguments: {} });
+    expect(result.isError).toBe(true);
+    expect(result.structuredContent).toMatchObject({ error: { data: { reason: "missing_playbook_id" } } });
+    expect(JSON.stringify(result)).not.toContain("stdio-test-user-key");
   });
 
   it("pins execution as well as discovery to the selected domain", async () => {

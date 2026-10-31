@@ -1,6 +1,7 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { CallToolRequestSchema, CallToolResultSchema, ListToolsRequestSchema, ToolSchema } from "@modelcontextprotocol/sdk/types.js";
 import { managementTools } from "@/app/api/_shared/management-tools";
+import { McpDiagnosticError, mcpErrorData } from "@/app/api/_shared/mcp-diagnostics";
 import { managementToolset } from "@/app/api/_shared/management-toolsets";
 
 const requiredEnvironment = [
@@ -10,8 +11,8 @@ const requiredEnvironment = [
   "AGENTPLAYBOOKS_API_KEY",
 ] as const;
 
-function toolError(text: string) {
-  return { isError: true, content: [{ type: "text" as const, text }] };
+function toolError(text: string, data?: Record<string, unknown>) {
+  return { isError: true, content: [{ type: "text" as const, text }], ...(data ? { structuredContent: { error: { message: text, data } } } : {}) };
 }
 
 /** Local transport for the application's account tools, using the same handlers and authorization. */
@@ -23,14 +24,14 @@ export function createStdioServer() {
     { name: "agentplaybooks-management", version: "0.4.0" },
     {
       capabilities: { tools: {} },
-      instructions: "AgentPlaybooks account tools. Discovery defaults to 15 common tools and works without credentials. Use find_tools to discover additional operations, or set AGENTPLAYBOOKS_TOOLSET=full for clients requiring all schemas up front. Tool calls require your self-hosted Supabase configuration and an AgentPlaybooks user API key; existing account permissions apply. No hosted MCP endpoint is proxied.",
+      instructions: "AgentPlaybooks account tools. Discovery defaults to a compact common-tool catalog and works without credentials. Use find_tools(include_schemas=false) for short summaries and include_schemas=true for selected details; omitting the flag preserves legacy discovery. Operations absent from host registration can use the authenticated REST operation route when HTTP execution is available; full catalogs are an opt-in fallback. Tool calls require your self-hosted Supabase configuration and an AgentPlaybooks user API key; existing account permissions apply. No hosted MCP endpoint is proxied.",
     },
   );
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools }));
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     if (!["core", "full", "runtime"].includes(view.name) && !view.allows(request.params.name)) {
-      return toolError(`Tool is not available in the ${view.name} toolset.`);
+      return toolError(`Tool is not available in the ${view.name} toolset.`, { ...mcpErrorData(new McpDiagnosticError("Excluded tool", "toolset_excluded", ["Inspect the configured AGENTPLAYBOOKS_TOOLSET and tools/list."])), phase: "local_toolset_check" });
     }
     const missing = requiredEnvironment.filter((name) => !process.env[name]);
     if (missing.length) {
@@ -55,7 +56,7 @@ export function createStdioServer() {
           : `The local AgentPlaybooks handler failed (HTTP ${response.status}).`);
       }
       const payload = await response.json();
-      if (payload.error) return toolError(payload.error.message || "AgentPlaybooks could not execute the tool.");
+      if (payload.error) return toolError(payload.error.message || "AgentPlaybooks could not execute the tool.", payload.error.data);
       return CallToolResultSchema.parse(payload.result);
     } catch {
       // Do not send database connection details, credentials or exception stacks to MCP clients.

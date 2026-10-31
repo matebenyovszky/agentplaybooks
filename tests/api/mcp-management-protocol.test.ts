@@ -42,6 +42,15 @@ describe("AgentPlaybooks management MCP transport", () => {
     mockGetAuthenticatedUser.mockResolvedValue(null);
   });
 
+  it("advertises the API contract independently from the MCP protocol and server build", async () => {
+    const response = await POST(mcpRequest({ id: 100, method: "initialize", params: { protocolVersion: "2025-11-25" } }));
+    const payload = await response.json();
+    expect(response.headers.get("X-AgentPlaybooks-API-Version")).toBe("1");
+    expect(payload.result.protocolVersion).toBe("2025-11-25");
+    expect(payload.result._meta["ai.agentplaybooks/apiVersion"]).toBe("1.1.0");
+    expect(payload.result.serverInfo.version).toBe("0.4.0");
+  });
+
   it("rejects unauthenticated keepalive requests", async () => {
     mockValidateUserApiKey.mockResolvedValueOnce(null);
 

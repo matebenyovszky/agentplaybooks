@@ -1,3 +1,4 @@
+import { API_VERSION } from "@/lib/api-contract";
 import { runWithAuditRequest } from "@/lib/audit-context";
 import { publicTransportConfig } from "@/lib/mcp/public-transport-config";
 import { configReferencesSecrets, SECRET_ROUTING_DENIED, userMayRouteSecrets } from "@/app/api/_shared/federation-secrets";
@@ -2250,7 +2251,7 @@ app.get("/manage/openapi.json", (c) => {
     info: {
       title: "AgentPlaybooks Management API",
       description: "API for AI agents to create and manage playbooks. Use with User API Key for authentication.",
-      version: "1.0.0",
+      version: API_VERSION,
     },
     servers: [{ url: `${baseUrl}/api` }],
     security: [{ bearerAuth: [] }],

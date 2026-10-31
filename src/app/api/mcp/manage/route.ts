@@ -1,3 +1,4 @@
+import { API_VERSION, apiCompatibilityInfo } from "@/lib/api-contract";
 import { handle } from "hono/vercel";
 import { managementToolset } from "@/app/api/_shared/management-toolsets";
 import { searchToolCatalog } from "@/app/api/_shared/toolsets";
@@ -14,6 +15,7 @@ import {
 import { POST as handleScopedPlaybookMcpPost } from "@/app/api/mcp/[guid]/route";
 import { createPlaybook, listAccessiblePlaybooks } from "@/lib/repositories/playbooks";
 import { ACCOUNT_TOOLS } from "@/app/api/_shared/account-tools";
+import { MCP_CATALOG_REVISION, McpDiagnosticError, mcpErrorData } from "@/app/api/_shared/mcp-diagnostics";
 import { managementTools } from "@/app/api/_shared/management-tools";
 import { structuredToolResult } from "@/app/api/_shared/mcp-tool-hints";
 import {
@@ -115,6 +117,7 @@ app.get("/", async (c) => {
   if ("error" in view) return c.json({ error: view.error }, 400);
   const manifest = {
     protocolVersion: LATEST_PROTOCOL_VERSION,
+    _meta: { "ai.agentplaybooks/catalogRevision": MCP_CATALOG_REVISION, "ai.agentplaybooks/apiVersion": API_VERSION },
     serverInfo: {
       name: "agentplaybooks-management",
       title: "AgentPlaybooks Management",
@@ -193,6 +196,7 @@ app.post("/", async (c) => {
         id,
         result: {
           protocolVersion: negotiateProtocolVersion(requestedVersion),
+          _meta: { "ai.agentplaybooks/catalogRevision": MCP_CATALOG_REVISION, "ai.agentplaybooks/apiVersion": API_VERSION },
           serverInfo: {
             name: "agentplaybooks-management",
             title: "AgentPlaybooks Management",
@@ -201,7 +205,7 @@ app.post("/", async (c) => {
           capabilities: { tools: {} },
           instructions: view.name === "directory"
             ? "Manage the authenticated user's playbooks, instructions, skills, memory, canvas and workflow runs using the individually listed tools. Playbook operations require playbook_id. Use update_persona to edit and reset_persona to reset. This directory profile does not expose connected-service dispatchers, secret handling or dynamic tool discovery. Account and playbook permissions apply to every operation."
-            : "Manage the authenticated user's portable agents. The default core list is compact; use find_tools without playbook_id to discover more operations. Use ?toolset=full for the full catalog, or pin runtime, memory, canvas, secrets or admin. Playbook operations require playbook_id. Use update_persona to edit, reset_persona to reset. Use list_secrets then use_secret or use_secret_write for server-side credential injection.",
+            : "Manage the authenticated user's portable agents. The default core list is compact; use find_tools without playbook_id to discover more operations. Use find_tools(include_schemas=false) for short discovery and include_schemas=true for selected details or public /api/tools/{name}. For operations absent from the host catalog, use authenticated POST /api/control/{name} if HTTP execution is available. Full catalogs are an opt-in fallback; pinned domain views remain enforced. Playbook operations require playbook_id. Use update_persona to edit, reset_persona to reset. Use get_connection_info after a failure to inspect permissions and catalog visibility. Discovery does not register host functions. Use list_secrets for reveal policy and use_secret or use_secret_write for server-side credential injection. reveal_secret requires per-secret opt-in even for owner OAuth.",
         },
       });
 
@@ -226,11 +230,34 @@ app.post("/", async (c) => {
         const federated = typeof toolName === "string" && toolName.includes("__")
           && ["core", "full", "runtime"].includes(view.name);
         if (!view.allows(toolName) && !federated) {
-          return c.json({ jsonrpc: "2.0", id, error: { code: -32602, message: `Tool is unknown or unavailable in toolset "${view.name}".` } });
+          return c.json({ jsonrpc: "2.0", id, error: { code: -32602, message: `Tool is unknown or unavailable in toolset "${view.name}".`, data: mcpErrorData(new McpDiagnosticError("Unavailable tool", MCP_TOOLS.some(tool => tool.name === toolName) ? "toolset_excluded" : "unknown_tool", ["Inspect get_connection_info or tools/list for this connection. Refresh the host catalog if a supported tool is missing; pinned toolsets deliberately exclude other domains."])) } });
+        }
+        if (toolName === "get_connection_info") {
+          succeedMcpToolUsage(c.req.raw);
+          const info = {
+            catalog_revision: MCP_CATALOG_REVISION,
+            api: apiCompatibilityInfo(),
+            toolset: view.name,
+            credential_kind: actor.kind,
+            account_permissions: actor.permissions,
+            advertised_tools: view.advertised.map(tool => tool.name),
+            callable_tools: view.searchable.map(tool => tool.name),
+            public_tool_catalog: "/api/tools",
+            rest_operation_template: "/api/control/{name}",
+            versioned_rest_operation_template: "/api/v1/control/{name}",
+            host_registration: "unknown_to_server",
+            secret_reveal: { supported: view.allows("reveal_secret"), requires: ["playbook secrets:read access", "per-secret allow_api_key_reveal=true", "unexpired secret", "successful audit write", "user need for raw access"] },
+            next_steps: [
+              "If a local function is missing, the request never reached this server. Refresh the host tool catalog and start a new conversation. find_tools returns schemas; it cannot register host functions.",
+              "Load selected schemas with find_tools(include_schemas=true), or public /api/tools/{name}. For unregistered host tools, use authenticated POST /api/control/{name} when an HTTP executor is available. Full catalogs are an opt-in fallback for hosts without either path.",
+              "Account permissions are not playbook authorization. Use get_secret_status for a named secret, or list_secrets, to inspect value-free capabilities. Proxy header injection needs no reveal; browser form login is a separate client capability.",
+            ],
+          };
+          return c.json({ jsonrpc: "2.0", id, result: { content: [{ type: "text", text: JSON.stringify(info) }], structuredContent: info } });
         }
         if (toolName === "find_tools" && (!args.playbook_id || !["core", "full", "runtime"].includes(view.name))) {
           if (typeof args.query !== "string" || !args.query.trim()) throw new Error("query is required");
-          const matches = searchToolCatalog(view.searchable, args.query, typeof args.limit === "number" ? args.limit : 10);
+          const matches = searchToolCatalog(view.searchable, args.query, typeof args.limit === "number" ? args.limit : 10, { includeSchemas: args.include_schemas !== false });
           const result = structuredToolResult([finder], toolName, matches);
           succeedMcpToolUsage(c.req.raw);
           return c.json({ jsonrpc: "2.0", id, result: { content: [{ type: "text", text: JSON.stringify(result ?? matches) }], ...(result ? { structuredContent: result } : {}) } });
@@ -241,7 +268,7 @@ app.post("/", async (c) => {
             return c.json({
               jsonrpc: "2.0",
               id,
-              error: { code: -32602, message: "playbook_id is required" },
+              error: { code: -32602, message: "playbook_id is required", data: mcpErrorData(new McpDiagnosticError("Missing playbook", "missing_playbook_id", ["Pass the selected playbook UUID or GUID as playbook_id."])) },
             });
           }
 
@@ -261,6 +288,8 @@ app.post("/", async (c) => {
 
           const scopedArguments = { ...args };
           delete scopedArguments.playbook_id;
+          // Internal merge needs schemas; only the final result follows the requested verbosity.
+          if (toolName === "find_tools") scopedArguments.include_schemas = true;
           const scopedUrl = new URL(c.req.raw.url);
           scopedUrl.pathname = `/api/mcp/${encodeURIComponent(target.guid)}`;
           // The account view was already enforced. Its canvas/secrets/core names
@@ -285,7 +314,7 @@ app.post("/", async (c) => {
           if (!payload.result?.structuredContent?.matches) return response;
           const scopedMatches = projectPlaybookToolsForUser(payload.result.structuredContent.matches);
           const catalog = [...view.searchable, ...scopedMatches.filter(tool => !MCP_TOOLS.some(known => known.name === tool.name))];
-          const matches = searchToolCatalog(catalog, String(args.query ?? ""), typeof args.limit === "number" ? args.limit : 10);
+          const matches = searchToolCatalog(catalog, String(args.query ?? ""), typeof args.limit === "number" ? args.limit : 10, { includeSchemas: args.include_schemas !== false });
           const result = structuredToolResult([finder], "find_tools", matches);
           return c.json({ jsonrpc: "2.0", id, result: { content: [{ type: "text", text: JSON.stringify(result) }], structuredContent: result } });
         }
@@ -317,6 +346,7 @@ app.post("/", async (c) => {
           error: {
             code: -32000,
             message,
+            data: mcpErrorData(error),
           },
         });
       }

@@ -74,3 +74,24 @@ test("self-check distinguishes network failures from invalid protocol responses"
   const invalid = await checkConnection(base, { fetchImpl: transport.fetchImpl });
   assert.equal(invalid.stages.at(-1).reason, "response-or-protocol-error");
 });
+
+test("self-check reports server versions, missing advertised capabilities and RPC codes without error bodies", async () => {
+  const transport = mockTransport();
+  const fetchImpl = async (url, options) => {
+    const response = await transport.fetchImpl(url, options);
+    if (!options.body) return response;
+    const { id, method } = JSON.parse(options.body);
+    if (method === "initialize") return Response.json({ jsonrpc: "2.0", id, result: { protocolVersion: "2025-11-25", serverInfo: { name: "agentplaybooks-management", version: "0.4.0" }, _meta: { "ai.agentplaybooks/catalogRevision": "test-revision.1", "ai.agentplaybooks/apiVersion": "1.1.0" } } });
+    if (method === "tools/call") return Response.json({ jsonrpc: "2.0", id, error: { code: -32602, message: "PRIVATE_ERROR_BODY" } });
+    return response;
+  };
+  const report = await checkConnection(base, { fetchImpl });
+  assert.equal(report.ok, false);
+  assert.equal(report.serverInfo.version, "0.4.0");
+  assert.equal(report.apiVersion, "1.1.0");
+  assert.equal(transport.calls.find(call => call.options.body)?.options.headers["X-AgentPlaybooks-API-Version"], "1");
+  assert.equal(report.serverCatalogRevision, "test-revision.1");
+  assert.equal(report.advertisedCapabilities.list_secrets, false);
+  assert.deepEqual(report.stages.at(-1), { stage: "profile", status: "failed", reason: "server-rpc-error", rpcCode: -32602 });
+  assert.doesNotMatch(JSON.stringify(report), /PRIVATE_ERROR_BODY/);
+});

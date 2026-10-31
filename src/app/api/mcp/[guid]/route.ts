@@ -1,3 +1,4 @@
+import { API_VERSION } from "@/lib/api-contract";
 import { startMcpToolUsage, succeedMcpToolUsage, finishMcpToolUsage } from "@/app/api/_shared/mcp-usage";
 import { handle } from "hono/vercel";
 import { logMcpDiscovery } from "@/app/api/_shared/mcp-observability";
@@ -46,9 +47,13 @@ import type {
 } from "@/lib/supabase/types";
 import { encryptSecret, decryptSecret } from "@/lib/crypto";
 import { expiredSecretMessage, expiresAtInput, isSecretExpired } from "@/lib/secret-expiry";
+import { secretCapabilities } from "@/lib/secret-capabilities";
+import { MCP_CATALOG_REVISION, McpDiagnosticError, mcpErrorData } from "@/app/api/_shared/mcp-diagnostics";
 import { checkSecretDestination } from "@/lib/secret-destinations";
 import {
   auditActor,
+  recordSecretAudit,
+  AUDIT_UNAVAILABLE,
   beginSecretAudit,
   destinationHostOf,
   federationAuditWriter,
@@ -538,6 +543,7 @@ app.post("/", async (c) => {
           ? discoverResult({ name: "AgentPlaybooks", version: "1.0.0" })
           : {
             protocolVersion: negotiateProtocolVersion(rpcParams?.protocolVersion),
+          _meta: { "ai.agentplaybooks/catalogRevision": MCP_CATALOG_REVISION, "ai.agentplaybooks/apiVersion": API_VERSION },
             serverInfo: { name: "AgentPlaybooks", version: "1.0.0" },
             capabilities: { tools: {}, resources: {} },
           },
@@ -610,6 +616,7 @@ app.post("/", async (c) => {
         id,
         result: {
           protocolVersion: negotiateProtocolVersion(rpcParams?.protocolVersion),
+          _meta: { "ai.agentplaybooks/catalogRevision": MCP_CATALOG_REVISION, "ai.agentplaybooks/apiVersion": API_VERSION },
           serverInfo: { name: "AgentPlaybooks", version: "1.0.0" },
           capabilities: { tools: {}, resources: {} },
         },
@@ -894,7 +901,8 @@ Secrets are encrypted credentials (API keys, passwords, tokens) stored with AES-
 ### Key Secrets Tools
 | Tool | Use When |
 |------|----------|
-| \`list_secrets\` | See available secret names and metadata (never values) |
+| \`list_secrets\` | See names, metadata and reveal/proxy capability reasons (never values) |
+| \`reveal_secret\` | Raw access only on explicit user need, per-secret opt-in, valid expiry and successful audit |
 | \`use_secret\` | Read from an API with a secret injected as a header (GET, HEAD) |
 | \`use_secret_write\` | Change something in an API with that secret (POST, PUT, PATCH, DELETE) |
 | \`store_secret\` | Save a new encrypted secret |
@@ -1200,9 +1208,10 @@ use_secret_write({
       // caller stays anonymous rather than having a rejected credential's
       // fragments copied into the trail.
       let secretAuditKeyPrefix: string | null = null;
+      let secretAuditUser: { id: string } | null = null;
       const secretAuditContext = () => ({
         playbookId: playbook.id,
-        actor: auditActor(null, secretAuditKeyPrefix),
+        actor: auditActor(secretAuditUser, secretAuditKeyPrefix),
         requestId: c.req.header("cf-ray") || c.req.header("x-request-id") || null,
       });
 
@@ -1241,7 +1250,7 @@ use_secret_write({
             result = searchToolCatalog([
               ...PLAYBOOK_TOOLS.filter(tool => toolsetView.includes(tool.name, false) && (!anonymousPublic || isPublicBuiltinTool(tool))),
               ...federated.filter(tool => toolsetView.includes(tool.name, true) && (!anonymousPublic || isReadOnlyTool(tool))),
-            ], query, limit);
+            ], query, limit, { includeSchemas: args.include_schemas !== false });
             break;
           }
 
@@ -2651,19 +2660,37 @@ use_secret_write({
           }
 
           // ===== Secrets Tools =====
-          case "list_secrets": {
+          case "list_secrets":
+          case "get_secret_status": {
             secretAudit = beginSecretAudit("secret.list");
             const secretsApiKey = await acceptPlaybookCredential(c.req.raw, "secrets:read");
             if (!secretsApiKey || secretsApiKey.playbooks.id !== playbook.id) {
               secretAudit.reason = "not_authorized";
-              throw new Error("API key with secrets:read or full permission required");
+              throw new McpDiagnosticError("Playbook secrets:read or full permission required", "secrets_read_required", ["Check this connection’s account permissions and owner/editor access to the selected playbook. An owner role alone does not grant API-key scopes."]);
             }
             secretAuditKeyPrefix = await storedDisplayPrefix(c.req.raw);
             secretAudit.status = "error";
 
+            if (toolName === "get_secret_status") {
+              if (typeof args.secret_name !== "string" || !args.secret_name.trim()) {
+                throw new McpDiagnosticError("secret_name is required", "invalid_arguments", ["Pass the exact secret name to check."]);
+              }
+              secretAudit.secretName = args.secret_name;
+              const { data: secret, error } = await serviceSupabase.from("secrets")
+                .select("name, category, expires_at, allow_api_key_reveal, allowed_hosts")
+                .eq("playbook_id", playbook.id).eq("name", args.secret_name).maybeSingle();
+              if (error) {
+                secretAudit.reason = "query_failed";
+                throw new McpDiagnosticError("Failed to read secret status; existence is unknown", "secret_metadata_query_failed", ["Check server database availability and migrations before concluding the secret is missing."]);
+              }
+              result = secret ? { ...secret, exists: true, capabilities: secretCapabilities(secret) }
+                : { name: args.secret_name, exists: false, reason: "secret_not_found", next_steps: ["Ask the user to confirm the name and selected playbook, or add the missing credential in the vault UI."] };
+              break;
+            }
+
             let secretsQuery = serviceSupabase
               .from("secrets")
-              .select("id, name, description, category, rotated_at, expires_at, last_used_at, use_count, created_at, updated_at")
+              .select("id, name, description, category, rotated_at, expires_at, last_used_at, use_count, allow_api_key_reveal, allowed_hosts, created_at, updated_at")
               .eq("playbook_id", playbook.id);
 
             if (args.category) {
@@ -2671,8 +2698,63 @@ use_secret_write({
             }
 
             const { data: secretsList, error: secretsError } = await secretsQuery.order("name");
-            if (secretsError) throw new Error(secretsError.message);
-            result = secretsList || [];
+            if (secretsError) throw new McpDiagnosticError("Failed to read secret metadata", "secret_metadata_query_failed", ["Check server database migrations and availability; this is not a reveal-policy refusal."]);
+            result = (secretsList || []).map(secret => ({ ...secret, capabilities: secretCapabilities(secret) }));
+            break;
+          }
+
+          case "reveal_secret": {
+            secretAudit = beginSecretAudit("secret.reveal");
+            const credential = await acceptPlaybookCredential(c.req.raw, "secrets:read");
+            if (!credential || credential.playbooks.id !== playbook.id) {
+              secretAudit.reason = "not_authorized";
+              throw new McpDiagnosticError("Playbook secrets:read or full permission required", "secrets_read_required", ["Check connection scopes and owner/editor access to this playbook."]);
+            }
+            secretAuditUser = credential.kind === "session" && credential.userId ? { id: credential.userId } : null;
+            secretAuditKeyPrefix = await storedDisplayPrefix(c.req.raw);
+            secretAudit.status = "error";
+            const name = args.secret_name;
+            if (typeof name !== "string" || !name.trim()) {
+              throw new McpDiagnosticError("secret_name is required", "invalid_arguments", ["Pass a name returned by list_secrets."]);
+            }
+            secretAudit.secretName = name;
+            const { data: secret, error: queryError } = await serviceSupabase.from("secrets")
+              .select("id, name, category, expires_at, allow_api_key_reveal, encrypted_value, iv, auth_tag, use_count")
+              .eq("playbook_id", playbook.id).eq("name", name).maybeSingle();
+            if (queryError) {
+              secretAudit.reason = "query_failed";
+              throw new McpDiagnosticError("Failed to read secret", "secret_query_failed", ["Check server database availability and migrations."]);
+            }
+            if (!secret) {
+              secretAudit.reason = "not_found";
+              throw new McpDiagnosticError("Secret not found", "secret_not_found", ["Use list_secrets to confirm the name in this playbook."]);
+            }
+            // MCP is an agent surface, including when OAuth identifies the owner.
+            // Dashboard recovery access must not bypass the agent opt-in here.
+            const capability = secretCapabilities(secret).reveal;
+            if (!capability.allowed) {
+              secretAudit.status = "denied";
+              secretAudit.reason = capability.reason;
+              throw new McpDiagnosticError(capability.reason === "proxy_only"
+                ? "Proxy Only: reveal is disabled for this secret"
+                : expiredSecretMessage(secret.name, secret.expires_at), capability.reason!, capability.next_steps);
+            }
+            let value: string;
+            try {
+              value = await decryptSecret(secret, playbook.user_id, { playbookId: playbook.id, secretName: secret.name });
+            } catch {
+              secretAudit.reason = "decrypt_failed";
+              throw new McpDiagnosticError("Failed to decrypt secret", "secret_decryption_failed", ["Check the server vault encryption configuration and key rotation; do not resend the value in chat."]);
+            }
+            const recorded = await recordSecretAudit(secretAuditContext(), { operation: "secret.reveal", status: "success", secretName: name });
+            if (!recorded) {
+              secretAudit.reason = "audit_unavailable";
+              throw new McpDiagnosticError(AUDIT_UNAVAILABLE, "audit_unavailable", ["Restore the audit store before retrying reveal. No value was released."]);
+            }
+            secretAudit = null; // Already recorded before releasing plaintext.
+            await serviceSupabase.from("secrets").update({ last_used_at: new Date().toISOString(), use_count: (secret.use_count || 0) + 1 }).eq("id", secret.id);
+            c.header("Cache-Control", "no-store");
+            result = { name: secret.name, value, category: secret.category, expires_at: secret.expires_at };
             break;
           }
 
@@ -2743,7 +2825,11 @@ use_secret_write({
               .eq("name", useSecretName)
               .single();
 
-            if (useSecretError || !useSecretData) {
+            if (useSecretError && useSecretError.code !== "PGRST116") {
+              secretAudit.reason = "query_failed";
+              throw new McpDiagnosticError("Failed to read secret", "secret_query_failed", ["Check server database availability and migrations."]);
+            }
+            if (!useSecretData) {
               secretAudit.reason = "not_found";
               throw new Error(`Secret '${useSecretName}' not found`);
             }
@@ -3033,7 +3119,7 @@ use_secret_write({
         return c.json({
           jsonrpc: "2.0",
           id,
-          error: { code: -32000, message },
+          error: { code: -32000, message, data: mcpErrorData(error, secretAudit?.reason) },
         });
       }
     }
