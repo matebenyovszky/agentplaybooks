@@ -9,9 +9,8 @@
 
 /* System preference based theming */
 :root {
-  /* Light Mode - Golden/Cream Background, Deep Blue Text */
-  --background: #fffbeb;
-  /* accent-50 */
+  /* Light Mode - Off-white Background, Deep Blue Text */
+  --background: #fafaf7;
   --foreground: #0f172a;
   /* primary-900 */
 
@@ -95,8 +94,12 @@ body {
   background-size: 16px 16px;
 }
 
-/* Gradient text - Deep Blue to Amber/Golden */
+/* Solid navy stays legible on light surfaces; keep the glow in dark mode. */
 .gradient-text {
+  color: var(--primary-800);
+}
+
+.dark .gradient-text {
   background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 25%, #fbbf24 75%, #d97706 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
