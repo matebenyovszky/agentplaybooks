@@ -96,8 +96,8 @@ export default function LandingPageClient() {
       <FloatingNav />
 
       {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center justify-center px-4">
-        <Spotlight className="-top-40 left-0 md:left-60 md:-top-20" fill="#fbbf24" />
+      <section className="relative flex items-center justify-center px-4 pt-36 pb-20 md:pt-40 md:pb-24 dark:min-h-screen dark:py-0 md:dark:py-0">
+        <Spotlight className="hidden dark:block -top-40 left-0 md:left-60 md:-top-20" fill="#fbbf24" />
 
         <div className="relative z-10 max-w-5xl mx-auto text-center">
           <motion.div
@@ -114,7 +114,7 @@ export default function LandingPageClient() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="text-xl md:text-2xl text-neutral-600 dark:text-neutral-400 max-w-3xl mx-auto mb-10"
+            className="text-xl md:text-2xl text-slate-700 dark:text-neutral-400 max-w-3xl mx-auto mb-10"
           >
             {t("landing.hero.subtitle")}
           </motion.p>
@@ -127,14 +127,14 @@ export default function LandingPageClient() {
           >
             <Link
               href="/explore"
-              className="px-8 py-4 bg-gradient-to-r from-amber-600 to-amber-400 rounded-full font-semibold text-lg text-slate-900 hover:opacity-90 transition-opacity flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25"
+              className="px-8 py-4 bg-orange-500 dark:bg-gradient-to-r dark:from-amber-600 dark:to-amber-400 rounded-full font-semibold text-lg text-slate-900 hover:opacity-90 transition-opacity flex items-center justify-center gap-2 shadow-lg shadow-orange-500/15 dark:shadow-amber-500/25"
             >
               {t("landing.hero.cta")}
               <ArrowRight className="h-5 w-5" />
             </Link>
             <Link
               href="/login"
-              className="px-8 py-4 bg-gradient-to-r from-amber-600 to-amber-500 rounded-full font-semibold text-lg text-slate-900 hover:opacity-90 transition-opacity flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25"
+              className="px-8 py-4 bg-white border border-slate-300 dark:border-transparent dark:bg-gradient-to-r dark:from-amber-600 dark:to-amber-500 rounded-full font-semibold text-lg text-slate-900 hover:opacity-90 transition-opacity flex items-center justify-center gap-2 dark:shadow-lg dark:shadow-amber-500/25"
             >
               <Play className="h-5 w-5" />
               {t("common.signIn")}
@@ -161,7 +161,7 @@ export default function LandingPageClient() {
             {["Claude Code", "Cursor", "Codex", "Antigravity", "Hermes", "Custom GPTs", "Gemini Gems", "Local LLMs", "Agent Skills", "SKILL.md", "AGENTS.md", "MCP Servers", "Cursor Rules", "Agent Memory"].map((tech) => (
               <span
                 key={tech}
-                className="px-3 py-1 text-sm bg-amber-100 dark:bg-amber-950/50 border border-amber-300 dark:border-amber-800/50 rounded-full text-amber-700 dark:text-amber-300"
+                className="px-3 py-1 text-sm bg-white dark:bg-amber-950/50 border border-slate-200 dark:border-amber-800/50 rounded-full text-slate-700 dark:text-amber-300"
               >
                 {tech}
               </span>
@@ -173,15 +173,15 @@ export default function LandingPageClient() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.8 }}
-            className="mt-8 text-lg text-amber-400/80 font-medium"
+            className="mt-8 text-lg text-slate-700 dark:text-amber-400/80 font-medium"
           >
             Open source and self-hostable. For software agents today, physical robots tomorrow. 🦉
           </motion.p>
         </div>
 
         {/* Gradient orbs */}
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-600/15 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl" />
+        <div className="pointer-events-none absolute top-1/4 left-1/4 w-96 h-96 bg-blue-600/5 dark:bg-blue-600/15 rounded-full blur-3xl" />
+        <div className="pointer-events-none hidden dark:block absolute bottom-1/4 right-1/4 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl" />
       </section>
 
       {/* What is a Playbook Section */}
