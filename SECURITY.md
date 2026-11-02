@@ -4,9 +4,21 @@ AgentPlaybooks takes reports of security issues in this repository, the publishe
 `@agentplaybooks/cli` package, the Python packages in `packages/`, and the
 self-host Docker image (`Dockerfile`) seriously.
 
-This file is the public vulnerability-handling policy (NIS2 Art. 21(2)(e);
-CRA Annex I vulnerability handling; Hungarian Kiberbiztonsági tv. supplier
-expectations). **Legal interpretations are marked *jogi ellenőrzés szükséges*
+## Community maintenance and warranty
+
+AgentPlaybooks is an open-source project distributed under the [MIT license](LICENSE).
+The software is provided **as is**, without warranty, to the extent permitted by
+applicable law. Maintainers offer community support on a best-effort basis;
+there is no guaranteed response time, security-fix deadline, availability SLA,
+or promise of fitness for a regulated use case. The warranty and liability
+limitations are those in the license, subject to mandatory applicable law.
+
+Operators are responsible for assessing suitability, securing their deployment,
+and meeting their own legal obligations. This policy and the audit exports are
+not an ISO certification, an AI Act / GDPR / CRA conformity assessment, or a
+guarantee of compliance. Publishing open-source code or a disclaimer does not
+by itself decide statutory obligations, including those of a hosted-service
+operator. **Legal interpretations are marked *jogi ellenőrzés szükséges*
 and are not legal advice.**
 
 For operator incident response, 24h / 72h / 1-month reporting support, and
@@ -18,9 +30,10 @@ For SBOMs, npm provenance, and `cosign verify`, see
 
 ## Supported versions
 
-We issue security fixes for the versions below. Older releases receive
-best-effort advice to upgrade; we do not maintain long-term patch branches
-unless a supported customer contract says otherwise.
+We focus best-effort security maintenance on the versions below. This is not
+a commitment to provide a fix or maintain a release for a minimum period.
+Older releases receive best-effort advice to upgrade; we do not maintain
+long-term patch branches.
 
 | Component | Supported | Notes |
 | --- | --- | --- |
@@ -35,6 +48,8 @@ Please upgrade before opening a vulnerability report against an unsupported
 revision, unless the issue is still present on a supported version.
 
 ## How to report a vulnerability
+
+Ordinary bugs and feature requests can be reported as public GitHub issues.
 
 **Do not file a public GitHub issue, discussion, or pull request for a
 vulnerability.** Do not post exploit details on social media before a fix is

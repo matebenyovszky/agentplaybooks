@@ -161,11 +161,12 @@ async function readAuditLogs(c: Context, formatDefault = "json") {
 
 async function loadChainLogs(
   playbookId: string,
+  maxRows = 100000,
 ): Promise<{ logs: AuditChainEntry[]; error: string | null; overflow?: boolean }> {
   const supabase = getServiceSupabase();
   const pageSize = 500;
   const logs: AuditChainEntry[] = [];
-  for (let offset = 0; offset < 100000; offset += pageSize) {
+  for (let offset = 0; offset < maxRows; offset += pageSize) {
     const { data, error } = await supabase
       .from("audit_logs")
       .select(AUDIT_COLUMNS)
@@ -180,10 +181,48 @@ async function loadChainLogs(
   }
   const { data: extra, error } = await supabase.from("audit_logs").select("id")
     .eq("playbook_id", playbookId).order("created_at", { ascending: true })
-    .order("id", { ascending: true }).range(100000, 100000);
+    .order("id", { ascending: true }).range(maxRows, maxRows);
   if (error) return { logs: [], error: error.message };
   if (extra?.length) return { logs: [], error: "Audit trail exceeds the online verification limit; run the operator hash-chain verifier", overflow: true };
   return { logs, error: null };
+}
+
+async function downloadAuditBundle(c: Context) {
+  const guid = c.req.param("guid");
+  if (!guid) return c.json({ error: "Missing playbook GUID" }, 400);
+  const auth = await authorizeAuditAccess(c.req.raw, guid);
+  if ("error" in auth) return c.json({ error: auth.message }, auth.error);
+  // A filtered excerpt cannot be presented as an independently linked chain.
+  if (new URL(c.req.url).search) {
+    return c.json({ error: "Audit bundles include the retained trail without filters. Remove query parameters." }, 400);
+  }
+  const collectionStartedAt = new Date().toISOString();
+  const { data: checkpoint, error: checkpointError } = await getServiceSupabase()
+    .from("audit_chain_checkpoints")
+    .select("anchor_hash, purged_through, purged_through_id, purged_count, created_at")
+    .eq("playbook_id", auth.playbook.id)
+    .order("checkpoint_seq", { ascending: false }).limit(1).maybeSingle();
+  if (checkpointError) return c.json({ error: "Could not read the audit checkpoint. Retry the export." }, 500);
+  // Bound memory usage on Workers. Overflow is an error, never a partial ZIP.
+  const { logs, error, overflow } = await loadChainLogs(auth.playbook.id, 10000);
+  if (error) return c.json({ error: overflow
+    ? "Audit bundle exceeds 10000 rows. Ask the operator for a database export and chain verification; no partial bundle was created."
+    : "Could not read the audit trail. Retry the export." }, overflow ? 413 : 500);
+  const startHash = checkpoint?.anchor_hash || GENESIS_HASH;
+  const ordered = orderByChainLinks(logs, startHash);
+  const report = verifyAuditChain(ordered, startHash);
+  if (!report.ok) return c.json({ error: "Audit chain verification failed or the trail changed during collection. Retry or ask the operator to investigate.", verification: report }, 409);
+  const { buildAuditBundle } = await import("@/lib/audit-bundle");
+  const bytes = await buildAuditBundle({
+    playbookId: auth.playbook.id, logs: ordered, report, checkpoint: checkpoint || null,
+    retentionDays: auditRetentionDays(), collectionStartedAt,
+  });
+  return new Response(bytes as Uint8Array<ArrayBuffer>, { headers: {
+    "Content-Type": "application/zip",
+    "Content-Disposition": 'attachment; filename="agentplaybooks-audit.zip"',
+    "Cache-Control": "private, no-store",
+    "X-Content-Type-Options": "nosniff",
+  } });
 }
 
 async function verifyAuditLogs(c: Context) {
@@ -244,6 +283,7 @@ async function purgePlaybookAudit(c: Context) {
 app.get("/api/playbooks/:guid/audit", (c) => readAuditLogs(c));
 app.get("/api/mcp/audit/:guid", (c) => readAuditLogs(c));
 app.get("/api/playbooks/:guid/audit/export", (c) => readAuditLogs(c, "jsonl"));
+app.get("/api/playbooks/:guid/audit/bundle", downloadAuditBundle);
 app.get("/api/playbooks/:guid/audit/verify", verifyAuditLogs);
 app.post("/api/playbooks/:guid/audit/purge", purgePlaybookAudit);
 

@@ -1,5 +1,35 @@
 # Audit logs (export, retention, tamper evidence)
 
+## Download an evidence bundle
+
+Owners and auditors can use **Details → Download audit ZIP**, or authenticated
+`GET /api/playbooks/:guid/audit/bundle` (the same credentials as audit export).
+The response is private/no-store and is not saved as a public file.
+
+The ZIP includes JSONL and spreadsheet-safe CSV, verification of those exact
+rows, the retention checkpoint, a manifest with file SHA-256 checksums and
+collection times, and a data-category inventory covering account/authentication,
+profiles/sharing, content, credentials, audit records, browser and provider data.
+It contains audit metadata, not vault values or a complete account-data export.
+Protect it as potentially personal/confidential data.
+
+The bundle accepts no filters and includes up to 10,000 retained rows. Above
+that limit it returns 413, never a silently truncated ZIP; request an operator
+database export and hash-chain verification instead. A broken or concurrently
+changing chain returns 409; retry or investigate. It is not an atomic database
+snapshot. Retention purges and playbook/account deletion must be understood:
+audit rows/checkpoints survive deletion; a purge removes a chain prefix and
+keeps a checkpoint. Backups and SIEM copies have separate retention.
+
+Doctor is local-only and is not run by this download. Retain a separate
+`apb doctor --json` report with the inspected project revision if needed.
+Checksums and hash links are not a signature, trusted timestamp, proof that all
+events were logged, or protection against complete rewriting by a privileged
+operator. ISO 27001/42001 preparation and applicable AI Act/GDPR reviews may use
+these records as supporting evidence; this is not certification or a guarantee
+of legal compliance. The operator determines applicability and organisational
+obligations.
+
 The `audit_logs` table is the playbook audit trail: federated MCP calls,
 vault operations (`secret.*`), configuration changes, and memory/canvas writes
 in one place, read at
@@ -62,7 +92,8 @@ app tolerates the additive schema.
 ## Retention
 
 Unset `AUDIT_RETENTION_DAYS` (or `0` / `forever`) keeps the current behaviour:
-logs are kept until the playbook or account is deleted.
+logs have no automatic expiry. They survive playbook/account deletion and are
+removed only by a retention purge; checkpoints remain.
 
 Set a positive integer to enable scheduled purge. The purge deletes rows older
 than the cutoff, writes an `audit_chain_checkpoints` row with the last purged
