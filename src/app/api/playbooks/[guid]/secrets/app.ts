@@ -8,6 +8,7 @@ import { expiredSecretMessage, expiresAtInput, isSecretExpired } from "@/lib/sec
 import { checkSecretDestination, narrowsAllowedHosts, normalizeAllowedHosts } from "@/lib/secret-destinations";
 import { assertPublicDestination, UnsafeDestinationError } from "@/lib/outbound-destination";
 import { secretProxyStream, type ProxyStreamOutcome } from "@/lib/secret-proxy-stream";
+import { readSecretProxyResponse, ProxyResponseTooLargeError } from "@/lib/secret-proxy-response";
 import {
   buildExchangeBody,
   isLoopbackRedirect,
@@ -771,14 +772,7 @@ app.post("/proxy", async (c) => {
         proxyRes.body, signal, () => upstreamAbort.abort(), finishStream,
       ), { status: proxyRes.status, headers });
     }
-    let responseBody: unknown;
-
-    if (contentType.includes("application/json")) {
-      responseBody = await proxyRes.json();
-    } else {
-      const text = await proxyRes.text();
-      responseBody = text.length > 10000 ? text.slice(0, 10000) + "\n... (truncated)" : text;
-    }
+    const responseBody = await readSecretProxyResponse(proxyRes);
 
     // Update usage stats
     await supabase
@@ -801,7 +795,7 @@ app.post("/proxy", async (c) => {
       status_text: proxyRes.statusText,
       body: responseBody,
     });
-  } catch {
+  } catch (error) {
     // The credential did leave the process, so this is an event even though the
     // request failed. The upstream message stays out of the row.
     await recordSecretAudit(audit, {
@@ -809,8 +803,11 @@ app.post("/proxy", async (c) => {
       status: "error",
       secretName: secret.name,
       target: destinationHost,
-      reason: "request_failed",
+      reason: error instanceof ProxyResponseTooLargeError ? "response_too_large" : "request_failed",
     });
+    if (error instanceof ProxyResponseTooLargeError) {
+      return c.json({ error: error.message, code: "upstream_response_too_large" }, 502);
+    }
     return c.json({ error: "Upstream HTTP request failed" }, 502);
   }
 });

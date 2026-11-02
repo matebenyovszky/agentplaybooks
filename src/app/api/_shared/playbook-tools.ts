@@ -687,7 +687,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   {
     name: "use_secret",
     title: "Read through a secret",
-    description: "Send a GET or HEAD request with a secret injected as a header, and return the response. The secret value is never returned to the agent — it is decrypted and used server-side only. Reads the remote API; it cannot change anything there, because only safe methods are accepted. The URL is chosen by the caller, so the target is whichever API the secret belongs to — see that API's own documentation for paths. Requires secrets:read or full permission. Example: use_secret({secret_name: 'OPENAI_API_KEY', url: 'https://api.openai.com/v1/models'}) sends GET with 'Authorization: Bearer <key>'. Use list_secrets to discover names, use_secret_write to send POST/PUT/PATCH/DELETE, and store_secret or rotate_secret to change a stored value.",
+    description: "Send a GET or HEAD request with a secret injected as a header, and return the response. The secret value is never returned to the agent — it is decrypted and used server-side only. Buffered JSON responses are limited to 8 MiB; paginate larger requests or use the direct REST secrets proxy with response_mode=stream. Reads the remote API; it cannot change anything there, because only safe methods are accepted. The URL is chosen by the caller, so the target is whichever API the secret belongs to — see that API's own documentation for paths. Requires secrets:read or full permission. Example: use_secret({secret_name: 'OPENAI_API_KEY', url: 'https://api.openai.com/v1/models'}) sends GET with 'Authorization: Bearer <key>'. Use list_secrets to discover names, use_secret_write to send POST/PUT/PATCH/DELETE, and store_secret or rotate_secret to change a stored value.",
     inputSchema: {
       type: "object",
       properties: {
@@ -706,7 +706,7 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
   {
     name: "use_secret_write",
     title: "Write through a secret",
-    description: "Send a POST, PUT, PATCH or DELETE request with a secret injected as a header, and return the response. The secret value is never returned to the agent — it is decrypted and used server-side only. This changes state in the remote API and cannot be undone from here. The URL is chosen by the caller, so the target is whichever API the secret belongs to — see that API's own documentation for paths and payloads. Requires secrets:read or full permission. Use use_secret for GET and HEAD, list_secrets to discover names, and store_secret or rotate_secret to change a stored value rather than send a request.",
+    description: "Send a POST, PUT, PATCH or DELETE request with a secret injected as a header, and return the response. The secret value is never returned to the agent — it is decrypted and used server-side only. Buffered JSON responses are limited to 8 MiB; paginate larger requests or use the direct REST secrets proxy with response_mode=stream. This changes state in the remote API and cannot be undone from here. The URL is chosen by the caller, so the target is whichever API the secret belongs to — see that API's own documentation for paths and payloads. Requires secrets:read or full permission. Use use_secret for GET and HEAD, list_secrets to discover names, and store_secret or rotate_secret to change a stored value rather than send a request.",
     inputSchema: {
       type: "object",
       properties: {

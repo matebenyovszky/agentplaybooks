@@ -13,7 +13,7 @@ profiles/sharing, content, credentials, audit records, browser and provider data
 It contains audit metadata, not vault values or a complete account-data export.
 Protect it as potentially personal/confidential data.
 
-The bundle accepts no filters and includes up to 10,000 retained rows. Above
+The bundle accepts no filters and includes up to 500 retained rows. Above
 that limit it returns 413, never a silently truncated ZIP; request an operator
 database export and hash-chain verification instead. A broken or concurrently
 changing chain returns 409; retry or investigate. It is not an atomic database
@@ -80,6 +80,12 @@ Each row stores `prev_hash` and `hash = sha256(canonical JSON of the row
 including prev_hash)`. The first row of a playbook chains from 64 zero hex
 digits. `GET /api/playbooks/:guid/audit/verify` and `apb audit verify` recompute
 the chain in order and report the first broken link (`prev_hash` or `hash`).
+
+Online verification checks at most 500 rows. Larger trails return HTTP 413
+before their contents are loaded; a partial trail is never reported as verified.
+Operators can verify the entire trail with `npm run audit:chain`, using
+`DATABASE_URL` or the documented Docker Compose environment. This keeps large
+hash-chain computations outside the HTTP Worker's CPU budget.
 
 A production database needs migration `20261024120000_audit_logs_compliance.sql`
 to add the columns and backfill existing rows. Do not apply it without approval

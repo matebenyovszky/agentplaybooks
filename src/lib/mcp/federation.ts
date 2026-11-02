@@ -885,7 +885,41 @@ async function readBoundedResponse(response: Response, signal: AbortSignal, rpcI
   const decoder = new TextDecoder();
   const sse = rpcId !== undefined && response.headers.get("content-type")?.includes("text/event-stream");
   let bytes = 0;
-  let text = "";
+  const parts: string[] = [];
+  let lineParts: string[] = [];
+  let dataLines: string[] = [];
+  function readLine(line: string): string | undefined {
+    if (line.endsWith("\r")) line = line.slice(0, -1);
+    if (line) {
+      if (line.startsWith("data:")) dataLines.push(line.slice(5).trimStart());
+      return;
+    }
+    const data = dataLines.join("\n");
+    dataLines = [];
+    if (!data || data === "[DONE]") return;
+    const payload = parseMaybeJson(data);
+    if (isRecord(payload) && payload.id === rpcId && ("result" in payload || "error" in payload)) {
+      return `data: ${JSON.stringify(payload)}\n\n`;
+    }
+  }
+  function readSseChunk(chunk: string, done: boolean): string | undefined {
+    let start = 0;
+    let end: number;
+    // Scan only the new chunk. A large data line is joined once, at its newline.
+    while ((end = chunk.indexOf("\n", start)) !== -1) {
+      lineParts.push(chunk.slice(start, end));
+      const result = readLine(lineParts.join(""));
+      lineParts = [];
+      if (result !== undefined) return result;
+      start = end + 1;
+    }
+    if (start < chunk.length) lineParts.push(chunk.slice(start));
+    if (done) {
+      const result = readLine(lineParts.join(""));
+      lineParts = [];
+      return result ?? readLine("");
+    }
+  }
   let onAbort: () => void = () => {};
   const aborted = new Promise<never>((_resolve, reject) => {
     onAbort = () => reject(new DOMException("Upstream body timed out", "AbortError"));
@@ -898,26 +932,15 @@ async function readBoundedResponse(response: Response, signal: AbortSignal, rpcI
       if (value) {
         bytes += value.byteLength;
         if (bytes > MAX_UPSTREAM_BODY_BYTES) throw new FederationError("Upstream response exceeds 8 MiB", "UPSTREAM_RESPONSE_TOO_LARGE");
-        text += decoder.decode(value, { stream: true });
       }
-      if (done) text += decoder.decode();
+      const chunk = done ? decoder.decode() : value ? decoder.decode(value, { stream: true }) : "";
       if (sse) {
-        // Events can span chunks and multiple data lines. Ignore notifications
-        // and other RPC IDs, then cancel as soon as our response is complete.
-        const events = text.split(/\r?\n\r?\n/);
-        text = done ? "" : events.pop() ?? "";
-        for (const event of events) {
-          const data = event.split(/\r?\n/).filter((line) => line.startsWith("data:"))
-            .map((line) => line.slice(5).trimStart()).join("\n");
-          if (!data || data === "[DONE]") continue;
-          const payload = parseMaybeJson(data);
-          if (isRecord(payload) && payload.id === rpcId && ("result" in payload || "error" in payload)) {
-            return `data: ${JSON.stringify(payload)}\n\n`;
-          }
-        }
+        const result = readSseChunk(chunk, done);
+        if (result !== undefined) return result;
         if (done) throw new FederationError("SSE response contained no matching JSON-RPC result", "INVALID_UPSTREAM_RESPONSE");
-      } else if (done) {
-        return text;
+      } else {
+        parts.push(chunk);
+        if (done) return parts.join("");
       }
     }
   } finally {

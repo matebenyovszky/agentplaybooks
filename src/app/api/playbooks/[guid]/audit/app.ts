@@ -161,30 +161,23 @@ async function readAuditLogs(c: Context, formatDefault = "json") {
 
 async function loadChainLogs(
   playbookId: string,
-  maxRows = 100000,
 ): Promise<{ logs: AuditChainEntry[]; error: string | null; overflow?: boolean }> {
   const supabase = getServiceSupabase();
-  const pageSize = 500;
-  const logs: AuditChainEntry[] = [];
-  for (let offset = 0; offset < maxRows; offset += pageSize) {
-    const { data, error } = await supabase
-      .from("audit_logs")
-      .select(AUDIT_COLUMNS)
-      .eq("playbook_id", playbookId)
-      .order("created_at", { ascending: true })
-      .order("id", { ascending: true })
-      .range(offset, offset + pageSize - 1);
-    if (error) return { logs, error: error.message };
-    const rows = (data || []) as AuditChainEntry[];
-    logs.push(...rows);
-    if (rows.length < pageSize) return { logs, error: null };
-  }
-  const { data: extra, error } = await supabase.from("audit_logs").select("id")
-    .eq("playbook_id", playbookId).order("created_at", { ascending: true })
-    .order("id", { ascending: true }).range(maxRows, maxRows);
+  // Fetch only IDs first: large trails must not be downloaded or hashed in an
+  // HTTP Worker. The operator verifier can check the complete trail offline.
+  const onlineLimit = 500;
+  const { data: ids, error } = await supabase.from("audit_logs").select("id")
+    .eq("playbook_id", playbookId).limit(onlineLimit + 1);
   if (error) return { logs: [], error: error.message };
-  if (extra?.length) return { logs: [], error: "Audit trail exceeds the online verification limit; run the operator hash-chain verifier", overflow: true };
-  return { logs, error: null };
+  if ((ids?.length ?? 0) > onlineLimit) return { logs: [], error: "Audit trail exceeds the 500-row online verification limit; run the operator hash-chain verifier (npm run audit:chain)", overflow: true };
+  // IDs pin the set even if more rows are appended between the two reads.
+  // A retention purge or missing row must never yield a successful partial check.
+  if (!ids?.length) return { logs: [], error: null };
+  const { data, error: rowsError } = await supabase.from("audit_logs").select(AUDIT_COLUMNS)
+    .eq("playbook_id", playbookId).in("id", ids.map(row => row.id));
+  if (rowsError) return { logs: [], error: rowsError.message };
+  if (data?.length !== ids.length) return { logs: [], error: "Audit trail changed during verification; retry the check" };
+  return { logs: data as AuditChainEntry[], error: null };
 }
 
 async function downloadAuditBundle(c: Context) {
@@ -204,9 +197,9 @@ async function downloadAuditBundle(c: Context) {
     .order("checkpoint_seq", { ascending: false }).limit(1).maybeSingle();
   if (checkpointError) return c.json({ error: "Could not read the audit checkpoint. Retry the export." }, 500);
   // Bound memory usage on Workers. Overflow is an error, never a partial ZIP.
-  const { logs, error, overflow } = await loadChainLogs(auth.playbook.id, 10000);
+  const { logs, error, overflow } = await loadChainLogs(auth.playbook.id);
   if (error) return c.json({ error: overflow
-    ? "Audit bundle exceeds 10000 rows. Ask the operator for a database export and chain verification; no partial bundle was created."
+    ? "Audit bundle exceeds the 500-row online verification limit. Ask the operator for a database export and chain verification; no partial bundle was created."
     : "Could not read the audit trail. Retry the export." }, overflow ? 413 : 500);
   const startHash = checkpoint?.anchor_hash || GENESIS_HASH;
   const ordered = orderByChainLinks(logs, startHash);

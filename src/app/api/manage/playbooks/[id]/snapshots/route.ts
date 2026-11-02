@@ -5,6 +5,7 @@ import { getUserFromAuthOrApiKey } from "@/app/api/_shared/auth";
 import { getPlaybookAccessRole } from "@/app/api/_shared/guards";
 import { getServiceSupabase } from "@/app/api/_shared/supabase";
 import { validatePortableSnapshot } from "@/lib/portable-snapshot";
+import { BodySizeLimitError, readBoundedText } from "@/lib/bounded-body";
 
 type Context = { params: Promise<{ id: string }> };
 
@@ -28,14 +29,15 @@ async function handlePOST(request: Request, { params }: Context) {
   const user = await authorized(request, id, "playbooks:write");
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  const raw = await request.text();
-  if (Buffer.byteLength(raw, "utf8") > 6 * 1024 * 1024) return Response.json({ error: "Snapshot upload exceeds 6 MiB." }, { status: 413 });
   let snapshot;
   let digest;
+  let sizeBytes;
   try {
+    const { text: raw } = await readBoundedText(request.body, 6 * 1024 * 1024);
     const body = JSON.parse(raw);
-    ({ snapshot, digest } = validatePortableSnapshot(body.snapshot));
+    ({ snapshot, digest, sizeBytes } = validatePortableSnapshot(body.snapshot));
   } catch (error) {
+    if (error instanceof BodySizeLimitError) return Response.json({ error: "Snapshot upload exceeds 6 MiB." }, { status: 413 });
     return Response.json({ error: error instanceof Error ? error.message : "Invalid snapshot" }, { status: 400 });
   }
 
@@ -49,7 +51,6 @@ async function handlePOST(request: Request, { params }: Context) {
   if (existing.error) return Response.json({ error: existing.error.message }, { status: 500 });
   if (existing.data?.digest === digest) return Response.json(existing.data);
 
-  const sizeBytes = snapshot.files.reduce((sum, file) => sum + Buffer.from(file.content, "base64").length, 0);
   const { data, error } = await db.from("playbook_snapshots").insert({
     playbook_id: id, playbook_guid: playbook.data.guid,
     playbook_name: playbook.data.name, owner_user_id: playbook.data.user_id,

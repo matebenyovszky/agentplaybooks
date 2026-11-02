@@ -57,11 +57,14 @@ function serviceClient(options: {
 } = {}) {
   const logs = options.logs ?? chained;
   let table = "";
+  let limit = Infinity;
   const chain: Record<string, unknown> = {};
   const pass = () => chain;
   for (const method of ["select", "eq", "like", "in", "gte", "lte", "order", "limit", "not"]) {
     chain[method] = vi.fn(pass);
   }
+  chain.limit = vi.fn((value: number) => { limit = value; return chain; });
+  chain.then = (resolve: (value: unknown) => unknown) => resolve({ data: table === "audit_logs" ? logs.slice(0, limit) : [], error: null });
   chain.range = vi.fn(async () => ({ data: table === "audit_logs" ? logs : [], error: null }));
   chain.maybeSingle = vi.fn(async () => {
     if (table === "playbooks") return { data: PLAYBOOK, error: null };
@@ -71,6 +74,7 @@ function serviceClient(options: {
   return {
     from: vi.fn((name: string) => {
       table = name;
+      limit = Infinity;
       return chain;
     }),
     rpc: vi.fn(async () => ({ data: options.rpc ?? { purged: 1, playbooks: 1 }, error: null })),
@@ -161,10 +165,12 @@ describe("audit trail API", () => {
   it("does not claim to verify a truncated large audit trail", async () => {
     vi.mocked(getAuthenticatedUser).mockResolvedValue({ id: "owner-1" });
     vi.mocked(getPlaybookAccessRole).mockResolvedValue("owner");
-    vi.mocked(getServiceSupabase).mockReturnValue(serviceClient({ logs: Array(500).fill(chained[0]) }) as never);
+    const client = serviceClient({ logs: Array(501).fill(chained[0]) });
+    vi.mocked(getServiceSupabase).mockReturnValue(client as never);
     const response = await app.request("/api/playbooks/guid-1/audit/verify");
     expect(response.status).toBe(413);
     await expect(response.json()).resolves.toMatchObject({ error: expect.stringContaining("operator") });
+    expect(client.from.mock.calls.filter(([table]) => table === "audit_logs")).toHaveLength(1);
   });
 
   it("downloads an auditor ZIP whose checksums and chain match the exported rows", async () => {
@@ -201,10 +207,30 @@ describe("audit trail API", () => {
     const damaged = chained.map((row) => ({ ...row, status: "tampered" }));
     vi.mocked(getServiceSupabase).mockReturnValue(serviceClient({ logs: damaged }) as never);
     expect((await app.request("/api/playbooks/guid-1/audit/bundle")).status).toBe(409);
-    vi.mocked(getServiceSupabase).mockReturnValue(serviceClient({ logs: Array(500).fill(chained[0]) }) as never);
+    vi.mocked(getServiceSupabase).mockReturnValue(serviceClient({ logs: Array(501).fill(chained[0]) }) as never);
     const oversized = await app.request("/api/playbooks/guid-1/audit/bundle");
     expect(oversized.status).toBe(413);
     expect(await oversized.text()).toContain("no partial bundle");
+  });
+
+  it("bundles exactly 500 rows and rejects 501 before loading their contents", async () => {
+    vi.mocked(getAuthenticatedUser).mockResolvedValue({ id: "owner-1" });
+    vi.mocked(getPlaybookAccessRole).mockResolvedValue("owner");
+    const logs = buildAuditChain(Array.from({ length: 500 }, (_, index) => ({
+      ...chained[0], id: `event-${index}`,
+    })));
+    vi.mocked(getServiceSupabase).mockReturnValue(serviceClient({ logs }) as never);
+    const response = await app.request("/api/playbooks/guid-1/audit/bundle");
+    expect(response.status).toBe(200);
+    const zip = await JSZip.loadAsync(await response.arrayBuffer());
+    const report = JSON.parse(await zip.file("verification.json")!.async("string"));
+    expect(report).toMatchObject({ ok: true, checked: 500 });
+
+    const client = serviceClient({ logs: [...logs, chained[0]] });
+    vi.mocked(getServiceSupabase).mockReturnValue(client as never);
+    const oversized = await app.request("/api/playbooks/guid-1/audit/bundle");
+    expect(oversized.status).toBe(413);
+    expect(client.from.mock.calls.filter(([table]) => table === "audit_logs")).toHaveLength(1);
   });
 
   it("fails closed when the checkpoint cannot be read or the caller is an editor", async () => {

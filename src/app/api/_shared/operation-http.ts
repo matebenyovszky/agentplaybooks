@@ -1,4 +1,5 @@
 import { API_MAJOR_HEADER, API_REVISION_HEADER } from "@/lib/api-contract";
+import { withOperationResult } from "./operation-result";
 
 type McpRouteHandler = (request: Request) => Response | Promise<Response>;
 
@@ -27,11 +28,13 @@ export async function invokeMcpOperation(
   const endpointUrl = new URL(request.url);
   endpointUrl.pathname = endpointPath;
   endpointUrl.search = "";
-  const rpcResponse = await handler(new Request(endpointUrl, {
+  const projected = await withOperationResult(operation, () => Promise.resolve(handler(new Request(endpointUrl, {
     method: "POST",
     headers: new Headers(request.headers),
+    signal: request.signal,
     body: JSON.stringify({ jsonrpc: "2.0", id: crypto.randomUUID(), method: "tools/call", params: { name: operation, arguments: args } }),
-  }));
+  }))));
+  const rpcResponse = projected.response;
 
   const headers = new Headers({ "Cache-Control": "no-store" });
   for (const name of [API_MAJOR_HEADER, API_REVISION_HEADER]) {
@@ -40,6 +43,9 @@ export async function invokeMcpOperation(
   }
   const challenge = rpcResponse.headers.get("WWW-Authenticate");
   if (challenge) headers.set("WWW-Authenticate", challenge);
+  if (projected.captured && rpcResponse.ok) {
+    return Response.json(projected.value, { headers });
+  }
   const payload = await rpcResponse.json() as {
     result?: { content?: Array<{ type?: string; text?: string }>; structuredContent?: unknown };
     error?: McpError;

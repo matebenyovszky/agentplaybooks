@@ -18,6 +18,7 @@ import { ACCOUNT_TOOLS } from "@/app/api/_shared/account-tools";
 import { MCP_CATALOG_REVISION, McpDiagnosticError, mcpErrorData } from "@/app/api/_shared/mcp-diagnostics";
 import { managementTools } from "@/app/api/_shared/management-tools";
 import { structuredToolResult } from "@/app/api/_shared/mcp-tool-hints";
+import { captureOperationResult } from "@/app/api/_shared/operation-result";
 import {
   LATEST_PROTOCOL_VERSION,
   isNotification,
@@ -299,6 +300,7 @@ app.post("/", async (c) => {
           const scopedRequest = new Request(scopedUrl, {
             method: "POST",
             headers: new Headers(c.req.raw.headers),
+            signal: c.req.raw.signal,
             body: JSON.stringify({
               jsonrpc: "2.0",
               id,
@@ -324,6 +326,7 @@ app.post("/", async (c) => {
         // A declared outputSchema is honoured with matching structuredContent;
         // see mcp-tool-hints.ts for why the two must never drift apart.
         const structured = structuredToolResult(ACCOUNT_TOOLS, toolName, result);
+        if (captureOperationResult(toolName, structured ?? result)) return c.body(null, 200);
         return c.json({
           jsonrpc: "2.0",
           id,

@@ -10,7 +10,7 @@ gyűjtési időpontokat és az alkalmazás által tárolt adatkategóriák leír
 Személyes vagy bizalmas naplóadatot tartalmazhat; teljes GDPR-adatmásolatot és
 titkos értékeket nem tartalmaz. A válasz nem gyorsítótárazható.
 
-A csomag szűrés nélkül legfeljebb 10 000 megőrzött sort fogad el; efölött 413
+A csomag szűrés nélkül legfeljebb 500 megőrzött sort fogad el; efölött 413
 hibával leáll, részleges ZIP helyett üzemeltetői adatbázisexport szükséges.
 Hibás vagy gyűjtés közben változó láncnál 409 hibát ad: ismételje meg, vagy
 kérjen kivizsgálást. Ez nem tranzakciós adatbázis-pillanatkép. A playbook/fiók
@@ -72,6 +72,12 @@ prev_hash-sal együtt)` értéket. Egy playbook első sora 64 nulla hexjegytől
 indul. A `GET /api/playbooks/:guid/audit/verify` és az `apb audit verify`
 sorrendben újraszámolja a láncot, és az első törött láncszemet jelenti
 (`prev_hash` vagy `hash`).
+
+Az online ellenőrzés legfeljebb 500 sort vizsgál. Nagyobb naplónál HTTP 413
+választ ad a teljes tartalom letöltése előtt; részleges ellenőrzést nem jelez
+sikeresnek. Az üzemeltető a teljes láncot az `npm run audit:chain` paranccsal
+ellenőrizheti, `DATABASE_URL` vagy a dokumentált Docker Compose környezet
+használatával. Így a nagy napló hash-elése nem a HTTP Worker CPU-keretét terheli.
 
 Éles adatbázison a `20261024120000_audit_logs_compliance.sql` migráció
 kell a oszlopokhoz és a meglévő sorok feltöltéséhez. Jóváhagyás és mentés
