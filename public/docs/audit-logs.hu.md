@@ -1,5 +1,28 @@
 # Auditnapló (export, megőrzés, hamisításjelzés)
 
+## Letölthető bizonyítékcsomag
+
+A tulajdonos és az auditor a playbook **Details → Download audit ZIP** gombjával,
+vagy hitelesített `GET /api/playbooks/:guid/audit/bundle` kéréssel töltheti le.
+A ZIP JSONL- és táblázatkezelőhöz védett CSV-naplót, a mellékelt sorok
+láncellenőrzését, megőrzési checkpointot, fájlonkénti SHA-256 ellenőrzőösszeget,
+gyűjtési időpontokat és az alkalmazás által tárolt adatkategóriák leírását adja.
+Személyes vagy bizalmas naplóadatot tartalmazhat; teljes GDPR-adatmásolatot és
+titkos értékeket nem tartalmaz. A válasz nem gyorsítótárazható.
+
+A csomag szűrés nélkül legfeljebb 500 megőrzött sort fogad el; efölött 413
+hibával leáll, részleges ZIP helyett üzemeltetői adatbázisexport szükséges.
+Hibás vagy gyűjtés közben változó láncnál 409 hibát ad: ismételje meg, vagy
+kérjen kivizsgálást. Ez nem tranzakciós adatbázis-pillanatkép. A playbook/fiók
+törlése nem törli a megőrzött auditnaplót és checkpointokat; az audit megőrzését
+külön kell kezelni. A mentések és külső naplómásolatok megőrzése is különálló.
+
+A doctor helyben fut, a webes letöltés nem végzi el. Szükség esetén külön
+`apb doctor --json` jelentést és a vizsgált projekt verzióját is őrizze meg.
+A hash-lánc nem digitális aláírás vagy hiteles időbélyeg, és nem bizonyítja,
+hogy minden eseményt naplóztak. A csomag támogathat ISO 27001/42001,
+AI Act- vagy GDPR-felkészülést, de nem tanúsítvány és nem megfelelőségi garancia.
+
 Az `audit_logs` tábla a playbook auditnyoma: a federált MCP-hívások és a
 trezor-műveletek (`secret.*`) egy helyen, olvasható a
 `GET /api/playbooks/:guid/audit` végponton. Egy sor soha nem tartalmaz titkos
@@ -67,7 +90,8 @@ telepített app az additive sémát elviseli.
 ## Megőrzés
 
 Ha az `AUDIT_RETENTION_DAYS` nincs beállítva (vagy `0` / `forever`), a jelenlegi
-viselkedés marad: a naplók a playbook vagy a fiók törléséig megmaradnak.
+nincs automatikus lejárat. A naplók a playbook vagy a fiók törlése után is
+megmaradnak, eltávolításuk külön megőrzési törléssel történik; a checkpointok megmaradnak.
 
 Pozitív egész esetén az ütemezett törlés a vágásnál régebbi sorokat törli,
 `audit_chain_checkpoints` sort ír az utolsó törölt hash-sel, hogy a megmaradó

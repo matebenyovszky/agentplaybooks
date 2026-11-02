@@ -19,7 +19,7 @@ export const TERMS_TITLE = "Terms";
 
 export const PRIVACY_CONTROLLER = "Máté Benyovszky, Hungary";
 export const PRIVACY_CONTACT_URL = "https://github.com/matebenyovszky/agentplaybooks/issues";
-export const PRIVACY_LAST_UPDATED = "10 October 2026";
+export const PRIVACY_LAST_UPDATED = "2 November 2026";
 
 /** A paragraph, or a bulleted list when it is an array. */
 export type LegalBlock = string | readonly string[];
@@ -48,7 +48,7 @@ export const PRIVACY_SECTIONS: readonly LegalSection[] = [
         "Secrets you store: encrypted with AES-256-GCM under per-user derived keys before they are saved. The service decrypts a secret only to send a request you asked for; the value is never returned through the API or to an AI client.",
         "API keys: we store a hash and a short prefix, never the key itself, plus when each key was last used.",
         "Connected apps: when you connect a client such as Claude or Cursor, a record of that app and your consent, so its access can be checked and revoked.",
-        "Security and audit records: for vault and connected-server operations, which operation ran, against which host, by which key or account, when, and whether it succeeded.",
+        "Security and audit records: for recorded vault and connected-server operations and configuration/content changes, the operation, target, key or account identifier, timestamp, result, request identifier and integrity hashes. Secret names can appear; vault values are excluded from the audit schema.",
         "Request data: your IP address and request details pass through our hosting provider's network for delivery and abuse protection.",
       ],
       "We do not use analytics, advertising, or tracking cookies. The website keeps your sign-in session and theme in your browser's local storage, and sets one cookie for your language choice. AgentPlaybooks does not run AI models, and your content is not used to train any.",
@@ -77,8 +77,9 @@ export const PRIVACY_SECTIONS: readonly LegalSection[] = [
   {
     heading: "How long we keep it",
     blocks: [
-      "Your account and content are kept until you delete them. Deleting a memory entry, skill, or playbook removes it from the live database at once; a playbook takes its skills, memory, canvas, runs, keys, secrets, and audit records with it.",
-      "You can delete your whole account under Settings → Delete account. That removes, immediately and in one step, every playbook you own and everything in it, your portable backups, your API keys, your connected-app sign-ins, your profile, stars, and memberships. Changes you made in playbooks other people own stay in their history, no longer linked to any account.",
+      "Your account and content are kept until you delete them. Deleting a memory entry, skill, or playbook removes that content from the live database. Deleting a playbook also removes its dependent content, keys and secrets, but retained audit records and chain checkpoints survive deletion.",
+      "You can delete your whole account under Settings → Delete account. This removes your owned playbooks and their dependent content, portable backups, API keys, connected-app sign-ins, profile, stars and memberships from the live database. Retained audit history, including actor identifiers, is not erased by account deletion. Changes in other people's playbooks can also remain in their history.",
+      "Audit rows are kept until a retention purge. The operator can configure AUDIT_RETENTION_DAYS and schedule purges; unset, 0 or forever means no automatic expiry. A purge preserves a chain checkpoint and a record of the purge. Copies in backups or external logging systems have separate operator/provider retention. Contact us as described above for an assessment of retained personal data and an erasure or restriction request.",
       "Our hosting provider's network may keep request logs for a limited period under its own policy.",
     ],
   },
@@ -86,6 +87,7 @@ export const PRIVACY_SECTIONS: readonly LegalSection[] = [
     heading: "Your rights",
     blocks: [
       "You can access, correct, export, and delete your data — most of it directly: edit anything in the dashboard, export a playbook as an Agent Plugin or with `apb pull`, and delete playbooks or your account in the dashboard. You can also ask us to restrict or stop a use, or to send you a copy of what we hold, through the repository as described above. We answer within one month.",
+      "Owners and invited auditors can download an audit ZIP from the playbook Details page. It contains retained audit metadata and a description of application data categories, not all personal data associated with an account. Protect downloaded copies; the application cannot revoke them after download.",
       "If you are in the EU or EEA and think we have mishandled your data, you can complain to a data protection authority. In Hungary that is the Nemzeti Adatvédelmi és Információszabadság Hatóság (NAIH, https://naih.hu).",
     ],
   },

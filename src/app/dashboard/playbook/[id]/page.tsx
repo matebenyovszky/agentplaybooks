@@ -62,6 +62,7 @@ import { ApiKeyManager } from "@/components/playbook/ApiKeyManager";
 import { SecretManager } from "@/components/playbook/SecretManager";
 import { McpRegistrySearch } from "@/components/playbook/McpRegistrySearch";
 import { CollaborationManager } from "@/components/playbook/CollaborationManager";
+import { AuditDownload } from "@/components/playbook/AuditDownload";
 
 type TabType = "details" | "skills" | "mcp" | "canvas" | "memory" | "secrets" | "apiKeys" | "sharing";
 type PlaybookWithAccess = Playbook & { current_user_role?: "owner" | "editor" | "auditor" | "viewer" };
@@ -1941,6 +1942,7 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
               </h2>
 
               <div className="space-y-6">
+                {(isOwner || playbook.current_user_role === "auditor") && <AuditDownload playbookId={playbook.guid || playbook.id} />}
                 {/* Description */}
                 <div
                   data-testid="playbook-description"

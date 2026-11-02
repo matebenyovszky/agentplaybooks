@@ -88,7 +88,8 @@ export function DeleteAccountSection({ email }: { email: string | undefined }) {
               <p className="font-medium text-neutral-800 dark:text-slate-200 mb-1">Not affected</p>
               <ul className="list-disc list-inside space-y-0.5 text-neutral-600 dark:text-slate-400">
                 <li>playbooks other people own, including ones shared with you</li>
-                <li>what you changed in those: it stays in their history, no longer linked to an account</li>
+                <li>what you changed in those: it stays in their history</li>
+                <li>retained audit records and integrity checkpoints, including actor identifiers; these follow the separate audit retention policy</li>
               </ul>
               <p className="mt-2 text-neutral-500 dark:text-slate-500">
                 People you shared a playbook with lose access to it. To keep a copy, export it first

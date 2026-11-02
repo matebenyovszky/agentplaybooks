@@ -180,6 +180,44 @@ async function loadChainLogs(
   return { logs: data as AuditChainEntry[], error: null };
 }
 
+async function downloadAuditBundle(c: Context) {
+  const guid = c.req.param("guid");
+  if (!guid) return c.json({ error: "Missing playbook GUID" }, 400);
+  const auth = await authorizeAuditAccess(c.req.raw, guid);
+  if ("error" in auth) return c.json({ error: auth.message }, auth.error);
+  // A filtered excerpt cannot be presented as an independently linked chain.
+  if (new URL(c.req.url).search) {
+    return c.json({ error: "Audit bundles include the retained trail without filters. Remove query parameters." }, 400);
+  }
+  const collectionStartedAt = new Date().toISOString();
+  const { data: checkpoint, error: checkpointError } = await getServiceSupabase()
+    .from("audit_chain_checkpoints")
+    .select("anchor_hash, purged_through, purged_through_id, purged_count, created_at")
+    .eq("playbook_id", auth.playbook.id)
+    .order("checkpoint_seq", { ascending: false }).limit(1).maybeSingle();
+  if (checkpointError) return c.json({ error: "Could not read the audit checkpoint. Retry the export." }, 500);
+  // Bound memory usage on Workers. Overflow is an error, never a partial ZIP.
+  const { logs, error, overflow } = await loadChainLogs(auth.playbook.id);
+  if (error) return c.json({ error: overflow
+    ? "Audit bundle exceeds the 500-row online verification limit. Ask the operator for a database export and chain verification; no partial bundle was created."
+    : "Could not read the audit trail. Retry the export." }, overflow ? 413 : 500);
+  const startHash = checkpoint?.anchor_hash || GENESIS_HASH;
+  const ordered = orderByChainLinks(logs, startHash);
+  const report = verifyAuditChain(ordered, startHash);
+  if (!report.ok) return c.json({ error: "Audit chain verification failed or the trail changed during collection. Retry or ask the operator to investigate.", verification: report }, 409);
+  const { buildAuditBundle } = await import("@/lib/audit-bundle");
+  const bytes = await buildAuditBundle({
+    playbookId: auth.playbook.id, logs: ordered, report, checkpoint: checkpoint || null,
+    retentionDays: auditRetentionDays(), collectionStartedAt,
+  });
+  return new Response(bytes as Uint8Array<ArrayBuffer>, { headers: {
+    "Content-Type": "application/zip",
+    "Content-Disposition": 'attachment; filename="agentplaybooks-audit.zip"',
+    "Cache-Control": "private, no-store",
+    "X-Content-Type-Options": "nosniff",
+  } });
+}
+
 async function verifyAuditLogs(c: Context) {
   const guid = c.req.param("guid");
   if (!guid) return c.json({ error: "Missing playbook GUID" }, 400);
@@ -238,6 +276,7 @@ async function purgePlaybookAudit(c: Context) {
 app.get("/api/playbooks/:guid/audit", (c) => readAuditLogs(c));
 app.get("/api/mcp/audit/:guid", (c) => readAuditLogs(c));
 app.get("/api/playbooks/:guid/audit/export", (c) => readAuditLogs(c, "jsonl"));
+app.get("/api/playbooks/:guid/audit/bundle", downloadAuditBundle);
 app.get("/api/playbooks/:guid/audit/verify", verifyAuditLogs);
 app.post("/api/playbooks/:guid/audit/purge", purgePlaybookAudit);
 
