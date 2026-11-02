@@ -50,6 +50,16 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("Direct HTTP vault streaming", () => {
+  it("returns a bounded-buffer diagnostic and audit error for oversized JSON", async () => {
+    fetchMock.mockResolvedValue(new Response('"' + "x".repeat(8 * 1024 * 1024) + '"', {
+      headers: { "Content-Type": "application/json" },
+    }));
+    const response = await request({ response_mode: "json" });
+    expect(response.status).toBe(502);
+    expect(await response.json()).toMatchObject({ code: "upstream_response_too_large" });
+    expect(recordSecretAudit).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ status: "error", reason: "response_too_large" }));
+    expect(update).not.toHaveBeenCalled();
+  });
   it("delivers the first chunk before upstream completion or accounting, without truncation", async () => {
     let upstream!: ReadableStreamDefaultController<Uint8Array>;
     fetchMock.mockResolvedValue(new Response(new ReadableStream<Uint8Array>({

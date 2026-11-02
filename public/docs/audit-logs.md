@@ -51,6 +51,12 @@ including prev_hash)`. The first row of a playbook chains from 64 zero hex
 digits. `GET /api/playbooks/:guid/audit/verify` and `apb audit verify` recompute
 the chain in order and report the first broken link (`prev_hash` or `hash`).
 
+Online verification checks at most 500 rows. Larger trails return HTTP 413
+before their contents are loaded; a partial trail is never reported as verified.
+Operators can verify the entire trail with `npm run audit:chain`, using
+`DATABASE_URL` or the documented Docker Compose environment. This keeps large
+hash-chain computations outside the HTTP Worker's CPU budget.
+
 A production database needs migration `20261024120000_audit_logs_compliance.sql`
 to add the columns and backfill existing rows. Do not apply it without approval
 and a backup. Operator steps (preflight, `pg_dump`, in-DB copy, postflight

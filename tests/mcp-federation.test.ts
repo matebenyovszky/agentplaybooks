@@ -278,6 +278,24 @@ describe("MCP federation", () => {
     expect(tools[0].name).toBe(federatedToolName(sseServer, "sse_search"));
   });
 
+  it.each([1, 1024])("reads fragmented multiline SSE with %i-byte chunks and an EOF-terminated event", async (chunkSize) => {
+    const upstream = server({ id: `fragmented-${chunkSize}`, tools: [{ name: "read", inputSchema: {} }] });
+    const expected = { content: [{ type: "text", text: "árvíz😀".repeat(chunkSize === 1 ? 10 : 20_000) }] };
+    const fetchMock = vi.fn(async (_url: unknown, init?: RequestInit) => {
+      const rpc = JSON.parse(String(init?.body));
+      const payload = JSON.stringify({ jsonrpc: "2.0", id: rpc.id, result: expected });
+      const split = payload.indexOf('"result"');
+      const bytes = new TextEncoder().encode(':comment\r\ndata: {"id":"other","result":{}}\r\n\r\n'
+        + `data: ${payload.slice(0, split)}\r\ndata: ${payload.slice(split)}`);
+      let offset = 0;
+      return new Response(new ReadableStream({ pull(controller) {
+        if (offset >= bytes.length) controller.close();
+        else { controller.enqueue(bytes.subarray(offset, offset + chunkSize)); offset += chunkSize; }
+      } }), { headers: { "Content-Type": "text/event-stream" } });
+    });
+    await expect(callFederatedTool(upstream, federatedToolName(upstream, "read"), {}, { fetch: fetchMock as typeof fetch })).resolves.toEqual(expected);
+  });
+
   it("finishes a persistent SSE after the matching response, ignoring notifications and other IDs", async () => {
     const upstream = server({ id: "persistent-sse", transport_config: { url: "https://persistent.example.com/mcp", timeout_ms: 100 } });
     const cancelled = vi.fn();

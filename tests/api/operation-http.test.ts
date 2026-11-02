@@ -1,7 +1,46 @@
 import { describe, expect, it, vi } from "vitest";
 import { invokeMcpOperation } from "@/app/api/_shared/operation-http";
+import { captureOperationResult } from "@/app/api/_shared/operation-result";
 
 describe("REST/OpenAPI operation projection", () => {
+  it("projects an authorized result without serializing or parsing an MCP envelope", async () => {
+    const request = new Request("https://agentplaybooks.ai/api/control/read_memory", { method: "POST" });
+    const response = await invokeMcpOperation(async () => {
+      expect(captureOperationResult("read_memory", { value: "fixture" })).toBe(true);
+      // An empty body proves the projection did not attempt response.json().
+      return new Response(null, { headers: { "X-AgentPlaybooks-API-Version": "1" } });
+    }, request, "/api/mcp/manage", "read_memory", {});
+    expect(await response.json()).toEqual({ value: "fixture" });
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(captureOperationResult("read_memory", { value: "outside" })).toBe(false);
+  });
+
+  it("propagates client cancellation to the internal handler", async () => {
+    const controller = new AbortController();
+    const response = await invokeMcpOperation(async request => {
+      controller.abort();
+      expect(request.signal.aborted).toBe(true);
+      return Response.json({ result: { content: [{ type: "text", text: "{}" }] } });
+    }, new Request("https://agentplaybooks.ai/api/control/read_memory", { method: "POST", signal: controller.signal }),
+    "/api/mcp/manage", "read_memory", {});
+    expect(await response.json()).toEqual({});
+  });
+
+  it("isolates concurrent projections and retains the discovery merge path", async () => {
+    const invoke = (value: string) => invokeMcpOperation(async () => {
+      await Promise.resolve();
+      expect(captureOperationResult("other_tool", "wrong")).toBe(false);
+      expect(captureOperationResult("read_memory", { value })).toBe(true);
+      return new Response(null);
+    }, new Request("https://agentplaybooks.ai/api/control/read_memory", { method: "POST" }), "/api/mcp/manage", "read_memory", {});
+    const responses = await Promise.all([invoke("one"), invoke("two")]);
+    expect(await Promise.all(responses.map(response => response.json()))).toEqual([{ value: "one" }, { value: "two" }]);
+    const discovery = await invokeMcpOperation(async () => {
+      expect(captureOperationResult("find_tools", {})).toBe(false);
+      return Response.json({ result: { content: [{ type: "text", text: '{"matches":[]}' }] } });
+    }, new Request("https://agentplaybooks.ai/api/control/find_tools", { method: "POST" }), "/api/mcp/manage", "find_tools", {});
+    expect(await discovery.json()).toEqual({ matches: [] });
+  });
   it("passes the REST body to the MCP operation handler and unwraps its result", async () => {
     const handler = vi.fn(async (request: Request) => {
       const body = await request.json();

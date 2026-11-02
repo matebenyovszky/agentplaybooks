@@ -50,6 +50,12 @@ indul. A `GET /api/playbooks/:guid/audit/verify` és az `apb audit verify`
 sorrendben újraszámolja a láncot, és az első törött láncszemet jelenti
 (`prev_hash` vagy `hash`).
 
+Az online ellenőrzés legfeljebb 500 sort vizsgál. Nagyobb naplónál HTTP 413
+választ ad a teljes tartalom letöltése előtt; részleges ellenőrzést nem jelez
+sikeresnek. Az üzemeltető a teljes láncot az `npm run audit:chain` paranccsal
+ellenőrizheti, `DATABASE_URL` vagy a dokumentált Docker Compose környezet
+használatával. Így a nagy napló hash-elése nem a HTTP Worker CPU-keretét terheli.
+
 Éles adatbázison a `20261024120000_audit_logs_compliance.sql` migráció
 kell a oszlopokhoz és a meglévő sorok feltöltéséhez. Jóváhagyás és mentés
 nélkül ne futtassa. Az üzemeltetői lépések (preflight, `pg_dump`, adatbázison

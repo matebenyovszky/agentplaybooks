@@ -19,6 +19,7 @@ vi.mock("@/app/api/_shared/audit", async original => ({
 vi.mock("@/app/api/_shared/supabase", () => ({ getSupabase: () => database, getServiceSupabase: () => database }));
 import { POST } from "@/app/api/mcp/[guid]/route";
 import { secretCapabilities } from "@/lib/secret-capabilities";
+import { invokeMcpOperation } from "@/app/api/_shared/operation-http";
 
 const playbook = { id: "pb", user_id: "owner", name: "Test" };
 let secret: Record<string, unknown> | null;
@@ -52,6 +53,32 @@ beforeEach(() => {
 });
 
 describe("MCP secret policy diagnostics and optional reveal", () => {
+  it("uses the same authorized result for REST without changing external MCP envelopes", async () => {
+    const ordinary = await call("get_secret_status", { secret_name: "LOGIN" });
+    const response = await invokeMcpOperation(POST,
+      new Request("https://example.test/api/control/get_secret_status", { method: "POST" }),
+      "/api/mcp/test", "get_secret_status", { secret_name: "LOGIN" });
+    expect(await response.json()).toEqual(JSON.parse(ordinary.body.result.content[0].text));
+    expect(mocks.credential).toHaveBeenCalledTimes(2);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    mocks.credential.mockResolvedValueOnce(null);
+    const refused = await invokeMcpOperation(POST,
+      new Request("https://example.test/api/control/get_secret_status", { method: "POST" }),
+      "/api/mcp/test", "get_secret_status", { secret_name: "LOGIN" });
+    expect(refused.status).toBe(422);
+    expect((await refused.json()).data.reason).toBe("secrets_read_required");
+  });
+
+  it("reports an oversized upstream without exposing its body or the vault value", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response('"' + "x".repeat(8 * 1024 * 1024) + '"', {
+      headers: { "Content-Type": "application/json" },
+    })));
+    try {
+      const failed = await call("use_secret", { secret_name: "LOGIN", url: "https://api.example.com" });
+      expect(failed.body.error.data.reason).toBe("upstream_response_too_large");
+      expect(JSON.stringify(failed.body)).not.toContain("RAW_TEST_VALUE");
+    } finally { vi.unstubAllGlobals(); }
+  });
   it("reports metadata and policy without decrypting anything", async () => {
     const { body } = await call("list_secrets");
     expect(body.result.structuredContent.secrets[0]).toMatchObject({ allow_api_key_reveal: false, allowed_hosts: ["api.example.com"], capabilities: { proxy: { allowed: true }, reveal: { supported: true, allowed: false, reason: "proxy_only" } } });

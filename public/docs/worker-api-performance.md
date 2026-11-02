@@ -9,6 +9,20 @@ registry search, and site-wide/per-playbook OAuth/skill discovery routes also us
 Request/Response handlers. Frontend pages use reviewed build-owned assets,
 with OpenNext as fallback.
 
+REST operation projections receive the authorized operation result through a
+request-local execution context. They serialize it once instead of producing
+and reparsing an intermediate MCP text/JSON envelope. External MCP responses
+retain their protocol shape, and both transports execute the same permission
+and audit checks. Request headers cannot enable the internal projection.
+
+Buffered vault proxies cap JSON responses at 8 MiB before parsing. Larger
+responses return `upstream_response_too_large`; paginate the upstream query or
+use the direct REST proxy with `response_mode: "stream"`. Plain text keeps its
+10,000-character preview and cancels the remaining upstream body immediately.
+Streaming proxy responses remain incremental and are not subject to this
+buffering limit. The limit bounds memory and parsing work; it does not promise
+that every large payload fits the free-plan CPU allowance.
+
 `scripts/generate-worker-api-routes.mjs` generates the dispatch manifest during
 prebuild. It includes reservations for Next-specific routes so the REST catch-all
 cannot shadow them. Specific routes take precedence over dynamic segments.
@@ -26,6 +40,10 @@ notifications and other request IDs cannot satisfy the request. Upstream bodies
 are limited to 8 MiB. This also applies to OpenAPI specifications, operations, and
 OAuth token requests. Initialization notification responses are cancelled without
 waiting for an unnecessary body.
+
+The SSE reader scans each incoming chunk once and joins a fragmented data line
+only when it completes. A large event split into small chunks no longer causes
+the accumulated event text to be scanned repeatedly.
 
 Connection logs record bounded, client-declared names/versions, User-Agent, and
 validated key prefixes (never tokens or request arguments). Discovery logs are

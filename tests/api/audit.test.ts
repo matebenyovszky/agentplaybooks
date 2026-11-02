@@ -54,11 +54,14 @@ function serviceClient(options: {
 } = {}) {
   const logs = options.logs ?? chained;
   let table = "";
+  let limit = Infinity;
   const chain: Record<string, unknown> = {};
   const pass = () => chain;
   for (const method of ["select", "eq", "like", "in", "gte", "lte", "order", "limit", "not"]) {
     chain[method] = vi.fn(pass);
   }
+  chain.limit = vi.fn((value: number) => { limit = value; return chain; });
+  chain.then = (resolve: (value: unknown) => unknown) => resolve({ data: table === "audit_logs" ? logs.slice(0, limit) : [], error: null });
   chain.range = vi.fn(async () => ({ data: table === "audit_logs" ? logs : [], error: null }));
   chain.maybeSingle = vi.fn(async () => {
     if (table === "playbooks") return { data: PLAYBOOK, error: null };
@@ -68,6 +71,7 @@ function serviceClient(options: {
   return {
     from: vi.fn((name: string) => {
       table = name;
+      limit = Infinity;
       return chain;
     }),
     rpc: vi.fn(async () => ({ data: options.rpc ?? { purged: 1, playbooks: 1 }, error: null })),
@@ -158,10 +162,12 @@ describe("audit trail API", () => {
   it("does not claim to verify a truncated large audit trail", async () => {
     vi.mocked(getAuthenticatedUser).mockResolvedValue({ id: "owner-1" });
     vi.mocked(getPlaybookAccessRole).mockResolvedValue("owner");
-    vi.mocked(getServiceSupabase).mockReturnValue(serviceClient({ logs: Array(500).fill(chained[0]) }) as never);
+    const client = serviceClient({ logs: Array(501).fill(chained[0]) });
+    vi.mocked(getServiceSupabase).mockReturnValue(client as never);
     const response = await app.request("/api/playbooks/guid-1/audit/verify");
     expect(response.status).toBe(413);
     await expect(response.json()).resolves.toMatchObject({ error: expect.stringContaining("operator") });
+    expect(client.from.mock.calls.filter(([table]) => table === "audit_logs")).toHaveLength(1);
   });
 
   it("purges for the owner via the SQL function", async () => {
