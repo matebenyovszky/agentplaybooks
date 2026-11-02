@@ -62,6 +62,8 @@ import {
 } from "@/app/api/_shared/audit";
 import { PLAYBOOK_TOOLS } from "@/app/api/_shared/playbook-tools";
 import { structuredToolResult } from "@/app/api/_shared/mcp-tool-hints";
+import { captureOperationResult } from "@/app/api/_shared/operation-result";
+import { readSecretProxyResponse, ProxyResponseTooLargeError } from "@/lib/secret-proxy-response";
 import { resolveToolset, searchToolCatalog, type ToolsetView } from "@/app/api/_shared/toolsets";
 import { isAnonymousPublicRequest, isPublicBuiltinTool, isPublicMcpServer, isReadOnlyTool } from "@/app/api/_shared/public-mcp-tools";
 import {
@@ -2889,7 +2891,7 @@ use_secret_write({
               headers: outHeaders,
               // Do not leak the injected secret across an unchecked redirect.
               redirect: "manual",
-              signal: AbortSignal.timeout(timeoutMs),
+              signal: AbortSignal.any([c.req.raw.signal, AbortSignal.timeout(timeoutMs)]),
             };
 
             if (args.body && ["POST", "PUT", "PATCH"].includes(method)) {
@@ -2898,16 +2900,7 @@ use_secret_write({
 
             try {
               const proxyRes = await fetch(useUrl, fetchOptions);
-              const contentType = proxyRes.headers.get("content-type") || "";
-              let responseBody: unknown;
-
-              if (contentType.includes("application/json")) {
-                responseBody = await proxyRes.json();
-              } else {
-                const text = await proxyRes.text();
-                // Truncate very large responses
-                responseBody = text.length > 10000 ? text.slice(0, 10000) + "\n... (truncated)" : text;
-              }
+              const responseBody = await readSecretProxyResponse(proxyRes);
 
               // Update usage stats
               await serviceSupabase
@@ -2925,6 +2918,12 @@ use_secret_write({
                 note: `Request made with secret '${useSecretName}' injected as ${headerName} header. Secret value was NOT exposed to the agent.`,
               };
             } catch (fetchErr) {
+              if (fetchErr instanceof ProxyResponseTooLargeError) {
+                secretAudit.reason = "response_too_large";
+                throw new McpDiagnosticError(fetchErr.message, "upstream_response_too_large", [
+                  "Paginate the upstream request or use the REST secrets proxy with response_mode=stream.",
+                ]);
+              }
               const msg = fetchErr instanceof Error ? fetchErr.message : "Request failed";
               throw new Error(`HTTP request to ${useUrl} failed: ${msg}`);
             }
@@ -3097,6 +3096,7 @@ use_secret_write({
         // The text block mirrors the same value, as the spec asks.
         succeedMcpToolUsage(c.req.raw, typeof result === "object" && result !== null && "isError" in result && result.isError === true);
         const structured = structuredToolResult(PLAYBOOK_TOOLS, toolName, result);
+        if (captureOperationResult(toolName, structured ?? result)) return c.body(null, 200);
         return c.json({
           jsonrpc: "2.0",
           id,

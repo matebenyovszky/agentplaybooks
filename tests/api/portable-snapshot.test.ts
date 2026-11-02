@@ -21,6 +21,14 @@ describe("portable backup validation", () => {
     expect(validatePortableSnapshot(value).digest).toMatch(/^sha256:[a-f0-9]{64}$/);
   });
 
+  it("returns the decoded size without changing the digest when file order changes", () => {
+    const value = snapshot(file("AGENTS.md", "safe"), file(".agents/skills/x/asset.bin", Buffer.from([0, 255])));
+    const result = validatePortableSnapshot(value);
+    expect(result.sizeBytes).toBe(8);
+    expect(validatePortableSnapshot({ ...value, files: [...value.files].reverse() }).digest).toBe(result.digest);
+    expect(() => validatePortableSnapshot(snapshot(file("AGENTS.md", Buffer.alloc(1024 * 1024 + 1))))).toThrow(/size limit/);
+  });
+
   it("rejects traversal, duplicate paths, and tampered contents", () => {
     expect(() => validatePortableSnapshot(snapshot(file(".agents/skills/x/../escape", "bad")))).toThrow(/Unsafe/);
     expect(() => validatePortableSnapshot(snapshot(file("AGENTS.md", "ok"), file("AGENTS.md", "again")))).toThrow(/duplicate/);

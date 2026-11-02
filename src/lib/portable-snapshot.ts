@@ -43,21 +43,25 @@ function safePath(value: unknown): value is string {
 }
 
 /** Validate an untrusted client upload before any database write or download. */
-export function validatePortableSnapshot(input: unknown): { snapshot: PortableSnapshot; digest: string } {
+export function validatePortableSnapshot(input: unknown): { snapshot: PortableSnapshot; digest: string; sizeBytes: number } {
   if (!input || typeof input !== "object" || Array.isArray(input)) throw new Error("Snapshot must be an object.");
   const candidate = input as Partial<PortableSnapshot>;
   if (candidate.format !== PORTABLE_SNAPSHOT_FORMAT || !Array.isArray(candidate.files)) throw new Error("Unsupported snapshot format.");
   if (candidate.files.length === 0 || candidate.files.length > MAX_SNAPSHOT_FILES) throw new Error("Snapshot file count is invalid.");
   const seen = new Set<string>();
   let total = 0;
+  const decoded: Array<{ path: string; bytes: Buffer }> = [];
   const files = candidate.files as PortableSnapshotFile[];
   for (const file of files) {
     if (!safePath(file?.path) || seen.has(file.path.toLowerCase())) throw new Error("Unsafe or duplicate snapshot path.");
     seen.add(file.path.toLowerCase());
-    if (typeof file.content !== "string" || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(file.content)) throw new Error(`Invalid base64 in ${file.path}.`);
+    if (typeof file.content !== "string") throw new Error(`Invalid base64 in ${file.path}.`);
+    if (file.content.length > Math.ceil(1024 * 1024 / 3) * 4) throw new Error("Snapshot size limit exceeded.");
+    if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(file.content)) throw new Error(`Invalid base64 in ${file.path}.`);
     const bytes = Buffer.from(file.content, "base64");
     total += bytes.length;
     if (bytes.length > 1024 * 1024 || total > MAX_SNAPSHOT_BYTES) throw new Error("Snapshot size limit exceeded.");
+    decoded.push({ path: file.path, bytes });
     if (file.sha256 !== checksum(bytes)) throw new Error(`Checksum mismatch in ${file.path}.`);
     if (hasLiteralCredential(bytes)) throw new Error(`Possible literal credential in ${file.path}; use a secret reference.`);
     if (file.path === ".agents/mcp.json") {
@@ -77,11 +81,11 @@ export function validatePortableSnapshot(input: unknown): { snapshot: PortableSn
   }
   if (!seen.has("agentplaybook.json")) throw new Error("Snapshot has no agentplaybook.json.");
   const hash = createHash("sha256");
-  for (const file of [...files].sort((a, b) => a.path.localeCompare(b.path))) {
+  for (const file of decoded.sort((a, b) => a.path.localeCompare(b.path))) {
     hash.update(file.path);
     hash.update("\0");
-    hash.update(Buffer.from(file.content, "base64"));
+    hash.update(file.bytes);
     hash.update("\0");
   }
-  return { snapshot: candidate as PortableSnapshot, digest: `sha256:${hash.digest("hex")}` };
+  return { snapshot: candidate as PortableSnapshot, digest: `sha256:${hash.digest("hex")}`, sizeBytes: total };
 }
