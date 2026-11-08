@@ -28,7 +28,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
 
       - name: Load air-gap fixture env
         run: |
@@ -51,7 +51,7 @@ jobs:
           docker pull alpine:3.21
 
       - name: Build app image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: Dockerfile
@@ -67,7 +67,7 @@ jobs:
             NEXT_PUBLIC_APP_URL=http://app:3000
 
       - name: Build observer image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: deploy/airgap
           file: deploy/airgap/Dockerfile.observer
@@ -79,7 +79,7 @@ jobs:
           sbom: false
 
       - name: Build tester image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: deploy/airgap
           file: deploy/airgap/Dockerfile.tester
