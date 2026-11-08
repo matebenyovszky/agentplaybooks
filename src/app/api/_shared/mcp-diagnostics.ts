@@ -1,7 +1,7 @@
 import { API_VERSION } from "@/lib/api-contract";
 
 /** Stable, value-free diagnostics. Never put arguments, credentials or URLs here. */
-export const MCP_CATALOG_REVISION = "2026-11-02.worker-cpu.1";
+export const MCP_CATALOG_REVISION = "2026-11-08.core-vault.1";
 
 export class McpDiagnosticError extends Error {
   constructor(message: string, readonly reason: string, readonly nextSteps: string[]) {

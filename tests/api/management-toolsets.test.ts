@@ -12,6 +12,7 @@ vi.mock("@/app/api/_shared/supabase", () => ({ getServiceSupabase: () => db }));
 vi.mock("@/app/api/mcp/[guid]/route", () => ({ POST: scoped }));
 vi.mock("@/app/api/_shared/guards", () => ({ checkPlaybookWriteAccess: canWrite }));
 import { GET, POST } from "@/app/api/mcp/manage/route";
+import { getAuthenticatedUser, validateUserApiKey } from "@/app/api/_shared/auth";
 import legacyContract from "../fixtures/mcp-0.9.1-contract.json";
 
 function request(name: string, args: Record<string, unknown> = {}, toolset = "") {
@@ -51,7 +52,7 @@ describe("compact management discovery", () => {
   });
   it("advertises compact common tools and discovers hidden operations without selecting a playbook", async () => {
     const manifest = await (await GET(new Request("https://apbks.test/api/mcp/manage"))).json();
-    expect(manifest.tools).toHaveLength(17);
+    expect(manifest.tools).toHaveLength(20);
     expect(manifest.tools.map((t: { name: string }) => t.name)).toEqual(expect.arrayContaining(["get_connection_info", "find_tools"]));
     expect(manifest.tools.map((t: { name: string }) => t.name)).toContain("get_profile");
     expect(manifest.tools.map((t: { name: string }) => t.name)).not.toContain("delete_playbook");
@@ -66,7 +67,8 @@ describe("compact management discovery", () => {
   it("loads schema details only when requested and keeps startup descriptions bounded", async () => {
     const compact = await (await GET(new Request("https://apbks.test/api/mcp/manage"))).json();
     const full = await (await GET(new Request("https://apbks.test/api/mcp/manage?toolset=full"))).json();
-    expect(JSON.stringify(compact.tools).length).toBeLessThan(20000);
+    // Three directly registered vault tools retain their complete schemas.
+    expect(JSON.stringify(compact.tools).length).toBeLessThan(24000);
     expect(JSON.stringify(compact.tools).length).toBeLessThan(JSON.stringify(full.tools).length / 3);
     expect(compact.tools.every((tool: { description: string; outputSchema?: unknown }) => tool.description.length <= 220)).toBe(true);
     expect(compact.tools.map((tool: { name: string }) => tool.name)).not.toContain("reveal_secret");
@@ -131,7 +133,7 @@ describe("compact management discovery", () => {
   });
 
   it("enforces pinned views before database access and rejects misspelled views", async () => {
-    for (const name of ["delete_playbook", "store_secret", "create_persona", "reset_persona"]) {
+    for (const name of ["delete_playbook", "store_secret", "get_secret_status", "use_secret", "use_secret_write", "create_persona", "reset_persona"]) {
       const result = await (await POST(request(name, { playbook_id: "pb" }, "memory"))).json();
       expect(result.error.code).toBe(-32602);
     }
@@ -147,6 +149,24 @@ describe("compact management discovery", () => {
     const forwarded = scoped.mock.calls[0][0] as Request;
     expect(new URL(forwarded.url).searchParams.has("toolset")).toBe(false);
     expect((await forwarded.json()).params.arguments).toEqual({ canvas_id: "doc" });
+  });
+
+  it.each(["get_secret_status", "use_secret", "use_secret_write"])("keeps OAuth and scoped authorization for core %s", async name => {
+    vi.mocked(validateUserApiKey).mockResolvedValueOnce(null);
+    vi.mocked(getAuthenticatedUser).mockResolvedValueOnce({ id: "oauth-user" });
+    const denied = { jsonrpc: "2.0", id: 1, error: { code: -32001, message: "Playbook access denied" } };
+    scoped.mockResolvedValueOnce(new Response(JSON.stringify(denied), { status: 403 }));
+    const scopedArgs = { secret_name: "TEST", ...(name === "get_secret_status" ? {} : { url: "https://api.example.com" }) };
+    const response = await POST(new Request(request(name, { playbook_id: "pb", ...scopedArgs }), {
+      headers: { "Content-Type": "application/json", Authorization: "Bearer oauth-access-token" },
+    }));
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual(denied);
+    expect(scoped).toHaveBeenCalledOnce();
+    const forwarded = scoped.mock.calls[0][0] as Request;
+    expect(forwarded.headers.get("Authorization")).toBe("Bearer oauth-access-token");
+    expect(new URL(forwarded.url).pathname).toBe("/api/mcp/project");
+    expect((await forwarded.json()).params).toEqual({ name, arguments: scopedArgs });
   });
 
   it("returns callable account schemas for scoped search and routes connected names through the same guards", async () => {

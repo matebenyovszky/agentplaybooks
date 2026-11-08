@@ -38,7 +38,8 @@ describe("local AgentPlaybooks MCP transport", () => {
     expect(tools.some((tool) => tool.name === "list_playbooks")).toBe(true);
     const skill = tools.find((tool) => tool.name === "get_skill");
     expect(skill?.inputSchema.required).toContain("playbook_id");
-    expect(tools).toHaveLength(17);
+    expect(tools).toHaveLength(20);
+    expect(tools.map(tool => tool.name)).toEqual(expect.arrayContaining(["get_secret_status", "use_secret", "use_secret_write"]));
     expect(tools.find(tool => tool.name === "find_tools")?.inputSchema.required).toEqual(["query"]);
     expect(tools.some(tool => tool.name === "delete_playbook")).toBe(false);
     expect(validateUserApiKey).not.toHaveBeenCalled();

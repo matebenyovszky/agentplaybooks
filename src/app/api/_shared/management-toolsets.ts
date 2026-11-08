@@ -8,6 +8,8 @@ const CORE = new Set([
   "list_skills", "get_skill", "get_skill_reference",
   "search_memory", "read_memory", "write_memory",
   "list_canvas", "read_canvas", "write_canvas", "list_mcp_servers", "find_tools",
+  // Hosts register only advertised tools; find_tools cannot add proxy bindings.
+  "get_secret_status", "use_secret", "use_secret_write",
 ]);
 const ACCOUNT_ADMIN = new Set([
   "create_playbook", "delete_playbook", "create_persona", "update_persona",
