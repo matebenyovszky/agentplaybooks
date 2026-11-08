@@ -74,25 +74,9 @@
     "undici": "7.30.1",
     "postcss": "8.5.28",
     "sharp": "0.35.5",
-    "@opennextjs/cloudflare": {
-      "glob": {
-        "minimatch": {
-          "brace-expansion": "5.0.12"
-        }
-      }
-    },
-    "@node-minify/core": {
-      "glob": {
-        ".": "10.5.0",
-        "minimatch": {
-          "brace-expansion": "2.1.7"
-        }
-      }
-    },
+    "glob@>=9.0.0 <=14.0.1": "14.0.2",
+    "minimatch@>=7.0.0 <11.0.1": "11.0.1",
     "js-yaml": "4.3.2",
-    "@typescript-eslint/typescript-estree": {
-      "brace-expansion": "5.0.12"
-    },
     "source-map-js": "1.2.2"
   }
 }
