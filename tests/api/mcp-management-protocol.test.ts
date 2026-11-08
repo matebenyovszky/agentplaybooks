@@ -144,6 +144,44 @@ describe("AgentPlaybooks management MCP transport", () => {
     expect(manifest._auth).toMatchObject({ type: "oauth2", actor: "oauth" });
   });
 
+  it("registers vault proxy tools in OAuth core discovery with unchanged contracts and effects", async () => {
+    mockValidateUserApiKey.mockResolvedValue(null);
+    mockGetAuthenticatedUser.mockResolvedValue({ id: "oauth-user" });
+    const headers = { Authorization: "Bearer oauth-access-token" };
+    const listed = await (await POST(mcpRequest({ id: 30, method: "tools/list" }, headers))).json();
+    const manifest = await (await GET(new Request("http://localhost/api/mcp/manage", { headers }))).json();
+    const full = await (await POST(mcpRequest({ id: 31, method: "tools/list" }, headers, "?toolset=full"))).json();
+    expect(manifest._auth.actor).toBe("oauth");
+    expect(listed.result.tools).toEqual(manifest.tools);
+    const names = listed.result.tools.map((tool: { name: string }) => tool.name);
+    expect(names).toHaveLength(20);
+    for (const name of ["get_secret_status", "use_secret", "use_secret_write"]) {
+      expect(names).toContain(name);
+      const tool = listed.result.tools.find((entry: { name: string }) => entry.name === name);
+      const complete = full.result.tools.find((entry: { name: string }) => entry.name === name);
+      expect(tool.inputSchema).toEqual(complete.inputSchema);
+      expect(tool.inputSchema.required).toEqual(expect.arrayContaining(["playbook_id", "secret_name"]));
+      expect(tool.outputSchema).toEqual(complete.outputSchema);
+      expect(tool.annotations).toEqual(complete.annotations);
+      expect(tool.annotations.readOnlyHint).toBe(name !== "use_secret_write");
+      expect(tool.annotations.destructiveHint).toBe(name === "use_secret_write");
+      expect(tool.annotations.openWorldHint).toBe(name !== "get_secret_status");
+    }
+    expect(listed.result.tools.find((tool: { name: string }) => tool.name === "use_secret").inputSchema.properties.method.enum).toEqual(["GET", "HEAD"]);
+    expect(listed.result.tools.find((tool: { name: string }) => tool.name === "use_secret_write").inputSchema.properties.method.enum).toEqual(["POST", "PUT", "PATCH", "DELETE"]);
+    for (const name of ["reveal_secret", "store_secret", "rotate_secret", "delete_secret"]) {
+      expect(names).not.toContain(name);
+    }
+    const diagnostics = await (await POST(mcpRequest({ id: 32, method: "tools/call", params: { name: "get_connection_info", arguments: {} } }, headers))).json();
+    expect(diagnostics.result.structuredContent).toMatchObject({
+      catalog_revision: "2026-11-08.core-vault.1", toolset: "core",
+      credential_kind: "oauth", account_permissions: ["full"], advertised_tools: names,
+    });
+    for (const name of ["get_secret_status", "use_secret", "use_secret_write"]) {
+      expect(diagnostics.result.structuredContent.callable_tools).toContain(name);
+    }
+  });
+
   it("negotiates the current protocol version", async () => {
     const response = await POST(mcpRequest({
       id: 1,

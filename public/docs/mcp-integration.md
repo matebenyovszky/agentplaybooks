@@ -347,7 +347,20 @@ catalog refresh or updated skill to discover, not a credential migration.
 
 ### Account connection diagnostics
 
-The account endpoint `/api/mcp/manage` defaults to 17 common operations with
+The default account `core` catalog advertises `get_secret_status`, `use_secret`
+and `use_secret_write` directly, with `playbook_id` required. Status checks are
+value-free; proxy calls inject credentials on the server. Existing account and
+playbook authorization and read/write effect annotations still apply.
+`reveal_secret` and vault administration remain outside the compact catalog.
+
+When deploying a catalog fix, verify that these names appear in both
+`get_connection_info.advertised_tools` and MCP `tools/list` on the existing OAuth
+connection. Then refresh the client's tool catalog and verify that the host
+registers the functions, opening a new chat if needed. A new chat alone cannot
+fix an unchanged server catalog, and `find_tools` cannot register host functions.
+No new API key or OAuth credential is needed for this catalog change.
+
+The account endpoint `/api/mcp/manage` defaults to 20 common operations with
 short descriptions. Existing input/output schemas and safety annotations are
 retained for compatibility; full descriptions are loaded on demand; the full view currently has 56 operations. Safety annotations
 remain present in both views. A pinned domain view still restricts calls; the

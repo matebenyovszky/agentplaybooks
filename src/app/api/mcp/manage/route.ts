@@ -249,7 +249,7 @@ app.post("/", async (c) => {
             host_registration: "unknown_to_server",
             secret_reveal: { supported: view.allows("reveal_secret"), requires: ["playbook secrets:read access", "per-secret allow_api_key_reveal=true", "unexpired secret", "successful audit write", "user need for raw access"] },
             next_steps: [
-              "If a local function is missing, the request never reached this server. Refresh the host tool catalog and start a new conversation. find_tools returns schemas; it cannot register host functions.",
+              "If a local function is missing, the request never reached this server. If the tool is callable but not advertised, update the server catalog first. Then refresh the host tool catalog and start a new conversation if needed. find_tools returns schemas; it cannot register host functions.",
               "Load selected schemas with find_tools(include_schemas=true), or public /api/tools/{name}. For unregistered host tools, use authenticated POST /api/control/{name} when an HTTP executor is available. Full catalogs are an opt-in fallback for hosts without either path.",
               "Account permissions are not playbook authorization. Use get_secret_status for a named secret, or list_secrets, to inspect value-free capabilities. Proxy header injection needs no reveal; browser form login is a separate client capability.",
             ],
