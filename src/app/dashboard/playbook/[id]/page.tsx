@@ -1942,7 +1942,6 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
               </h2>
 
               <div className="space-y-6">
-                {(isOwner || playbook.current_user_role === "auditor") && <AuditDownload playbookId={playbook.guid || playbook.id} />}
                 {/* Description */}
                 <div
                   data-testid="playbook-description"
@@ -2139,6 +2138,9 @@ export default function PlaybookEditorPage({ params }: { params: Promise<{ id: s
                     </>
                   )}
                 </div>
+
+                {/* Audit evidence */}
+                {(isOwner || playbook.current_user_role === "auditor") && <AuditDownload playbookId={playbook.guid || playbook.id} />}
 
                 {/* Danger Zone */}
                 {isOwner && <div className={cn(
