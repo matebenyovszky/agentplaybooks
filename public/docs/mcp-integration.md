@@ -587,22 +587,17 @@ form login, which additionally needs a suitable client workflow.
 
 The agent receives only the API response — the secret value stays on the server.
 
-### Example: Storing a Secret
+### Adding a Secret Without Exposing It to the Agent
 
-```json
-{
-  "method": "tools/call",
-  "params": {
-    "name": "store_secret",
-    "arguments": {
-      "name": "OPENAI_API_KEY",
-      "value": "sk-...",
-      "description": "OpenAI API key for GPT-4",
-      "category": "api_key"
-    }
-  }
-}
-```
+Do not ask the user to send a value in chat or place it in a `store_secret` /
+`rotate_secret` tool argument: tool inputs can remain in the agent transcript.
+Prepare a small program that requests hidden input and uploads directly from
+the user's own terminal, or reuse the reviewed helper in the
+[secure input guide](./secure-secret-input.md). It refuses echoed input and
+redirects, verifies HTTPS, avoids plaintext files and sanitizes output/errors.
+Confirm the destination and create/rotate choice using metadata only. Users
+without a local terminal can enter the value directly in the **Secrets** web UI.
+Verify success by metadata rather than revealing the secret.
 
 ## Authentication
 

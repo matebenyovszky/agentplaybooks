@@ -101,6 +101,7 @@ export function SecretManager({ storage, secrets, onUpdate, readOnly = false }: 
   }, [loadSecrets]);
 
   const handleCreate = async () => {
+    if (creating) return;
     if (!newName.trim()) {
       setCreateError("Name is required");
       return;
@@ -155,6 +156,23 @@ export function SecretManager({ storage, secrets, onUpdate, readOnly = false }: 
     setCreateError("");
   };
 
+  const closeCreateModal = () => {
+    if (creating) return;
+    const hasChanges = !!(newName || newValue || newDescription || newExpiresAt
+      || newCategory !== "api_key" || newAllowApiKeyReveal);
+    if (hasChanges && !confirm("Discard this new secret? Your unsaved changes will be lost.")) return;
+    setShowCreateModal(false);
+    resetCreateForm();
+  };
+
+  const closeRotateModal = () => {
+    if (rotating) return;
+    const hasChanges = !!rotateValue || rotateExpiry.value !== rotateExpiry.initial;
+    if (hasChanges && !confirm("Discard these secret changes? Your unsaved changes will be lost.")) return;
+    setShowRotateModal(null);
+    setRotateValue("");
+  };
+
   const handleReveal = async (name: string) => {
     setActionError("");
     if (revealedSecrets[name]) {
@@ -189,7 +207,7 @@ export function SecretManager({ storage, secrets, onUpdate, readOnly = false }: 
   };
 
   const handleRotate = async (name: string) => {
-    if (!rotateValue.trim()) return;
+    if (rotating || !rotateValue.trim()) return;
 
     setActionError("");
     setRotating(true);
@@ -553,28 +571,28 @@ export function SecretManager({ storage, secrets, onUpdate, readOnly = false }: 
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
-            onClick={() => {
-              setShowCreateModal(false);
-              resetCreateForm();
-            }}
           >
+            {/* Backdrop clicks (including text-selection drags) must not discard edits. */}
             <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="create-secret-title"
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="w-full max-w-lg bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-500/30 rounded-xl shadow-2xl overflow-hidden"
+              className="w-full max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-500/30 rounded-xl shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between p-4 border-b border-neutral-200 dark:border-slate-700/50">
-                <h3 className="text-lg font-semibold flex items-center gap-2 text-neutral-900 dark:text-white">
+                <h3 id="create-secret-title" className="text-lg font-semibold flex items-center gap-2 text-neutral-900 dark:text-white">
                   <Lock className="h-5 w-5 text-emerald-400" />
                   Add New Secret
                 </h3>
                 <button
-                  onClick={() => {
-                    setShowCreateModal(false);
-                    resetCreateForm();
-                  }}
+                  type="button"
+                  aria-label="Close new secret"
+                  onClick={closeCreateModal}
+                  disabled={creating}
                   className="p-2 text-neutral-400 dark:text-slate-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
                 >
                   <X className="h-5 w-5" />
@@ -590,10 +608,11 @@ export function SecretManager({ storage, secrets, onUpdate, readOnly = false }: 
 
                 {/* Name */}
                 <div>
-                  <label className="block text-sm font-medium text-neutral-600 dark:text-slate-400 mb-1">
-                    Name <span className="text-red-400">*</span>
+                  <label htmlFor="new-secret-name" className="block text-sm font-medium text-neutral-600 dark:text-slate-400 mb-1">
+                    Name / identifier <span className="text-red-400">*</span>
                   </label>
                   <input
+                    id="new-secret-name"
                     type="text"
                     value={newName}
                     onChange={(e) => setNewName(e.target.value.replace(/[^a-zA-Z0-9_-]/g, ""))}
@@ -606,36 +625,35 @@ export function SecretManager({ storage, secrets, onUpdate, readOnly = false }: 
                     )}
                   />
                   <p className="text-xs text-neutral-400 dark:text-slate-500 mt-1">
-                    Only letters, numbers, hyphens, and underscores allowed
+                    Used to reference this secret. Only letters, numbers, hyphens, and underscores allowed.
                   </p>
                 </div>
 
-                {/* Value */}
+                {/* Description */}
                 <div>
-                  <label className="block text-sm font-medium text-neutral-600 dark:text-slate-400 mb-1">
-                    Secret Value <span className="text-red-400">*</span>
+                  <label htmlFor="new-secret-description" className="block text-sm font-medium text-neutral-600 dark:text-slate-400 mb-1">
+                    Description
                   </label>
                   <input
-                    type="password"
-                    value={newValue}
-                    onChange={(e) => setNewValue(e.target.value)}
-                    placeholder="sk-..."
+                    id="new-secret-description"
+                    type="text"
+                    value={newDescription}
+                    onChange={(e) => setNewDescription(e.target.value)}
+                    placeholder="What is this secret used for?"
                     className={cn(
-                      "w-full px-3 py-2 rounded-lg font-mono",
+                      "w-full px-3 py-2 rounded-lg",
                       "bg-neutral-50 dark:bg-slate-800 border border-neutral-200 dark:border-slate-700",
                       "text-neutral-900 dark:text-slate-200 placeholder:text-neutral-400 dark:placeholder:text-slate-600",
                       "focus:outline-none focus:border-emerald-500/50"
                     )}
                   />
-                  <p className="text-xs text-neutral-400 dark:text-slate-500 mt-1">
-                    Will be encrypted with AES-256-GCM before storage
-                  </p>
                 </div>
 
-                {/* Category */}
+                {/* Type */}
                 <div>
-                  <label className="block text-sm font-medium text-neutral-600 dark:text-slate-400 mb-1">Category</label>
+                  <label htmlFor="new-secret-type" className="block text-sm font-medium text-neutral-600 dark:text-slate-400 mb-1">Type</label>
                   <select
+                    id="new-secret-type"
                     value={newCategory}
                     onChange={(e) => setNewCategory(e.target.value as SecretCategory)}
                     className={cn(
@@ -653,31 +671,36 @@ export function SecretManager({ storage, secrets, onUpdate, readOnly = false }: 
                   </select>
                 </div>
 
-                {/* Description */}
+                {/* Value */}
                 <div>
-                  <label className="block text-sm font-medium text-neutral-600 dark:text-slate-400 mb-1">
-                    Description
+                  <label htmlFor="new-secret-value" className="block text-sm font-medium text-neutral-600 dark:text-slate-400 mb-1">
+                    Secret Value <span className="text-red-400">*</span>
                   </label>
                   <input
-                    type="text"
-                    value={newDescription}
-                    onChange={(e) => setNewDescription(e.target.value)}
-                    placeholder="What is this secret used for?"
+                    id="new-secret-value"
+                    type="password"
+                    value={newValue}
+                    onChange={(e) => setNewValue(e.target.value)}
+                    placeholder="Enter the secret value"
                     className={cn(
-                      "w-full px-3 py-2 rounded-lg",
+                      "w-full px-3 py-2 rounded-lg font-mono",
                       "bg-neutral-50 dark:bg-slate-800 border border-neutral-200 dark:border-slate-700",
                       "text-neutral-900 dark:text-slate-200 placeholder:text-neutral-400 dark:placeholder:text-slate-600",
                       "focus:outline-none focus:border-emerald-500/50"
                     )}
                   />
+                  <p className="text-xs text-neutral-400 dark:text-slate-500 mt-1">
+                    Will be encrypted with AES-256-GCM before storage
+                  </p>
                 </div>
 
                 {/* Expires At */}
                 <div>
-                  <label className="block text-sm font-medium text-neutral-600 dark:text-slate-400 mb-1">
+                  <label htmlFor="new-secret-expiry" className="block text-sm font-medium text-neutral-600 dark:text-slate-400 mb-1">
                     Expires At (optional)
                   </label>
                   <input
+                    id="new-secret-expiry"
                     type="datetime-local"
                     value={newExpiresAt}
                     onChange={(e) => setNewExpiresAt(e.target.value)}
@@ -693,15 +716,15 @@ export function SecretManager({ storage, secrets, onUpdate, readOnly = false }: 
 
               <div className="flex justify-end gap-3 p-4 border-t border-neutral-200 dark:border-slate-700/50">
                 <button
-                  onClick={() => {
-                    setShowCreateModal(false);
-                    resetCreateForm();
-                  }}
+                  type="button"
+                  onClick={closeCreateModal}
+                  disabled={creating}
                   className="px-4 py-2 text-neutral-600 dark:text-slate-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
                 >
                   Cancel
                 </button>
                 <button
+                  type="button"
                   onClick={handleCreate}
                   disabled={creating || !newName.trim() || !newValue.trim()}
                   className={cn(
@@ -737,28 +760,27 @@ export function SecretManager({ storage, secrets, onUpdate, readOnly = false }: 
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
-            onClick={() => {
-              setShowRotateModal(null);
-              setRotateValue("");
-            }}
           >
             <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="rotate-secret-title"
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="w-full max-w-md bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-500/30 rounded-xl shadow-2xl overflow-hidden"
+              className="w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-500/30 rounded-xl shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between p-4 border-b border-neutral-200 dark:border-slate-700/50">
-                <h3 className="text-lg font-semibold flex items-center gap-2 text-neutral-900 dark:text-white">
+                <h3 id="rotate-secret-title" className="text-lg font-semibold flex items-center gap-2 text-neutral-900 dark:text-white">
                   <RefreshCw className="h-5 w-5 text-amber-400" />
                   Rotate Secret
                 </h3>
                 <button
-                  onClick={() => {
-                    setShowRotateModal(null);
-                    setRotateValue("");
-                  }}
+                  type="button"
+                  aria-label="Close secret rotation"
+                  onClick={closeRotateModal}
+                  disabled={rotating}
                   className="p-2 text-neutral-400 dark:text-slate-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
                 >
                   <X className="h-5 w-5" />
@@ -814,15 +836,15 @@ export function SecretManager({ storage, secrets, onUpdate, readOnly = false }: 
 
               <div className="flex justify-end gap-3 p-4 border-t border-neutral-200 dark:border-slate-700/50">
                 <button
-                  onClick={() => {
-                    setShowRotateModal(null);
-                    setRotateValue("");
-                  }}
+                  type="button"
+                  onClick={closeRotateModal}
+                  disabled={rotating}
                   className="px-4 py-2 text-neutral-600 dark:text-slate-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
                 >
                   Cancel
                 </button>
                 <button
+                  type="button"
                   onClick={() => showRotateModal && handleRotate(showRotateModal)}
                   disabled={rotating || !rotateValue.trim()}
                   className={cn(

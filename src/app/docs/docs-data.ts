@@ -57,6 +57,12 @@ export const docsEntries: DocEntry[] = [
     section: "guides",
   },
   {
+    slug: "secure-secret-input",
+    title: "Secure Secret Input",
+    description: "Hidden terminal input and direct vault uploads without exposing credentials to agents",
+    section: "guides",
+  },
+  {
     slug: "python-secrets",
     title: "Python Secrets",
     description: "Startup secret loading with API keys or mTLS, including self-hosted proxy mode",
