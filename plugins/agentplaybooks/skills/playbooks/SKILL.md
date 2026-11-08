@@ -80,8 +80,16 @@ while editing a section someone else might also edit.
 - `use_secret` makes a read request (GET or HEAD) to an allowed host with the
   secret injected server-side. `use_secret_write` does the same for writes.
   Name the host and the effect to the user before a write.
-- Never ask the user to paste a credential into the chat. To add one, point
-  them to the playbook's **Secrets** tab in the AgentPlaybooks web app.
+- Never ask the user to paste a credential into chat or pass its value as a
+  tool argument, including vault-write or terminal-input arguments. To add one,
+  prepare a small hidden-input upload program or reuse the reviewed helper in
+  the [secure input guide](https://agentplaybooks.ai/docs/secure-secret-input).
+  The user runs it in their own trusted terminal, outside the agent session.
+  It must abort if echo cannot be disabled, send directly over verified HTTPS
+  without redirects, avoid plaintext files and sanitize all output/errors.
+  Specify the server, playbook and secret identifier; require an explicit
+  create/rotate choice. Verify by metadata, without revealing the value.
+  Browser-only users can enter it directly in the playbook's **Secrets** tab.
 
 ## Boundaries
 

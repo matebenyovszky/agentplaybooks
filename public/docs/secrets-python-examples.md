@@ -10,6 +10,11 @@ mTLS authentication, Docker examples, and compatibility with existing CI/CD valu
 
 Ready-to-use Python code for integrating with the AgentPlaybooks Secrets API. These examples cover the **Proxy** (zero-exposure) pattern, the optional **Reveal** pattern, and full CRUD operations.
 
+For a person adding a credential, use the [hidden-input upload helper](./secure-secret-input.md)
+in their own terminal or the vault web UI. Agents must not collect real values
+in chat/tool arguments or substitute them into the code examples below. The
+helper also suppresses response bodies and raw errors, which may contain secrets.
+
 ## Prerequisites
 
 ```bash
@@ -224,7 +229,7 @@ def reveal_secret(secret_name: str) -> str:
 # Example
 try:
     token = reveal_secret("GITHUB_TOKEN")
-    print(f"Token (first 10 chars): {token[:10]}...")
+    # Pass token directly to the authorized local SDK. Never print any part of it.
 except PermissionError as e:
     print(f"Cannot reveal: {e}")
     print("Use the proxy pattern instead, or enable allow_api_key_reveal.")

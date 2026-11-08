@@ -23,6 +23,8 @@ const EXPECTED_NAMES = [
   "skills/agentplaybooks/references/api-compatibility.json",
   "skills/agentplaybooks/references/hosted-api.md",
   "skills/agentplaybooks/references/local-cli.md",
+  "skills/agentplaybooks/scripts/store-vault-secret.ps1",
+  "skills/agentplaybooks/scripts/store-vault-secret.py",
 ];
 
 test("default Skills-only ZIP path is packages/cli/dist/agentplaybooks-openai-skills.zip", () => {

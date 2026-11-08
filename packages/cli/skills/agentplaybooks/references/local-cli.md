@@ -154,8 +154,8 @@ Substitute your variant for `apb` in the commands below.
   last applied sync state; local edits remain conflicts. `push --apply`
   refuses an incomplete backup; resolve drift before retrying. `pull` skips
   differing local files and reports each conflict.
-- Never echo API keys. Prefer `AGENTPLAYBOOKS_API_KEY=<your-key>` in the
-  environment over pasting keys into the terminal. `push` refuses to upload
+- Never echo API keys or put literals in shell commands. Use the CLI's hidden
+  login prompt or an existing trusted secret provider. `push` refuses to upload
   content that looks like it contains hard-coded credentials — fix the finding
   instead of working around it.
 - If the bundled Codex MCP connection reports an authentication error, use
@@ -167,11 +167,18 @@ Substitute your variant for `apb` in the commands below.
   "AGENTPLAYBOOKS_API_KEY"` under `[mcp_servers.agentplaybooks-account]` in
   Codex configuration and fully restart it. Never ask the user to paste the key
   into chat.
-- `apb secrets status` is safe to run. **Do not run `apb secrets push` for the
-  user**: storing a credential is theirs to confirm, and the command needs a
-  value on stdin that you must never hold or generate. Tell them the exact
-  command instead, e.g.
-  `pass show deploy/api | apb secrets push DEPLOY_API_KEY`.
+- `apb secrets status` is safe to run. For manual vault entry give the user
+  the bundled [Python helper](../scripts/store-vault-secret.py) or
+  [PowerShell helper](../scripts/store-vault-secret.ps1). They run it in their
+  own trusted terminal, outside the agent session; do not conduct the input
+  session for them. Require hidden input (abort on Python's `GetPassWarning`;
+  PowerShell requires a console and `Read-Host -AsSecureString`), verified HTTPS,
+  no redirects, sanitized errors and an explicit create/rotate choice. No values
+  in chat, agent/tool arguments, terminal-input tools, argv, plaintext files or
+  logs. Verify by metadata without reveal. Use the vault UI if no local terminal
+  is available. A direct password-manager pipe to `apb secrets push` is another
+  option after the user reviews the destination and possible rotation; see the
+  [secure input guide](https://agentplaybooks.ai/docs/secure-secret-input).
 - `apb secrets run -- <command>` injects values into one child process and
   writes nothing to disk. Prefer it over asking the user to export variables,
   and never suggest writing secrets into `.env`, `.mcp.json`, or a skill.

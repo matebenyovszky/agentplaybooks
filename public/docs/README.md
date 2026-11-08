@@ -13,6 +13,7 @@ Welcome to the AgentPlaybooks documentation.
 - [AgentPlaybooks Tools in Hermes](./hermes-portable-agents.md) - Connect playbook skills, MCP/OpenAPI tools, and credentials
 - [Team Collaboration](./team-collaboration.md) - Share playbooks securely with human editors
 - [Audit Logs](./audit-logs.md) - Export, retention, hash chain, and the auditor role
+- [Secure Secret Input](./secure-secret-input.md) - Add vault credentials without putting values in agent context
 - [Roadmap](./roadmap.md) - Development roadmap and future plans
 
 ### Core Concepts

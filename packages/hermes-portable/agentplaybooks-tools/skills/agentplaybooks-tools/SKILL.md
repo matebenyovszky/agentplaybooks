@@ -20,7 +20,7 @@ This skill does not install software or run commands by itself.
 
 ## Guided setup
 
-Requires `@agentplaybooks/cli@0.10.0` or later. Run on the gateway host/container.
+Requires `@agentplaybooks/cli@0.10.1` or later. Run on the gateway host/container.
 Choose the profile explicitly using `--profile=<name>` and, when needed,
 `--hermes-home=<installation-directory>`; keep that selection on every command.
 
@@ -71,6 +71,17 @@ If the user wants to configure an upstream service, guide them to create or
 select its vault secret in AgentPlaybooks, then associate that secret with the
 service's MCP/OpenAPI configuration. The agent should use the exposed tool; it
 must not ask the user to reveal the upstream secret in chat.
+
+For manual entry, prepare a small hidden-input upload program or reuse the
+reviewed helper in the [secure input guide](https://agentplaybooks.ai/docs/secure-secret-input).
+The user runs it in their own trusted local terminal, outside the Hermes chat or
+agent-controlled terminal. Require hidden input with no echoed fallback, verified
+HTTPS with no redirects, sanitized output/errors and no plaintext files. Never
+pass values through chat, agent/tool arguments, terminal-input tools, argv or logs.
+State the server, playbook, secret identifier and create/rotate choice; check
+success by metadata without reveal. Use the vault UI if no suitable terminal is
+available. A trusted password manager may instead pipe directly to the CLI after
+the user reviews the target and possible rotation.
 
 ## Limits and safety
 

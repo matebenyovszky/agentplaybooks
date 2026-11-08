@@ -62,6 +62,7 @@
     "@types/react-dom": "^19",
     "eslint": "^10",
     "eslint-config-next": "16.4.3",
+    "happy-dom": "^21.0.4",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
     "typescript": "^5",

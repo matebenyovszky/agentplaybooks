@@ -58,9 +58,20 @@ when the user explicitly needs raw access, the host exposes that tool,
 access and a successful audit write. Never turn reveal on automatically. Do not
 echo raw values in chat or persist them in files, skill bodies, memory or logs.
 Header injection does not require reveal; browser form login additionally needs
-a suitable client workflow and is not provided by `use_secret`. For adding/rotating a secret, direct the user to
-the secure vault UI or their local stdin-based CLI workflow; don't request a
-value in chat. A read permission or discovered tool is not permission to send
+a suitable client workflow and is not provided by `use_secret`. For adding or
+rotating a secret, prepare the destination metadata and give the user the bundled
+[Python helper](scripts/store-vault-secret.py) or
+[PowerShell helper](scripts/store-vault-secret.ps1), whichever fits their local
+runtime. They run it in their own trusted terminal, outside the agent session;
+use the secure vault UI when local execution is unavailable. Both helpers
+require hidden input, upload directly over verified HTTPS, refuse redirects,
+sanitize errors and distinguish creation from explicitly requested rotation.
+Do not collect values in chat or pass them through agent/tool arguments,
+terminal-input tools, argv, plaintext files or logs. Never reveal a value or
+enable reveal to verify storage; check metadata instead. See the
+[secure input guide](https://agentplaybooks.ai/docs/secure-secret-input) before
+preparing an equivalent helper or a direct password-manager-to-CLI pipe.
+A read permission or discovered tool is not permission to send
 data to a new external destination, delete content, or replace whole documents.
 Report permission and policy failures; do not bypass them by changing transport.
 

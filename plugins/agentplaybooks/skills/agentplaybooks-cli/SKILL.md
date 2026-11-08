@@ -10,7 +10,7 @@ terminal. Run it through npm with the version pinned, which is the version
 this plugin was released and tested with:
 
 ```
-npx --yes @agentplaybooks/cli@0.10.0 <command>
+npx --yes @agentplaybooks/cli@0.10.1 <command>
 ```
 
 In chat or Cowork, where there is no project directory, use the connected
@@ -36,7 +36,7 @@ it again with `--apply` only after the user agrees.
 
 - `doctor` and `sync` are local and need no account.
 - `playbooks`, `pull`, `push`, and `backups` need a stored key. If one is
-  missing, the user runs `npx --yes @agentplaybooks/cli@0.10.0 login` in their
+  missing, the user runs `npx --yes @agentplaybooks/cli@0.10.1 login` in their
   own terminal; it prompts for the key and stores it in the user's private
   credential file. Never ask for the key in chat, and never print, read, or
   copy that file.
@@ -46,6 +46,18 @@ it again with `--apply` only after the user agrees.
   that CA's file in the user's terminal.
 - Secret values never move. The CLI writes `${VAR}` references, and `doctor`
   reports a credential that is hard-coded in a config file without printing it.
+
+For a new vault credential, prepare a small program that reads it without echo
+and uploads directly to the selected playbook, or reuse the reviewed helper in
+the [secure input guide](https://agentplaybooks.ai/docs/secure-secret-input).
+The user runs it in their own trusted terminal, outside the agent session.
+Abort if hidden input is unavailable; verify HTTPS certificates, refuse redirects,
+and print no credential, request/response body or raw exception. No values in
+chat, agent tool arguments, terminal-input tools, argv, plaintext files or logs.
+Confirm the destination and create/rotate choice using metadata; check success
+with metadata rather than reveal. Use the vault web UI when no local terminal
+is available. An existing password-manager value can instead go through a direct
+pipe to `apb secrets push`, after the user reviews its possible rotation behavior.
 
 ## Typical requests
 

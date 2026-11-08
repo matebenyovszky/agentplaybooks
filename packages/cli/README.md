@@ -266,6 +266,16 @@ plugin-facing MCP tools return a normal MCP result.
 
 ## Secrets
 
+For manual entry, the CLI skill includes a
+[Python helper](skills/agentplaybooks/scripts/store-vault-secret.py) and a
+[PowerShell helper](skills/agentplaybooks/scripts/store-vault-secret.ps1)
+(Windows PowerShell 5.1 / PowerShell 7+).
+Have the agent prepare the command with the server, playbook and secret name;
+run it yourself in a trusted terminal outside the agent session. It prompts
+without echo, uploads over verified HTTPS, refuses redirects and suppresses raw
+errors/response bodies. See the [secure input guide](https://agentplaybooks.ai/docs/secure-secret-input).
+Never supply a real value in chat, agent tool arguments or shell command lines.
+
 **A plaintext secret value never touches the disk.** Not in the manifest, not in
 a generated `.env`, not in `~/.agentplaybooks`. What the CLI stores is the
 requirement; what it moves is a value in memory, on request.

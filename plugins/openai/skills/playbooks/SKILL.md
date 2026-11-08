@@ -50,6 +50,15 @@ This directory integration manages AgentPlaybooks knowledge and documents.
 It does not call third-party services or handle secret values. Never ask the user
 to paste credentials into chat, memory, documents or package files.
 
+For vault input, direct the user to the secure vault web UI. If local execution
+is available, prepare a small hidden-input upload program using the reviewed
+[secure input guide](https://agentplaybooks.ai/docs/secure-secret-input).
+The user runs it in their own trusted terminal, outside the agent session.
+Abort if hidden input is unavailable; use verified HTTPS without redirects and
+sanitize errors. No values may pass through agent/tool arguments, terminal-input
+tools, argv, plaintext files or logs. Confirm the target and create/rotate choice
+using metadata, and verify storage without reading back the value.
+
 When a call is denied, report the missing permission or other reason. Never
 work around an access refusal with another account, endpoint or credential.
 

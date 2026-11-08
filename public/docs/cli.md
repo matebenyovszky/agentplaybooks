@@ -294,6 +294,12 @@ mistake, and a credential in the wrong vault is a tedious one to undo.
 
 ## Secrets: no plaintext value ever touches the disk
 
+For manual entry, have the agent prepare the
+[hidden-input upload helper](./secure-secret-input.md) and run it in your own
+terminal. It sends the value directly to the selected vault without passing
+through chat or agent tool arguments, and refuses visible input or redirects.
+Use the vault web UI when local execution is unavailable.
+
 ```bash
 apb secrets login <guid>     # a playbook-scoped key, stored 0600
 apb secrets status           # what's needed vs in the vault vs in this shell
