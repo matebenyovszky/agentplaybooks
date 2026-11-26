@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import sys
 import tempfile
+import time
 import types
 import threading
 import contextvars
@@ -44,6 +45,7 @@ class Service:
     def __init__(self):
         self.books = {guid: {"visibility": "private", "key": f"key-{guid}", "entries": {}, "history": {}} for guid in (A, B, C)}
         self.calls = []
+        self.sso = set()  # playbooks the signed-in (Entra SSO) user may access
 
     def open(self, req, timeout=None):
         parts = urlsplit(req.full_url)
@@ -51,6 +53,8 @@ class Service:
         guid = segments[3]
         book = self.books.get(guid)
         auth = req.get_header("X-api-key")
+        if auth is None and req.get_header("Authorization") == "Bearer sso-token" and guid in self.sso:
+            auth = book and book["key"]
         self.calls.append((req.method, guid, auth, req.full_url))
         def fail(code):
             raise HTTPError(req.full_url, code, "hidden error", {}, io.BytesIO(b"secret-server-body"))
@@ -221,6 +225,40 @@ class ProviderTests(unittest.TestCase):
         self.service.books[A]["visibility"] = "public"
         self.assertIn("error", self.call(p, "write", key="secret", value="must not upload"))
         self.assertNotIn("secret", self.service.books[A]["entries"])
+
+    def sso_helper(self, returncode=0, stderr=b""):
+        runs = []
+        def run(argv, **kwargs):
+            runs.append(argv)
+            body = json.dumps({"access_token": "sso-token", "expires_at": time.time() + 3600}).encode()
+            return types.SimpleNamespace(returncode=returncode, stdout=body if returncode == 0 else b"", stderr=stderr)
+        return runs, patch("agentplaybooks.token_source.subprocess.run", side_effect=run)
+
+    def test_entra_sso_token_command_replaces_playbook_keys(self):
+        self.secrets = {}
+        self.service.sso = {A, C}
+        config = json.loads((self.home / CONFIG_FILE).read_text())
+        config.update(team_playbooks=C, token_command=["apb", "token", "--entra", "--json"])
+        (self.home / CONFIG_FILE).write_text(json.dumps(config))
+        runs, helper = self.sso_helper()
+        with helper:
+            self.assertTrue(AgentPlaybooksMemoryProvider().is_available())
+            p = self.provider()
+            self.assertNotIn("error", self.call(p, "write", key="pref", value="tea"))
+            self.assertNotIn("error", self.call(p, "write", key="case", value="shared", source=C))
+        self.assertEqual(self.service.books[A]["entries"]["pref"]["value"], "tea")
+        self.assertEqual(self.service.books[C]["entries"]["case"]["value"], "shared")
+        # One helper run: the token is cached until shortly before it expires.
+        self.assertEqual(runs, [["apb", "token", "--entra", "--json"]])
+
+    def test_entra_sso_helper_failure_is_reported_without_a_key(self):
+        self.secrets = {"AGENTPLAYBOOKS_TOKEN_COMMAND": json.dumps(["apb", "token", "--entra", "--json"])}
+        _, helper = self.sso_helper(returncode=1, stderr=b"Run 'agentplaybooks login --entra'.\n")
+        with helper:
+            self.assertTrue(AgentPlaybooksMemoryProvider().is_available())
+            error = self.call(self.provider(), "search")["error"]
+        self.assertIn("login --entra", error)
+        self.assertEqual(self.service.calls, [])
 
     def test_recall_skips_acknowledgements_repeats_and_resets_after_write(self):
         p = self.provider()

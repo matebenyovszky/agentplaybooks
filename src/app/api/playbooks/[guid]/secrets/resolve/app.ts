@@ -7,6 +7,7 @@ import {
   mtlsRuntimeGrant,
   playbookOwnerByGuid,
   secretNames,
+  sessionMayLoadRuntime,
 } from "@/app/api/_shared/secret-runtime";
 import { AUDIT_UNAVAILABLE, recordSecretAudit, type AuditContext } from "@/app/api/_shared/audit";
 import { decryptSecret } from "@/lib/crypto";
@@ -27,13 +28,16 @@ function auditTrail(
   clientId: string | null,
   displayPrefix: string | null,
   request: Request,
+  memberId: string | null = null,
 ): AuditContext {
   const requestId = request.headers.get("cf-ray") || request.headers.get("x-request-id");
   return {
     playbookId,
     actor: clientId
       ? { type: "mtls", id: clientId }
-      : { type: "api_key", id: displayPrefix },
+      : memberId
+        ? { type: "owner", id: memberId }
+        : { type: "api_key", id: displayPrefix },
     requestId,
   };
 }
@@ -56,9 +60,14 @@ app.post("/", async c => {
   }
   let clientId: string | null = null;
   let allowedNames: string[] | null = null;
+  let memberId: string | null = null;
   if (mode === "api_key") {
+    // A playbook key first; otherwise a signed-in owner or editor (SSO session).
     if (!await bearerMayLoadRuntime(c.req.raw, playbook.playbookId)) {
-      return c.json({ error: "Authentication required or credential not authorized for this playbook" }, 401);
+      memberId = await sessionMayLoadRuntime(c.req.raw, playbook.playbookId);
+      if (!memberId) {
+        return c.json({ error: "Authentication required or credential not authorized for this playbook" }, 401);
+      }
     }
   } else {
     const grant = await mtlsRuntimeGrant(c.req.raw, playbook.playbookId);
@@ -68,8 +77,8 @@ app.post("/", async c => {
     clientId = grant.clientId;
     allowedNames = grant.allowedNames;
   }
-  const displayPrefix = clientId ? null : await storedDisplayPrefix(c.req.raw);
-  const audit = auditTrail(playbook.playbookId, clientId, displayPrefix, c.req.raw);
+  const displayPrefix = clientId || memberId ? null : await storedDisplayPrefix(c.req.raw);
+  const audit = auditTrail(playbook.playbookId, clientId, displayPrefix, c.req.raw, memberId);
   const names = [...required, ...optional];
   const denied = names.filter(name => allowedNames && !allowedNames.includes(name));
   if (denied.length) {

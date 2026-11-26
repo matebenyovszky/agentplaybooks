@@ -2,6 +2,7 @@
 import type { ApiHandlers, ApiRoute } from "./api-dispatch";
 
 export const apiRoutes: ApiRoute[] = [
+  { basePath: "/api", segments: ["auth","entra"], methods: ["GET","POST"], handlers: () => import("../app/api/auth/entra/route") as unknown as Promise<ApiHandlers> },
   { basePath: "/api", segments: ["collaboration-invites","[token]"], methods: ["GET","POST"], handlers: () => import("../app/api/collaboration-invites/[token]/route") as unknown as Promise<ApiHandlers> },
   { basePath: "/api", segments: ["connections"], methods: ["GET"], handlers: () => import("../app/api/connections/route") as unknown as Promise<ApiHandlers> },
   { basePath: "/api", segments: ["control","[operation]"], methods: ["POST"], handlers: () => import("../app/api/control/[operation]/route") as unknown as Promise<ApiHandlers> },
