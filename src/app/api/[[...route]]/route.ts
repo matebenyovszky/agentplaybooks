@@ -1733,6 +1733,19 @@ app.delete("/manage/playbooks/:id/mcp-servers/:mid", async (c) => {
 // SKILL ATTACHMENTS API
 // ============================================
 
+// Who may read a skill's attachments. Public and unlisted skills need no
+// credential. A private one needs owner or editor access, shown by a browser
+// session or by a user API key with skills:read, the read half of the
+// skills:write that uploading an attachment already accepts. Only a session
+// used to count here, so a key that could read these files inline through
+// GET /manage/playbooks/:id got 403 on the file's own path.
+async function mayReadSkillAttachments(c: AppContext, skill: SkillWithPlaybookAccess): Promise<boolean> {
+  const visibility = skill.playbooks?.visibility;
+  if (visibility === "public" || visibility === "unlisted") return true;
+  const user = await getUserFromAuthOrApiKey(c, "skills:read");
+  return user ? checkPlaybookWriteAccess(user.id, skill.playbook_id) : false;
+}
+
 // GET /api/manage/skills/:skillId/attachments - List attachments for a skill
 app.get("/manage/skills/:skillId/attachments", async (c) => {
   const skillId = c.req.param("skillId");
@@ -1751,12 +1764,7 @@ app.get("/manage/skills/:skillId/attachments", async (c) => {
     return c.json({ error: "Skill not found" }, 404);
   }
 
-  // Check if public or owned
-  const user = await getAuthenticatedUser(c);
-  const isPublicOrUnlisted = skill.playbooks?.visibility === 'public' || skill.playbooks?.visibility === 'unlisted';
-  const hasAccess = user ? await checkPlaybookWriteAccess(user.id, skill.playbook_id) : false;
-
-  if (!isPublicOrUnlisted && !hasAccess) {
+  if (!(await mayReadSkillAttachments(c, skill))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -1792,11 +1800,7 @@ app.get("/manage/skills/:skillId/attachments/:attachmentId", async (c) => {
     return c.json({ error: "Skill not found" }, 404);
   }
 
-  const user = await getAuthenticatedUser(c);
-  const isPublicOrUnlisted = skill.playbooks?.visibility === 'public' || skill.playbooks?.visibility === 'unlisted';
-  const hasAccess = user ? await checkPlaybookWriteAccess(user.id, skill.playbook_id) : false;
-
-  if (!isPublicOrUnlisted && !hasAccess) {
+  if (!(await mayReadSkillAttachments(c, skill))) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
