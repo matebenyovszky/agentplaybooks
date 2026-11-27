@@ -103,8 +103,8 @@ Usage:
                              [--allow-insecure-http] [--check] [--json]
   agentplaybooks hermes sync <bundle-guid> [--url=<base>] [--memory=<guid>]
                              [--managed-dir=<directory>] [--hermes-home=<directory>]
-                             [--hermes-bin=<path>] [--env-file=<file>] [--allow-insecure-http]
-                             [--apply] [--json]
+                             [--hermes-bin=<path>] [--env-file=<file>] [--key-env=<VAR>]
+                             [--allow-insecure-http] [--apply] [--json]
   agentplaybooks logout [--url=<base>] [--entra]
   agentplaybooks playbooks [--url=<base>] [--json]
   agentplaybooks backups <guid> [--url=<base>] [--json]
@@ -143,7 +143,9 @@ Commands:
              of those profiles (key from AGENTPLAYBOOKS_MEMORY_API_KEY, kept in
              the managed .env). --env-file adds credentials from a protected
              file; they are kept for later syncs. Bundle and bot playbooks are read anonymously,
-             so they must be public or unlisted. Plan-only without --apply.
+             so they must be public or unlisted, unless --key-env names a variable
+             holding a key that may read them (sent, never written). Plan-only
+             without --apply.
   doctor     Audit agent instructions, skills, MCP configuration, secrets, and drift.
   sync       Plan or apply the canonical manifest and missing platform files
              for enabled targets (claude, cursor, codex, copilot, gemini,
@@ -739,6 +741,7 @@ export async function run(args) {
       hermesHome: option("--hermes-home"),
       hermesBin: option("--hermes-bin"),
       envFile: option("--env-file"),
+      keyEnv: option("--key-env"),
       allowInsecureHttp: flags.has("--allow-insecure-http"),
     });
     if (flags.has("--json") && !flags.has("--apply")) console.log(JSON.stringify(publicSyncPlan(plan), null, 2));

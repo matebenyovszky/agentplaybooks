@@ -88,6 +88,16 @@ kerülnek, és a későbbi szinkronoknál is megmaradnak, akkor is, ha a fájl �
 nem érhető el. Ha egy kulcsot a bundle `env` mezője korábban beállított, de már
 nem állít, az törlődik.
 
+Privát bundle- és bot-playbookot API-kulccsal lehet olvasni: a
+`--key-env=<VÁLTOZÓ>` annak a környezeti változónak a neve, amelyben a kulcs
+van. Ez lehet egy olyan munkatárs felhasználói kulcsa (`playbooks:read`),
+akivel a playbookok meg vannak osztva, vagy a playbook saját kulcsa, ha az
+egészet olvashatja (`playbooks:read`, `personas:read`, `skills:read`). Ugyanaz
+a kulcs olvassa a bundle-t és minden botot, ezért playbook-kulcs csak bot
+nélküli bundle-höz elég. A kulcsot a szinkron minden olvasásnál elküldi, de
+a managed könyvtárba nem írja; az ütemezett futásnak is minden alkalommal a
+környezetében kell lennie.
+
 A Hermes csak akkor olvassa a managed réteget, ha a `HERMES_MANAGED_DIR` a
 managed könyvtárra mutat. A telepítő ezt egyszer állítsa be felhasználói
 környezeti változóként. TLS nélküli intranetes példánynál add hozzá az
@@ -113,7 +123,8 @@ playbookja tartalmazhat ügyspecifikus részleteket. A közös tudás ettől kü
 - A felhasználói szintű managed könyvtár csak tanácsadó jellegű, mert a munkatárs
   szerkesztheti. Valódi kikényszerítéshez gépszintű, a felhasználók számára csak
   olvasható `HERMES_MANAGED_DIR` kell, amelyet az eszközfelügyelet állít be.
-- A bundle- és bot-playbookoknak nyilvánosnak vagy unlistednek kell lenniük.
+- `--key-env` nélkül a bundle- és bot-playbookoknak nyilvánosnak vagy
+  unlistednek kell lenniük.
   A csak szervezeten belüli láthatóság tervben van.
 - A privát memória-playbookot és a kulcsát minden munkatárs egyszer, a
   webes felületen hozza létre.
