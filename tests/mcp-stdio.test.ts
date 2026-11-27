@@ -38,7 +38,7 @@ describe("local AgentPlaybooks MCP transport", () => {
     expect(tools.some((tool) => tool.name === "list_playbooks")).toBe(true);
     const skill = tools.find((tool) => tool.name === "get_skill");
     expect(skill?.inputSchema.required).toContain("playbook_id");
-    expect(tools).toHaveLength(20);
+    expect(tools).toHaveLength(21);
     expect(tools.map(tool => tool.name)).toEqual(expect.arrayContaining(["get_secret_status", "use_secret", "use_secret_write"]));
     expect(tools.find(tool => tool.name === "find_tools")?.inputSchema.required).toEqual(["query"]);
     expect(tools.some(tool => tool.name === "delete_playbook")).toBe(false);
@@ -49,7 +49,7 @@ describe("local AgentPlaybooks MCP transport", () => {
   it("offers the full catalog for strict clients and rejects invalid views", async () => {
     vi.stubEnv("AGENTPLAYBOOKS_TOOLSET", "full");
     const { tools } = await (await connect()).listTools();
-    expect(tools).toHaveLength(56);
+    expect(tools).toHaveLength(57);
     expect(tools.find(tool => tool.name === "reset_persona")?.annotations?.destructiveHint).toBe(true);
     vi.stubEnv("AGENTPLAYBOOKS_TOOLSET", "memroy");
     expect(() => createStdioServer()).toThrow("Unknown management toolset");

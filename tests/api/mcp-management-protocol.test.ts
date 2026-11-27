@@ -154,7 +154,7 @@ describe("AgentPlaybooks management MCP transport", () => {
     expect(manifest._auth.actor).toBe("oauth");
     expect(listed.result.tools).toEqual(manifest.tools);
     const names = listed.result.tools.map((tool: { name: string }) => tool.name);
-    expect(names).toHaveLength(20);
+    expect(names).toHaveLength(21);
     for (const name of ["get_secret_status", "use_secret", "use_secret_write"]) {
       expect(names).toContain(name);
       const tool = listed.result.tools.find((entry: { name: string }) => entry.name === name);
