@@ -84,15 +84,21 @@ export function defaultManagedDir({ env = process.env, platform = process.platfo
  * answers anonymously for public and unlisted playbooks. On an intranet-only
  * instance an unlisted bundle is therefore readable by every employee without
  * handing each of them a credential.
+ *
+ * A private playbook is read with an API key instead (`--key-env`): a user key
+ * of a collaborator, or a key of that playbook that may read all of it. The key
+ * is only sent, never written; redirects are refused so it cannot follow one.
  */
-export async function fetchPlaybook(baseUrl, guid, { fetchImpl = fetch } = {}) {
+export async function fetchPlaybook(baseUrl, guid, { fetchImpl = fetch, apiKey } = {}) {
   if (!GUID.test(guid ?? "")) throw new Error(`'${guid}' is not a playbook GUID.`);
   const response = await fetchImpl(`${baseUrl}/api/playbooks/${encodeURIComponent(guid)}?format=json`, {
-    headers: { Accept: "application/json" },
+    headers: { Accept: "application/json", ...(apiKey ? { "X-API-Key": apiKey } : {}) },
     redirect: "error",
   });
   if (response.status === 404) {
-    throw new Error(`Playbook ${guid} was not found at ${baseUrl}. Bundle and bot playbooks must be public or unlisted.`);
+    throw new Error(apiKey
+      ? `Playbook ${guid} was not found at ${baseUrl}, or the key may not read it. Use a user key of a collaborator, or a key of that playbook with playbooks:read, personas:read and skills:read.`
+      : `Playbook ${guid} was not found at ${baseUrl}. Bundle and bot playbooks must be public or unlisted, or read with --key-env.`);
   }
   if (!response.ok) throw new Error(`Reading playbook ${guid} failed: HTTP ${response.status}`);
   return response.json();
@@ -335,12 +341,19 @@ export async function planHermesSync(options = {}) {
   if (!GUID.test(options.bundle ?? "")) throw new Error("Pass the bundle playbook GUID.");
   if (options.memory !== undefined && !GUID.test(options.memory)) throw new Error("--memory must be the GUID of a private memory playbook.");
 
+  let apiKey;
+  if (options.keyEnv !== undefined) {
+    if (!ENV_NAME.test(options.keyEnv)) throw new Error("--key-env must name an environment variable.");
+    apiKey = env[options.keyEnv];
+    if (!apiKey) throw new Error(`No key in ${options.keyEnv}; set it in this environment first.`);
+  }
+
   const fetchImpl = options.fetchImpl ?? fetch;
   const home = await hermesProfile({ env: options.hermesHome ? { ...env, HERMES_HOME: options.hermesHome } : env });
   const managedDir = path.resolve(options.managedDir ?? defaultManagedDir({ env }));
   const warnings = [];
 
-  const bundle = await fetchPlaybook(baseUrl, options.bundle, { fetchImpl });
+  const bundle = await fetchPlaybook(baseUrl, options.bundle, { fetchImpl, apiKey });
   const config = readBundleConfig(bundle);
 
   const skills = [];
@@ -351,7 +364,7 @@ export async function planHermesSync(options = {}) {
 
   const bots = [];
   for (const guid of config.bots) {
-    const playbook = await fetchPlaybook(baseUrl, guid, { fetchImpl });
+    const playbook = await fetchPlaybook(baseUrl, guid, { fetchImpl, apiKey });
     const bot = botDistribution(playbook, warnings);
     if (bots.some((other) => other.profileName === bot.profileName)) {
       throw new Error(`Two bots map to the Hermes profile '${bot.profileName}'.`);

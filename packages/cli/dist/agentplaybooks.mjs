@@ -12347,14 +12347,14 @@ function defaultManagedDir({ env = process.env, platform = process.platform, hom
   const base = platform === "win32" && env.LOCALAPPDATA ? env.LOCALAPPDATA : path17.join(homedir, ".local", "share");
   return path17.join(base, "agentplaybooks", "hermes-managed");
 }
-async function fetchPlaybook(baseUrl, guid, { fetchImpl = fetch } = {}) {
+async function fetchPlaybook(baseUrl, guid, { fetchImpl = fetch, apiKey } = {}) {
   if (!GUID2.test(guid ?? "")) throw new Error(`'${guid}' is not a playbook GUID.`);
   const response = await fetchImpl(`${baseUrl}/api/playbooks/${encodeURIComponent(guid)}?format=json`, {
-    headers: { Accept: "application/json" },
+    headers: { Accept: "application/json", ...apiKey ? { "X-API-Key": apiKey } : {} },
     redirect: "error"
   });
   if (response.status === 404) {
-    throw new Error(`Playbook ${guid} was not found at ${baseUrl}. Bundle and bot playbooks must be public or unlisted.`);
+    throw new Error(apiKey ? `Playbook ${guid} was not found at ${baseUrl}, or the key may not read it. Use a user key of a collaborator, or a key of that playbook with playbooks:read, personas:read and skills:read.` : `Playbook ${guid} was not found at ${baseUrl}. Bundle and bot playbooks must be public or unlisted, or read with --key-env.`);
   }
   if (!response.ok) throw new Error(`Reading playbook ${guid} failed: HTTP ${response.status}`);
   return response.json();
@@ -12556,11 +12556,17 @@ async function planHermesSync(options = {}) {
   assertBundleUrl(baseUrl, insecure);
   if (!GUID2.test(options.bundle ?? "")) throw new Error("Pass the bundle playbook GUID.");
   if (options.memory !== void 0 && !GUID2.test(options.memory)) throw new Error("--memory must be the GUID of a private memory playbook.");
+  let apiKey;
+  if (options.keyEnv !== void 0) {
+    if (!ENV_NAME.test(options.keyEnv)) throw new Error("--key-env must name an environment variable.");
+    apiKey = env[options.keyEnv];
+    if (!apiKey) throw new Error(`No key in ${options.keyEnv}; set it in this environment first.`);
+  }
   const fetchImpl = options.fetchImpl ?? fetch;
   const home = await hermesProfile({ env: options.hermesHome ? { ...env, HERMES_HOME: options.hermesHome } : env });
   const managedDir = path17.resolve(options.managedDir ?? defaultManagedDir({ env }));
   const warnings = [];
-  const bundle = await fetchPlaybook(baseUrl, options.bundle, { fetchImpl });
+  const bundle = await fetchPlaybook(baseUrl, options.bundle, { fetchImpl, apiKey });
   const config = readBundleConfig(bundle);
   const skills = [];
   for (const skill of bundle.skills ?? []) {
@@ -12569,7 +12575,7 @@ async function planHermesSync(options = {}) {
   }
   const bots = [];
   for (const guid of config.bots) {
-    const playbook = await fetchPlaybook(baseUrl, guid, { fetchImpl });
+    const playbook = await fetchPlaybook(baseUrl, guid, { fetchImpl, apiKey });
     const bot = botDistribution(playbook, warnings);
     if (bots.some((other) => other.profileName === bot.profileName)) {
       throw new Error(`Two bots map to the Hermes profile '${bot.profileName}'.`);
@@ -13298,8 +13304,8 @@ Usage:
                              [--allow-insecure-http] [--check] [--json]
   agentplaybooks hermes sync <bundle-guid> [--url=<base>] [--memory=<guid>]
                              [--managed-dir=<directory>] [--hermes-home=<directory>]
-                             [--hermes-bin=<path>] [--env-file=<file>] [--allow-insecure-http]
-                             [--apply] [--json]
+                             [--hermes-bin=<path>] [--env-file=<file>] [--key-env=<VAR>]
+                             [--allow-insecure-http] [--apply] [--json]
   agentplaybooks logout [--url=<base>] [--entra]
   agentplaybooks playbooks [--url=<base>] [--json]
   agentplaybooks backups <guid> [--url=<base>] [--json]
@@ -13338,7 +13344,9 @@ Commands:
              of those profiles (key from AGENTPLAYBOOKS_MEMORY_API_KEY, kept in
              the managed .env). --env-file adds credentials from a protected
              file; they are kept for later syncs. Bundle and bot playbooks are read anonymously,
-             so they must be public or unlisted. Plan-only without --apply.
+             so they must be public or unlisted, unless --key-env names a variable
+             holding a key that may read them (sent, never written). Plan-only
+             without --apply.
   doctor     Audit agent instructions, skills, MCP configuration, secrets, and drift.
   sync       Plan or apply the canonical manifest and missing platform files
              for enabled targets (claude, cursor, codex, copilot, gemini,
@@ -13855,6 +13863,7 @@ async function run(args) {
       hermesHome: option("--hermes-home"),
       hermesBin: option("--hermes-bin"),
       envFile: option("--env-file"),
+      keyEnv: option("--key-env"),
       allowInsecureHttp: flags.has("--allow-insecure-http")
     });
     if (flags.has("--json") && !flags.has("--apply")) console.log(JSON.stringify(publicSyncPlan(plan), null, 2));

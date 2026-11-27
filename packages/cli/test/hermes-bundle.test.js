@@ -254,6 +254,44 @@ test("refuses insecure transport, unreadable bundles and invalid bundle config",
   assert.throws(() => botDistribution({ name: "!!!", config: {} }), /profile name/);
 });
 
+test("--key-env sends the key with every read and never writes it", async () => {
+  const { hermesHome, managedDir } = await fixture();
+  const playbooks = { [BUNDLE]: bundlePlaybook(), [BOT]: botPlaybook() };
+  const sent = [];
+  const fetchImpl = async (url, init) => {
+    sent.push(init.headers["X-API-Key"]);
+    return fakeFetch(playbooks)(url, init);
+  };
+  const key = "apb_live_test_reader";
+  const plan = await planHermesSync({ bundle: BUNDLE, url: URL_BASE, managedDir, hermesHome,
+    keyEnv: "ORG_BUNDLE_KEY", env: { ORG_BUNDLE_KEY: key }, fetchImpl });
+
+  assert.deepEqual(sent, [key, key]);
+  assert.ok(!JSON.stringify(publicSyncPlan(plan)).includes(key));
+  assert.ok(!plan.managedEnv.includes(key) && !plan.managedConfig.includes(key));
+  await applyHermesSync(plan, { runHermes: fakeHermes([]) });
+  for (const file of [".env", "config.yaml", "state.json"]) {
+    assert.ok(!(await readFile(path.join(managedDir, file), "utf8")).includes(key), file);
+  }
+});
+
+test("without --key-env nothing is sent; a refused key gets its own message", async () => {
+  const { hermesHome, managedDir } = await fixture();
+  const sent = [];
+  const fetchImpl = async (url, init) => {
+    sent.push(init.headers["X-API-Key"]);
+    return fakeFetch({ [BUNDLE]: bundlePlaybook(), [BOT]: botPlaybook() })(url, init);
+  };
+  const base = { url: URL_BASE, managedDir, hermesHome, fetchImpl };
+  await planHermesSync({ ...base, bundle: BUNDLE, env: { ORG_BUNDLE_KEY: "apb_live_unused" } });
+  assert.deepEqual(sent, [undefined, undefined]);
+
+  await assert.rejects(planHermesSync({ ...base, bundle: "5555555555555555", keyEnv: "ORG_BUNDLE_KEY", env: { ORG_BUNDLE_KEY: "apb_live_x" } }),
+    (error) => /may not read it/.test(error.message) && !error.message.includes("apb_live_x"));
+  await assert.rejects(planHermesSync({ ...base, bundle: BUNDLE, keyEnv: "ORG_BUNDLE_KEY", env: {} }), /No key in ORG_BUNDLE_KEY/);
+  await assert.rejects(planHermesSync({ ...base, bundle: BUNDLE, keyEnv: "bad-name", env: {} }), /--key-env/);
+});
+
 test("defaults never override a set key and keep comments", () => {
   const merged = mergeDefaults("# keep\nmodel:\n  default: mine\n", { model: { default: "theirs", provider: "local-llm" }, display: { compact: true } });
   assert.match(merged, /# keep/);

@@ -88,6 +88,15 @@ for example on a protected share. Its values go into the managed `.env` and
 stay there for later syncs, even when the file cannot be reached. A key that
 the bundle's `env` used to set, and no longer does, is removed.
 
+Private bundle and bot playbooks are read with an API key:
+`--key-env=<VAR>` names the environment variable that holds it. Use a user key
+(`playbooks:read`) of someone the playbooks are shared with, or a key of the
+playbook that may read all of it (`playbooks:read`, `personas:read`,
+`skills:read`). The same key reads the bundle and every bot, so a playbook key
+only works for a bundle without bots. The key is sent with each read and never
+written to the managed directory; a scheduled sync needs it in its environment
+every time.
+
 Hermes reads the managed layer only when `HERMES_MANAGED_DIR` points at the
 managed directory. Set it once, as a user environment variable, in your
 installer. On an intranet instance without TLS, add `--allow-insecure-http`;
@@ -113,7 +122,7 @@ playbook may hold case details. Shared knowledge is kept separate:
 - A user-level managed directory is advisory: the employee can edit it. Real
   enforcement needs a machine-level `HERMES_MANAGED_DIR` that users can only
   read, set by your device management.
-- Bundle and bot playbooks must be public or unlisted. Organisation-only
-  visibility is planned.
+- Without `--key-env`, bundle and bot playbooks must be public or unlisted.
+  Organisation-only visibility is planned.
 - Each employee creates their private memory playbook and its key once, in the
   web app.
