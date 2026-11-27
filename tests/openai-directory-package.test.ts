@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import sharp from 'sharp';
 import { collectDirectoryFiles, directoryMcp } from '../scripts/pack-openai-directory.mjs';
 import { buildZipStore, listZipStore } from '../packages/cli/scripts/pack-openai-skills-zip.mjs';
 import { managementTools } from '../src/app/api/_shared/management-tools';
@@ -17,11 +18,20 @@ describe('hosted OpenAI directory package', () => {
     });
     const plugin = JSON.parse(files.get('plugin.json')!.toString());
     expect(plugin.name).toBe('agentplaybooks-hosted');
+    const presentation = plugin.extensions['com.openai'].interface;
+    expect(presentation.displayName).toBe('AgentPlaybooks');
+    expect(presentation.shortDescription.length).toBeLessThanOrEqual(30);
+    for (const [field, size] of Object.entries({ logo: 512, logoDark: 512, composerIcon: 128, composerIconDark: 128 })) {
+      const asset = files.get(presentation[field].slice(2));
+      expect(asset, field).toBeDefined();
+      expect(await sharp(asset).metadata()).toMatchObject({ format: 'png', width: size, height: size });
+    }
     expect(plugin.extensions['com.openai'].review.test_cases.positive).toHaveLength(5);
     expect(plugin.extensions['com.openai'].review.test_cases.negative).toHaveLength(3);
     const directory = managementToolset(managementTools(), 'directory');
     if ('error' in directory) throw new Error(directory.error);
     const exposedNames = new Set(directory.advertised.map(tool => tool.name));
+    expect(directory.advertised.every(tool => tool.title && !tool.title.includes('_'))).toBe(true);
     for (const scenario of plugin.extensions['com.openai'].review.test_cases.positive) {
       for (const name of scenario.tools_triggered.split(',').map((value: string) => value.trim())) {
         expect(exposedNames.has(name), `Review scenario refers to unavailable tool ${name}`).toBe(true);

@@ -1,5 +1,10 @@
 import type { McpTool } from "@/lib/supabase/types";
 import {
+  SKILL_REFERENCE_BATCH_DEFAULT_CHARS,
+  SKILL_REFERENCE_BATCH_LIMIT,
+  SKILL_REFERENCE_BATCH_MAX_CHARS,
+} from "@/lib/repositories/skill-context";
+import {
   DESTRUCTIVE_CLOSED,
   IDEMPOTENT_WRITE_CLOSED,
   OPEN_WORLD_CALL,
@@ -16,6 +21,24 @@ import {
   skillListOutputSchema,
   skillRecordOutputSchema,
 } from "@/app/api/_shared/mcp-tool-hints";
+
+const skillReferenceProperties = {
+  skill_id: { type: "string", description: "Skill UUID or name" },
+  filename: { type: "string", description: "Exact attachment filename, including its folder, or SKILL.md" },
+  section: { type: "string", description: "Optional exact Markdown heading without # prefixes" },
+  offset: { type: "integer", minimum: 0, default: 0, description: "Zero-based UTF-16 offset within the selected file or section; use the previous next_offset" },
+};
+
+const skillReferenceOutput = {
+  type: "object",
+  properties: {
+    skill_id: { type: "string" }, filename: { type: "string" }, content: { type: "string" },
+    offset: { type: "integer" }, next_offset: { type: ["integer", "null"] },
+    total_chars: { type: "integer" }, truncated: { type: "boolean" },
+    section_start_line: { type: "integer" }, section: { type: "string" },
+  },
+  required: ["skill_id", "filename", "content", "offset", "next_offset", "truncated", "total_chars"],
+};
 
 export const PLAYBOOK_TOOLS: McpTool[] = [
   {
@@ -67,23 +90,56 @@ export const PLAYBOOK_TOOLS: McpTool[] = [
     inputSchema: {
       type: "object",
       properties: {
-        skill_id: { type: "string", description: "Skill UUID or name" },
-        filename: { type: "string", description: "Exact attachment filename, including its folder, or SKILL.md" },
-        section: { type: "string", description: "Optional exact Markdown heading without # prefixes" },
-        offset: { type: "integer", minimum: 0, default: 0, description: "Zero-based UTF-16 offset within the selected file or section; use the previous next_offset" },
+        ...skillReferenceProperties,
         max_chars: { type: "integer", minimum: 1, maximum: 32000, default: 12000, description: "Maximum UTF-16 string units returned in content; default 12000, maximum 32000" },
       },
       required: ["skill_id", "filename"],
     },
+    outputSchema: skillReferenceOutput,
+    annotations: READ_CLOSED,
+  },
+  {
+    name: "get_skill_references",
+    title: "Read skill references",
+    description: "Read up to five skill files or sections from one playbook. Each item returns its text or an error, in request order. Use SKILL.md for main instructions and an exact heading without # for a section. A truncated item has next_offset for continuation.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        references: {
+          type: "array", minItems: 1, maxItems: SKILL_REFERENCE_BATCH_LIMIT,
+          description: "The skill files or sections to read, in the order they should be returned",
+          items: {
+            type: "object",
+            properties: {
+              ...skillReferenceProperties,
+              max_chars: {
+                type: "integer", minimum: 1, maximum: SKILL_REFERENCE_BATCH_MAX_CHARS, default: SKILL_REFERENCE_BATCH_DEFAULT_CHARS,
+                description: "Maximum UTF-16 string units returned for this item",
+              },
+            },
+            required: ["skill_id", "filename"],
+          },
+        },
+      },
+      required: ["references"],
+    },
     outputSchema: {
       type: "object",
       properties: {
-        skill_id: { type: "string" }, filename: { type: "string" }, content: { type: "string" },
-        offset: { type: "integer" }, next_offset: { type: ["integer", "null"] },
-        total_chars: { type: "integer" }, truncated: { type: "boolean" },
-        section_start_line: { type: "integer" }, section: { type: "string" },
+        results: {
+          type: "array", minItems: 1, maxItems: SKILL_REFERENCE_BATCH_LIMIT,
+          items: {
+            type: "object",
+            properties: {
+              ok: { type: "boolean" },
+              reference: skillReferenceOutput,
+              error: { type: "string" },
+            },
+            required: ["ok"],
+          },
+        },
       },
-      required: ["skill_id", "filename", "content", "offset", "next_offset", "truncated", "total_chars"],
+      required: ["results"],
     },
     annotations: READ_CLOSED,
   },

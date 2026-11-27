@@ -6,11 +6,13 @@ Build the complete hosted directory package from the repository root:
 node scripts/pack-openai-directory.mjs --output=.tmp/agentplaybooks-openai.zip
 ```
 
-The package uses shared release metadata and the website's logo, a hosted-only
-playbook skill, and the account MCP endpoint with OAuth dynamic registration.
+The package uses shared publisher metadata, a hosted-only playbook skill, and
+the account MCP endpoint with OAuth dynamic registration. The packer renders the
+brand mark into a 512 px PNG for the directory and a 128 px PNG for the composer.
+Both light and dark theme slots point to included assets.
 Its package identifier is `agentplaybooks-hosted`, separate from the CLI package
 and the earlier unpublished draft whose MCP configuration cannot be changed.
-The first upload must use `?toolset=directory` so each of the 38 supported
+The hosted upload uses `?toolset=directory` so each of the 40 supported
 knowledge/document operations is exposed upfront. This enforced allowlist excludes
 generic third-party dispatchers, secret handling, discovery and legacy aliases.
 Excluded calls, including federated tool names, are rejected before forwarding.
@@ -31,6 +33,14 @@ draft. The packer accepts HTTPS URLs without embedded credentials.
 The initial 0.8.0 draft was uploaded on 2026-10-28. Upload does not mean review
 approval or publication. Track actual status in the
 [release issue](https://github.com/matebenyovszky/agentplaybooks/issues/245).
+
+For the 0.10.2 update, deploy the server first and verify that the existing
+listing's MCP scan picks up **Read skill references**. It accepts one to five
+known files or headings from one playbook and returns results in request order,
+including item errors and offsets for truncated text. Its REST equivalent is
+`POST /api/v1/control/get_skill_references`. Use the existing listing to create
+the package draft. Check its icon and starter prompts in the directory preview
+and verify the composer icon on a narrow viewport in both themes.
 
 Complete domain verification, OAuth connection, automated findings and reviewer
 materials in the portal before submitting. The public domain challenge is in

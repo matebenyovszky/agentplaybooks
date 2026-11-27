@@ -42,7 +42,7 @@ backups. Tool names may have a host-assigned namespace; use the actual catalog.
 | User's task | Useful path |
 |---|---|
 | Inspect or edit a playbook | `get_playbook` (compact by default); `update_playbook` for the requested fields. Persona is the agent's identity; instructions are the project's rules. There is no `get_persona`. |
-| Use a skill | `list_skills` for metadata → `get_skill` for the chosen body. Read only the required attachment/heading via `get_skill_reference`; do not fetch all attachments. |
+| Use a skill | Reuse the known playbook and skill name or UUID. Call `get_skill_reference` directly for a known filename (`SKILL.md` for main instructions). Pass the exact heading without `#` as `section` when only that section is needed. Use `list_skills` to discover a skill and `get_skill(include_content=false)` to discover attachment filenames. Use `get_skill` for the full definition or for the main instructions when the reference tool is unavailable. |
 | Save or revise a skill | `create_skill` / `update_skill`; version history via `list_skill_versions`. Check the target rather than creating duplicates. |
 | Recall a fact | Known key: `read_memory`. Otherwise `search_memory` with focused filters and a small limit (e.g. 5–10). For a broader session brief use `get_memory_context` with bounded `max_items`. `read_memory` updates access statistics. |
 | Remember something | `write_memory` for the chosen key. A proposal/pending-review result is not an applied write; report its status accurately. Do not persist unrelated conversation content automatically. |
@@ -50,6 +50,10 @@ backups. Tool names may have a host-assigned namespace; use the actual catalog.
 | Run a connected API/tool | `find_tools` → the matching federated tool, or `list_mcp_servers` → `call_connected_tool`. MCP and OpenAPI connections are both hosted capabilities; no local executable is required. |
 | Call an API using a secret | If its name is known, call `use_secret` directly for GET/HEAD. Otherwise discover names via `list_secrets` (metadata only). `use_secret_write` handles POST/PUT/PATCH/DELETE only within the user's authorized external action. |
 | Work with isolated artifacts | Reuse the relevant run from `list_runs`, or `create_run` when a new run is requested. There is no `get_run`; the list returns run records. |
+
+When available, `get_skill_references` reads two to five known files or
+sections in the same playbook. Results follow request order and carry
+individual errors. Use individual reads when the batch operation is absent.
 
 Prefer server-side proxy use. Optional `reveal_secret` returns a raw value only
 when the user explicitly needs raw access, the host exposes that tool,

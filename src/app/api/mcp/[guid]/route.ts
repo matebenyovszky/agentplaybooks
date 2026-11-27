@@ -81,7 +81,7 @@ import { searchMemories } from "@/app/api/_shared/memory";
 import { proposeMemory, proposeSkill } from "@/app/api/_shared/proposals";
 import { memoryTimestamp, memoryWriteFields } from "@/lib/memory";
 import { findPlaybookSkill } from "@/lib/repositories/skills";
-import { getSkillDefinition, getSkillReference, listSkillSummaries, skillReferenceWindow } from "@/lib/repositories/skill-context";
+import { getSkillDefinition, getSkillReference, getSkillReferences, listSkillSummaries, skillReferenceWindow } from "@/lib/repositories/skill-context";
 import { serveSkill, skillResourceUri, type ServedSkill } from "@/lib/mcp/skill-extension";
 import { getPublisherIdForAuthUser } from "@/lib/repositories/playbooks";
 import { cachedSingleFlight, type SingleFlightEntry } from "@/lib/cache/single-flight";
@@ -1279,6 +1279,11 @@ use_secret_write({
             skillReferenceWindow("", { offset: 0, max_chars: args.max_chars });
             const file = await getSkillReference(serviceSupabase, playbook.id, args.skill_id as string, args.filename as string);
             result = { ...file, ...skillReferenceWindow(file.content, args) };
+            break;
+          }
+
+          case "get_skill_references": {
+            result = await getSkillReferences(serviceSupabase, playbook.id, args.references);
             break;
           }
 

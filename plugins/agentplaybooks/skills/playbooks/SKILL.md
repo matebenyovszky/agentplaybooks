@@ -33,16 +33,16 @@ each connection's state; a server is added by running the CLI's
 
 ## Start of a task
 
-1. `list_playbooks` to see what exists. Pick by name with the user if more
-   than one fits; do not guess between similar names. A project the CLI has
-   linked to a playbook names it in `.agentplaybooks/remote.json`; prefer that
-   one.
-2. `get_playbook` for the chosen one. It returns the persona, instructions,
-   skills, connected servers, and a memory summary.
+1. Reuse the selected playbook ID. A project the CLI has linked to a playbook
+   names it in `.agentplaybooks/remote.json`; prefer that one. If the ID is
+   unknown, use `list_playbooks` and ask which playbook to use when several
+   names fit.
+2. Use `get_playbook` when opening the playbook or when its persona,
+   instructions, or overview are needed.
 3. If the user wants Claude to *be* that playbook, follow its persona and
    instructions for the rest of the conversation. Say that you are doing so.
-4. `get_memory_context` packs the memory that matters into one read. Prefer it
-   over reading keys one by one.
+4. When the task needs shared memory context, use `get_memory_context` to read
+   the relevant entries together.
 
 ## Memory
 
@@ -59,10 +59,22 @@ each connection's state; a server is added by running the CLI's
 
 ## Skills
 
-`list_skills` and `get_skill` return the playbook's skills. When a skill fits
-the task, read it and follow it. `create_skill` and `update_skill` change what
-every client of the playbook will do next time, so show the user the content
-before writing, and prefer `update_skill` over creating a near-duplicate.
+Use `list_skills` only to discover a skill. With a known skill name or UUID and
+filename, call `get_skill_reference` directly. For the main instructions the
+filename is `SKILL.md`. Pass the exact heading without `#` in `section` when
+only that section is needed. If you need to find an attachment filename, use
+`get_skill(include_content=false)` for the manifest. For the full definition,
+or when the reference tool is unavailable and you need the main instructions,
+use `get_skill`.
+
+Use `get_skill_references` for two to five known files or sections in the same
+playbook when the connection offers it. Results follow the request order and
+carry individual errors. Use individual reads when the batch tool is absent.
+
+When a skill fits the task, read and follow its applicable instructions.
+`create_skill` and `update_skill` change what every client of the playbook will
+do next time, so show the user the content before writing, and prefer
+`update_skill` over creating a near-duplicate.
 `list_skill_versions` and `rollback_skill` undo a bad change.
 
 ## Canvas
