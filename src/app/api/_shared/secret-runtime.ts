@@ -1,4 +1,5 @@
-import { presentedApiKey, validateApiKey } from "./auth";
+import { getAuthenticatedUser, presentedApiKey, validateApiKey } from "./auth";
+import { getPlaybookAccessRole } from "./guards";
 import { getServiceSupabase } from "./supabase";
 import { accountIsActive } from "./account-status";
 import { verifiedClientFingerprint } from "@/lib/mtls";
@@ -43,6 +44,22 @@ export async function playbookOwnerByGuid(guid: string): Promise<PlaybookOwner |
 export async function bearerMayLoadRuntime(request: Request, playbookId: string): Promise<boolean> {
   const accepted = await validateApiKey(request, "secrets:read");
   return Boolean(accepted && accepted.playbooks.id === playbookId);
+}
+
+/**
+ * The signed-in member (an SSO session, not a key) who may load runtime vault
+ * values for this playbook, or null. Owners and editors only: an auditor reads
+ * the audit trail, not secret values. Returns the user id for the audit actor.
+ *
+ * This is what lets a desktop agent signed in with Microsoft Entra ID load the
+ * secrets its user can already manage, without a playbook key on the machine.
+ * Each secret still has to allow runtime reveal (allow_api_key_reveal).
+ */
+export async function sessionMayLoadRuntime(request: Request, playbookId: string): Promise<string | null> {
+  const user = await getAuthenticatedUser(request);
+  if (!user) return null;
+  const role = await getPlaybookAccessRole(user.id, playbookId);
+  return role === "owner" || role === "editor" ? user.id : null;
 }
 
 /**

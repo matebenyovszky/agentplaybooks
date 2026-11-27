@@ -112,17 +112,17 @@ var require_visit = __commonJS({
     visit.BREAK = BREAK;
     visit.SKIP = SKIP2;
     visit.REMOVE = REMOVE;
-    function visit_(key, node, visitor, path20) {
-      const ctrl = callVisitor(key, node, visitor, path20);
+    function visit_(key, node, visitor, path21) {
+      const ctrl = callVisitor(key, node, visitor, path21);
       if (identity.isNode(ctrl) || identity.isPair(ctrl)) {
-        replaceNode(key, path20, ctrl);
-        return visit_(key, ctrl, visitor, path20);
+        replaceNode(key, path21, ctrl);
+        return visit_(key, ctrl, visitor, path21);
       }
       if (typeof ctrl !== "symbol") {
         if (identity.isCollection(node)) {
-          path20 = Object.freeze(path20.concat(node));
+          path21 = Object.freeze(path21.concat(node));
           for (let i = 0; i < node.items.length; ++i) {
-            const ci = visit_(i, node.items[i], visitor, path20);
+            const ci = visit_(i, node.items[i], visitor, path21);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -133,13 +133,13 @@ var require_visit = __commonJS({
             }
           }
         } else if (identity.isPair(node)) {
-          path20 = Object.freeze(path20.concat(node));
-          const ck = visit_("key", node.key, visitor, path20);
+          path21 = Object.freeze(path21.concat(node));
+          const ck = visit_("key", node.key, visitor, path21);
           if (ck === BREAK)
             return BREAK;
           else if (ck === REMOVE)
             node.key = null;
-          const cv = visit_("value", node.value, visitor, path20);
+          const cv = visit_("value", node.value, visitor, path21);
           if (cv === BREAK)
             return BREAK;
           else if (cv === REMOVE)
@@ -160,17 +160,17 @@ var require_visit = __commonJS({
     visitAsync.BREAK = BREAK;
     visitAsync.SKIP = SKIP2;
     visitAsync.REMOVE = REMOVE;
-    async function visitAsync_(key, node, visitor, path20) {
-      const ctrl = await callVisitor(key, node, visitor, path20);
+    async function visitAsync_(key, node, visitor, path21) {
+      const ctrl = await callVisitor(key, node, visitor, path21);
       if (identity.isNode(ctrl) || identity.isPair(ctrl)) {
-        replaceNode(key, path20, ctrl);
-        return visitAsync_(key, ctrl, visitor, path20);
+        replaceNode(key, path21, ctrl);
+        return visitAsync_(key, ctrl, visitor, path21);
       }
       if (typeof ctrl !== "symbol") {
         if (identity.isCollection(node)) {
-          path20 = Object.freeze(path20.concat(node));
+          path21 = Object.freeze(path21.concat(node));
           for (let i = 0; i < node.items.length; ++i) {
-            const ci = await visitAsync_(i, node.items[i], visitor, path20);
+            const ci = await visitAsync_(i, node.items[i], visitor, path21);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -181,13 +181,13 @@ var require_visit = __commonJS({
             }
           }
         } else if (identity.isPair(node)) {
-          path20 = Object.freeze(path20.concat(node));
-          const ck = await visitAsync_("key", node.key, visitor, path20);
+          path21 = Object.freeze(path21.concat(node));
+          const ck = await visitAsync_("key", node.key, visitor, path21);
           if (ck === BREAK)
             return BREAK;
           else if (ck === REMOVE)
             node.key = null;
-          const cv = await visitAsync_("value", node.value, visitor, path20);
+          const cv = await visitAsync_("value", node.value, visitor, path21);
           if (cv === BREAK)
             return BREAK;
           else if (cv === REMOVE)
@@ -214,23 +214,23 @@ var require_visit = __commonJS({
       }
       return visitor;
     }
-    function callVisitor(key, node, visitor, path20) {
+    function callVisitor(key, node, visitor, path21) {
       if (typeof visitor === "function")
-        return visitor(key, node, path20);
+        return visitor(key, node, path21);
       if (identity.isMap(node))
-        return visitor.Map?.(key, node, path20);
+        return visitor.Map?.(key, node, path21);
       if (identity.isSeq(node))
-        return visitor.Seq?.(key, node, path20);
+        return visitor.Seq?.(key, node, path21);
       if (identity.isPair(node))
-        return visitor.Pair?.(key, node, path20);
+        return visitor.Pair?.(key, node, path21);
       if (identity.isScalar(node))
-        return visitor.Scalar?.(key, node, path20);
+        return visitor.Scalar?.(key, node, path21);
       if (identity.isAlias(node))
-        return visitor.Alias?.(key, node, path20);
+        return visitor.Alias?.(key, node, path21);
       return void 0;
     }
-    function replaceNode(key, path20, node) {
-      const parent = path20[path20.length - 1];
+    function replaceNode(key, path21, node) {
+      const parent = path21[path21.length - 1];
       if (identity.isCollection(parent)) {
         parent.items[key] = node;
       } else if (identity.isPair(parent)) {
@@ -842,10 +842,10 @@ var require_Collection = __commonJS({
     var createNode = require_createNode();
     var identity = require_identity();
     var Node = require_Node();
-    function collectionFromPath(schema, path20, value) {
+    function collectionFromPath(schema, path21, value) {
       let v = value;
-      for (let i = path20.length - 1; i >= 0; --i) {
-        const k = path20[i];
+      for (let i = path21.length - 1; i >= 0; --i) {
+        const k = path21[i];
         if (typeof k === "number" && Number.isInteger(k) && k >= 0) {
           const a = [];
           a[k] = v;
@@ -864,7 +864,7 @@ var require_Collection = __commonJS({
         sourceObjects: /* @__PURE__ */ new Map()
       });
     }
-    var isEmptyPath = (path20) => path20 == null || typeof path20 === "object" && !!path20[Symbol.iterator]().next().done;
+    var isEmptyPath = (path21) => path21 == null || typeof path21 === "object" && !!path21[Symbol.iterator]().next().done;
     var Collection = class extends Node.NodeBase {
       constructor(type, schema) {
         super(type);
@@ -894,11 +894,11 @@ var require_Collection = __commonJS({
        * be a Pair instance or a `{ key, value }` object, which may not have a key
        * that already exists in the map.
        */
-      addIn(path20, value) {
-        if (isEmptyPath(path20))
+      addIn(path21, value) {
+        if (isEmptyPath(path21))
           this.add(value);
         else {
-          const [key, ...rest] = path20;
+          const [key, ...rest] = path21;
           const node = this.get(key, true);
           if (identity.isCollection(node))
             node.addIn(rest, value);
@@ -912,8 +912,8 @@ var require_Collection = __commonJS({
        * Removes a value from the collection.
        * @returns `true` if the item was found and removed.
        */
-      deleteIn(path20) {
-        const [key, ...rest] = path20;
+      deleteIn(path21) {
+        const [key, ...rest] = path21;
         if (rest.length === 0)
           return this.delete(key);
         const node = this.get(key, true);
@@ -927,8 +927,8 @@ var require_Collection = __commonJS({
        * scalar values from their surrounding node; to disable set `keepScalar` to
        * `true` (collections are always returned intact).
        */
-      getIn(path20, keepScalar) {
-        const [key, ...rest] = path20;
+      getIn(path21, keepScalar) {
+        const [key, ...rest] = path21;
         const node = this.get(key, true);
         if (rest.length === 0)
           return !keepScalar && identity.isScalar(node) ? node.value : node;
@@ -946,8 +946,8 @@ var require_Collection = __commonJS({
       /**
        * Checks if the collection includes a value with the key `key`.
        */
-      hasIn(path20) {
-        const [key, ...rest] = path20;
+      hasIn(path21) {
+        const [key, ...rest] = path21;
         if (rest.length === 0)
           return this.has(key);
         const node = this.get(key, true);
@@ -957,8 +957,8 @@ var require_Collection = __commonJS({
        * Sets a value in this collection. For `!!set`, `value` needs to be a
        * boolean to add/remove the item from the set.
        */
-      setIn(path20, value) {
-        const [key, ...rest] = path20;
+      setIn(path21, value) {
+        const [key, ...rest] = path21;
         if (rest.length === 0) {
           this.set(key, value);
         } else {
@@ -1162,27 +1162,27 @@ var require_stringifyString = __commonJS({
       return true;
     }
     function doubleQuotedString(value, ctx) {
-      const json = JSON.stringify(value);
+      const json2 = JSON.stringify(value);
       if (ctx.options.doubleQuotedAsJSON)
-        return json;
+        return json2;
       const { implicitKey } = ctx;
       const minMultiLineLength = ctx.options.doubleQuotedMinMultiLineLength;
       const indent = ctx.indent || (containsDocumentMarker(value) ? "  " : "");
       let str = "";
       let start = 0;
-      for (let i = 0, ch = json[i]; ch; ch = json[++i]) {
-        if (ch === " " && json[i + 1] === "\\" && json[i + 2] === "n") {
-          str += json.slice(start, i) + "\\ ";
+      for (let i = 0, ch = json2[i]; ch; ch = json2[++i]) {
+        if (ch === " " && json2[i + 1] === "\\" && json2[i + 2] === "n") {
+          str += json2.slice(start, i) + "\\ ";
           i += 1;
           start = i;
           ch = "\\";
         }
         if (ch === "\\")
-          switch (json[i + 1]) {
+          switch (json2[i + 1]) {
             case "u":
               {
-                str += json.slice(start, i);
-                const code = json.substr(i + 2, 4);
+                str += json2.slice(start, i);
+                const code = json2.substr(i + 2, 4);
                 switch (code) {
                   case "0000":
                     str += "\\0";
@@ -1212,23 +1212,23 @@ var require_stringifyString = __commonJS({
                     if (code.substr(0, 2) === "00")
                       str += "\\x" + code.substr(2);
                     else
-                      str += json.substr(i, 6);
+                      str += json2.substr(i, 6);
                 }
                 i += 5;
                 start = i + 1;
               }
               break;
             case "n":
-              if (implicitKey || json[i + 2] === '"' || json.length < minMultiLineLength) {
+              if (implicitKey || json2[i + 2] === '"' || json2.length < minMultiLineLength) {
                 i += 1;
               } else {
-                str += json.slice(start, i) + "\n\n";
-                while (json[i + 2] === "\\" && json[i + 3] === "n" && json[i + 4] !== '"') {
+                str += json2.slice(start, i) + "\n\n";
+                while (json2[i + 2] === "\\" && json2[i + 3] === "n" && json2[i + 4] !== '"') {
                   str += "\n";
                   i += 2;
                 }
                 str += indent;
-                if (json[i + 2] === " ")
+                if (json2[i + 2] === " ")
                   str += "\\";
                 i += 1;
                 start = i + 1;
@@ -1238,7 +1238,7 @@ var require_stringifyString = __commonJS({
               i += 1;
           }
       }
-      str = start ? str + json.slice(start) : json;
+      str = start ? str + json2.slice(start) : json2;
       return implicitKey ? str : foldFlowLines.foldFlowLines(str, indent, foldFlowLines.FOLD_QUOTED, getFoldOptions(ctx, false));
     }
     function singleQuotedString(value, ctx) {
@@ -3473,9 +3473,9 @@ var require_Document = __commonJS({
           this.contents.add(value);
       }
       /** Adds a value to the document. */
-      addIn(path20, value) {
+      addIn(path21, value) {
         if (assertCollection(this.contents))
-          this.contents.addIn(path20, value);
+          this.contents.addIn(path21, value);
       }
       /**
        * Create a new `Alias` node, ensuring that the target `node` has the required anchor.
@@ -3550,14 +3550,14 @@ var require_Document = __commonJS({
        * Removes a value from the document.
        * @returns `true` if the item was found and removed.
        */
-      deleteIn(path20) {
-        if (Collection.isEmptyPath(path20)) {
+      deleteIn(path21) {
+        if (Collection.isEmptyPath(path21)) {
           if (this.contents == null)
             return false;
           this.contents = null;
           return true;
         }
-        return assertCollection(this.contents) ? this.contents.deleteIn(path20) : false;
+        return assertCollection(this.contents) ? this.contents.deleteIn(path21) : false;
       }
       /**
        * Returns item at `key`, or `undefined` if not found. By default unwraps
@@ -3572,10 +3572,10 @@ var require_Document = __commonJS({
        * scalar values from their surrounding node; to disable set `keepScalar` to
        * `true` (collections are always returned intact).
        */
-      getIn(path20, keepScalar) {
-        if (Collection.isEmptyPath(path20))
+      getIn(path21, keepScalar) {
+        if (Collection.isEmptyPath(path21))
           return !keepScalar && identity.isScalar(this.contents) ? this.contents.value : this.contents;
-        return identity.isCollection(this.contents) ? this.contents.getIn(path20, keepScalar) : void 0;
+        return identity.isCollection(this.contents) ? this.contents.getIn(path21, keepScalar) : void 0;
       }
       /**
        * Checks if the document includes a value with the key `key`.
@@ -3586,10 +3586,10 @@ var require_Document = __commonJS({
       /**
        * Checks if the document includes a value at `path`.
        */
-      hasIn(path20) {
-        if (Collection.isEmptyPath(path20))
+      hasIn(path21) {
+        if (Collection.isEmptyPath(path21))
           return this.contents !== void 0;
-        return identity.isCollection(this.contents) ? this.contents.hasIn(path20) : false;
+        return identity.isCollection(this.contents) ? this.contents.hasIn(path21) : false;
       }
       /**
        * Sets a value in this document. For `!!set`, `value` needs to be a
@@ -3606,13 +3606,13 @@ var require_Document = __commonJS({
        * Sets a value in this document. For `!!set`, `value` needs to be a
        * boolean to add/remove the item from the set.
        */
-      setIn(path20, value) {
-        if (Collection.isEmptyPath(path20)) {
+      setIn(path21, value) {
+        if (Collection.isEmptyPath(path21)) {
           this.contents = value;
         } else if (this.contents == null) {
-          this.contents = Collection.collectionFromPath(this.schema, Array.from(path20), value);
+          this.contents = Collection.collectionFromPath(this.schema, Array.from(path21), value);
         } else if (assertCollection(this.contents)) {
-          this.contents.setIn(path20, value);
+          this.contents.setIn(path21, value);
         }
       }
       /**
@@ -3660,11 +3660,11 @@ var require_Document = __commonJS({
           throw new Error(`With a null YAML version, the { schema: Schema } option is required`);
       }
       // json & jsonArg are only used from toJSON()
-      toJS({ json, jsonArg, mapAsMap, maxAliasCount, onAnchor, reviver } = {}) {
+      toJS({ json: json2, jsonArg, mapAsMap, maxAliasCount, onAnchor, reviver } = {}) {
         const ctx = {
           anchors: /* @__PURE__ */ new Map(),
           doc: this,
-          keep: !json,
+          keep: !json2,
           mapAsMap: mapAsMap === true,
           mapKeyWarned: false,
           maxAliasCount: typeof maxAliasCount === "number" ? maxAliasCount : 100
@@ -5573,9 +5573,9 @@ var require_cst_visit = __commonJS({
     visit.BREAK = BREAK;
     visit.SKIP = SKIP2;
     visit.REMOVE = REMOVE;
-    visit.itemAtPath = (cst, path20) => {
+    visit.itemAtPath = (cst, path21) => {
       let item = cst;
-      for (const [field, index] of path20) {
+      for (const [field, index] of path21) {
         const tok = item?.[field];
         if (tok && "items" in tok) {
           item = tok.items[index];
@@ -5584,23 +5584,23 @@ var require_cst_visit = __commonJS({
       }
       return item;
     };
-    visit.parentCollection = (cst, path20) => {
-      const parent = visit.itemAtPath(cst, path20.slice(0, -1));
-      const field = path20[path20.length - 1][0];
+    visit.parentCollection = (cst, path21) => {
+      const parent = visit.itemAtPath(cst, path21.slice(0, -1));
+      const field = path21[path21.length - 1][0];
       const coll = parent?.[field];
       if (coll && "items" in coll)
         return coll;
       throw new Error("Parent collection not found");
     };
-    function _visit(path20, item, visitor) {
-      let ctrl = visitor(item, path20);
+    function _visit(path21, item, visitor) {
+      let ctrl = visitor(item, path21);
       if (typeof ctrl === "symbol")
         return ctrl;
       for (const field of ["key", "value"]) {
         const token = item[field];
         if (token && "items" in token) {
           for (let i = 0; i < token.items.length; ++i) {
-            const ci = _visit(Object.freeze(path20.concat([[field, i]])), token.items[i], visitor);
+            const ci = _visit(Object.freeze(path21.concat([[field, i]])), token.items[i], visitor);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -5611,10 +5611,10 @@ var require_cst_visit = __commonJS({
             }
           }
           if (typeof ctrl === "function" && field === "key")
-            ctrl = ctrl(item, path20);
+            ctrl = ctrl(item, path21);
         }
       }
-      return typeof ctrl === "function" ? ctrl(item, path20) : ctrl;
+      return typeof ctrl === "function" ? ctrl(item, path21) : ctrl;
     }
     exports.visit = visit;
   }
@@ -7368,7 +7368,7 @@ var require_dist = __commonJS({
 // src/mcp-stdio.js
 import readline from "node:readline";
 var MAX_RESPONSE_BYTES = 8 * 1024 * 1024;
-function createMcpRelay({ url, keyEnvVar = "AGENTPLAYBOOKS_API_KEY", keyHeader = "X-API-Key", env = process.env, fetchImpl = fetch, signal, allowInsecureHttp = false }) {
+function createMcpRelay({ url, keyEnvVar = "AGENTPLAYBOOKS_API_KEY", keyHeader = "X-API-Key", env = process.env, fetchImpl = fetch, signal, allowInsecureHttp = false, credential }) {
   const endpoint = new URL(url);
   if (endpoint.username || endpoint.password || endpoint.search || endpoint.hash || !/\/api\/mcp\/(?:manage|[a-f0-9-]+)$/i.test(endpoint.pathname) || !(endpoint.protocol === "https:" || endpoint.protocol === "http:" && (allowInsecureHttp || ["localhost", "127.0.0.1", "[::1]"].includes(endpoint.hostname)))) {
     throw new Error("Use an AgentPlaybooks HTTPS MCP endpoint (localhost HTTP is also supported).");
@@ -7381,9 +7381,20 @@ function createMcpRelay({ url, keyEnvVar = "AGENTPLAYBOOKS_API_KEY", keyHeader =
     const error = (code, text) => ({ jsonrpc: "2.0", id, error: { code, message: text } });
     if (!message || Array.isArray(message) || message.jsonrpc !== "2.0" || typeof message.method !== "string") return error(-32600, "Invalid JSON-RPC request.");
     if (message.method === "ping") return hasId ? { jsonrpc: "2.0", id, result: {} } : null;
-    const key = env[keyEnvVar];
-    if (!key) return hasId ? error(-32001, `Configure ${keyEnvVar} in the selected profile's secret environment.`) : null;
-    const headers = { "Content-Type": "application/json", Accept: "application/json", [keyHeader]: key };
+    let headers;
+    if (credential) {
+      let authorization;
+      try {
+        authorization = await credential();
+      } catch (failure) {
+        return hasId ? error(-32001, failure instanceof Error ? failure.message : "Sign-in required.") : null;
+      }
+      headers = { "Content-Type": "application/json", Accept: "application/json", Authorization: authorization };
+    } else {
+      const key = env[keyEnvVar];
+      if (!key) return hasId ? error(-32001, `Configure ${keyEnvVar} in the selected profile's secret environment.`) : null;
+      headers = { "Content-Type": "application/json", Accept: "application/json", [keyHeader]: key };
+    }
     if (session) headers["Mcp-Session-Id"] = session;
     if (protocol) headers["MCP-Protocol-Version"] = protocol;
     try {
@@ -7460,26 +7471,367 @@ async function runMcpStdio(options = {}) {
   }
 }
 
+// src/entra.js
+import crypto2 from "node:crypto";
+import { spawn } from "node:child_process";
+import { chmod, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+
+// src/oauth.js
+import crypto from "node:crypto";
+import http from "node:http";
+function base64url(buffer) {
+  return buffer.toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+function pkcePair(randomBytes = crypto.randomBytes) {
+  const verifier = base64url(randomBytes(32));
+  const challenge = base64url(crypto.createHash("sha256").update(verifier).digest());
+  return { verifier, challenge, method: "S256" };
+}
+function randomState(randomBytes = crypto.randomBytes) {
+  return base64url(randomBytes(16));
+}
+function buildAuthorizeUrl({
+  authorizationUrl,
+  clientId,
+  redirectUri,
+  scopes = [],
+  state,
+  challenge,
+  extraParams = {}
+}) {
+  if (!authorizationUrl) throw new Error("The connection template has no authorization_url.");
+  if (!clientId) throw new Error("A client_id is required to ask for consent.");
+  const url = new URL(authorizationUrl);
+  const params = url.searchParams;
+  params.set("response_type", "code");
+  params.set("client_id", clientId);
+  params.set("redirect_uri", redirectUri);
+  params.set("state", state);
+  params.set("code_challenge", challenge);
+  params.set("code_challenge_method", "S256");
+  if (scopes.length > 0) params.set("scope", scopes.join(" "));
+  for (const [key, value] of Object.entries(extraParams)) params.set(key, value);
+  return url.toString();
+}
+function interpretCallback(query, expectedState) {
+  const state = query.get("state");
+  if (state !== expectedState) {
+    return { ok: false, reason: "state-mismatch", message: "The redirect did not come from this request." };
+  }
+  const error = query.get("error");
+  if (error) {
+    const description = query.get("error_description");
+    return { ok: false, reason: error, message: description || `The provider refused: ${error}.` };
+  }
+  const code = query.get("code");
+  if (!code) {
+    return { ok: false, reason: "no-code", message: "The redirect carried no authorization code." };
+  }
+  return { ok: true, code };
+}
+function startCallbackServer({ path: path21 = "/callback", timeoutMs = 3e5, createServer = http.createServer } = {}) {
+  let resolveCallback;
+  let rejectCallback;
+  const callback = new Promise((resolve, reject) => {
+    resolveCallback = resolve;
+    rejectCallback = reject;
+  });
+  let settled = false;
+  const server = createServer((request2, response) => {
+    const url = new URL(request2.url, "http://127.0.0.1");
+    if (url.pathname !== path21) {
+      response.writeHead(404).end("Not found");
+      return;
+    }
+    response.writeHead(200, { "Content-Type": "text/plain; charset=utf-8" });
+    response.end("Consent received. You can close this tab and return to the terminal.\n");
+    if (!settled) {
+      settled = true;
+      resolveCallback(url.searchParams);
+      server.close();
+    }
+  });
+  const timer = setTimeout(() => {
+    if (!settled) {
+      settled = true;
+      rejectCallback(new Error("Timed out waiting for the provider to redirect back."));
+      server.close();
+    }
+  }, timeoutMs);
+  if (typeof timer.unref === "function") timer.unref();
+  const ready = new Promise((resolve, reject) => {
+    server.on("error", reject);
+    server.listen(0, "127.0.0.1", () => {
+      const address = server.address();
+      resolve(typeof address === "object" && address ? address.port : 0);
+    });
+  });
+  return {
+    ready,
+    callback: callback.finally(() => clearTimeout(timer)),
+    close: () => {
+      clearTimeout(timer);
+      server.close();
+    }
+  };
+}
+
+// src/entra.js
+var RENEW_MARGIN_SECONDS = 120;
+var MICROSOFT = "https://login.microsoftonline.com";
+function storePath(homedir = os.homedir()) {
+  return path.join(homedir, ".agentplaybooks", "entra.json");
+}
+function base64url2(buffer) {
+  return buffer.toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+function jwtClaims(token) {
+  try {
+    const payload = String(token).split(".")[1];
+    return JSON.parse(Buffer.from(payload.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8"));
+  } catch {
+    return null;
+  }
+}
+var DPAPI_SCRIPT = [
+  "$ErrorActionPreference='Stop'",
+  "Add-Type -AssemblyName System.Security",
+  "$mode=[Console]::In.ReadLine()",
+  "$data=[Convert]::FromBase64String([Console]::In.ReadLine())",
+  "$scope=[Security.Cryptography.DataProtectionScope]::CurrentUser",
+  "if($mode -eq 'protect'){$out=[Security.Cryptography.ProtectedData]::Protect($data,$null,$scope)}else{$out=[Security.Cryptography.ProtectedData]::Unprotect($data,$null,$scope)}",
+  "[Console]::Out.Write([Convert]::ToBase64String($out))"
+].join(";");
+function dpapi(mode, buffer, { spawnImpl = spawn } = {}) {
+  return new Promise((resolve, reject) => {
+    const child = spawnImpl("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", DPAPI_SCRIPT], {
+      stdio: ["pipe", "pipe", "ignore"],
+      windowsHide: true
+    });
+    const chunks = [];
+    child.stdout.on("data", (chunk) => chunks.push(chunk));
+    child.on("error", reject);
+    child.on("close", (code) => {
+      if (code !== 0) return reject(new Error(`Windows DPAPI ${mode} failed.`));
+      resolve(Buffer.from(Buffer.concat(chunks).toString("utf8").trim(), "base64"));
+    });
+    child.stdin.end(`${mode}
+${buffer.toString("base64")}
+`);
+  });
+}
+function fileStore({ homedir, platform = process.platform, protect = dpapi } = {}) {
+  const file = storePath(homedir);
+  const windows = platform === "win32";
+  async function readAll() {
+    try {
+      return JSON.parse(await readFile(file, "utf8"));
+    } catch (error) {
+      if (error?.code === "ENOENT") return { version: 1, remotes: {} };
+      throw new Error(`Cannot read ${file}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+  async function writeAll(value) {
+    await mkdir(path.dirname(file), { recursive: true, mode: 448 });
+    const temp = `${file}.${process.pid}.${crypto2.randomBytes(4).toString("hex")}.tmp`;
+    await writeFile(temp, `${JSON.stringify(value, null, 2)}
+`, { encoding: "utf8", mode: 384 });
+    await rename(temp, file);
+    await chmod(file, 384).catch(() => {
+    });
+  }
+  return {
+    async load(url) {
+      const entry = (await readAll()).remotes?.[url];
+      if (!entry?.data) return null;
+      const raw = Buffer.from(entry.data, "base64");
+      const plain = entry.scheme === "dpapi" ? await protect("unprotect", raw) : raw;
+      return JSON.parse(plain.toString("utf8"));
+    },
+    async save(url, state) {
+      const all = await readAll();
+      const plain = Buffer.from(JSON.stringify(state), "utf8");
+      const data = windows ? await protect("protect", plain) : plain;
+      all.remotes = { ...all.remotes ?? {}, [url]: { scheme: windows ? "dpapi" : "plain", data: data.toString("base64") } };
+      await writeAll(all);
+    },
+    async remove(url) {
+      const all = await readAll();
+      if (!all.remotes?.[url]) return false;
+      delete all.remotes[url];
+      if (Object.keys(all.remotes).length) await writeAll(all);
+      else await rm(file, { force: true });
+      return true;
+    }
+  };
+}
+async function json(response) {
+  return response.json().catch(() => null);
+}
+async function fetchEntraConfig(url, { fetchImpl = fetch } = {}) {
+  let response;
+  try {
+    response = await fetchImpl(`${url}/api/auth/entra`, { headers: { Accept: "application/json" }, redirect: "error" });
+  } catch {
+    throw new Error(`Cannot reach ${url}.`);
+  }
+  const body = await json(response);
+  if (!response.ok || !body?.enabled) {
+    throw new Error(`${url} does not offer Microsoft Entra ID sign-in (ENTRA_TENANT_ID / ENTRA_CLIENT_ID are not set there).`);
+  }
+  return { tenantId: body.tenant_id, clientId: body.client_id, scopes: body.scopes ?? ["openid", "profile", "email", "offline_access"] };
+}
+async function entraToken(config, params, { fetchImpl = fetch } = {}) {
+  const response = await fetchImpl(`${MICROSOFT}/${config.tenantId}/oauth2/v2.0/token`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" },
+    body: new URLSearchParams({ client_id: config.clientId, scope: config.scopes.join(" "), ...params }).toString(),
+    redirect: "error"
+  });
+  const body = await json(response);
+  if (!response.ok || typeof body?.id_token !== "string") {
+    const error = new Error(`Microsoft Entra ID refused: ${body?.error_description?.split("\n")[0] || body?.error || response.status}`);
+    error.code = body?.error;
+    throw error;
+  }
+  return body;
+}
+async function exchangeIdToken(url, idToken, rawNonce, { fetchImpl = fetch } = {}) {
+  const nonce = jwtClaims(idToken)?.nonce ? rawNonce : void 0;
+  const response = await fetchImpl(`${url}/api/auth/entra`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ id_token: idToken, ...nonce ? { nonce } : {} }),
+    redirect: "error"
+  });
+  const body = await json(response);
+  if (!response.ok || typeof body?.access_token !== "string") {
+    throw new Error(`${url} refused the Entra sign-in: ${body?.detail || body?.error || `HTTP ${response.status}`}`);
+  }
+  return body;
+}
+function sessionState(config, entra, session, rawNonce) {
+  return {
+    tenant_id: config.tenantId,
+    client_id: config.clientId,
+    scopes: config.scopes,
+    refresh_token: entra.refresh_token,
+    nonce: rawNonce,
+    access_token: session.access_token,
+    expires_at: session.expires_at,
+    user: session.user
+  };
+}
+async function loginWithEntra(url, {
+  fetchImpl = fetch,
+  openBrowser: openBrowser2,
+  log = () => {
+  },
+  store = fileStore(),
+  timeoutMs = 3e5,
+  loginHint
+} = {}) {
+  const config = await fetchEntraConfig(url, { fetchImpl });
+  const pkce = pkcePair();
+  const state = randomState();
+  const rawNonce = base64url2(crypto2.randomBytes(24));
+  const nonceHash = crypto2.createHash("sha256").update(rawNonce).digest("hex");
+  const server = startCallbackServer({ path: "/", timeoutMs });
+  try {
+    const port = await server.ready;
+    const redirectUri = `http://localhost:${port}/`;
+    const authorizeUrl = buildAuthorizeUrl({
+      authorizationUrl: `${MICROSOFT}/${config.tenantId}/oauth2/v2.0/authorize`,
+      clientId: config.clientId,
+      redirectUri,
+      scopes: config.scopes,
+      state,
+      challenge: pkce.challenge,
+      extraParams: { nonce: nonceHash, response_mode: "query", ...loginHint ? { login_hint: loginHint } : {} }
+    });
+    log("Opening the Microsoft sign-in page. If no browser opens, visit:");
+    log(authorizeUrl);
+    if (openBrowser2) await openBrowser2(authorizeUrl);
+    const outcome = interpretCallback(await server.callback, state);
+    if (!outcome.ok) throw new Error(outcome.message);
+    const entra = await entraToken(config, {
+      grant_type: "authorization_code",
+      code: outcome.code,
+      redirect_uri: redirectUri,
+      code_verifier: pkce.verifier
+    }, { fetchImpl });
+    if (!entra.refresh_token) throw new Error("Microsoft Entra ID issued no refresh token; the offline_access scope is needed.");
+    const session = await exchangeIdToken(url, entra.id_token, rawNonce, { fetchImpl });
+    const saved = sessionState(config, entra, session, rawNonce);
+    await store.save(url, saved);
+    return saved;
+  } finally {
+    server.close();
+  }
+}
+async function refreshEntraSession(url, saved, { fetchImpl = fetch, store = fileStore() } = {}) {
+  const config = { tenantId: saved.tenant_id, clientId: saved.client_id, scopes: saved.scopes };
+  const entra = await entraToken(config, { grant_type: "refresh_token", refresh_token: saved.refresh_token }, { fetchImpl });
+  const session = await exchangeIdToken(url, entra.id_token, saved.nonce, { fetchImpl });
+  const next = sessionState(config, { refresh_token: entra.refresh_token || saved.refresh_token }, session, saved.nonce);
+  await store.save(url, next);
+  return next;
+}
+async function entraAccessToken(url, options = {}) {
+  return (await entraSession(url, options)).access_token;
+}
+async function entraSession(url, { fetchImpl = fetch, store = fileStore(), now = () => Date.now() } = {}) {
+  const saved = await store.load(url);
+  if (!saved?.refresh_token) {
+    throw new Error(`Not signed in to ${url} with Microsoft Entra ID. Run 'agentplaybooks login --entra --url=${url}'.`);
+  }
+  const current = (state) => ({ access_token: state.access_token, expires_at: state.expires_at });
+  if (saved.access_token && saved.expires_at - RENEW_MARGIN_SECONDS > now() / 1e3) return current(saved);
+  try {
+    return current(await refreshEntraSession(url, saved, { fetchImpl, store }));
+  } catch (error) {
+    if (error?.code === "invalid_grant" || error?.code === "interaction_required") {
+      throw new Error(`The Microsoft Entra ID sign-in for ${url} has expired or was revoked. Run 'agentplaybooks login --entra --url=${url}'.`);
+    }
+    throw error;
+  }
+}
+async function entraStatus(url, { store = fileStore(), now = () => Date.now() } = {}) {
+  const saved = await store.load(url);
+  if (!saved) return { signedIn: false };
+  return {
+    signedIn: Boolean(saved.refresh_token),
+    user: saved.user ?? null,
+    tenantId: saved.tenant_id,
+    accessTokenValidFor: Math.max(0, Math.floor((saved.expires_at ?? 0) - now() / 1e3))
+  };
+}
+function logoutEntra(url, { store = fileStore() } = {}) {
+  return store.remove(url);
+}
+
 // src/cli.js
-import os7 from "node:os";
-import { readFile as readFile16 } from "node:fs/promises";
-import path19 from "node:path";
+import os8 from "node:os";
+import { readFile as readFile17 } from "node:fs/promises";
+import path20 from "node:path";
 import readline3 from "node:readline";
 
 // src/checks.js
 var import_yaml3 = __toESM(require_dist(), 1);
-import path3 from "node:path";
+import path4 from "node:path";
 
 // src/agents.js
 var import_yaml2 = __toESM(require_dist(), 1);
-import path2 from "node:path";
+import path3 from "node:path";
 
 // src/discovery.js
 var import_yaml = __toESM(require_dist(), 1);
 import { createHash } from "node:crypto";
-import { access, readdir, readFile } from "node:fs/promises";
-import os from "node:os";
-import path from "node:path";
+import { access, readdir, readFile as readFile2 } from "node:fs/promises";
+import os2 from "node:os";
+import path2 from "node:path";
 var IGNORED_DIRECTORIES = /* @__PURE__ */ new Set([
   ".git",
   ".next",
@@ -7544,11 +7896,11 @@ function digest(value) {
   return `sha256:${createHash("sha256").update(value).digest("hex")}`;
 }
 function normalizePath(value) {
-  return value.split(path.sep).join("/");
+  return value.split(path2.sep).join("/");
 }
 function platformFor(relativePath) {
   const normalized = `/${normalizePath(relativePath).toLowerCase()}`;
-  const base = path.basename(relativePath).toLowerCase();
+  const base = path2.basename(relativePath).toLowerCase();
   if (normalized.includes("/.codex/")) return "codex";
   if (base.startsWith("agents.")) return "portable";
   if (normalized.includes("/.claude/") || base === "claude.md" || base === "claude_desktop_config.json" || base === ".mcp.json") return "claude";
@@ -7561,7 +7913,7 @@ function platformFor(relativePath) {
 }
 function isMcpConfig(relativePath) {
   const normalized = normalizePath(relativePath).toLowerCase();
-  const base = path.basename(relativePath).toLowerCase();
+  const base = path2.basename(relativePath).toLowerCase();
   return MCP_JSON_FILES.has(base) || normalized === ".cursor/mcp.json" || normalized.endsWith("/.cursor/mcp.json") || normalized === ".vscode/mcp.json" || normalized.endsWith("/.vscode/mcp.json") || normalized === ".gemini/settings.json" || normalized.endsWith("/.gemini/settings.json") || normalized === ".codex/config.toml" || normalized.endsWith("/.codex/config.toml") || normalized === ".hermes/config.yaml" || normalized.endsWith("/.hermes/config.yaml");
 }
 function isAgentDefinition(relativePath) {
@@ -7582,7 +7934,7 @@ async function walk(root, ignored = IGNORED_DIRECTORIES, listDir = readdir) {
     }
     for (const entry of entries) {
       if (entry.isSymbolicLink()) continue;
-      const absolute = path.join(current, entry.name);
+      const absolute = path2.join(current, entry.name);
       if (entry.isDirectory()) {
         if (!ignored.has(entry.name)) queue.push(absolute);
         continue;
@@ -7600,28 +7952,28 @@ function normalizeText(value) {
   return value.replace(/\r\n/g, "\n");
 }
 async function readText(absolutePath) {
-  const buffer = await readFile(absolutePath);
+  const buffer = await readFile2(absolutePath);
   if (buffer.byteLength > MAX_TEXT_BYTES) return null;
   return normalizeText(buffer.toString("utf8"));
 }
 async function readSkillTree(skillFile, allFiles) {
-  const directory = path.dirname(skillFile);
+  const directory = path2.dirname(skillFile);
   const members = allFiles.filter((file) => {
-    const relative = path.relative(directory, file);
-    return relative && relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative);
-  }).sort((a, b) => normalizePath(path.relative(directory, a)).localeCompare(normalizePath(path.relative(directory, b))));
+    const relative = path2.relative(directory, file);
+    return relative && relative !== ".." && !relative.startsWith(`..${path2.sep}`) && !path2.isAbsolute(relative);
+  }).sort((a, b) => normalizePath(path2.relative(directory, a)).localeCompare(normalizePath(path2.relative(directory, b))));
   const hash = createHash("sha256");
   const bundled = [];
   for (const file of members) {
-    const relative = normalizePath(path.relative(directory, file));
-    const buffer = await readFile(file);
+    const relative = normalizePath(path2.relative(directory, file));
+    const buffer = await readFile2(file);
     hash.update(relative);
     hash.update("\0");
     const isText = buffer.byteLength <= MAX_TEXT_BYTES && !buffer.includes(0);
     if (isText) hash.update(normalizeText(buffer.toString("utf8")));
     else hash.update(buffer);
     hash.update("\0");
-    if (isText && path.basename(file) !== "SKILL.md") bundled.push({ path: relative, content: normalizeText(buffer.toString("utf8")) });
+    if (isText && path2.basename(file) !== "SKILL.md") bundled.push({ path: relative, content: normalizeText(buffer.toString("utf8")) });
   }
   return { treeDigest: `sha256:${hash.digest("hex")}`, bundled };
 }
@@ -7633,7 +7985,7 @@ async function readTextIfExists(absolutePath) {
   }
 }
 async function discover(root, { extraMcpPaths = [], agentPlatform = null, skipVendored = false, readdir: listDir } = {}) {
-  const absoluteRoot = path.resolve(root);
+  const absoluteRoot = path2.resolve(root);
   const ignored = skipVendored ? /* @__PURE__ */ new Set([...IGNORED_DIRECTORIES, ...VENDORED_DIRECTORIES]) : IGNORED_DIRECTORIES;
   const files = await walk(absoluteRoot, ignored, listDir);
   const inventory = {
@@ -7644,8 +7996,8 @@ async function discover(root, { extraMcpPaths = [], agentPlatform = null, skipVe
     mcpConfigs: []
   };
   for (const absolutePath of files) {
-    const relativePath = normalizePath(path.relative(absoluteRoot, absolutePath));
-    const base = path.basename(absolutePath);
+    const relativePath = normalizePath(path2.relative(absoluteRoot, absolutePath));
+    const base = path2.basename(absolutePath);
     const isSkill = base === "SKILL.md";
     const rootAgentExtension = agentPlatform === "codex" ? "toml" : "md";
     const rootAgent = agentPlatform && new RegExp(`^agents/[^/]+\\.${rootAgentExtension}$`, "i").test(relativePath);
@@ -7681,14 +8033,14 @@ async function discover(root, { extraMcpPaths = [], agentPlatform = null, skipVe
   }
   return inventory;
 }
-function hermesProfileCandidates({ homedir = os.homedir(), env = process.env, platform = process.platform } = {}) {
+function hermesProfileCandidates({ homedir = os2.homedir(), env = process.env, platform = process.platform } = {}) {
   const override = typeof env.HERMES_HOME === "string" ? env.HERMES_HOME.trim() : "";
-  if (override.length > 0) return [{ directory: path.resolve(override), display: "$HERMES_HOME" }];
+  if (override.length > 0) return [{ directory: path2.resolve(override), display: "$HERMES_HOME" }];
   const candidates = [];
   if (platform === "win32" && typeof env.LOCALAPPDATA === "string" && env.LOCALAPPDATA.length > 0) {
-    candidates.push({ directory: path.join(env.LOCALAPPDATA, "hermes"), display: "%LOCALAPPDATA%/hermes" });
+    candidates.push({ directory: path2.join(env.LOCALAPPDATA, "hermes"), display: "%LOCALAPPDATA%/hermes" });
   }
-  candidates.push({ directory: path.join(homedir, ".hermes"), display: "~/.hermes" });
+  candidates.push({ directory: path2.join(homedir, ".hermes"), display: "~/.hermes" });
   return candidates;
 }
 async function hermesProfile(options = {}) {
@@ -7699,12 +8051,12 @@ async function hermesProfile(options = {}) {
   if (!/^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(named)) {
     throw new Error("Invalid Hermes profile name; use 1\u201364 letters, digits, underscores or hyphens.");
   }
-  const nested = path.basename(path.dirname(home.directory)) === "profiles";
-  const root = nested ? path.dirname(path.dirname(home.directory)) : home.directory;
+  const nested = path2.basename(path2.dirname(home.directory)) === "profiles";
+  const root = nested ? path2.dirname(path2.dirname(home.directory)) : home.directory;
   const display = nested ? `${home.display}/../..` : home.display;
   if (named === "default") return { directory: root, display };
   return {
-    directory: path.join(root, "profiles", named),
+    directory: path2.join(root, "profiles", named),
     display: `${display}/profiles/${named}`
   };
 }
@@ -7712,7 +8064,7 @@ async function hermesHome(options = {}) {
   const candidates = hermesProfileCandidates(options);
   for (const candidate of candidates) {
     try {
-      await access(path.join(candidate.directory, "config.yaml"));
+      await access(path2.join(candidate.directory, "config.yaml"));
       return candidate;
     } catch {
       continue;
@@ -7728,14 +8080,14 @@ async function hermesHome(options = {}) {
   }
   return candidates[0];
 }
-function expandConfiguredPath(value, { homedir = os.homedir(), env = process.env } = {}) {
+function expandConfiguredPath(value, { homedir = os2.homedir(), env = process.env } = {}) {
   const substituted = String(value).replace(
     /\$\{([A-Za-z_][A-Za-z0-9_]*)\}/g,
     (whole, name) => typeof env[name] === "string" ? env[name] : whole
   );
   if (substituted === "~") return homedir;
   if (substituted.startsWith("~/") || substituted.startsWith("~\\")) {
-    return path.join(homedir, substituted.slice(2));
+    return path2.join(homedir, substituted.slice(2));
   }
   return substituted;
 }
@@ -7749,7 +8101,7 @@ function hermesExternalSkillDirs(configContent, { homedir, env } = {}) {
   return list.filter((entry) => typeof entry === "string" && entry.trim().length > 0).map((entry) => expandConfiguredPath(entry, { homedir, env }));
 }
 async function hermesBundledSkillNames(profileDirectory) {
-  const manifest = await readTextIfExists(path.join(profileDirectory, "skills", ".bundled_manifest"));
+  const manifest = await readTextIfExists(path2.join(profileDirectory, "skills", ".bundled_manifest"));
   if (manifest === null) return /* @__PURE__ */ new Set();
   return new Set(
     manifest.split("\n").map((line) => line.split(":")[0].trim()).filter((name) => name.length > 0)
@@ -7758,27 +8110,27 @@ async function hermesBundledSkillNames(profileDirectory) {
 var VENDOR_SKILL_DIRECTORIES = [".cursor/skills-cursor/"];
 function isVendorSkill(source, bundledNames) {
   if (VENDOR_SKILL_DIRECTORIES.some((directory) => source.startsWith(directory))) return true;
-  return bundledNames.has(path.basename(path.dirname(source)));
+  return bundledNames.has(path2.basename(path2.dirname(source)));
 }
 async function discoverGlobal({
-  homedir = os.homedir(),
+  homedir = os2.homedir(),
   env = process.env,
   platform = process.platform,
   includeVendored = false
 } = {}) {
   const profile = await hermesProfile({ homedir, env, platform });
   const roots = [
-    { directory: path.join(homedir, ".codex"), label: ".codex", platform: "codex" },
-    { directory: path.join(homedir, ".claude"), label: ".claude", platform: "claude" },
-    { directory: path.join(homedir, ".cursor"), label: ".cursor", platform: "cursor" },
-    { directory: path.join(homedir, ".gemini"), label: ".gemini", platform: "gemini" },
+    { directory: path2.join(homedir, ".codex"), label: ".codex", platform: "codex" },
+    { directory: path2.join(homedir, ".claude"), label: ".claude", platform: "claude" },
+    { directory: path2.join(homedir, ".cursor"), label: ".cursor", platform: "cursor" },
+    { directory: path2.join(homedir, ".gemini"), label: ".gemini", platform: "gemini" },
     // The profile config holds Hermes' MCP servers; it is scanned as its own
     // root, so the name it is recognized by is relative to that root.
     { directory: profile.directory, label: profile.display, platform: "hermes", extraMcpPaths: ["config.yaml"] },
-    { directory: path.join(homedir, ".agents"), label: ".agents", platform: "portable" }
+    { directory: path2.join(homedir, ".agents"), label: ".agents", platform: "portable" }
   ];
   for (const directory of hermesExternalSkillDirs(
-    await readTextIfExists(path.join(profile.directory, "config.yaml")),
+    await readTextIfExists(path2.join(profile.directory, "config.yaml")),
     { homedir, env }
   )) {
     if (roots.some((entry) => entry.directory === directory)) continue;
@@ -7878,8 +8230,8 @@ function codexAgent(item) {
 }
 function parseAgentDefinition(item) {
   const parsed = item.source.toLowerCase().endsWith(".toml") ? codexAgent(item) : markdownAgent(item);
-  const filename = path2.basename(item.source);
-  const fallbackName = filename.toLowerCase().endsWith(".agent.md") ? filename.slice(0, -".agent.md".length) : path2.basename(filename, path2.extname(filename));
+  const filename = path3.basename(item.source);
+  const fallbackName = filename.toLowerCase().endsWith(".agent.md") ? filename.slice(0, -".agent.md".length) : path3.basename(filename, path3.extname(filename));
   const name = typeof parsed.values.name === "string" && parsed.values.name.length > 0 ? parsed.values.name : fallbackName;
   const description = typeof parsed.values.description === "string" ? parsed.values.description : "";
   const model = typeof parsed.values.model === "string" && parsed.values.model.length > 0 ? parsed.values.model : void 0;
@@ -8121,7 +8473,7 @@ function analyze(inventory) {
   }
   for (const skill of inventory.skills) {
     const frontmatter = parseFrontmatter(skill.content);
-    const parentName = path3.basename(path3.dirname(skill.source));
+    const parentName = path4.basename(path4.dirname(skill.source));
     const name = typeof frontmatter.values.name === "string" ? frontmatter.values.name : parentName;
     const description = typeof frontmatter.values.description === "string" ? frontmatter.values.description : "";
     const { demonstrations, invalid: demonstrationsInvalid } = skillDemonstrations(frontmatter.values);
@@ -8303,8 +8655,8 @@ function analyze(inventory) {
 }
 
 // src/ros2.js
-import { readdir as readdir2, readFile as readFile2, stat } from "node:fs/promises";
-import path4 from "node:path";
+import { readdir as readdir2, readFile as readFile3, stat } from "node:fs/promises";
+import path5 from "node:path";
 var SKIP = /* @__PURE__ */ new Set([".git", ".tmp", ".agentplaybooks", "node_modules", "build", "install", "log", "dist", ".venv"]);
 async function inspectRos2(root) {
   const packages = [], launches = [], findings = [];
@@ -8315,20 +8667,20 @@ async function inspectRos2(root) {
     for (const entry of await readdir2(directory, { withFileTypes: true })) {
       if (++visited > 2e4) throw new Error("ROS 2 scan limit reached; choose a smaller workspace.");
       if (entry.isSymbolicLink()) continue;
-      const absolute = path4.join(directory, entry.name);
+      const absolute = path5.join(directory, entry.name);
       if (entry.isDirectory()) {
         if (!SKIP.has(entry.name)) pending.push(absolute);
         continue;
       }
       if (!entry.isFile()) continue;
-      const source = path4.relative(root, absolute).split(path4.sep).join("/");
+      const source = path5.relative(root, absolute).split(path5.sep).join("/");
       if (/\.launch\.(py|xml|yaml|yml)$/.test(entry.name)) launches.push(source);
       if (entry.name !== "package.xml") continue;
       if ((await stat(absolute)).size > 2097152) {
         findings.push({ source, severity: "high", code: "ros2.package.too-large", message: "Package metadata exceeds the scan limit." });
         continue;
       }
-      const xml = (await readFile2(absolute, "utf8")).replace(/<!--[\s\S]*?-->/g, " ");
+      const xml = (await readFile3(absolute, "utf8")).replace(/<!--[\s\S]*?-->/g, " ");
       const field = (tag) => new RegExp(`<${tag}(?:\\s[^>]*)?>([^<]*)</${tag}>`).exec(xml)?.[1]?.trim();
       const name = field("name");
       if (!/<package(?:\s[^>]*)?>/.test(xml) || !/<\/package>/.test(xml) || !name || !/^[a-z][a-z0-9_]*$/.test(name)) {
@@ -8347,7 +8699,7 @@ async function inspectRos2(root) {
     names.add(pkg.name);
   }
   try {
-    const manifest = JSON.parse(await readFile2(path4.join(root, "agentplaybook.json"), "utf8"));
+    const manifest = JSON.parse(await readFile3(path5.join(root, "agentplaybook.json"), "utf8"));
     const robot = manifest.spec?.targets?.some((target) => target.type === "ros2" && target.enabled);
     if (robot && manifest.spec?.policies?.physicalActions === "allowlist" && manifest.spec?.policies?.emergencyStopRequired !== true) {
       findings.push({ source: "agentplaybook.json", severity: "high", code: "ros2.policy.emergency-stop-missing", message: "A ROS 2 target that declares physical actions must declare an emergency-stop requirement. Runtime enforcement still needs to be verified separately." });
@@ -8678,106 +9030,6 @@ function printConnection(report, log = console.log) {
   for (const step of report.nextSteps) log(`  ${step}`);
 }
 
-// src/oauth.js
-import crypto from "node:crypto";
-import http from "node:http";
-function base64url(buffer) {
-  return buffer.toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-function pkcePair(randomBytes = crypto.randomBytes) {
-  const verifier = base64url(randomBytes(32));
-  const challenge = base64url(crypto.createHash("sha256").update(verifier).digest());
-  return { verifier, challenge, method: "S256" };
-}
-function randomState(randomBytes = crypto.randomBytes) {
-  return base64url(randomBytes(16));
-}
-function buildAuthorizeUrl({
-  authorizationUrl,
-  clientId,
-  redirectUri,
-  scopes = [],
-  state,
-  challenge,
-  extraParams = {}
-}) {
-  if (!authorizationUrl) throw new Error("The connection template has no authorization_url.");
-  if (!clientId) throw new Error("A client_id is required to ask for consent.");
-  const url = new URL(authorizationUrl);
-  const params = url.searchParams;
-  params.set("response_type", "code");
-  params.set("client_id", clientId);
-  params.set("redirect_uri", redirectUri);
-  params.set("state", state);
-  params.set("code_challenge", challenge);
-  params.set("code_challenge_method", "S256");
-  if (scopes.length > 0) params.set("scope", scopes.join(" "));
-  for (const [key, value] of Object.entries(extraParams)) params.set(key, value);
-  return url.toString();
-}
-function interpretCallback(query, expectedState) {
-  const state = query.get("state");
-  if (state !== expectedState) {
-    return { ok: false, reason: "state-mismatch", message: "The redirect did not come from this request." };
-  }
-  const error = query.get("error");
-  if (error) {
-    const description = query.get("error_description");
-    return { ok: false, reason: error, message: description || `The provider refused: ${error}.` };
-  }
-  const code = query.get("code");
-  if (!code) {
-    return { ok: false, reason: "no-code", message: "The redirect carried no authorization code." };
-  }
-  return { ok: true, code };
-}
-function startCallbackServer({ path: path20 = "/callback", timeoutMs = 3e5, createServer = http.createServer } = {}) {
-  let resolveCallback;
-  let rejectCallback;
-  const callback = new Promise((resolve, reject) => {
-    resolveCallback = resolve;
-    rejectCallback = reject;
-  });
-  let settled = false;
-  const server = createServer((request2, response) => {
-    const url = new URL(request2.url, "http://127.0.0.1");
-    if (url.pathname !== path20) {
-      response.writeHead(404).end("Not found");
-      return;
-    }
-    response.writeHead(200, { "Content-Type": "text/plain; charset=utf-8" });
-    response.end("Consent received. You can close this tab and return to the terminal.\n");
-    if (!settled) {
-      settled = true;
-      resolveCallback(url.searchParams);
-      server.close();
-    }
-  });
-  const timer = setTimeout(() => {
-    if (!settled) {
-      settled = true;
-      rejectCallback(new Error("Timed out waiting for the provider to redirect back."));
-      server.close();
-    }
-  }, timeoutMs);
-  if (typeof timer.unref === "function") timer.unref();
-  const ready = new Promise((resolve, reject) => {
-    server.on("error", reject);
-    server.listen(0, "127.0.0.1", () => {
-      const address = server.address();
-      resolve(typeof address === "object" && address ? address.port : 0);
-    });
-  });
-  return {
-    ready,
-    callback: callback.finally(() => clearTimeout(timer)),
-    close: () => {
-      clearTimeout(timer);
-      server.close();
-    }
-  };
-}
-
 // src/auth-command.js
 async function fetchTemplate(url, id, { fetchImpl = fetch } = {}) {
   const response = await fetchImpl(`${url}/api/connections?id=${encodeURIComponent(id)}`, {
@@ -8905,27 +9157,27 @@ function checkPrerequisites(state) {
 }
 
 // src/sync.js
-import { mkdir as mkdir3, readFile as readFile5, rename as rename3, writeFile as writeFile3, copyFile as copyFile2 } from "node:fs/promises";
-import os3 from "node:os";
-import path8 from "node:path";
+import { mkdir as mkdir4, readFile as readFile6, rename as rename4, writeFile as writeFile4, copyFile as copyFile2 } from "node:fs/promises";
+import os4 from "node:os";
+import path9 from "node:path";
 
 // src/adapters.js
 var import_yaml4 = __toESM(require_dist(), 1);
-import { access as access2, mkdir as mkdir2, copyFile, readFile as readFile4, readdir as readdir3, rename as rename2, writeFile as writeFile2 } from "node:fs/promises";
-import os2 from "node:os";
+import { access as access2, mkdir as mkdir3, copyFile, readFile as readFile5, readdir as readdir3, rename as rename3, writeFile as writeFile3 } from "node:fs/promises";
+import os3 from "node:os";
 import { createHash as createHash4 } from "node:crypto";
-import path6 from "node:path";
+import path7 from "node:path";
 
 // src/sync-state.js
 import { createHash as createHash3 } from "node:crypto";
-import { lstat, mkdir, readFile as readFile3, rename, writeFile } from "node:fs/promises";
-import path5 from "node:path";
+import { lstat, mkdir as mkdir2, readFile as readFile4, rename as rename2, writeFile as writeFile2 } from "node:fs/promises";
+import path6 from "node:path";
 function fileHash(bytes) {
   return bytes === null ? null : createHash3("sha256").update(bytes).digest("hex");
 }
 async function hashFile(filename) {
   try {
-    return fileHash(await readFile3(filename));
+    return fileHash(await readFile4(filename));
   } catch (error) {
     if (error.code === "ENOENT") return null;
     throw error;
@@ -8933,7 +9185,7 @@ async function hashFile(filename) {
 }
 async function loadSyncState(statePath) {
   try {
-    const state = JSON.parse(await readFile3(statePath, "utf8"));
+    const state = JSON.parse(await readFile4(statePath, "utf8"));
     if (state.version !== 1 || !state.files || Array.isArray(state.files) || typeof state.files !== "object") throw new Error("invalid state");
     return state;
   } catch (error) {
@@ -8942,17 +9194,17 @@ async function loadSyncState(statePath) {
   }
 }
 async function saveSyncState(statePath, state) {
-  await mkdir(path5.dirname(statePath), { recursive: true, mode: 448 });
+  await mkdir2(path6.dirname(statePath), { recursive: true, mode: 448 });
   const temp = `${statePath}.${process.pid}.tmp`;
-  await writeFile(temp, JSON.stringify(state, null, 2) + "\n", { mode: 384 });
-  await rename(temp, statePath);
+  await writeFile2(temp, JSON.stringify(state, null, 2) + "\n", { mode: 384 });
+  await rename2(temp, statePath);
 }
 async function assertSafeSyncPath(root, relative) {
   const parts = relative.split(/[\\/]/);
-  if (path5.isAbsolute(relative) || parts.some((part) => !part || part === "." || part === "..")) throw new Error("Sync path escapes its root.");
+  if (path6.isAbsolute(relative) || parts.some((part) => !part || part === "." || part === "..")) throw new Error("Sync path escapes its root.");
   let current = root;
   for (const part of parts) {
-    current = path5.join(current, part);
+    current = path6.join(current, part);
     try {
       if ((await lstat(current)).isSymbolicLink()) throw new Error(`Sync path passes through a symlink: ${relative}`);
     } catch (error) {
@@ -9052,7 +9304,7 @@ function agentActions(report, targetIds, conflicts, { root }) {
         name,
         action: "create",
         path: relativePath,
-        absolutePath: path6.join(root, ...relativePath.split("/")),
+        absolutePath: path7.join(root, ...relativePath.split("/")),
         content: serializeAgent(canonical, target),
         from: canonical.source
       });
@@ -9068,7 +9320,7 @@ function conflict(target, kind, name, reason, sources) {
 }
 async function readIfExists(absolutePath) {
   try {
-    return normalizeText(await readFile4(absolutePath, "utf8"));
+    return normalizeText(await readFile5(absolutePath, "utf8"));
   } catch (error) {
     if (error?.code === "ENOENT") return null;
     throw error;
@@ -9090,7 +9342,7 @@ async function directoryFiles(root) {
     const current = queue.shift();
     for (const entry of await readdir3(current, { withFileTypes: true })) {
       if (entry.isSymbolicLink()) continue;
-      const absolute = path6.join(current, entry.name);
+      const absolute = path7.join(current, entry.name);
       if (entry.isDirectory()) queue.push(absolute);
       else if (entry.isFile()) files.push(absolute);
     }
@@ -9104,7 +9356,7 @@ function sameFileContent(left, right) {
 }
 async function readBufferIfExists(absolutePath) {
   try {
-    return await readFile4(absolutePath);
+    return await readFile5(absolutePath);
   } catch (error) {
     if (error?.code === "ENOENT") return null;
     throw error;
@@ -9116,7 +9368,7 @@ async function skillActions(report, targetIds, conflicts, { root, syncState = { 
   const planned = /* @__PURE__ */ new Set();
   for (const [name, variants] of groups) {
     const canonical = variants.find((item) => item.platform === "portable") ?? variants.find((item) => !syncState.files[item.source]) ?? variants[0];
-    const sourceRoot = path6.dirname(canonical.absolutePath);
+    const sourceRoot = path7.dirname(canonical.absolutePath);
     const sourceFiles = await directoryFiles(sourceRoot);
     const authored = [];
     for (const variant of variants) {
@@ -9124,10 +9376,10 @@ async function skillActions(report, targetIds, conflicts, { root, syncState = { 
         authored.push(variant);
         continue;
       }
-      const members = await directoryFiles(path6.dirname(variant.absolutePath));
+      const members = await directoryFiles(path7.dirname(variant.absolutePath));
       const unchanged = (await Promise.all(members.map(async (member) => {
-        const source = normalizePath(path6.relative(root, member));
-        return syncState.files[source]?.digest === fileHash(await readFile4(member));
+        const source = normalizePath(path7.relative(root, member));
+        return syncState.files[source]?.digest === fileHash(await readFile5(member));
       }))).every(Boolean);
       if (!unchanged) authored.push(variant);
     }
@@ -9144,14 +9396,14 @@ async function skillActions(report, targetIds, conflicts, { root, syncState = { 
         conflicts.push(conflict(target, "skill", name, "Skill name is not a safe lowercase kebab-case directory name.", variants.map((item) => item.source)));
         continue;
       }
-      const targetRoot = path6.join(root, ...adapter.skillsDir.split("/"), name);
-      if (path6.resolve(targetRoot) === path6.resolve(sourceRoot)) continue;
+      const targetRoot = path7.join(root, ...adapter.skillsDir.split("/"), name);
+      if (path7.resolve(targetRoot) === path7.resolve(sourceRoot)) continue;
       for (const sourceFile of sourceFiles) {
-        const member = normalizePath(path6.relative(sourceRoot, sourceFile));
+        const member = normalizePath(path7.relative(sourceRoot, sourceFile));
         const relativePath = `${adapter.skillsDir}/${name}/${member}`;
-        const absolutePath = path6.join(targetRoot, ...member.split("/"));
+        const absolutePath = path7.join(targetRoot, ...member.split("/"));
         if (planned.has(absolutePath)) continue;
-        const [content, existing] = await Promise.all([readFile4(sourceFile), readBufferIfExists(absolutePath)]);
+        const [content, existing] = await Promise.all([readFile5(sourceFile), readBufferIfExists(absolutePath)]);
         if (existing === null && syncState.files[relativePath]) {
           conflicts.push(conflict(
             target,
@@ -9299,7 +9551,7 @@ function mcpActions(report, targetIds, conflicts, { root }) {
       name: adapter.mcpPath,
       action: existing ? "merge" : "create",
       path: adapter.mcpPath,
-      absolutePath: path6.join(root, ...adapter.mcpPath.split("/")),
+      absolutePath: path7.join(root, ...adapter.mcpPath.split("/")),
       servers: merged.added.sort(),
       content: merged.content
     });
@@ -9308,8 +9560,8 @@ function mcpActions(report, targetIds, conflicts, { root }) {
   return actions;
 }
 function samePath(left, right) {
-  const a = path6.resolve(left);
-  const b = path6.resolve(right);
+  const a = path7.resolve(left);
+  const b = path7.resolve(right);
   return process.platform === "win32" ? a.toLowerCase() === b.toLowerCase() : a === b;
 }
 function unrepresentableServerKeys(definition) {
@@ -9382,17 +9634,17 @@ async function hermesActions(report, targetIds, conflicts, { root, homedir, env,
   if (!targetIds.includes("hermes")) return [];
   const profile = await hermesProfile({ homedir, env, platform, profile: hermesProfileName });
   const actions = [];
-  const configPath = path6.join(profile.directory, "config.yaml");
+  const configPath = path7.join(profile.directory, "config.yaml");
   const configDisplay = `${profile.display}/config.yaml`;
   let existingConfig = await readIfExists(configPath);
   let seededFrom = null;
   if (existingConfig === null && hermesProfileName) {
     const installation = await hermesProfile({ homedir, env, platform });
-    existingConfig = await readIfExists(path6.join(installation.directory, "config.yaml"));
+    existingConfig = await readIfExists(path7.join(installation.directory, "config.yaml"));
     if (existingConfig !== null) seededFrom = `${installation.display}/config.yaml`;
   }
   const additions = skipMcp ? {} : mcpAdditionsFor(TARGET_ADAPTERS.hermes, groupByName(report.inventory.mcpServers), "hermes", conflicts);
-  const merged = mergedHermesConfig(existingConfig, additions, path6.join(root, ".agents", "skills"), {
+  const merged = mergedHermesConfig(existingConfig, additions, path7.join(root, ".agents", "skills"), {
     conflicts,
     display: configDisplay,
     homedir,
@@ -9412,9 +9664,9 @@ async function hermesActions(report, targetIds, conflicts, { root, homedir, env,
       content: merged.content
     });
   }
-  const persona = await readIfExists(path6.join(root, ...PORTABLE_PERSONA_PATH.split("/")));
+  const persona = await readIfExists(path7.join(root, ...PORTABLE_PERSONA_PATH.split("/")));
   if (persona !== null && persona.trim().length > 0) {
-    const soulPath = path6.join(profile.directory, "SOUL.md");
+    const soulPath = path7.join(profile.directory, "SOUL.md");
     const soulDisplay = `${profile.display}/SOUL.md`;
     const content = persona.endsWith("\n") ? persona : `${persona}
 `;
@@ -9463,7 +9715,7 @@ async function instructionActions(report, targetIds, conflicts, { root }) {
       name: "CLAUDE.md",
       action: "create",
       path: "CLAUDE.md",
-      absolutePath: path6.join(root, "CLAUDE.md"),
+      absolutePath: path7.join(root, "CLAUDE.md"),
       content: CLAUDE_BRIDGE_CONTENT,
       from: "AGENTS.md"
     }];
@@ -9473,10 +9725,10 @@ async function instructionActions(report, targetIds, conflicts, { root }) {
   }
   return [];
 }
-async function detectInstalledTargets(homedir = os2.homedir(), env = process.env, platform = process.platform) {
+async function detectInstalledTargets(homedir = os3.homedir(), env = process.env, platform = process.platform) {
   const detected = [];
   for (const [type, marker] of Object.entries(TARGET_HOME_MARKERS)) {
-    const directory = type === "hermes" ? (await hermesProfile({ homedir, env, platform })).directory : path6.join(homedir, marker);
+    const directory = type === "hermes" ? (await hermesProfile({ homedir, env, platform })).directory : path7.join(homedir, marker);
     try {
       await access2(directory);
       detected.push(type);
@@ -9487,7 +9739,7 @@ async function detectInstalledTargets(homedir = os2.homedir(), env = process.env
   return detected;
 }
 async function planAdapters(report, targets, {
-  homedir = os2.homedir(),
+  homedir = os3.homedir(),
   env = process.env,
   platform = process.platform,
   skipMcp = false,
@@ -9511,10 +9763,10 @@ async function planAdapters(report, targets, {
   return { actions, conflicts };
 }
 async function atomicWrite(absolutePath, content) {
-  await mkdir2(path6.dirname(absolutePath), { recursive: true });
-  const tempPath = path6.join(path6.dirname(absolutePath), `.${path6.basename(absolutePath)}.${process.pid}.tmp`);
-  await writeFile2(tempPath, content, { encoding: "utf8", mode: 384 });
-  await rename2(tempPath, absolutePath);
+  await mkdir3(path7.dirname(absolutePath), { recursive: true });
+  const tempPath = path7.join(path7.dirname(absolutePath), `.${path7.basename(absolutePath)}.${process.pid}.tmp`);
+  await writeFile3(tempPath, content, { encoding: "utf8", mode: 384 });
+  await rename3(tempPath, absolutePath);
 }
 function backupName(displayPath) {
   return displayPath.replace(/^~\//, "HOME/").replace(/^\$([A-Za-z_][A-Za-z0-9_]*)\//, "$1/").replace(/^%([A-Za-z_][A-Za-z0-9_]*)%\//, "$1/").split("/").join("__");
@@ -9524,8 +9776,8 @@ async function applyAdapters(actions, backupDirectory) {
   const backups = [];
   for (const action of actions) {
     if (action.action === "merge") {
-      await mkdir2(backupDirectory, { recursive: true, mode: 448 });
-      const backupPath = path6.join(backupDirectory, backupName(action.path));
+      await mkdir3(backupDirectory, { recursive: true, mode: 448 });
+      const backupPath = path7.join(backupDirectory, backupName(action.path));
       await copyFile(action.absolutePath, backupPath);
       backups.push(backupPath);
     }
@@ -9537,7 +9789,7 @@ async function applyAdapters(actions, backupDirectory) {
 async function planHermesMcpServersAction({
   definitions,
   conflicts = [],
-  homedir = os2.homedir(),
+  homedir = os3.homedir(),
   env = process.env,
   platform = process.platform,
   hermesHome: hermesHome2,
@@ -9545,7 +9797,7 @@ async function planHermesMcpServersAction({
   externalDir = null
 }) {
   const profile = await hermesProfile({ homedir, env, platform, hermesHome: hermesHome2, profile: hermesProfileName });
-  const configPath = path6.join(profile.directory, "config.yaml");
+  const configPath = path7.join(profile.directory, "config.yaml");
   const display = `${profile.display}/config.yaml`;
   const existingContent = await readIfExists(configPath);
   const merged = mergedHermesConfig(existingContent, definitions, externalDir, {
@@ -9587,7 +9839,7 @@ function planMcpServersAction({ root, target, definitions, existingContent = nul
     name: adapter.mcpPath,
     action: existingContent === null ? "create" : "merge",
     path: adapter.mcpPath,
-    absolutePath: path6.join(root, ...adapter.mcpPath.split("/")),
+    absolutePath: path7.join(root, ...adapter.mcpPath.split("/")),
     servers: merged.added,
     content: merged.content,
     expectedHash: existingContent === null ? null : createHash4("sha256").update(existingContent).digest("hex")
@@ -9595,7 +9847,7 @@ function planMcpServersAction({ root, target, definitions, existingContent = nul
 }
 
 // src/manifest.js
-import path7 from "node:path";
+import path8 from "node:path";
 function slugify(value) {
   const slug = value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 64);
   return slug || "agent-playbook";
@@ -9636,7 +9888,7 @@ function secretReferences(report) {
   return [...found].sort().map((name) => ({ name, ref: `env:${name}`, required: true }));
 }
 function createManifest(report, { displayName } = {}) {
-  const projectName = displayName ?? path7.basename(report.inventory.root);
+  const projectName = displayName ?? path8.basename(report.inventory.root);
   const platforms = /* @__PURE__ */ new Set([
     ...report.inventory.instructions.map((item) => item.platform),
     ...report.inventory.skills.map((item) => item.platform),
@@ -9715,7 +9967,7 @@ function comparableManifest(manifest) {
 var MANIFEST_NAME = "agentplaybook.json";
 async function readExisting(manifestPath) {
   try {
-    return JSON.parse(await readFile5(manifestPath, "utf8"));
+    return JSON.parse(await readFile6(manifestPath, "utf8"));
   } catch (error) {
     if (error?.code === "ENOENT") return null;
     throw new Error(`Cannot read existing ${MANIFEST_NAME}: ${error instanceof Error ? error.message : String(error)}`);
@@ -9725,25 +9977,25 @@ function timestampForPath() {
   return (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
 }
 async function atomicWrite2(manifestPath, manifest) {
-  const directory = path8.dirname(manifestPath);
-  await mkdir3(directory, { recursive: true, mode: 448 });
-  const tempPath = path8.join(directory, `.${MANIFEST_NAME}.${process.pid}.tmp`);
-  await writeFile3(tempPath, `${JSON.stringify(manifest, null, 2)}
+  const directory = path9.dirname(manifestPath);
+  await mkdir4(directory, { recursive: true, mode: 448 });
+  const tempPath = path9.join(directory, `.${MANIFEST_NAME}.${process.pid}.tmp`);
+  await writeFile4(tempPath, `${JSON.stringify(manifest, null, 2)}
 `, { encoding: "utf8", mode: 384 });
-  await rename3(tempPath, manifestPath);
+  await rename4(tempPath, manifestPath);
 }
 async function planSync(target, options = {}) {
   const report = await runDoctor(target);
-  return planFrom(report, path8.join(report.inventory.root, MANIFEST_NAME), options);
+  return planFrom(report, path9.join(report.inventory.root, MANIFEST_NAME), options);
 }
 async function planGlobalSync(options = {}) {
-  const homedir = options.homedir ?? os3.homedir();
+  const homedir = options.homedir ?? os4.homedir();
   const report = await runGlobalDoctor(options);
-  const manifestPath = path8.join(homedir, ".agentplaybooks", MANIFEST_NAME);
+  const manifestPath = path9.join(homedir, ".agentplaybooks", MANIFEST_NAME);
   return planFrom(report, manifestPath, { ...options, homedir, skipMcp: true, scope: "global" });
 }
 async function planFrom(report, manifestPath, options = {}) {
-  const statePath = path8.join(path8.dirname(manifestPath), ...options.scope === "global" ? [] : [".agentplaybooks"], "sync-state.json");
+  const statePath = path9.join(path9.dirname(manifestPath), ...options.scope === "global" ? [] : [".agentplaybooks"], "sync-state.json");
   const syncState = await loadSyncState(statePath);
   const existing = await readExisting(manifestPath);
   const discovered = createManifest(report);
@@ -9827,16 +10079,16 @@ async function applySync(plan) {
     await assertSafeSyncPath(plan.report.inventory.root, ".agentplaybooks/sync-state.json");
   }
   for (const action of plan.fileActions) {
-    const relative = path8.relative(plan.report.inventory.root, action.absolutePath);
-    if (!relative.startsWith("..") && !path8.isAbsolute(relative)) await assertSafeSyncPath(plan.report.inventory.root, relative);
+    const relative = path9.relative(plan.report.inventory.root, action.absolutePath);
+    if (!relative.startsWith("..") && !path9.isAbsolute(relative)) await assertSafeSyncPath(plan.report.inventory.root, relative);
     if (await hashFile(action.absolutePath) !== action.expectedHash) throw new Error(`Sync target changed after preview: ${action.path}`);
   }
-  const backupDirectory = path8.join(path8.dirname(plan.manifestPath), ".agentplaybooks", "backups", timestampForPath());
-  await assertSafeSyncPath(path8.dirname(plan.manifestPath), path8.relative(path8.dirname(plan.manifestPath), backupDirectory));
+  const backupDirectory = path9.join(path9.dirname(plan.manifestPath), ".agentplaybooks", "backups", timestampForPath());
+  await assertSafeSyncPath(path9.dirname(plan.manifestPath), path9.relative(path9.dirname(plan.manifestPath), backupDirectory));
   let backupPath = null;
   if (plan.manifestChanged && plan.existing) {
-    await mkdir3(backupDirectory, { recursive: true, mode: 448 });
-    backupPath = path8.join(backupDirectory, MANIFEST_NAME);
+    await mkdir4(backupDirectory, { recursive: true, mode: 448 });
+    backupPath = path9.join(backupDirectory, MANIFEST_NAME);
     await copyFile2(plan.manifestPath, backupPath);
   }
   if (plan.manifestChanged) {
@@ -9902,13 +10154,13 @@ function printSyncPlan(plan) {
 }
 
 // src/agent-plugins.js
-import { copyFile as copyFile3, mkdir as mkdir4, readFile as readFile7, readdir as readdir5, realpath, rename as rename4, writeFile as writeFile4 } from "node:fs/promises";
-import path10 from "node:path";
+import { copyFile as copyFile3, mkdir as mkdir5, readFile as readFile8, readdir as readdir5, realpath, rename as rename5, writeFile as writeFile5 } from "node:fs/promises";
+import path11 from "node:path";
 
 // src/snapshot.js
 import { createHash as createHash5 } from "node:crypto";
-import { lstat as lstat2, readFile as readFile6, readdir as readdir4 } from "node:fs/promises";
-import path9 from "node:path";
+import { lstat as lstat2, readFile as readFile7, readdir as readdir4 } from "node:fs/promises";
+import path10 from "node:path";
 var SNAPSHOT_FORMAT = "agentplaybooks.portable-snapshot/v1";
 var SNAPSHOT_MAX_FILES = 1e3;
 var SNAPSHOT_MAX_BYTES = 4 * 1024 * 1024;
@@ -9952,7 +10204,7 @@ async function treeFiles(root) {
     const current = queue.shift();
     for (const entry of await readdir4(current, { withFileTypes: true })) {
       if (entry.isSymbolicLink()) continue;
-      const absolute = path9.join(current, entry.name);
+      const absolute = path10.join(current, entry.name);
       if (entry.isDirectory()) queue.push(absolute);
       else if (entry.isFile()) files.push(absolute);
     }
@@ -10019,10 +10271,10 @@ async function buildPortableSnapshot(report, root, manifest, instructions, { ski
       continue;
     }
     const chosen = variants.find((item) => item.platform === "portable") ?? variants[0];
-    const directory = path9.dirname(chosen.absolutePath);
+    const directory = path10.dirname(chosen.absolutePath);
     for (const absolute of await treeFiles(directory)) {
-      const relative = normalizePath(path9.relative(directory, absolute));
-      add(`.agents/skills/${name}/${relative}`, await readFile6(absolute), normalizePath(path9.relative(root, absolute)));
+      const relative = normalizePath(path10.relative(directory, absolute));
+      add(`.agents/skills/${name}/${relative}`, await readFile7(absolute), normalizePath(path10.relative(root, absolute)));
     }
   }
   for (const [name, variants] of groupByName2(report.inventory.agents)) {
@@ -10052,9 +10304,9 @@ async function buildPortableSnapshot(report, root, manifest, instructions, { ski
   }
   if (instructions) add("AGENTS.md", instructions.content.endsWith("\n") ? instructions.content : `${instructions.content}
 `, instructions.source);
-  const persona = path9.join(root, ".agents", "persona.md");
+  const persona = path10.join(root, ".agents", "persona.md");
   try {
-    if ((await lstat2(persona)).isFile()) add(".agents/persona.md", await readFile6(persona), ".agents/persona.md");
+    if ((await lstat2(persona)).isFile()) add(".agents/persona.md", await readFile7(persona), ".agents/persona.md");
   } catch (error) {
     if (error?.code !== "ENOENT") throw error;
   }
@@ -10075,7 +10327,7 @@ async function planSnapshotRestore(root, snapshot, { skillsOnly = false } = {}) 
     const content = Buffer.from(file.content, "base64");
     let existing = null;
     try {
-      existing = await readFile6(absolute);
+      existing = await readFile7(absolute);
     } catch (error) {
       if (error?.code !== "ENOENT") throw error;
     }
@@ -10086,12 +10338,12 @@ async function planSnapshotRestore(root, snapshot, { skillsOnly = false } = {}) 
 }
 async function assertSafeDestination(root, relative) {
   if (!validSnapshotPath(relative)) throw new Error(`Unsafe restore path: ${relative}.`);
-  const base = path9.resolve(root);
+  const base = path10.resolve(root);
   let current = base;
   for (const segment of relative.split("/")) {
-    current = path9.join(current, segment);
-    const inside = path9.relative(base, current);
-    if (inside.startsWith("..") || path9.isAbsolute(inside)) throw new Error(`Restore path escapes its root: ${relative}.`);
+    current = path10.join(current, segment);
+    const inside = path10.relative(base, current);
+    if (inside.startsWith("..") || path10.isAbsolute(inside)) throw new Error(`Restore path escapes its root: ${relative}.`);
     try {
       const stat3 = await lstat2(current);
       if (stat3.isSymbolicLink()) throw new Error(`Restore path passes through a symlink: ${relative}.`);
@@ -10164,7 +10416,7 @@ function slugify2(value) {
 }
 async function readJsonIfExists(file) {
   try {
-    return JSON.parse(await readFile7(file, "utf8"));
+    return JSON.parse(await readFile8(file, "utf8"));
   } catch (error) {
     if (error?.code === "ENOENT") return null;
     throw new Error(`Cannot read ${normalizePath(file)}: ${error instanceof Error ? error.message : String(error)}`);
@@ -10172,7 +10424,7 @@ async function readJsonIfExists(file) {
 }
 async function readIfExists2(file) {
   try {
-    return await readFile7(file);
+    return await readFile8(file);
   } catch (error) {
     if (error?.code === "ENOENT") return null;
     throw error;
@@ -10192,7 +10444,7 @@ async function filesBelow(root) {
     }
     for (const entry of entries) {
       if (entry.isSymbolicLink()) continue;
-      const absolute = path10.join(current, entry.name);
+      const absolute = path11.join(current, entry.name);
       if (entry.isDirectory()) queue.push(absolute);
       else if (entry.isFile()) result.push(absolute);
     }
@@ -10200,7 +10452,7 @@ async function filesBelow(root) {
   return result;
 }
 async function addAction(actions, conflicts, root, relative, content, from) {
-  const absolutePath = path10.join(root, ...relative.split("/"));
+  const absolutePath = path11.join(root, ...relative.split("/"));
   const existing = await readIfExists2(absolutePath);
   const buffer = Buffer.isBuffer(content) ? content : Buffer.from(content, "utf8");
   if (existing?.equals(buffer)) return;
@@ -10267,10 +10519,10 @@ function secretExtension(manifestSecrets, bindings) {
   return [...byName.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 async function planPluginExport(root, { output } = {}) {
-  const projectRoot = path10.resolve(root);
-  const outputRoot = path10.resolve(output ?? path10.join(projectRoot, ".agentplaybooks", "plugin"));
+  const projectRoot = path11.resolve(root);
+  const outputRoot = path11.resolve(output ?? path11.join(projectRoot, ".agentplaybooks", "plugin"));
   const report = await runDoctor(projectRoot);
-  const playbook = await readJsonIfExists(path10.join(projectRoot, "agentplaybook.json"));
+  const playbook = await readJsonIfExists(path11.join(projectRoot, "agentplaybook.json"));
   const actions = [];
   const conflicts = [];
   const skillGroups = groupBy2(report.inventory.skills, (item) => item.name);
@@ -10283,15 +10535,15 @@ async function planPluginExport(root, { output } = {}) {
       conflicts.push({ kind: "skill", name, reason: "Skill definitions drift across platforms.", sources: variants.map((item) => item.source) });
       continue;
     }
-    const sourceRoot = path10.dirname(variants[0].absolutePath);
+    const sourceRoot = path11.dirname(variants[0].absolutePath);
     const members = await filesBelow(sourceRoot);
     let unsafeResource = null;
     for (const file of members) {
-      const content = await readFile7(file);
+      const content = await readFile8(file);
       if (content.includes(0)) continue;
       try {
         if (credentialLines(new TextDecoder("utf-8", { fatal: true }).decode(content)).length > 0) {
-          unsafeResource = normalizePath(path10.relative(sourceRoot, file));
+          unsafeResource = normalizePath(path11.relative(sourceRoot, file));
           break;
         }
       } catch (error) {
@@ -10303,8 +10555,8 @@ async function planPluginExport(root, { output } = {}) {
       continue;
     }
     for (const file of members) {
-      const relative = normalizePath(path10.relative(sourceRoot, file));
-      await addAction(actions, conflicts, outputRoot, `skills/${name}/${relative}`, await readFile7(file), variants[0].source);
+      const relative = normalizePath(path11.relative(sourceRoot, file));
+      await addAction(actions, conflicts, outputRoot, `skills/${name}/${relative}`, await readFile8(file), variants[0].source);
     }
   }
   const agentGroups = groupBy2(report.inventory.agents, (item) => item.name);
@@ -10347,7 +10599,7 @@ async function planPluginExport(root, { output } = {}) {
   }
   const secrets = secretExtension(playbook?.spec?.secrets, bindings);
   const plugin = portablePluginManifest({
-    name: slugify2(playbook?.metadata?.name ?? path10.basename(projectRoot)),
+    name: slugify2(playbook?.metadata?.name ?? path11.basename(projectRoot)),
     version: playbook?.metadata?.labels?.version ?? "1.0.0",
     description: playbook?.metadata?.description,
     ...secrets.length > 0 ? { extensions: { "ai.agentplaybooks": { secrets } } } : {}
@@ -10403,16 +10655,16 @@ async function validateMcpDocument(value, pluginRoot, conflicts = []) {
   return { $schema: value.$schema, mcpServers: validServers };
 }
 async function validatePackagePath(pluginRoot, value, label) {
-  const absolute = path10.resolve(pluginRoot, value);
-  const relative = path10.relative(pluginRoot, absolute);
-  if (relative === ".." || relative.startsWith(`..${path10.sep}`) || path10.isAbsolute(relative)) {
+  const absolute = path11.resolve(pluginRoot, value);
+  const relative = path11.relative(pluginRoot, absolute);
+  if (relative === ".." || relative.startsWith(`..${path11.sep}`) || path11.isAbsolute(relative)) {
     throw new Error(`${label} escapes the plugin root.`);
   }
   try {
     const resolvedRoot = await realpath(pluginRoot);
     const resolved = await realpath(absolute);
-    const resolvedRelative = path10.relative(resolvedRoot, resolved);
-    if (resolvedRelative === ".." || resolvedRelative.startsWith(`..${path10.sep}`) || path10.isAbsolute(resolvedRelative)) {
+    const resolvedRelative = path11.relative(resolvedRoot, resolved);
+    if (resolvedRelative === ".." || resolvedRelative.startsWith(`..${path11.sep}`) || path11.isAbsolute(resolvedRelative)) {
       throw new Error(`${label} resolves outside the plugin root.`);
     }
   } catch (error) {
@@ -10515,7 +10767,7 @@ function nativeServers(mcp, secrets) {
 async function mergedPortableMcp(root, definitions, conflicts) {
   if (Object.keys(definitions).length === 0) return null;
   const relative = ".agents/mcp.json";
-  const absolutePath = path10.join(root, ".agents", "mcp.json");
+  const absolutePath = path11.join(root, ".agents", "mcp.json");
   const current = await readJsonIfExists(absolutePath) ?? { mcpServers: {} };
   if (!current.mcpServers || typeof current.mcpServers !== "object" || Array.isArray(current.mcpServers)) throw new Error(`${relative} has no mcpServers object.`);
   const added = [];
@@ -10534,22 +10786,22 @@ async function mergedPortableMcp(root, definitions, conflicts) {
 `), servers: added };
 }
 async function planPluginImport(pluginDirectory, root) {
-  const pluginRoot = path10.resolve(pluginDirectory);
-  const projectRoot = path10.resolve(root);
+  const pluginRoot = path11.resolve(pluginDirectory);
+  const projectRoot = path11.resolve(root);
   const actions = [];
   const conflicts = [];
-  const plugin = validatePluginManifest(await readJsonIfExists(path10.join(pluginRoot, "plugin.json")), conflicts);
+  const plugin = validatePluginManifest(await readJsonIfExists(path11.join(pluginRoot, "plugin.json")), conflicts);
   let mcp = null;
   try {
-    const mcpRaw = await readJsonIfExists(path10.join(pluginRoot, "mcp.json"));
+    const mcpRaw = await readJsonIfExists(path11.join(pluginRoot, "mcp.json"));
     mcp = mcpRaw === null ? null : await validateMcpDocument(mcpRaw, pluginRoot, conflicts);
   } catch (error) {
     conflicts.push({ kind: "mcp", name: "mcp.json", reason: `${error instanceof Error ? error.message : String(error)} MCP was disabled; other components remain available.`, sources: ["mcp.json"] });
   }
   const secrets = importedSecrets(plugin, conflicts);
-  const skillsRoot = path10.join(pluginRoot, "skills");
+  const skillsRoot = path11.join(pluginRoot, "skills");
   const skillFiles2 = await filesBelow(skillsRoot);
-  const relativeSkillFiles = skillFiles2.map((file) => normalizePath(path10.relative(skillsRoot, file)));
+  const relativeSkillFiles = skillFiles2.map((file) => normalizePath(path11.relative(skillsRoot, file)));
   const invalidSkills = /* @__PURE__ */ new Set();
   for (const directory of new Set(relativeSkillFiles.map((relative) => relative.split("/")[0]))) {
     if (relativeSkillFiles.includes(`${directory}/SKILL.md`)) continue;
@@ -10565,24 +10817,24 @@ async function planPluginImport(pluginDirectory, root) {
     conflicts.push({ kind: "skill", name: match[1], reason: `Invalid skill (${finding2.code}); skipped this skill.`, sources: [finding2.source] });
   }
   for (const file of skillFiles2) {
-    const relative = normalizePath(path10.relative(skillsRoot, file));
+    const relative = normalizePath(path11.relative(skillsRoot, file));
     const [skillName] = relative.split("/");
     if (invalidSkills.has(skillName)) continue;
-    await addAction(actions, conflicts, projectRoot, `.agents/skills/${skillName}/${relative.split("/").slice(1).join("/")}`, await readFile7(file), `skills/${relative}`);
+    await addAction(actions, conflicts, projectRoot, `.agents/skills/${skillName}/${relative.split("/").slice(1).join("/")}`, await readFile8(file), `skills/${relative}`);
   }
-  const canonicalAgentRoot = path10.join(pluginRoot, "ai.agentplaybooks", "agents");
+  const canonicalAgentRoot = path11.join(pluginRoot, "ai.agentplaybooks", "agents");
   const canonicalFiles = (await filesBelow(canonicalAgentRoot)).filter((file) => file.toLowerCase().endsWith(".md"));
-  const agentRoot = canonicalFiles.length > 0 ? canonicalAgentRoot : path10.join(pluginRoot, "com.github.copilot", "agents");
+  const agentRoot = canonicalFiles.length > 0 ? canonicalAgentRoot : path11.join(pluginRoot, "com.github.copilot", "agents");
   for (const file of (canonicalFiles.length > 0 ? canonicalFiles : await filesBelow(agentRoot)).filter((item) => item.toLowerCase().endsWith(".md"))) {
-    const filename = path10.basename(file);
-    const name = filename.toLowerCase().endsWith(".agent.md") ? filename.slice(0, -".agent.md".length) : path10.basename(filename, ".md");
-    const source = normalizeText(await readFile7(file, "utf8"));
+    const filename = path11.basename(file);
+    const name = filename.toLowerCase().endsWith(".agent.md") ? filename.slice(0, -".agent.md".length) : path11.basename(filename, ".md");
+    const source = normalizeText(await readFile8(file, "utf8"));
     const parsed = parseAgentDefinition({ source: `.agents/agents/${name}.md`, platform: "portable", content: source, absolutePath: file, digest: "" });
     if (!parsed.valid || !SAFE_AGENT_NAME.test(parsed.name) || !parsed.description || !parsed.prompt.trim()) {
-      conflicts.push({ kind: "agent", name, reason: "Plugin custom agent is invalid and was not imported.", sources: [normalizePath(path10.relative(pluginRoot, file))] });
+      conflicts.push({ kind: "agent", name, reason: "Plugin custom agent is invalid and was not imported.", sources: [normalizePath(path11.relative(pluginRoot, file))] });
       continue;
     }
-    await addAction(actions, conflicts, projectRoot, `.agents/agents/${parsed.name}.md`, portableAgentContent(parsed), normalizePath(path10.relative(pluginRoot, file)));
+    await addAction(actions, conflicts, projectRoot, `.agents/agents/${parsed.name}.md`, portableAgentContent(parsed), normalizePath(path11.relative(pluginRoot, file)));
   }
   const mcpAction = await mergedPortableMcp(projectRoot, nativeServers(mcp, secrets), conflicts);
   if (mcpAction) actions.push(mcpAction);
@@ -10590,10 +10842,10 @@ async function planPluginImport(pluginDirectory, root) {
   return { kind: "import", root: projectRoot, pluginRoot, plugin, secrets, actions, conflicts, refreshManifest: true };
 }
 async function atomicWrite3(action) {
-  await mkdir4(path10.dirname(action.absolutePath), { recursive: true });
-  const temp = path10.join(path10.dirname(action.absolutePath), `.${path10.basename(action.absolutePath)}.${process.pid}.tmp`);
-  await writeFile4(temp, action.content, { mode: 384 });
-  await rename4(temp, action.absolutePath);
+  await mkdir5(path11.dirname(action.absolutePath), { recursive: true });
+  const temp = path11.join(path11.dirname(action.absolutePath), `.${path11.basename(action.absolutePath)}.${process.pid}.tmp`);
+  await writeFile5(temp, action.content, { mode: 384 });
+  await rename5(temp, action.absolutePath);
 }
 async function applyPluginPlan(plan) {
   if (plan.kind === "export" && plan.conflicts.length > 0) {
@@ -10601,11 +10853,11 @@ async function applyPluginPlan(plan) {
   }
   const written = [];
   const backups = [];
-  const backupRoot = path10.join(plan.root, ".agentplaybooks", "backups", (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-"));
+  const backupRoot = path11.join(plan.root, ".agentplaybooks", "backups", (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-"));
   for (const action of plan.actions) {
     if (plan.kind === "import" && action.action === "merge") {
-      const backup = path10.join(backupRoot, action.path.split("/").join("__"));
-      await mkdir4(path10.dirname(backup), { recursive: true, mode: 448 });
+      const backup = path11.join(backupRoot, action.path.split("/").join("__"));
+      await mkdir5(path11.dirname(backup), { recursive: true, mode: 448 });
       await copyFile3(action.absolutePath, backup);
       backups.push(backup);
     }
@@ -10657,13 +10909,13 @@ function printPluginPlan(plan) {
 }
 
 // src/hermes-distribution.js
-import { mkdir as mkdir6, readFile as readFile9, readdir as readdir7, rename as rename6, writeFile as writeFile6 } from "node:fs/promises";
-import path12 from "node:path";
+import { mkdir as mkdir7, readFile as readFile10, readdir as readdir7, rename as rename7, writeFile as writeFile7 } from "node:fs/promises";
+import path13 from "node:path";
 
 // src/remote.js
-import { chmod, mkdir as mkdir5, readdir as readdir6, readFile as readFile8, rename as rename5, writeFile as writeFile5 } from "node:fs/promises";
-import os4 from "node:os";
-import path11 from "node:path";
+import { chmod as chmod2, mkdir as mkdir6, readdir as readdir6, readFile as readFile9, rename as rename6, writeFile as writeFile6 } from "node:fs/promises";
+import os5 from "node:os";
+import path12 from "node:path";
 var import_yaml5 = __toESM(require_dist(), 1);
 var DEFAULT_BASE_URL = "https://agentplaybooks.ai";
 var LINK_FILE = [".agentplaybooks", "remote.json"];
@@ -10686,24 +10938,24 @@ function resolveBaseUrl(flagUrl, env = process.env) {
   const url = flagUrl || env.AGENTPLAYBOOKS_URL || DEFAULT_BASE_URL;
   return trimEndCharacters(url, "/");
 }
-function credentialsPath(homedir = os4.homedir()) {
-  return path11.join(homedir, ".agentplaybooks", "credentials.json");
+function credentialsPath(homedir = os5.homedir()) {
+  return path12.join(homedir, ".agentplaybooks", "credentials.json");
 }
 async function loadCredentials(homedir) {
   try {
-    return JSON.parse(await readFile8(credentialsPath(homedir), "utf8"));
+    return JSON.parse(await readFile9(credentialsPath(homedir), "utf8"));
   } catch (error) {
     if (error?.code === "ENOENT") return { version: 1, remotes: {} };
     throw new Error(`Cannot read stored credentials: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 async function writePrivateJson(filePath, value) {
-  await mkdir5(path11.dirname(filePath), { recursive: true, mode: 448 });
-  const tempPath = path11.join(path11.dirname(filePath), `.${path11.basename(filePath)}.${process.pid}.tmp`);
-  await writeFile5(tempPath, `${JSON.stringify(value, null, 2)}
+  await mkdir6(path12.dirname(filePath), { recursive: true, mode: 448 });
+  const tempPath = path12.join(path12.dirname(filePath), `.${path12.basename(filePath)}.${process.pid}.tmp`);
+  await writeFile6(tempPath, `${JSON.stringify(value, null, 2)}
 `, { encoding: "utf8", mode: 384 });
-  await rename5(tempPath, filePath);
-  await chmod(filePath, 384).catch(() => {
+  await rename6(tempPath, filePath);
+  await chmod2(filePath, 384).catch(() => {
   });
 }
 async function saveCredentials(credentials, homedir) {
@@ -10768,11 +11020,11 @@ async function resolvePlaybook(url, apiKey, ref, { fetchImpl } = {}) {
   return getPlaybook(url, apiKey, match.id, { fetchImpl });
 }
 function linkPath(root) {
-  return path11.join(root, ...LINK_FILE);
+  return path12.join(root, ...LINK_FILE);
 }
 async function readLink(root) {
   try {
-    return JSON.parse(await readFile8(linkPath(root), "utf8"));
+    return JSON.parse(await readFile9(linkPath(root), "utf8"));
   } catch (error) {
     if (error?.code === "ENOENT") return null;
     throw new Error(`Cannot read ${LINK_FILE.join("/")}: ${error instanceof Error ? error.message : String(error)}`);
@@ -10816,7 +11068,7 @@ ${body}${body.endsWith("\n") ? "" : "\n"}`;
 }
 async function readLocalFile(root, relativePath) {
   try {
-    return normalizeText(await readFile8(path11.join(root, ...relativePath.split("/")), "utf8"));
+    return normalizeText(await readFile9(path12.join(root, ...relativePath.split("/")), "utf8"));
   } catch (error) {
     if (error?.code === "ENOENT") return null;
     throw error;
@@ -11039,9 +11291,9 @@ async function planPull(root, ref, { url, apiKey, fetchImpl, snapshotId, skillsO
 async function applyPull(root, plan) {
   for (const action of plan.actions) {
     const absolutePath = await assertSafeDestination(root, action.path);
-    await mkdir5(path11.dirname(absolutePath), { recursive: true });
+    await mkdir6(path12.dirname(absolutePath), { recursive: true });
     await assertSafeDestination(root, action.path);
-    await writeFile5(absolutePath, action.content);
+    await writeFile6(absolutePath, action.content);
   }
   await writeLink(root, {
     url: plan.url,
@@ -11053,14 +11305,14 @@ async function applyPull(root, plan) {
   return { written: plan.actions.map((action) => action.path) };
 }
 async function readSkillFiles(skillDocumentPath, skillName, warnings) {
-  const directory = path11.dirname(skillDocumentPath);
+  const directory = path12.dirname(skillDocumentPath);
   const names = [];
   const entries = await readdir6(directory, { withFileTypes: true }).catch(() => []);
   for (const entry of entries) {
     if (entry.isFile()) {
       names.push(entry.name);
     } else if (entry.isDirectory() && SKILL_FILE_DIRECTORIES.includes(entry.name)) {
-      const nested = await readdir6(path11.join(directory, entry.name), { withFileTypes: true }).catch(() => []);
+      const nested = await readdir6(path12.join(directory, entry.name), { withFileTypes: true }).catch(() => []);
       for (const child of nested) {
         if (child.isFile()) names.push(`${entry.name}/${child.name}`);
       }
@@ -11073,7 +11325,7 @@ async function readSkillFiles(skillDocumentPath, skillName, warnings) {
       warnings.push({ kind: "skill-file", name: `${skillName}/${filename}`, reason: "File stays in the private snapshot but is outside the hosted skill attachment format." });
       continue;
     }
-    const content = await readFile8(path11.join(directory, ...filename.split("/"))).catch(() => null);
+    const content = await readFile9(path12.join(directory, ...filename.split("/"))).catch(() => null);
     if (content === null) continue;
     if (content.byteLength > MAX_SKILL_FILE_BYTES) {
       warnings.push({ kind: "skill-file", name: `${skillName}/${filename}`, reason: `File is ${content.byteLength} bytes; the hosted attachment limit is ${MAX_SKILL_FILE_BYTES}, but it stays in the private snapshot.` });
@@ -11175,12 +11427,12 @@ async function planPush(root, options = {}) {
   return planPushFrom(await runDoctor(root), root, options);
 }
 async function planGlobalPush(options = {}) {
-  const homedir = options.homedir ?? os4.homedir();
+  const homedir = options.homedir ?? os5.homedir();
   const report = await runGlobalDoctor(options);
   return planPushFrom(report, homedir, {
     ...options,
     scope: "global",
-    displayName: `${os4.hostname()} workstation`
+    displayName: `${os5.hostname()} workstation`
   });
 }
 function skillFileActions(skill, remoteSkill) {
@@ -11421,10 +11673,10 @@ async function applyPush(root, plan, { apiKey, fetchImpl } = {}) {
   await writeLink(root, { url, playbookId, guid, name, lastSyncedAt: (/* @__PURE__ */ new Date()).toISOString() });
   return { playbookId, guid, name };
 }
-function decidePush({ apply, yes, json, interactive, actionCount }) {
+function decidePush({ apply, yes, json: json2, interactive, actionCount }) {
   if (apply || yes) return { upload: true, reason: "explicit" };
   if (actionCount === 0) return { upload: false, reason: "nothing-to-do" };
-  if (json) return { upload: false, reason: "needs-explicit-flag" };
+  if (json2) return { upload: false, reason: "needs-explicit-flag" };
   if (!interactive) return { upload: false, reason: "needs-explicit-flag" };
   return { upload: false, reason: "ask" };
 }
@@ -11438,7 +11690,7 @@ var SKILL_FILE_DIRECTORIES2 = ["scripts", "references", "assets", "examples", "t
 var SAFE_PROFILE_NAME = /^[a-z0-9](?:[a-z0-9_-]{0,62}[a-z0-9])?$/;
 async function readIfExists3(absolutePath) {
   try {
-    return normalizeText(await readFile9(absolutePath, "utf8"));
+    return normalizeText(await readFile10(absolutePath, "utf8"));
   } catch (error) {
     if (error?.code === "ENOENT") return null;
     throw error;
@@ -11471,25 +11723,25 @@ function renderManifest({ name, version, description, author, owned }) {
 `;
 }
 async function readPortableSkills(root) {
-  const skillsRoot = path12.join(root, ...PORTABLE_SKILLS_DIR.split("/"));
+  const skillsRoot = path13.join(root, ...PORTABLE_SKILLS_DIR.split("/"));
   const entries = await readdir7(skillsRoot, { withFileTypes: true }).catch(() => []);
   const skills = [];
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
-    const directory = path12.join(skillsRoot, entry.name);
-    const document = await readIfExists3(path12.join(directory, "SKILL.md"));
+    const directory = path13.join(skillsRoot, entry.name);
+    const document = await readIfExists3(path13.join(directory, "SKILL.md"));
     if (document === null) continue;
     const files = [{ relativePath: "SKILL.md", content: document }];
     const inside = await readdir7(directory, { withFileTypes: true }).catch(() => []);
     for (const child of inside) {
       if (child.isFile() && child.name !== "SKILL.md") {
-        const content = await readIfExists3(path12.join(directory, child.name));
+        const content = await readIfExists3(path13.join(directory, child.name));
         if (content !== null) files.push({ relativePath: child.name, content });
       } else if (child.isDirectory() && SKILL_FILE_DIRECTORIES2.includes(child.name)) {
-        const nested = await readdir7(path12.join(directory, child.name), { withFileTypes: true }).catch(() => []);
+        const nested = await readdir7(path13.join(directory, child.name), { withFileTypes: true }).catch(() => []);
         for (const file of nested) {
           if (!file.isFile()) continue;
-          const content = await readIfExists3(path12.join(directory, child.name, file.name));
+          const content = await readIfExists3(path13.join(directory, child.name, file.name));
           if (content !== null) files.push({ relativePath: `${child.name}/${file.name}`, content });
         }
       }
@@ -11502,12 +11754,12 @@ async function readPortableSkills(root) {
 }
 async function planHermesExport(root, destination, { name, version } = {}) {
   const link = await readLink(root);
-  const profileName = (name ?? link?.name ?? path12.basename(root)).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const profileName = (name ?? link?.name ?? path13.basename(root)).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   if (!SAFE_PROFILE_NAME.test(profileName)) {
     throw new Error(`'${profileName}' is not a usable Hermes profile name. Pass --name with a lowercase, hyphenated one.`);
   }
   const skills = await readPortableSkills(root);
-  const persona = await readIfExists3(path12.join(root, ...PORTABLE_PERSONA_PATH3.split("/")));
+  const persona = await readIfExists3(path13.join(root, ...PORTABLE_PERSONA_PATH3.split("/")));
   if (skills.length === 0 && persona === null) {
     throw new Error(`Nothing to export: ${root} has no ${PORTABLE_SKILLS_DIR} and no ${PORTABLE_PERSONA_PATH3}. Run 'agentplaybooks pull <playbook> --apply' first.`);
   }
@@ -11540,7 +11792,7 @@ async function planHermesExport(root, destination, { name, version } = {}) {
   });
   return {
     root,
-    destination: path12.resolve(destination),
+    destination: path13.resolve(destination),
     profileName,
     playbook: link ? { guid: link.guid, name: link.name } : null,
     skills: skills.map((skill) => skill.name),
@@ -11550,14 +11802,14 @@ async function planHermesExport(root, destination, { name, version } = {}) {
 async function applyHermesExport(plan) {
   const written = [];
   for (const file of plan.files) {
-    const absolutePath = path12.join(plan.destination, ...file.path.split("/"));
-    await mkdir6(path12.dirname(absolutePath), { recursive: true });
-    const temporary = path12.join(
-      path12.dirname(absolutePath),
-      `.${path12.basename(absolutePath)}.${process.pid}.tmp`
+    const absolutePath = path13.join(plan.destination, ...file.path.split("/"));
+    await mkdir7(path13.dirname(absolutePath), { recursive: true });
+    const temporary = path13.join(
+      path13.dirname(absolutePath),
+      `.${path13.basename(absolutePath)}.${process.pid}.tmp`
     );
-    await writeFile6(temporary, file.content, "utf8");
-    await rename6(temporary, absolutePath);
+    await writeFile7(temporary, file.content, "utf8");
+    await rename7(temporary, absolutePath);
     written.push(file.path);
   }
   return { written };
@@ -11578,8 +11830,8 @@ function hermesInstallHint(plan) {
 }
 
 // src/connect.js
-import { readFile as readFile10 } from "node:fs/promises";
-import path13 from "node:path";
+import { readFile as readFile11 } from "node:fs/promises";
+import path14 from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash as createHash6 } from "node:crypto";
 var GUID_PATTERN = /^[0-9a-f]{8,}$/i;
@@ -11607,7 +11859,7 @@ function serverDefinition({ url, keyEnvVar, keyHeader = DEFAULT_KEY_HEADER, targ
 }
 async function readIfPresent(absolutePath) {
   try {
-    return await readFile10(absolutePath, "utf8");
+    return await readFile11(absolutePath, "utf8");
   } catch (error) {
     if (error?.code === "ENOENT") return null;
     throw new Error(`Cannot read ${absolutePath}: ${error instanceof Error ? error.message : String(error)}`);
@@ -11709,7 +11961,7 @@ async function applyConnect(plan) {
     const hash = current === null ? null : createHash6("sha256").update(current).digest("hex");
     if (hash !== action.expectedHash) throw new Error(`Connection target changed after preview: ${action.path}.`);
   }
-  const backupDirectory = path13.join(plan.root, ".agentplaybooks", "backups", `connect-${Date.now()}`);
+  const backupDirectory = path14.join(plan.root, ".agentplaybooks", "backups", `connect-${Date.now()}`);
   const { written, backups } = await applyAdapters(plan.fileActions, backupDirectory);
   return { applied: true, written, backups };
 }
@@ -11741,18 +11993,18 @@ conflict (${item.target}): ${item.reason}`);
 }
 
 // src/hermes-setup.js
-import { access as access3, readFile as readFile11, stat as stat2, lstat as lstat3 } from "node:fs/promises";
+import { access as access3, readFile as readFile12, stat as stat2, lstat as lstat3 } from "node:fs/promises";
 import { constants } from "node:fs";
 import { createHash as createHash7 } from "node:crypto";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import os5 from "node:os";
-import path14 from "node:path";
+import os6 from "node:os";
+import path15 from "node:path";
 var execute = promisify(execFile);
 var digest2 = (value) => value === null ? null : createHash7("sha256").update(value).digest("hex");
 async function readOptional(file) {
   try {
-    return await readFile11(file);
+    return await readFile12(file);
   } catch (error) {
     if (error.code === "ENOENT") return null;
     throw error;
@@ -11764,11 +12016,11 @@ async function writableDestination(destination) {
     try {
       const info = await stat2(candidate);
       await access3(candidate, constants.W_OK | (info.isDirectory() ? constants.X_OK : 0));
-      if (!info.isDirectory()) await access3(path14.dirname(candidate), constants.W_OK | constants.X_OK);
+      if (!info.isDirectory()) await access3(path15.dirname(candidate), constants.W_OK | constants.X_OK);
       return true;
     } catch (error) {
       if (error.code !== "ENOENT") return false;
-      const parent = path14.dirname(candidate);
+      const parent = path15.dirname(candidate);
       if (parent === candidate) return false;
       candidate = parent;
     }
@@ -11797,14 +12049,14 @@ async function inspectHermes(root, options = {}) {
   }
   const keyEnvVar = options.keyEnvVar ?? "APBKS_KEY_AGENTPLAYBOOKS";
   if (!/^[A-Z_][A-Z0-9_]*$/.test(keyEnvVar)) throw new Error("Invalid key environment variable name.");
-  const profileEnv = (await readOptional(path14.join(profile.directory, ".env")))?.toString() ?? "";
+  const profileEnv = (await readOptional(path15.join(profile.directory, ".env")))?.toString() ?? "";
   const declared = profileEnv.split(/\r?\n/).some((line) => /^\s*(?:export\s+)?([A-Z_][A-Z0-9_]*)\s*=/.exec(line)?.[1] === keyEnvVar);
   return {
-    host: os5.hostname(),
+    host: os6.hostname(),
     profile: profile.directory,
     nodeSupported: Number(process.versions.node.split(".")[0]) >= 20,
     hermesInstalled,
-    profileWritable: await (options.writable ?? writableDestination)(path14.join(profile.directory, "config.yaml")),
+    profileWritable: await (options.writable ?? writableDestination)(path15.join(profile.directory, "config.yaml")),
     projectWritable: await (options.writable ?? writableDestination)(root),
     keyEnvVar,
     keyInProcess: Boolean(env[keyEnvVar]),
@@ -11813,10 +12065,10 @@ async function inspectHermes(root, options = {}) {
   };
 }
 async function planHermesSetup(root, options = {}) {
-  root = path14.resolve(root);
+  root = path15.resolve(root);
   const url = serviceUrl(options);
   const diagnostics = await inspectHermes(root, options);
-  const connect = await planConnect(root, { ...options, url, targets: ["hermes"], externalDir: path14.join(root, ".agents", "skills") });
+  const connect = await planConnect(root, { ...options, url, targets: ["hermes"], externalDir: path15.join(root, ".agents", "skills") });
   const conflicts = [...connect.conflicts];
   const fileActions = [...connect.fileActions];
   for (const [ok, name, reason] of [
@@ -11836,7 +12088,7 @@ async function planHermesSetup(root, options = {}) {
       fileActions.push({
         name: "remote link",
         path: ".agentplaybooks/remote.json",
-        absolutePath: path14.join(root, ".agentplaybooks/remote.json"),
+        absolutePath: path15.join(root, ".agentplaybooks/remote.json"),
         content: JSON.stringify({ url, playbookId: pull.playbook.id, guid: pull.playbook.guid, name: pull.playbook.name }, null, 2) + "\n"
       });
     }
@@ -11873,7 +12125,7 @@ async function applyHermesSetup(plan) {
   for (const action of plan.fileActions) {
     if (action.restore) await assertSafeDestination(plan.root, action.path);
     if (action.path === ".agentplaybooks/remote.json") {
-      for (const target of [path14.join(plan.root, ".agentplaybooks"), action.absolutePath]) {
+      for (const target of [path15.join(plan.root, ".agentplaybooks"), action.absolutePath]) {
         const info = await lstat3(target).catch((error) => {
           if (error.code !== "ENOENT") throw error;
         });
@@ -11883,7 +12135,7 @@ async function applyHermesSetup(plan) {
     if (digest2(await readOptional(action.absolutePath)) !== action.expectedHash) throw new Error(`Setup target changed after preview: ${action.path}.`);
     if (!await writableDestination(action.absolutePath)) throw new Error(`Setup destination is no longer writable: ${action.path}.`);
   }
-  return applyAdapters(plan.fileActions, path14.join(plan.diagnostics.profile, ".agentplaybooks", "backups", `setup-${Date.now()}`));
+  return applyAdapters(plan.fileActions, path15.join(plan.diagnostics.profile, ".agentplaybooks", "backups", `setup-${Date.now()}`));
 }
 async function checkHermesTools(endpoint, options = {}) {
   serviceUrl({ ...options, url: endpoint.replace(/\/api\/mcp\/[^/]+$/, "") });
@@ -11939,18 +12191,18 @@ function printHermesSetup(plan, log = console.log) {
 
 // src/hermes-memory.js
 var import_yaml6 = __toESM(require_dist(), 1);
-import { readFile as readFile12 } from "node:fs/promises";
+import { readFile as readFile13 } from "node:fs/promises";
 import { createHash as createHash8 } from "node:crypto";
-import path15 from "node:path";
+import path16 from "node:path";
 import { fileURLToPath as fileURLToPath2 } from "node:url";
 var GUID = /^(?:[a-f\d]{8,}|[a-f\d]{8}(?:-[a-f\d]{4}){3}-[a-f\d]{12})$/i;
 var PROVIDER = "agentplaybooks-memory";
 var LEGACY_PROVIDER = "agentplaybooks";
-var PLUGIN_FILES = ["__init__.py", "client.py", "recall.py", "config_schema.py", "plugin.yaml", "README.md", "LICENSE"];
+var PLUGIN_FILES = ["__init__.py", "client.py", "recall.py", "token_source.py", "config_schema.py", "plugin.yaml", "README.md", "LICENSE"];
 var digest3 = (value) => value === null ? null : createHash8("sha256").update(value).digest("hex");
 async function readOptional2(filename) {
   try {
-    return await readFile12(filename, "utf8");
+    return await readFile13(filename, "utf8");
   } catch (error) {
     if (error.code === "ENOENT") return null;
     throw error;
@@ -11978,14 +12230,14 @@ async function planHermesMemory(options = {}) {
       kind: "memory-provider",
       name,
       path: `${profile.display}/${name}`,
-      absolutePath: path15.join(profile.directory, name),
+      absolutePath: path16.join(profile.directory, name),
       action: old === null ? "create" : "merge",
       expectedHash: digest3(old),
       content
     });
   };
   const conflict2 = (name, reason) => conflicts.push({ kind: "memory-provider", name, reason });
-  const configPath = path15.join(profile.directory, "config.yaml");
+  const configPath = path16.join(profile.directory, "config.yaml");
   const oldYaml = await readOptional2(configPath);
   const yaml = (0, import_yaml6.parseDocument)(oldYaml ?? "{}\n");
   if (yaml.errors.length || !(0, import_yaml6.isMap)(yaml.contents)) throw new Error("Hermes config.yaml must be a valid YAML mapping.");
@@ -12002,7 +12254,7 @@ async function planHermesMemory(options = {}) {
     add("config.yaml", oldYaml, String(yaml));
   }
   const settingsName = "agentplaybooks/config.json";
-  const oldSettings = await readOptional2(path15.join(profile.directory, settingsName));
+  const oldSettings = await readOptional2(path16.join(profile.directory, settingsName));
   const settings = oldSettings === null ? {} : JSON.parse(oldSettings);
   const desired = { base_url: baseUrl, playbook_guid: options.playbook, shared_playbooks: shared.join(",") };
   if (team.length) desired.team_playbooks = team.join(",");
@@ -12015,11 +12267,11 @@ async function planHermesMemory(options = {}) {
   }
   const bundled = fileURLToPath2(new URL("../hermes-plugin/", import.meta.url));
   const source = fileURLToPath2(new URL("../../hermes-memory/agentplaybooks/", import.meta.url));
-  const pluginDirectory = options.pluginDirectory ?? (await readOptional2(path15.join(bundled, "plugin.yaml")) !== null ? bundled : source);
+  const pluginDirectory = options.pluginDirectory ?? (await readOptional2(path16.join(bundled, "plugin.yaml")) !== null ? bundled : source);
   for (const name of PLUGIN_FILES) {
     const relative = `plugins/${PROVIDER}/${name}`;
-    const content = await readFile12(path15.join(pluginDirectory, name), "utf8");
-    const old = await readOptional2(path15.join(profile.directory, relative));
+    const content = await readFile13(path16.join(pluginDirectory, name), "utf8");
+    const old = await readOptional2(path16.join(profile.directory, relative));
     if (old !== null && old !== content) conflict2(relative, "An installed plugin file differs; update through Hermes or reconcile it explicitly.");
     add(relative, old, content);
   }
@@ -12040,7 +12292,7 @@ async function applyHermesMemory(plan) {
       throw new Error(`Setup target changed after planning: ${action.path}. Rerun the plan.`);
     }
   }
-  return applyAdapters(plan.fileActions, path15.join(plan.profile, ".agentplaybooks", "backups", `memory-${Date.now()}`));
+  return applyAdapters(plan.fileActions, path16.join(plan.profile, ".agentplaybooks", "backups", `memory-${Date.now()}`));
 }
 function printHermesMemoryPlan(plan, log = console.log) {
   log(`Hermes memory: private playbook ${plan.playbook}`);
@@ -12055,9 +12307,9 @@ function printHermesMemoryPlan(plan, log = console.log) {
 import { spawnSync } from "node:child_process";
 var import_yaml7 = __toESM(require_dist(), 1);
 import { createHash as createHash9 } from "node:crypto";
-import { access as access4, chmod as chmod2, mkdir as mkdir7, readFile as readFile13, rename as rename7, rm, writeFile as writeFile7 } from "node:fs/promises";
-import os6 from "node:os";
-import path16 from "node:path";
+import { access as access4, chmod as chmod3, mkdir as mkdir8, readFile as readFile14, rename as rename8, rm as rm2, writeFile as writeFile8 } from "node:fs/promises";
+import os7 from "node:os";
+import path17 from "node:path";
 var GUID2 = /^(?:[a-f\d]{8,}|[a-f\d]{8}(?:-[a-f\d]{4}){3}-[a-f\d]{12})$/i;
 var SAFE_PROFILE_NAME2 = /^[a-z0-9](?:[a-z0-9_-]{0,62}[a-z0-9])?$/;
 var ENV_NAME = /^[A-Z_][A-Z0-9_]*$/;
@@ -12067,7 +12319,7 @@ var STATE_FILE = "state.json";
 var digest4 = (value) => value === null ? null : createHash9("sha256").update(value).digest("hex");
 async function readOptional3(filename) {
   try {
-    return await readFile13(filename, "utf8");
+    return await readFile14(filename, "utf8");
   } catch (error) {
     if (error.code === "ENOENT") return null;
     throw error;
@@ -12091,9 +12343,9 @@ function assertBundleUrl(baseUrl, allowInsecureHttp = false) {
   }
   return url;
 }
-function defaultManagedDir({ env = process.env, platform = process.platform, homedir = os6.homedir() } = {}) {
-  const base = platform === "win32" && env.LOCALAPPDATA ? env.LOCALAPPDATA : path16.join(homedir, ".local", "share");
-  return path16.join(base, "agentplaybooks", "hermes-managed");
+function defaultManagedDir({ env = process.env, platform = process.platform, homedir = os7.homedir() } = {}) {
+  const base = platform === "win32" && env.LOCALAPPDATA ? env.LOCALAPPDATA : path17.join(homedir, ".local", "share");
+  return path17.join(base, "agentplaybooks", "hermes-managed");
 }
 async function fetchPlaybook(baseUrl, guid, { fetchImpl = fetch } = {}) {
   if (!GUID2.test(guid ?? "")) throw new Error(`'${guid}' is not a playbook GUID.`);
@@ -12287,14 +12539,14 @@ function recordedSource(manifest) {
 function sameSource(recorded, source) {
   if (!recorded) return false;
   const normalize = (value) => {
-    const resolved = trimEndCharacters(path16.resolve(value), "\\/");
+    const resolved = trimEndCharacters(path17.resolve(value), "\\/");
     return process.platform === "win32" ? resolved.toLowerCase() : resolved;
   };
   return normalize(recorded) === normalize(source);
 }
 function findHermesBinary(home, explicit) {
   if (explicit) return explicit;
-  const candidates = process.platform === "win32" ? [path16.join(home, "hermes-agent", "venv", "Scripts", "hermes.exe")] : [path16.join(home, "hermes-agent", "venv", "bin", "hermes")];
+  const candidates = process.platform === "win32" ? [path17.join(home, "hermes-agent", "venv", "Scripts", "hermes.exe")] : [path17.join(home, "hermes-agent", "venv", "bin", "hermes")];
   return candidates;
 }
 async function planHermesSync(options = {}) {
@@ -12306,7 +12558,7 @@ async function planHermesSync(options = {}) {
   if (options.memory !== void 0 && !GUID2.test(options.memory)) throw new Error("--memory must be the GUID of a private memory playbook.");
   const fetchImpl = options.fetchImpl ?? fetch;
   const home = await hermesProfile({ env: options.hermesHome ? { ...env, HERMES_HOME: options.hermesHome } : env });
-  const managedDir = path16.resolve(options.managedDir ?? defaultManagedDir({ env }));
+  const managedDir = path17.resolve(options.managedDir ?? defaultManagedDir({ env }));
   const warnings = [];
   const bundle = await fetchPlaybook(baseUrl, options.bundle, { fetchImpl });
   const config = readBundleConfig(bundle);
@@ -12325,7 +12577,7 @@ async function planHermesSync(options = {}) {
     bots.push(bot);
   }
   const managed = structuredClone(config.managed);
-  const skillsDir = path16.join(managedDir, "skills");
+  const skillsDir = path17.join(managedDir, "skills");
   managed.skills = { ...managed.skills ?? {} };
   managed.skills.external_dirs = [.../* @__PURE__ */ new Set([...managed.skills.external_dirs ?? [], skillsDir])];
   if (options.memory) managed.memory = { ...managed.memory ?? {}, provider: "agentplaybooks-memory" };
@@ -12335,15 +12587,15 @@ async function planHermesSync(options = {}) {
     "# replaced on every sync.",
     (0, import_yaml7.stringify)(managed, { lineWidth: 0 })
   ].join("\n");
-  const previousEnv = parseEnv(await readOptional3(path16.join(managedDir, ".env")));
-  const previousState = JSON.parse(await readOptional3(path16.join(managedDir, STATE_FILE)) ?? "{}");
+  const previousEnv = parseEnv(await readOptional3(path17.join(managedDir, ".env")));
+  const previousState = JSON.parse(await readOptional3(path17.join(managedDir, STATE_FILE)) ?? "{}");
   const envValues = { ...previousEnv };
   for (const name of previousState.bundleEnv ?? []) {
     if (!(name in config.env)) delete envValues[name];
   }
   Object.assign(envValues, config.env);
   if (options.envFile) {
-    const fileContent = await readOptional3(path16.resolve(options.envFile));
+    const fileContent = await readOptional3(path17.resolve(options.envFile));
     if (fileContent === null) warnings.push(`--env-file ${options.envFile} is not readable; previously synced values are kept.`);
     else {
       const fileValues = parseEnv(fileContent);
@@ -12366,10 +12618,10 @@ async function planHermesSync(options = {}) {
   const profiles = [{ name: "default", directory: home.directory }];
   const installs = [];
   for (const bot of bots) {
-    const profileDir = path16.join(home.directory, "profiles", bot.profileName);
-    const source = path16.join(managedDir, "bots", bot.profileName);
-    const manifest = await readOptional3(path16.join(profileDir, "distribution.yaml"));
-    if (manifest === null && await exists(path16.join(home.directory, "profiles", ".deleted", bot.profileName))) {
+    const profileDir = path17.join(home.directory, "profiles", bot.profileName);
+    const source = path17.join(managedDir, "bots", bot.profileName);
+    const manifest = await readOptional3(path17.join(profileDir, "distribution.yaml"));
+    if (manifest === null && await exists(path17.join(home.directory, "profiles", ".deleted", bot.profileName))) {
       warnings.push(`Bot '${bot.profileName}' was deleted on this machine; it is not reinstalled.`);
       continue;
     }
@@ -12441,32 +12693,32 @@ function printHermesSyncPlan(plan, log = console.log) {
   for (const warning of plan.warnings) log(`  ! ${warning}`);
 }
 async function writeAtomic(filename, content, mode) {
-  await mkdir7(path16.dirname(filename), { recursive: true });
-  const temporary = path16.join(path16.dirname(filename), `.${path16.basename(filename)}.${process.pid}.tmp`);
-  await writeFile7(temporary, content, { encoding: "utf8", ...mode ? { mode } : {} });
-  await rename7(temporary, filename);
-  if (mode) await chmod2(filename, mode).catch(() => {
+  await mkdir8(path17.dirname(filename), { recursive: true });
+  const temporary = path17.join(path17.dirname(filename), `.${path17.basename(filename)}.${process.pid}.tmp`);
+  await writeFile8(temporary, content, { encoding: "utf8", ...mode ? { mode } : {} });
+  await rename8(temporary, filename);
+  if (mode) await chmod3(filename, mode).catch(() => {
   });
 }
 async function replaceDirectory(directory, files) {
   const staging = `${directory}.staging-${process.pid}`;
   const previous = `${directory}.previous-${process.pid}`;
-  await rm(staging, { recursive: true, force: true });
+  await rm2(staging, { recursive: true, force: true });
   for (const file of files) {
-    const target = path16.join(staging, ...file.path.split("/"));
-    await mkdir7(path16.dirname(target), { recursive: true });
-    await writeFile7(target, file.content, "utf8");
+    const target = path17.join(staging, ...file.path.split("/"));
+    await mkdir8(path17.dirname(target), { recursive: true });
+    await writeFile8(target, file.content, "utf8");
   }
-  await mkdir7(staging, { recursive: true });
+  await mkdir8(staging, { recursive: true });
   const hadPrevious = await exists(directory);
-  if (hadPrevious) await rename7(directory, previous);
+  if (hadPrevious) await rename8(directory, previous);
   try {
-    await rename7(staging, directory);
+    await rename8(staging, directory);
   } catch (error) {
-    if (hadPrevious) await rename7(previous, directory);
+    if (hadPrevious) await rename8(previous, directory);
     throw error;
   }
-  if (hadPrevious) await rm(previous, { recursive: true, force: true });
+  if (hadPrevious) await rm2(previous, { recursive: true, force: true });
 }
 function defaultRunHermes(binary, args, { home }) {
   const candidates = Array.isArray(binary) ? binary : [binary];
@@ -12489,19 +12741,19 @@ function defaultRunHermes(binary, args, { home }) {
 async function applyHermesSync(plan, { runHermes = defaultRunHermes } = {}) {
   const written = [];
   const failures = [];
-  await mkdir7(plan.managedDir, { recursive: true });
-  await writeAtomic(path16.join(plan.managedDir, "config.yaml"), plan.managedConfig);
-  await writeAtomic(path16.join(plan.managedDir, ".env"), plan.managedEnv, 384);
+  await mkdir8(plan.managedDir, { recursive: true });
+  await writeAtomic(path17.join(plan.managedDir, "config.yaml"), plan.managedConfig);
+  await writeAtomic(path17.join(plan.managedDir, ".env"), plan.managedEnv, 384);
   written.push("config.yaml", ".env");
   const skillFilesFlat = plan.skills.flatMap((skill) => skill.files.map((file) => ({
     path: `${skill.name}/${file.relativePath}`,
     content: file.content.endsWith("\n") ? file.content : `${file.content}
 `
   })));
-  await replaceDirectory(path16.join(plan.managedDir, "skills"), skillFilesFlat);
+  await replaceDirectory(path17.join(plan.managedDir, "skills"), skillFilesFlat);
   written.push(`skills/ (${plan.skills.length})`);
   for (const bot of plan.bots) {
-    await replaceDirectory(path16.join(plan.managedDir, "bots", bot.profileName), bot.files);
+    await replaceDirectory(path17.join(plan.managedDir, "bots", bot.profileName), bot.files);
   }
   const installed = [];
   for (const install of plan.installs) {
@@ -12522,7 +12774,7 @@ async function applyHermesSync(plan, { runHermes = defaultRunHermes } = {}) {
   for (const profile of plan.profiles) {
     if (!await exists(profile.directory)) continue;
     for (const plugin of plan.plugins ?? []) {
-      if (await exists(path16.join(profile.directory, "plugins", plugin.name))) continue;
+      if (await exists(path17.join(profile.directory, "plugins", plugin.name))) continue;
       const args = [
         ...profile.name === "default" ? [] : ["-p", profile.name],
         "plugins",
@@ -12539,11 +12791,11 @@ async function applyHermesSync(plan, { runHermes = defaultRunHermes } = {}) {
   for (const profile of plan.profiles) {
     if (profile.name !== "default" && !await exists(profile.directory)) continue;
     const bot = plan.bots.find((entry) => entry.profileName === profile.name);
-    const configPath = path16.join(profile.directory, "config.yaml");
+    const configPath = path17.join(profile.directory, "config.yaml");
     try {
       const merged = mergeDefaults(await readOptional3(configPath), plan.defaults, {
         mcpServers: bot?.mcpServers,
-        externalDirs: [path16.join(plan.managedDir, "skills")]
+        externalDirs: [path17.join(plan.managedDir, "skills")]
       });
       if (merged !== null) {
         await writeAtomic(configPath, merged);
@@ -12587,15 +12839,15 @@ async function applyHermesSync(plan, { runHermes = defaultRunHermes } = {}) {
     bots: plan.bots.map((bot) => ({ guid: bot.guid, profile: bot.profileName })),
     failures
   };
-  await writeAtomic(path16.join(plan.managedDir, STATE_FILE), `${JSON.stringify(state, null, 2)}
+  await writeAtomic(path17.join(plan.managedDir, STATE_FILE), `${JSON.stringify(state, null, 2)}
 `);
   return { written, installed, plugins, memory, failures };
 }
 
 // src/adopt.js
 var import_yaml8 = __toESM(require_dist(), 1);
-import { readFile as readFile14, writeFile as writeFile8, rename as rename8 } from "node:fs/promises";
-import path17 from "node:path";
+import { readFile as readFile15, writeFile as writeFile9, rename as rename9 } from "node:fs/promises";
+import path18 from "node:path";
 var CREDENTIAL_KEY = /(api[_-]?key|secret|token|password|passwd|credential|auth)/i;
 var NOT_A_VALUE = /^(\s*|\$\{.*\}|\$[A-Za-z_][A-Za-z0-9_]*|env:.*|vault:.*|\*+|x{3,}|\.{3}|<.*>|your[-_].*|changeme|placeholder|redacted|dummy|todo)$/i;
 var EXPANSION_SUPPORT = {
@@ -12728,21 +12980,21 @@ function rewriteConfig(content, format, occurrences, names) {
 `;
 }
 async function applyRewrite(absolutePath, content) {
-  const temporary = path17.join(path17.dirname(absolutePath), `.${path17.basename(absolutePath)}.${process.pid}.tmp`);
-  await writeFile8(temporary, content, { encoding: "utf8", mode: 384 });
-  await rename8(temporary, absolutePath);
+  const temporary = path18.join(path18.dirname(absolutePath), `.${path18.basename(absolutePath)}.${process.pid}.tmp`);
+  await writeFile9(temporary, content, { encoding: "utf8", mode: 384 });
+  await rename9(temporary, absolutePath);
 }
 async function readConfigForRewrite(absolutePath) {
-  return normalizeText(await readFile14(absolutePath, "utf8"));
+  return normalizeText(await readFile15(absolutePath, "utf8"));
 }
 async function inventoryForAdoption({ global = false, root } = {}) {
   return global ? discoverGlobal() : discover(root);
 }
 
 // src/secrets.js
-import { spawn } from "node:child_process";
-import path18 from "node:path";
-import { readFile as readFile15 } from "node:fs/promises";
+import { spawn as spawn2 } from "node:child_process";
+import path19 from "node:path";
+import { readFile as readFile16 } from "node:fs/promises";
 var SECRET_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
 async function savePlaybookKey(url, guid, apiKey, homedir) {
   const credentials = await loadCredentials(homedir);
@@ -12863,7 +13115,7 @@ async function buildRunEnvironment(url, guid, playbookKey, names, { fetchImpl, b
 }
 function runWithEnvironment(command, args, injected) {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, {
+    const child = spawn2(command, args, {
       stdio: "inherit",
       shell: false,
       env: { ...process.env, ...injected }
@@ -12874,7 +13126,7 @@ function runWithEnvironment(command, args, injected) {
 }
 async function readManifestSecrets(root) {
   try {
-    const manifest = JSON.parse(await readFile15(path18.join(root, "agentplaybook.json"), "utf8"));
+    const manifest = JSON.parse(await readFile16(path19.join(root, "agentplaybook.json"), "utf8"));
     const secrets = manifest?.spec?.secrets;
     return Array.isArray(secrets) ? secrets : [];
   } catch (error) {
@@ -12950,8 +13202,8 @@ function queryString(query) {
   return encoded ? `?${encoded}` : "";
 }
 async function fetchAuditExport(url, apiKey, guid, query, { fetchImpl = fetch } = {}) {
-  const path20 = `/api/playbooks/${guid}/audit/export${queryString(query)}`;
-  const response = await fetchImpl(`${url}${path20}`, {
+  const path21 = `/api/playbooks/${guid}/audit/export${queryString(query)}`;
+  const response = await fetchImpl(`${url}${path21}`, {
     headers: { Authorization: `Bearer ${apiKey}` }
   });
   const text = await response.text();
@@ -12961,15 +13213,15 @@ async function fetchAuditExport(url, apiKey, guid, query, { fetchImpl = fetch } 
       message = JSON.parse(text).error || message;
     } catch {
     }
-    const error = new Error(`GET ${path20} failed: ${message}`);
+    const error = new Error(`GET ${path21} failed: ${message}`);
     error.status = response.status;
     throw error;
   }
   return text;
 }
 async function fetchAuditVerify(url, apiKey, guid, { fetchImpl = fetch } = {}) {
-  const path20 = `/api/playbooks/${guid}/audit/verify`;
-  const response = await fetchImpl(`${url}${path20}`, {
+  const path21 = `/api/playbooks/${guid}/audit/verify`;
+  const response = await fetchImpl(`${url}${path21}`, {
     headers: { Authorization: `Bearer ${apiKey}` }
   });
   let payload = null;
@@ -12979,7 +13231,7 @@ async function fetchAuditVerify(url, apiKey, guid, { fetchImpl = fetch } = {}) {
   }
   if (!response.ok && response.status !== 409) {
     const message = payload?.error || `HTTP ${response.status}`;
-    const error = new Error(`GET ${path20} failed: ${message}`);
+    const error = new Error(`GET ${path21} failed: ${message}`);
     error.status = response.status;
     throw error;
   }
@@ -13031,10 +13283,13 @@ Usage:
                                 [--profile=<bot>] [--hermes-home=<directory>]
   agentplaybooks connect --account [path] [--apply] [--json] [--target=<types>]
   agentplaybooks login [--url=<base>]
+  agentplaybooks login --entra [--url=<base>] [--login-hint=<upn>]
+  agentplaybooks token --entra [--url=<base>] [--json]
+  agentplaybooks whoami --entra [--url=<base>] [--json]
   agentplaybooks memory setup <guid> --target=hermes [--hermes-home=<directory>]
                              [--profile=<bot>] [--shared=<guids>] [--team=<guids>] [--url=<base>] [--allow-insecure-http]
                              [--apply] [--json]
-  agentplaybooks mcp stdio --url=<MCP endpoint> [--key-env=<variable>]
+  agentplaybooks mcp stdio --url=<MCP endpoint> [--key-env=<variable>] [--entra]
   agentplaybooks hermes setup <guid> [path] [--profile=<bot>] [--hermes-home=<directory>]
                              [--tools-only] [--key-env=<VAR>] [--url=<base>] [--hermes-bin=<path>]
                              [--allow-insecure-http] [--apply] [--check] [--json]
@@ -13045,7 +13300,7 @@ Usage:
                              [--managed-dir=<directory>] [--hermes-home=<directory>]
                              [--hermes-bin=<path>] [--env-file=<file>] [--allow-insecure-http]
                              [--apply] [--json]
-  agentplaybooks logout [--url=<base>]
+  agentplaybooks logout [--url=<base>] [--entra]
   agentplaybooks playbooks [--url=<base>] [--json]
   agentplaybooks backups <guid> [--url=<base>] [--json]
   agentplaybooks pull <id|guid> [path] [--snapshot=<id>] [--apply] [--json] [--url=<base>]
@@ -13166,7 +13421,7 @@ function parse(args) {
   const separator = args.indexOf("--");
   const own = separator === -1 ? args.slice(1) : args.slice(1, separator);
   const rest = separator === -1 ? [] : args.slice(separator + 1);
-  const valueFlags = /* @__PURE__ */ new Set(["--profile", "--hermes-home", "--target", "--name", "--key-env", "--key-header", "--url", "--shared", "--team", "--memory", "--managed-dir", "--hermes-bin", "--env-file", "--output", "--version", "--snapshot", "--client-id", "--playbook", "--from-env", "--rewrite", "--prefix", "--format", "--since", "--until", "--actor", "--action", "--operation", "--secret", "--limit", "--days"]);
+  const valueFlags = /* @__PURE__ */ new Set(["--profile", "--hermes-home", "--target", "--name", "--key-env", "--key-header", "--url", "--shared", "--team", "--memory", "--managed-dir", "--hermes-bin", "--env-file", "--output", "--version", "--snapshot", "--client-id", "--playbook", "--from-env", "--rewrite", "--prefix", "--format", "--since", "--until", "--actor", "--action", "--operation", "--secret", "--limit", "--days", "--login-hint"]);
   for (let i = 0; i < own.length; i++) {
     const arg = own[i];
     if (arg.startsWith("--")) {
@@ -13198,10 +13453,10 @@ async function confirm(question) {
   }
 }
 async function openBrowser(url) {
-  const { spawn: spawn2 } = await import("node:child_process");
-  const [command, args] = process.platform === "win32" ? ["cmd", ["/c", "start", "", url]] : process.platform === "darwin" ? ["open", [url]] : ["xdg-open", [url]];
+  const { spawn: spawn3 } = await import("node:child_process");
+  const [command, args] = process.platform === "win32" ? ["rundll32", ["url.dll,FileProtocolHandler", url]] : process.platform === "darwin" ? ["open", [url]] : ["xdg-open", [url]];
   try {
-    const child = spawn2(command, args, { stdio: "ignore", detached: true });
+    const child = spawn3(command, args, { stdio: "ignore", detached: true });
     child.on("error", () => {
     });
     child.unref();
@@ -13309,7 +13564,7 @@ async function runSecrets(url, flags, positional, rest) {
   if (subcommand === "run" && rest.length === 0) {
     throw new Error("Usage: agentplaybooks secrets run [path] -- <command> [args...]");
   }
-  const root = flags.has("--global") ? os7.homedir() : path19.resolve(subcommand === "push" ? positional[2] ?? process.cwd() : positional[1] ?? process.cwd());
+  const root = flags.has("--global") ? os8.homedir() : path20.resolve(subcommand === "push" ? positional[2] ?? process.cwd() : positional[1] ?? process.cwd());
   const needsVault = subcommand !== "adopt" || flags.has("--apply");
   const vault = needsVault ? await resolveVaultAccess(url, root, flags) : { guid: null, playbookKey: null };
   const { guid, playbookKey } = vault;
@@ -13520,7 +13775,7 @@ async function runAudit(url, flags, positional) {
 async function run(args) {
   const { command, flags, positional, rest } = parse(args);
   if (command === "--version") {
-    console.log(JSON.parse(await readFile16(new URL("../package.json", import.meta.url), "utf8")).version);
+    console.log(JSON.parse(await readFile17(new URL("../package.json", import.meta.url), "utf8")).version);
     return;
   }
   if (!command || flags.has("--help") || command === "help") {
@@ -13528,8 +13783,16 @@ async function run(args) {
     return;
   }
   if (command === "mcp" && positional[0] === "stdio") {
-    for (const flag of flags.keys()) if (!["--url", "--key-env", "--key-header", "--allow-insecure-http"].includes(flag)) throw new Error(`Unknown option ${flag} for mcp stdio.`);
-    await runMcpStdio({ url: flags.get("--url"), keyEnvVar: flags.get("--key-env"), keyHeader: flags.get("--key-header"), allowInsecureHttp: flags.has("--allow-insecure-http") });
+    for (const flag of flags.keys()) if (!["--url", "--key-env", "--key-header", "--allow-insecure-http", "--entra"].includes(flag)) throw new Error(`Unknown option ${flag} for mcp stdio.`);
+    if (flags.has("--entra") && (flags.has("--key-env") || flags.has("--key-header"))) throw new Error("--entra replaces --key-env and --key-header.");
+    const entraBase = flags.has("--entra") ? new URL(String(flags.get("--url"))).origin : null;
+    await runMcpStdio({
+      url: flags.get("--url"),
+      keyEnvVar: flags.get("--key-env"),
+      keyHeader: flags.get("--key-header"),
+      allowInsecureHttp: flags.has("--allow-insecure-http"),
+      credential: entraBase ? async () => `Bearer ${await entraAccessToken(entraBase)}` : void 0
+    });
     return;
   }
   const common = ["--json", "--apply", "--url", "--profile", "--hermes-home"];
@@ -13554,7 +13817,7 @@ async function run(args) {
       toolsOnly: flags.has("--tools-only"),
       allowInsecureHttp: flags.has("--allow-insecure-http")
     };
-    const root = path19.resolve(positional[2] ?? process.cwd());
+    const root = path20.resolve(positional[2] ?? process.cwd());
     let plan, result, diagnostics, connection;
     if (positional[0] === "doctor") {
       const connect = await planConnect(root, { ...options, targets: ["hermes"] });
@@ -13636,7 +13899,7 @@ async function run(args) {
     const target = flags.get("--target");
     if (target && target !== "ros2") throw new Error("Doctor's optional --target currently supports ros2 only.");
     if (target && flags.has("--global")) throw new Error("ROS 2 Doctor requires a project directory, not --global.");
-    const report = flags.has("--global") ? await runGlobalDoctor({ includeVendored: flags.has("--include-vendored") }) : await runDoctor(path19.resolve(positional[0] ?? process.cwd()), { robotics: target === "ros2" });
+    const report = flags.has("--global") ? await runGlobalDoctor({ includeVendored: flags.has("--include-vendored") }) : await runDoctor(path20.resolve(positional[0] ?? process.cwd()), { robotics: target === "ros2" });
     if (flags.has("--json")) console.log(JSON.stringify(publicReport(report), null, 2));
     else printDoctor(report);
     if (flags.has("--strict") && report.findings.some((item) => item.severity === "critical" || item.severity === "high")) {
@@ -13654,7 +13917,7 @@ async function run(args) {
       // the main one. Ignored by every other target, which has no such concept.
       hermesProfileName: typeof flags.get("--profile") === "string" ? flags.get("--profile") : ""
     };
-    const plan = flags.has("--global") ? await planGlobalSync(options) : await planSync(path19.resolve(positional[0] ?? process.cwd()), options);
+    const plan = flags.has("--global") ? await planGlobalSync(options) : await planSync(path20.resolve(positional[0] ?? process.cwd()), options);
     if (flags.has("--json")) {
       console.log(JSON.stringify({
         action: plan.action,
@@ -13683,12 +13946,12 @@ async function run(args) {
     const subcommand = positional[0];
     let plan;
     if (subcommand === "export") {
-      const root = path19.resolve(positional[1] ?? process.cwd());
-      const output = typeof flags.get("--output") === "string" ? path19.resolve(flags.get("--output")) : void 0;
+      const root = path20.resolve(positional[1] ?? process.cwd());
+      const output = typeof flags.get("--output") === "string" ? path20.resolve(flags.get("--output")) : void 0;
       plan = await planPluginExport(root, { output });
     } else if (subcommand === "import") {
       if (!positional[1]) throw new Error("Usage: agentplaybooks plugin import <plugin-directory> [path] [--apply]");
-      plan = await planPluginImport(path19.resolve(positional[1]), path19.resolve(positional[2] ?? process.cwd()));
+      plan = await planPluginImport(path20.resolve(positional[1]), path20.resolve(positional[2] ?? process.cwd()));
     } else {
       throw new Error("Usage: agentplaybooks plugin <export|import> ...");
     }
@@ -13709,7 +13972,7 @@ async function run(args) {
     const requestedTargets = typeof flags.get("--target") === "string" ? flags.get("--target").split(",").map((value) => value.trim()).filter(Boolean) : [];
     const account = flags.has("--account");
     const requestedPlaybooks = account ? [] : positional[0]?.split(",") ?? [];
-    const plan = await planConnect(path19.resolve(positional[account ? 0 : 1] ?? process.cwd()), {
+    const plan = await planConnect(path20.resolve(positional[account ? 0 : 1] ?? process.cwd()), {
       account,
       profile: typeof flags.get("--profile") === "string" ? flags.get("--profile") : void 0,
       hermesHome: typeof flags.get("--hermes-home") === "string" ? flags.get("--hermes-home") : void 0,
@@ -13767,12 +14030,40 @@ async function run(args) {
     await runSecrets(url, flags, positional, rest);
     return;
   }
+  if (command === "login" && flags.has("--entra")) {
+    const saved = await loginWithEntra(url, {
+      openBrowser,
+      log: (line) => console.error(line),
+      loginHint: typeof flags.get("--login-hint") === "string" ? flags.get("--login-hint") : void 0
+    });
+    console.log(`Signed in to ${url} as ${saved.user?.email || saved.user?.id} with Microsoft Entra ID.`);
+    return;
+  }
+  if (command === "token" || command === "whoami") {
+    if (!flags.has("--entra")) throw new Error(`Usage: agentplaybooks ${command} --entra [--url=<base>]`);
+    if (command === "whoami") {
+      const status = await entraStatus(url);
+      if (flags.has("--json")) console.log(JSON.stringify(status, null, 2));
+      else console.log(status.signedIn ? `${status.user?.email || status.user?.id} (Microsoft Entra ID, ${url})` : `Not signed in to ${url} with Microsoft Entra ID.`);
+      if (!status.signedIn) process.exitCode = 1;
+      return;
+    }
+    const session = await entraSession(url);
+    if (flags.has("--json")) console.log(JSON.stringify(session));
+    else process.stdout.write(session.access_token);
+    return;
+  }
   if (command === "login") {
     const apiKey = process.env.AGENTPLAYBOOKS_API_KEY || await promptForKey(`Paste your ${url} user API key (apb_...): `);
     if (!apiKey.startsWith("apb_")) throw new Error("That does not look like an AgentPlaybooks user API key (apb_...).");
     await verifyApiKey(url, apiKey);
     await saveApiKey(url, apiKey);
     console.log(`Stored API key for ${url}.`);
+    return;
+  }
+  if (command === "logout" && flags.has("--entra")) {
+    const removed = await logoutEntra(url);
+    console.log(removed ? `Removed the Microsoft Entra ID sign-in for ${url}.` : `No Microsoft Entra ID sign-in stored for ${url}.`);
     return;
   }
   if (command === "logout") {
@@ -13812,8 +14103,8 @@ async function run(args) {
     if (kind !== "hermes") throw new Error("Usage: agentplaybooks export hermes <dir> [path]");
     const destination = positional[1];
     if (!destination) throw new Error("Usage: agentplaybooks export hermes <dir> [path]");
-    const root = path19.resolve(positional[2] ?? process.cwd());
-    const plan = await planHermesExport(root, path19.resolve(destination), {
+    const root = path20.resolve(positional[2] ?? process.cwd());
+    const plan = await planHermesExport(root, path20.resolve(destination), {
       name: typeof flags.get("--name") === "string" ? flags.get("--name") : void 0,
       version: typeof flags.get("--version") === "string" ? flags.get("--version") : void 0
     });
@@ -13844,7 +14135,7 @@ async function run(args) {
   if (command === "pull") {
     const ref = positional[0];
     if (!ref) throw new Error("Usage: agentplaybooks pull <id|guid> [path]");
-    const root = path19.resolve(positional[1] ?? process.cwd());
+    const root = path20.resolve(positional[1] ?? process.cwd());
     const apiKey = await requireApiKey(url);
     const snapshotId = typeof flags.get("--snapshot") === "string" ? flags.get("--snapshot") : void 0;
     const plan = await planPull(root, ref, { url, apiKey, snapshotId });
@@ -13872,7 +14163,7 @@ async function run(args) {
   }
   if (command === "push") {
     const global = flags.has("--global");
-    const root = global ? os7.homedir() : path19.resolve(positional[0] ?? process.cwd());
+    const root = global ? os8.homedir() : path20.resolve(positional[0] ?? process.cwd());
     const apiKey = await requireApiKey(url);
     const plan = global ? await planGlobalPush({ url, apiKey, includeVendored: flags.has("--include-vendored") }) : await planPush(root, { url, apiKey });
     if (flags.has("--json")) {
@@ -13917,7 +14208,7 @@ async function run(args) {
   if (command === "auth") {
     const provider = positional[0];
     if (!provider) throw new Error("Usage: agentplaybooks auth <provider> [path]");
-    const root = path19.resolve(positional[1] ?? process.cwd());
+    const root = path20.resolve(positional[1] ?? process.cwd());
     const template = await fetchTemplate(url, provider);
     const plan = planConsent(template);
     const vault = await resolveVaultAccess(url, root, flags);

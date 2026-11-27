@@ -111,6 +111,35 @@ GOTRUE_EXTERNAL_AZURE_REDIRECT_URI=https://<your-supabase-auth-host>/auth/v1/cal
 
 Setting the tenant in `GOTRUE_EXTERNAL_AZURE_URL` limits sign-in to your organisation. Entra ID requires an HTTPS redirect URI for anything but localhost, so the Supabase Auth endpoint needs a certificate. Add your app's URL to `GOTRUE_URI_ALLOW_LIST` so the login can return to it.
 
+#### Desktop agents with single sign-on (Hermes, CLI)
+
+The same Entra ID sign-in can serve desktop agents, so nobody on the team handles an `apb_` key. The agent signs in to Entra ID once in the browser (on an Entra-joined Windows machine Edge completes this from the Windows sign-in, without a prompt), then renews silently. Each renewal gets a fresh Entra ID token and exchanges it at `POST /api/auth/entra` for a short-lived session of the same user the web login produces. The agent sees exactly the playbooks, memory and runtime secrets that this user can reach, and the audit trail names the user.
+
+1. In the **same** app registration as the web login, add the platform **Mobile and desktop applications** with the redirect URI `http://localhost`, and set **Allow public client flows** to *Yes*. Use one registration: Entra's `sub` claim differs per application, so a second registration would create a second account for the same person.
+2. Add the optional ID-token claims `email` and `xms_edov`, and grant admin consent for `openid`, `profile`, `email`, `offline_access` and `User.Read`.
+3. On the app, set:
+
+   ```bash
+   ENTRA_TENANT_ID=<tenant id>
+   ENTRA_CLIENT_ID=<application (client) id>
+   ```
+
+   These are not secrets: `GET /api/auth/entra` publishes them so the CLI needs only the instance URL.
+4. On each machine:
+
+   ```bash
+   agentplaybooks login --entra --url=https://<your-server>
+   ```
+
+   Then point clients at the session instead of a key:
+   - MCP over stdio: `agentplaybooks mcp stdio --entra --url=https://<your-server>/api/mcp/<guid>`
+   - Hermes memory provider: set `token_command` in `agentplaybooks/config.json` (or `AGENTPLAYBOOKS_TOKEN_COMMAND`) to a JSON array such as `["node", "<cli>/bin/agentplaybooks.js", "token", "--entra", "--json", "--url=https://<your-server>"]`. Team and shared memory playbooks then use the same sign-in; a configured key still wins for its playbook.
+   - Runtime secrets (`/api/playbooks/<guid>/secrets/resolve`) accept the session of the playbook's owner or an editor. Each secret must still allow runtime reveal.
+
+The Entra refresh token and the current access token are stored in `~/.agentplaybooks/entra.json`, encrypted with Windows DPAPI on Windows (file mode 0600 elsewhere). The Supabase refresh token is not handed out. Every renewal goes through Entra ID, so a user disabled there loses access when the current access token expires (one hour by default, `GOTRUE_JWT_EXP`). `agentplaybooks whoami --entra` shows who is signed in, and `agentplaybooks logout --entra` removes the sign-in.
+
+Each renewal opens a new Supabase Auth session. Set `GOTRUE_SESSIONS_INACTIVITY_TIMEOUT` (for example `8h`) so unused ones are cleaned up. If Supabase Auth refuses the ID token over its nonce, set `GOTRUE_EXTERNAL_AZURE_SKIP_NONCE_CHECK=true`. The Supabase Auth container needs outbound HTTPS to `login.microsoftonline.com` for the token signing keys.
+
 ## Option 2: Docker
 
 For running on your own servers.
@@ -230,6 +259,7 @@ an empty database: the incremental history cannot create the core tables.
 | `AUDIT_SIEM_WEBHOOK_URL` | No | Optional HTTPS POST of each audit event. Off by default. Requires `AUDIT_SIEM_WEBHOOK_SECRET` (≥32 random bytes, not a password) for an HMAC `X-Audit-Signature` header. |
 | `NO_EGRESS` | No | Set to `true` on an air-gapped instance to disable optional outbound calls (today: MCP registry search) unless `MCP_REGISTRY_URL` points at an internal mirror. Unset keeps the hosted default. |
 | `MCP_REGISTRY_URL` | No | Override for `GET /api/mcp-registry/search`. Unset uses the official registry. Empty disables it. An internal URL is used even when `NO_EGRESS=true`. |
+| `ENTRA_TENANT_ID`, `ENTRA_CLIENT_ID` | No | Microsoft Entra ID single sign-on for desktop agents (`POST /api/auth/entra`). Both must be GUIDs, and the client id must be the one Supabase Auth's `azure` provider uses. Unset disables the endpoint. See [Desktop agents with single sign-on](#desktop-agents-with-single-sign-on-hermes-cli). |
 | `MTLS_MODE` | No | Secret-client certificate auth. Default `cloudflare` (hosted production). Set `proxy` behind a TLS terminator that verifies client certs; `off` disables certificate auth. Unknown values fail closed. See [Self-hosted mTLS](./self-hosted-mtls.md). |
 | `MTLS_PROXY_FINGERPRINT_HEADER` | No | Required when `MTLS_MODE=proxy`. Header the terminator sets after verifying the client cert (hex SHA-256 or PEM). |
 | `MTLS_PROXY_VERIFY_HEADER` | No | Required in proxy mode. That header must equal `SUCCESS` or mTLS is rejected. |

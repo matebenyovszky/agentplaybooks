@@ -61,3 +61,8 @@ services:
       # hosted default. See public/docs/self-hosting.md.
       NO_EGRESS: ${NO_EGRESS:-}
       MCP_REGISTRY_URL: ${MCP_REGISTRY_URL:-}
+      # Optional. Microsoft Entra ID single sign-on for desktop agents
+      # (agentplaybooks login --entra). Same app registration as the
+      # Supabase Auth azure provider. See public/docs/self-hosting.md.
+      ENTRA_TENANT_ID: ${ENTRA_TENANT_ID:-}
+      ENTRA_CLIENT_ID: ${ENTRA_CLIENT_ID:-}

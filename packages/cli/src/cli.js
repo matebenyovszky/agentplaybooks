@@ -1,4 +1,5 @@
 import { runMcpStdio } from "./mcp-stdio.js";
+import { entraAccessToken, entraSession, entraStatus, loginWithEntra, logoutEntra } from "./entra.js";
 import os from "node:os";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -87,10 +88,13 @@ Usage:
                                 [--profile=<bot>] [--hermes-home=<directory>]
   agentplaybooks connect --account [path] [--apply] [--json] [--target=<types>]
   agentplaybooks login [--url=<base>]
+  agentplaybooks login --entra [--url=<base>] [--login-hint=<upn>]
+  agentplaybooks token --entra [--url=<base>] [--json]
+  agentplaybooks whoami --entra [--url=<base>] [--json]
   agentplaybooks memory setup <guid> --target=hermes [--hermes-home=<directory>]
                              [--profile=<bot>] [--shared=<guids>] [--team=<guids>] [--url=<base>] [--allow-insecure-http]
                              [--apply] [--json]
-  agentplaybooks mcp stdio --url=<MCP endpoint> [--key-env=<variable>]
+  agentplaybooks mcp stdio --url=<MCP endpoint> [--key-env=<variable>] [--entra]
   agentplaybooks hermes setup <guid> [path] [--profile=<bot>] [--hermes-home=<directory>]
                              [--tools-only] [--key-env=<VAR>] [--url=<base>] [--hermes-bin=<path>]
                              [--allow-insecure-http] [--apply] [--check] [--json]
@@ -101,7 +105,7 @@ Usage:
                              [--managed-dir=<directory>] [--hermes-home=<directory>]
                              [--hermes-bin=<path>] [--env-file=<file>] [--allow-insecure-http]
                              [--apply] [--json]
-  agentplaybooks logout [--url=<base>]
+  agentplaybooks logout [--url=<base>] [--entra]
   agentplaybooks playbooks [--url=<base>] [--json]
   agentplaybooks backups <guid> [--url=<base>] [--json]
   agentplaybooks pull <id|guid> [path] [--snapshot=<id>] [--apply] [--json] [--url=<base>]
@@ -227,7 +231,7 @@ function parse(args) {
   const separator = args.indexOf("--");
   const own = separator === -1 ? args.slice(1) : args.slice(1, separator);
   const rest = separator === -1 ? [] : args.slice(separator + 1);
-  const valueFlags = new Set(["--profile", "--hermes-home", "--target", "--name", "--key-env", "--key-header", "--url", "--shared", "--team", "--memory", "--managed-dir", "--hermes-bin", "--env-file", "--output", "--version", "--snapshot", "--client-id", "--playbook", "--from-env", "--rewrite", "--prefix", "--format", "--since", "--until", "--actor", "--action", "--operation", "--secret", "--limit", "--days"]);
+  const valueFlags = new Set(["--profile", "--hermes-home", "--target", "--name", "--key-env", "--key-header", "--url", "--shared", "--team", "--memory", "--managed-dir", "--hermes-bin", "--env-file", "--output", "--version", "--snapshot", "--client-id", "--playbook", "--from-env", "--rewrite", "--prefix", "--format", "--since", "--until", "--actor", "--action", "--operation", "--secret", "--limit", "--days", "--login-hint"]);
   for (let i = 0; i < own.length; i++) {
     const arg = own[i];
     if (arg.startsWith("--")) {
@@ -271,7 +275,8 @@ async function confirm(question) {
 async function openBrowser(url) {
   const { spawn } = await import("node:child_process");
   const [command, args] = process.platform === "win32"
-    ? ["cmd", ["/c", "start", "", url]]
+    // Not `cmd /c start`: cmd splits an unquoted URL at every `&`.
+    ? ["rundll32", ["url.dll,FileProtocolHandler", url]]
     : process.platform === "darwin"
       ? ["open", [url]]
       : ["xdg-open", [url]];
@@ -667,8 +672,14 @@ export async function run(args) {
   }
 
   if (command === "mcp" && positional[0] === "stdio") {
-    for (const flag of flags.keys()) if (!["--url", "--key-env", "--key-header", "--allow-insecure-http"].includes(flag)) throw new Error(`Unknown option ${flag} for mcp stdio.`);
-    await runMcpStdio({ url: flags.get("--url"), keyEnvVar: flags.get("--key-env"), keyHeader: flags.get("--key-header"), allowInsecureHttp: flags.has("--allow-insecure-http") });
+    for (const flag of flags.keys()) if (!["--url", "--key-env", "--key-header", "--allow-insecure-http", "--entra"].includes(flag)) throw new Error(`Unknown option ${flag} for mcp stdio.`);
+    if (flags.has("--entra") && (flags.has("--key-env") || flags.has("--key-header"))) throw new Error("--entra replaces --key-env and --key-header.");
+    // The instance is the MCP endpoint's origin: the Entra session is stored per instance.
+    const entraBase = flags.has("--entra") ? new URL(String(flags.get("--url"))).origin : null;
+    await runMcpStdio({
+      url: flags.get("--url"), keyEnvVar: flags.get("--key-env"), keyHeader: flags.get("--key-header"), allowInsecureHttp: flags.has("--allow-insecure-http"),
+      credential: entraBase ? async () => `Bearer ${await entraAccessToken(entraBase)}` : undefined,
+    });
     return;
   }
   const common = ["--json", "--apply", "--url", "--profile", "--hermes-home"];
@@ -916,6 +927,32 @@ export async function run(args) {
     return;
   }
 
+  if (command === "login" && flags.has("--entra")) {
+    const saved = await loginWithEntra(url, {
+      openBrowser, log: line => console.error(line),
+      loginHint: typeof flags.get("--login-hint") === "string" ? flags.get("--login-hint") : undefined,
+    });
+    console.log(`Signed in to ${url} as ${saved.user?.email || saved.user?.id} with Microsoft Entra ID.`);
+    return;
+  }
+
+  if (command === "token" || command === "whoami") {
+    if (!flags.has("--entra")) throw new Error(`Usage: agentplaybooks ${command} --entra [--url=<base>]`);
+    if (command === "whoami") {
+      const status = await entraStatus(url);
+      if (flags.has("--json")) console.log(JSON.stringify(status, null, 2));
+      else console.log(status.signedIn ? `${status.user?.email || status.user?.id} (Microsoft Entra ID, ${url})` : `Not signed in to ${url} with Microsoft Entra ID.`);
+      if (!status.signedIn) process.exitCode = 1;
+      return;
+    }
+    // For helpers (the Hermes memory provider) that need a bearer token: the
+    // token goes to stdout only, so it can be captured without a shell echo.
+    const session = await entraSession(url);
+    if (flags.has("--json")) console.log(JSON.stringify(session));
+    else process.stdout.write(session.access_token);
+    return;
+  }
+
   if (command === "login") {
     const apiKey = process.env.AGENTPLAYBOOKS_API_KEY
       || await promptForKey(`Paste your ${url} user API key (apb_...): `);
@@ -923,6 +960,12 @@ export async function run(args) {
     await verifyApiKey(url, apiKey);
     await saveApiKey(url, apiKey);
     console.log(`Stored API key for ${url}.`);
+    return;
+  }
+
+  if (command === "logout" && flags.has("--entra")) {
+    const removed = await logoutEntra(url);
+    console.log(removed ? `Removed the Microsoft Entra ID sign-in for ${url}.` : `No Microsoft Entra ID sign-in stored for ${url}.`);
     return;
   }
 
