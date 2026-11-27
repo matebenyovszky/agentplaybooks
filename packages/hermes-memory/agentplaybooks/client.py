@@ -8,6 +8,8 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode, urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
+from .token_source import TokenUnavailable
+
 USER_AGENT = "AgentPlaybooks-Hermes-Memory/0.4.0"
 
 
@@ -43,20 +45,27 @@ def validate_url(url, allow_insecure_http=False):
 
 
 class Client:
-    def __init__(self, base_url, guid, api_key="", allow_insecure_http=False):
+    def __init__(self, base_url, guid, api_key="", allow_insecure_http=False, token_source=None):
         self.base_url = validate_url(base_url, allow_insecure_http)
         self.guid = validate_guid(guid)
         self.api_key = api_key
+        # The signed-in user's session (Microsoft Entra ID SSO), when no key is set.
+        self.token_source = None if api_key else token_source
         self.path = f"/api/playbooks/{quote(guid, safe='')}/memory"
         self.opener = build_opener(NoRedirects())
         self.retry_after = 0.0
 
     def request(self, method, path, body=None, authenticated=True, timeout=15):
         if authenticated and time.monotonic() < self.retry_after:
-            raise MemoryAPIError("AgentPlaybooks authentication is paused after a rejection; reconfigure the key and reinitialize the provider.", status=401)
+            raise MemoryAPIError("AgentPlaybooks authentication is paused after a rejection; reconfigure the key (or sign in again) and reinitialize the provider.", status=401)
         headers = {"Accept": "application/json", "User-Agent": USER_AGENT}
         if authenticated and self.api_key:
             headers["X-API-Key"] = self.api_key
+        elif authenticated and self.token_source:
+            try:
+                headers["Authorization"] = "Bearer " + self.token_source.token()
+            except TokenUnavailable as exc:
+                raise MemoryAPIError(f"AgentPlaybooks sign-in failed: {exc}", status=401) from None
         data = None
         if body is not None:
             headers["Content-Type"] = "application/json"
@@ -67,6 +76,8 @@ class Client:
         except HTTPError as exc:
             if authenticated and exc.code in (401, 403):
                 self.retry_after = time.monotonic() + 60
+                if self.token_source:
+                    self.token_source.invalidate()
             # Do not expose response bodies, credentials or request headers to the model/log.
             raise MemoryAPIError(f"AgentPlaybooks request failed (HTTP {exc.code}).", status=exc.code) from None
         except (URLError, TimeoutError, OSError, ValueError):
@@ -81,8 +92,8 @@ class Client:
         anonymous-404 privacy proof for those servers. Never cache either proof;
         check before every write, not just at startup.
         """
-        if not self.api_key:
-            raise MemoryAPIError("A playbook-scoped memory API key is required.")
+        if not self.api_key and not self.token_source:
+            raise MemoryAPIError("A playbook-scoped memory API key or an AgentPlaybooks sign-in (token_command) is required.")
         proof = self.request("GET", self.path + "?private_check=1&limit=1", timeout=timeout)
         if isinstance(proof, dict) and proof.get("private_memory") is True:
             return

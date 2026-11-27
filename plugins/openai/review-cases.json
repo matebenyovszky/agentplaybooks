@@ -13,10 +13,10 @@
       "expected_behavior": "Resolve the named demo playbook, then summarize its persona and instructions with the correct playbook ID. Do not change the configuration."
     },
     {
-      "description": "Read a reusable skill",
-      "prompt": "Read the code-review-checklist skill in Reviewer demo: Team handbook.",
-      "tools_triggered": "list_skills, get_skill",
-      "expected_behavior": "Use the listed tool schemas and return the existing code-review-checklist skill from the demo playbook. Do not invent missing skill content."
+      "description": "Read two known skill sections together",
+      "prompt": "In Reviewer demo: Team handbook, read the Code review checklist section from code-review-checklist and the Weekly status report section from weekly-status-report.",
+      "tools_triggered": "list_playbooks, get_skill_references",
+      "expected_behavior": "Resolve the playbook ID if needed. Use one get_skill_references call for the two named SKILL.md headings. Return the four review checks and the three steps for preparing the weekly status report."
     },
     {
       "description": "Retrieve shared project knowledge",

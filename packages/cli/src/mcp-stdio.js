@@ -5,7 +5,12 @@ const MAX_RESPONSE_BYTES = 8 * 1024 * 1024;
 /** Demand-driven transport for AgentPlaybooks' JSON MCP endpoints. No timer,
  * health poll, discovery refresh, or automatic retry issues a network request.
  * Hermes leaves a stdio connection idle instead of pinging an HTTP server. */
-export function createMcpRelay({ url, keyEnvVar = "AGENTPLAYBOOKS_API_KEY", keyHeader = "X-API-Key", env = process.env, fetchImpl = fetch, signal, allowInsecureHttp = false }) {
+/**
+ * `credential`, when given, replaces the environment key: an async function
+ * returning the Authorization header value, e.g. a Microsoft Entra ID session
+ * renewed on demand (`mcp stdio --entra`).
+ */
+export function createMcpRelay({ url, keyEnvVar = "AGENTPLAYBOOKS_API_KEY", keyHeader = "X-API-Key", env = process.env, fetchImpl = fetch, signal, allowInsecureHttp = false, credential }) {
   const endpoint = new URL(url);
   if (endpoint.username || endpoint.password || endpoint.search || endpoint.hash ||
       !/\/api\/mcp\/(?:manage|[a-f0-9-]+)$/i.test(endpoint.pathname) ||
@@ -22,9 +27,17 @@ export function createMcpRelay({ url, keyEnvVar = "AGENTPLAYBOOKS_API_KEY", keyH
     // A local liveness probe needs no hosted data. Normal Hermes stdio does not
     // send these, but an explicitly configured probe still stays on this host.
     if (message.method === "ping") return hasId ? { jsonrpc: "2.0", id, result: {} } : null;
-    const key = env[keyEnvVar];
-    if (!key) return hasId ? error(-32001, `Configure ${keyEnvVar} in the selected profile's secret environment.`) : null;
-    const headers = { "Content-Type": "application/json", Accept: "application/json", [keyHeader]: key };
+    let headers;
+    if (credential) {
+      let authorization;
+      try { authorization = await credential(); }
+      catch (failure) { return hasId ? error(-32001, failure instanceof Error ? failure.message : "Sign-in required.") : null; }
+      headers = { "Content-Type": "application/json", Accept: "application/json", Authorization: authorization };
+    } else {
+      const key = env[keyEnvVar];
+      if (!key) return hasId ? error(-32001, `Configure ${keyEnvVar} in the selected profile's secret environment.`) : null;
+      headers = { "Content-Type": "application/json", Accept: "application/json", [keyHeader]: key };
+    }
     if (session) headers["Mcp-Session-Id"] = session;
     if (protocol) headers["MCP-Protocol-Version"] = protocol;
     try {

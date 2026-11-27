@@ -1,6 +1,7 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { POST } from "@/app/api/mcp/[guid]/route";
 import { POST as managementPost } from "@/app/api/mcp/manage/route";
+import { POST as controlPost } from "@/app/api/v1/control/[operation]/route";
 import { getServiceSupabase, getSupabase } from "@/app/api/_shared/supabase";
 import { skillReferenceWindow } from "@/lib/repositories/skill-context";
 
@@ -16,7 +17,7 @@ vi.mock("@/app/api/_shared/guards", async original => ({
 }));
 const own = "11111111-1111-4111-8111-111111111111";
 const foreign = "22222222-2222-4222-8222-222222222222";
-const body = "# Instructions\nUse references only when needed.";
+const body = "# Instructions\nUse references only when needed.\n\n## Setup\nConfigure the scheduler.\n\n## Backups\nKeep a daily backup.";
 const fileBody = "# Operations\n## Cron\nRun the scheduler.\n### Check\nCheck status.\n```md\n## Example heading\n```\n## Backups\nDo not load this section for cron.\n";
 const privateBody = "PRIVATE_OTHER_PLAYBOOK_FILE";
 const attachments = [
@@ -83,6 +84,38 @@ it("keeps discovery small and full-content exports explicit", async () => {
   expect((await call("get_skill", { skill_id: own, include_attachments: true })).result.structuredContent.skill_attachments[0].content).toBe(fileBody);
 });
 
+it.each(["core", "directory"])("supports both plugin skill reads through the %s account toolset", async toolset => {
+  const read = async (name: string, args: object) => {
+    const response = await managementPost(new Request(`http://localhost/api/mcp/manage?toolset=${toolset}`, {
+      method: "POST", headers: { "Content-Type": "application/json", "X-API-Key": "test-key" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: {
+        name, arguments: { playbook_id: "lean-context", ...args },
+      } }),
+    }));
+    expect(response.status).toBe(200);
+    const payload = await response.json();
+    expect(payload.error).toBeUndefined();
+    const result = payload.result.structuredContent;
+    expect(JSON.parse(payload.result.content[0].text)).toEqual(result);
+    return result;
+  };
+
+  const legacy = await read("get_skill", { skill_id: own });
+  expect(legacy).toMatchObject({
+    id: own, name: "operations", content: body,
+    skill_attachments: [{ filename: "references/operations.md", size_bytes: fileBody.length }],
+  });
+  expect(legacy.skill_attachments[0].content).toBeUndefined();
+
+  const section = "## Setup\nConfigure the scheduler.\n";
+  expect(await read("get_skill_reference", {
+    skill_id: "operations", filename: "SKILL.md", section: "Setup",
+  })).toEqual({
+    skill_id: own, filename: "SKILL.md", section: "Setup", content: section,
+    offset: 0, next_offset: null, total_chars: section.length, truncated: false, section_start_line: 4,
+  });
+});
+
 it("reads one bounded section and does not treat code-fence headings as boundaries", async () => {
   const result = (await call("get_skill_reference", { skill_id: own, filename: "references/operations.md", section: "Cron" })).result.structuredContent;
   expect(result.content).toContain("### Check");
@@ -96,6 +129,50 @@ it("reads one bounded section and does not treat code-fence headings as boundari
   expect(() => skillReferenceWindow(text, { max_chars: 32001 })).toThrow("max_chars");
   expect(() => skillReferenceWindow(text, { section: "missing" })).toThrow("Section not found");
 });
+
+it("preserves order, pagination, and item errors in MCP and REST batch reads", async () => {
+  const references = [
+    { skill_id: own, filename: "SKILL.md", section: "Setup", max_chars: 12 },
+    { skill_id: foreign, filename: "SKILL.md" },
+    { skill_id: own, filename: "SKILL.md", section: "Backups" },
+    { skill_id: own, filename: "SKILL.md", section: "Missing" },
+    { skill_id: own, filename: "SKILL.md", max_chars: 6001 },
+  ];
+  const operation = "get_skill_references";
+  const db = database();
+  const from = vi.spyOn(db, "from");
+  vi.mocked(getServiceSupabase).mockReturnValue(db as never);
+  const mcp = await call(operation, { references });
+  expect(mcp.error).toBeUndefined();
+  expect(from.mock.calls.filter(([table]) => table === "skills")).toHaveLength(2);
+  const result = mcp.result.structuredContent;
+  expect(result.results).toEqual([
+    { ok: true, reference: expect.objectContaining({ content: "## Setup\nCon", truncated: true, next_offset: 12 }) },
+    { ok: false, error: "Skill not found" },
+    { ok: true, reference: expect.objectContaining({ content: "## Backups\nKeep a daily backup.", next_offset: null }) },
+    { ok: false, error: expect.stringContaining("Section not found") },
+    { ok: false, error: expect.stringContaining("max_chars") },
+  ]);
+  for (const index of [0, 2]) {
+    const single = await call("get_skill_reference", references[index]);
+    expect(result.results[index].reference).toEqual(single.result.structuredContent);
+  }
+  const rest = await controlPost(new Request(`http://localhost/api/v1/control/${operation}`, {
+    method: "POST", headers: { "Content-Type": "application/json", "X-API-Key": "test-key" },
+    body: JSON.stringify({ playbook_id: "lean-context", references }),
+  }), { params: Promise.resolve({ operation }) });
+  expect(rest.status).toBe(200);
+  expect(await rest.json()).toEqual(result);
+});
+
+it.each([0, 6])(
+  "rejects a batch of %i items",
+  async size => {
+    const references = Array.from({ length: size }, () => ({ skill_id: own, filename: "SKILL.md" }));
+    const response = await call("get_skill_references", { references });
+    expect(response.error?.message).toContain("references must contain 1 to 5 items");
+  },
+);
 
 it("refuses another playbook's files through both tools and legacy resource URIs", async () => {
   const result = await call("get_skill_reference", { skill_id: foreign, filename: "private.md" });

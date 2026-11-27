@@ -2,6 +2,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import sharp from 'sharp';
 import { buildZipStore } from '../packages/cli/scripts/pack-openai-skills-zip.mjs';
 import { containsLiteralCredential } from '../packages/cli/src/plugin-package.js';
 
@@ -28,15 +29,24 @@ export function directoryMcp(source) {
 export async function collectDirectoryFiles({ recordingUrl } = {}) {
   const plugin = JSON.parse(await readFile(path.join(root, 'packages/cli/plugin.json'), 'utf8'));
   plugin.name = 'agentplaybooks-hosted';
-  plugin.description = 'Manage your portable agent instructions, skills, shared memory and planning documents with AgentPlaybooks.';
+  plugin.version = '0.10.2';
+  plugin.description = 'Open playbooks and work with their agent instructions, skills, shared memory, and planning documents.';
   const openai = plugin.extensions['com.openai'];
-  openai.interface.longDescription = 'Keep your agents and project knowledge under your control. Manage portable playbooks, agent instructions, skills, shared memory, canvas documents and workflow runs through your AgentPlaybooks account. Sign in with OAuth; access follows your account and playbook permissions. This directory integration exposes each supported operation separately and does not forward calls to other services or handle secret values.';
+  openai.interface.shortDescription = 'Playbooks and shared memory';
+  openai.interface.longDescription = 'Open your AgentPlaybooks playbooks in ChatGPT. Read the skill instructions you need, find decisions in shared memory, and work on canvas documents. Sign in to your AgentPlaybooks account to access the playbooks you own or that others have shared with you.';
   openai.interface.supportURL = 'https://github.com/matebenyovszky/agentplaybooks/issues';
   openai.interface.defaultPrompt = [
-    'Show my playbooks and their skills.',
-    'Find the project decisions in my playbook memory.',
-    'Open my team handbook and planning documents.',
+    'Show me my playbooks.',
+    'Find the release policy in my team handbook.',
+    'Open the project planning document in my playbook.',
   ];
+  // The high-contrast brand mark works on both themes. Rasterize it once
+  // for each slot so directory cards and small composer controls use PNGs.
+  openai.interface.logo = openai.interface.logoDark = './assets/logo.png';
+  openai.interface.composerIcon = openai.interface.composerIconDark = './assets/composer-icon.png';
+  openai.publication = {
+    release_notes: 'Read only the skill sections you need. This update also brings a sharper icon and clearer labels to the plugin directory and composer.',
+  };
   openai.onboardingSkill = './skills/playbooks/SKILL.md';
   openai.review = {
     test_cases: JSON.parse(await readFile(path.join(root, 'plugins/openai/review-cases.json'), 'utf8')),
@@ -49,11 +59,16 @@ export async function collectDirectoryFiles({ recordingUrl } = {}) {
     openai.review.demo_recording_url = url.href;
   }
   const mcp = directoryMcp(JSON.parse(await readFile(path.join(root, 'packages/cli/mcp.json'), 'utf8')));
+  const brandMark = await readFile(path.join(root, 'packages/cli/assets/icon.svg'));
+  const [logo, composerIcon] = await Promise.all(
+    [512, 128].map(size => sharp(brandMark).resize(size, size).png().toBuffer()),
+  );
   const files = new Map([
     ['plugin.json', Buffer.from(JSON.stringify(plugin, null, 2) + '\n')],
     ['mcp.json', Buffer.from(JSON.stringify(mcp, null, 2) + '\n')],
     ['LICENSE', await readFile(path.join(root, 'packages/cli/LICENSE'))],
-    ['assets/icon.svg', await readFile(path.join(root, 'packages/cli/assets/icon.svg'))],
+    ['assets/logo.png', logo],
+    ['assets/composer-icon.png', composerIcon],
     ['skills/playbooks/SKILL.md', await readFile(path.join(root, 'plugins/openai/skills/playbooks/SKILL.md'))],
   ]);
   for (const [name, data] of files) {

@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { db, apiKey, user, tls, decrypt } = vi.hoisted(() => ({
-  db: vi.fn(), apiKey: vi.fn(), user: vi.fn(), tls: vi.fn(), decrypt: vi.fn(),
+const { db, apiKey, user, tls, decrypt, role } = vi.hoisted(() => ({
+  db: vi.fn(), apiKey: vi.fn(), user: vi.fn(), tls: vi.fn(), decrypt: vi.fn(), role: vi.fn(),
 }));
+vi.mock("@/app/api/_shared/guards", () => ({ getPlaybookAccessRole: role }));
 vi.mock("@/app/api/_shared/supabase", () => ({ getServiceSupabase: db }));
 vi.mock("@/app/api/_shared/auth", () => ({
   validateApiKey: apiKey, getAuthenticatedUser: user,
@@ -58,6 +59,7 @@ beforeEach(() => {
   db.mockReturnValue({ from: (table: string) => queries[table] ??= query(table) });
   apiKey.mockResolvedValue({ id: "key", playbooks: { id: "pb" }, key_prefix: "apb_prefix" });
   user.mockResolvedValue({ id: ownerId });
+  role.mockResolvedValue(null);
   tls.mockReturnValue(fingerprint);
   decrypt.mockImplementation(async (row: Row) => `value-for-${row.name}`);
 });
@@ -69,6 +71,31 @@ function resolve(body: unknown = { names: ["DATABASE_URL", "TOKEN"] }, headers: 
 }
 
 describe("runtime secret loading", () => {
+  it("lets a signed-in owner or editor (Entra SSO session) load values, audited as that user", async () => {
+    apiKey.mockResolvedValue(null);
+    user.mockResolvedValue({ id: "editor-user" });
+    role.mockResolvedValue("editor");
+    const response = await resolve(undefined, { Authorization: "Bearer session-jwt" });
+    expect(response.status).toBe(200);
+    expect(role).toHaveBeenCalledWith("editor-user", "pb");
+    const audited = JSON.stringify(queries.audit_logs.insert.mock.calls);
+    expect(audited).toContain("editor-user");
+    expect(audited).not.toContain("value-for-");
+  });
+
+  it("refuses a signed-in auditor or non-member, and still requires runtime reveal per secret", async () => {
+    apiKey.mockResolvedValue(null);
+    user.mockResolvedValue({ id: "someone" });
+    for (const value of ["auditor", null]) {
+      role.mockResolvedValue(value);
+      expect((await resolve(undefined, { Authorization: "Bearer session-jwt" })).status).toBe(401);
+    }
+    expect(queries.secrets).toBeUndefined();
+    role.mockResolvedValue("owner");
+    rows = [record("DATABASE_URL", { allow_api_key_reveal: false }), record("TOKEN")];
+    expect((await resolve(undefined, { Authorization: "Bearer session-jwt" })).status).toBe(403);
+  });
+
   it("loads a batch using the existing scoped API key and records names only", async () => {
     const response = await resolve();
     expect(response.status).toBe(200);

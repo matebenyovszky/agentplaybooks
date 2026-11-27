@@ -12,6 +12,7 @@ from utils import atomic_json_write, read_json_or_empty
 
 from .client import Client, MemoryAPIError, validate_guid, validate_url
 from .recall import Recall
+from .token_source import TOKEN_COMMAND_ENV, CommandTokenSource, parse_token_command
 
 CONFIG_FILE = "agentplaybooks/config.json"
 KEY_ENV = "AGENTPLAYBOOKS_MEMORY_API_KEY"
@@ -25,7 +26,14 @@ def load_config(home=None):
     if config.get("recall_mode") not in ("explicit", "automatic"):
         raise ValueError("recall_mode must be explicit or automatic.")
     validate_url(config["base_url"], config["allow_insecure_http"])
+    config["token_command"] = parse_token_command(config.get("token_command"))
     return config
+
+
+def token_source(config):
+    """The Entra SSO helper from config.json, else from AGENTPLAYBOOKS_TOKEN_COMMAND."""
+    argv = config.get("token_command") or parse_token_command(get_secret(TOKEN_COMMAND_ENV, ""))
+    return CommandTokenSource(argv) if argv else None
 
 
 def schema(name, description, properties, required=()):
@@ -73,16 +81,16 @@ class AgentPlaybooksMemoryProvider(MemoryProvider):
         try:
             config = load_config()
             validate_guid(config["playbook_guid"])
+            return bool(get_secret(KEY_ENV, "")) or token_source(config) is not None
         except ValueError:
             return False
-        return bool(get_secret(KEY_ENV, ""))
 
     def unavailable_reason(self):
-        return "Run hermes memory setup and select agentplaybooks-memory; configure a private playbook GUID and its memory API key."
+        return "Run hermes memory setup and select agentplaybooks-memory; configure a private playbook GUID and its memory API key, or sign in with 'agentplaybooks login --entra' and set token_command."
 
     def get_config_schema(self):
         return [
-            {"key": "api_key", "description": "Private playbook API key (memory:read + memory:write)", "secret": True, "required": True, "env_var": KEY_ENV},
+            {"key": "api_key", "description": "Private playbook API key (memory:read + memory:write)", "secret": True, "required": False, "env_var": KEY_ENV},
             {"key": "playbook_guid", "description": "Private memory playbook GUID (one per Hermes profile)", "required": True},
             {"key": "base_url", "description": "AgentPlaybooks service URL", "default": "https://agentplaybooks.ai"},
             {"key": "shared_playbooks", "description": "Optional comma-separated shared playbook GUIDs (read-only)", "default": ""},
@@ -92,12 +100,15 @@ class AgentPlaybooksMemoryProvider(MemoryProvider):
 
     def save_config(self, values, hermes_home):
         # Only configuration, never credentials. Hermes owns the secret field.
-        allowed = {k: v for k, v in values.items() if k in {"playbook_guid", "base_url", "shared_playbooks", "team_playbooks", "recall_mode"}}
+        allowed = {k: v for k, v in values.items() if k in {"playbook_guid", "base_url", "shared_playbooks", "team_playbooks", "recall_mode", "token_command"}}
         config = {**load_config(hermes_home), **allowed}
         if config["recall_mode"] not in ("explicit", "automatic"):
             raise ValueError("recall_mode must be explicit or automatic.")
         validate_guid(config["playbook_guid"])
         validate_url(config["base_url"], config["allow_insecure_http"])
+        config["token_command"] = parse_token_command(config.get("token_command"))
+        if not config["token_command"]:
+            config.pop("token_command")
         for field in ("shared_playbooks", "team_playbooks"):
             for guid in config.get(field, "").split(","):
                 if guid.strip():
@@ -107,7 +118,10 @@ class AgentPlaybooksMemoryProvider(MemoryProvider):
     def initialize(self, session_id, **kwargs):
         config = load_config(kwargs.get("hermes_home"))
         insecure = config["allow_insecure_http"]
-        self.client = Client(config["base_url"], config["playbook_guid"], get_secret(KEY_ENV, ""), insecure)
+        # One sign-in serves the personal, team and shared playbooks alike: the
+        # user's own access decides. A configured key still wins per playbook.
+        sso = token_source(config)
+        self.client = Client(config["base_url"], config["playbook_guid"], get_secret(KEY_ENV, ""), insecure, sso)
         # Initialization must stay offline. Privacy is checked on first use and
         # before writes, so an installed but unused provider makes no requests.
         self.recall_mode = config["recall_mode"]
@@ -121,13 +135,13 @@ class AgentPlaybooksMemoryProvider(MemoryProvider):
             guid = guid.strip()
             if guid and guid != self.client.guid:
                 env_name = "AGENTPLAYBOOKS_TEAM_" + guid.replace("-", "").upper() + "_API_KEY"
-                self.teams[guid] = Client(config["base_url"], guid, get_secret(env_name, ""), insecure)
+                self.teams[guid] = Client(config["base_url"], guid, get_secret(env_name, ""), insecure, sso)
         self.shared = {}
         for guid in config.get("shared_playbooks", "").split(","):
             guid = guid.strip()
             if guid and guid != self.client.guid and guid not in self.teams:
                 env_name = "AGENTPLAYBOOKS_SHARED_" + guid.replace("-", "").upper() + "_API_KEY"
-                self.shared[guid] = Client(config["base_url"], guid, get_secret(env_name, ""), insecure)
+                self.shared[guid] = Client(config["base_url"], guid, get_secret(env_name, ""), insecure, sso)
         self.session_id = session_id
         self.agent_id = str(kwargs.get("agent_identity") or Path(kwargs.get("hermes_home") or get_hermes_home()).name)
         self.user_id = self.initial_user_id = str(kwargs.get("user_id") or "")
