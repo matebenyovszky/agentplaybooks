@@ -2,7 +2,8 @@
 // @worker-native
 import { runWithAuditRequest } from "@/lib/audit-context";
 import { getServiceSupabase } from "../../_shared/supabase";
-import { getAuthenticatedUser } from "../../_shared/auth";
+import { actorMayRead, getAuthenticatedUser, resolvePrivatePlaybookActor } from "../../_shared/auth";
+import { presentedApiKey } from "../../_shared/api-key-header";
 import { getPlaybookAccessRole } from "../../_shared/guards";
 import { buildPlaybookUpdate } from "@/lib/playbook-access";
 import { playbookViewForRole, roleMayWrite } from "@/lib/audit-access";
@@ -23,6 +24,14 @@ import type { Skill } from "@/lib/supabase/types";
  * place rather than trying to create one that already exists.
  */
 type AttachmentRow = { id: string; filename: string; content: string };
+
+/**
+ * What a playbook key must be able to read to receive a private playbook from
+ * this endpoint: the payload carries its persona, its skills with their files,
+ * and its settings and connected servers. The MCP endpoint gates each of these
+ * separately, with the same permissions (see private-read-scopes.ts).
+ */
+const WHOLE_PLAYBOOK_READ = ["playbooks:read", "personas:read", "skills:read"] as const;
 
 // Helper: Convert playbook to persona shape
 function playbookToPersona(playbook: {
@@ -54,6 +63,7 @@ export async function GET(
 
     // Try to get user (optional auth)
     const user = await getAuthenticatedUser(request);
+    const keyPresented = !user && presentedApiKey(request) !== null;
 
     // Check if it's a UUID or GUID
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrGuid);
@@ -72,7 +82,9 @@ export async function GET(
     // Legacy memory clients deliberately probe anonymously for an expected
     // 404. Filter before loading the row so a private persona/instructions
     // payload never travels from the database just to be discarded below.
-    if (!user) query = query.in("visibility", ["public", "unlisted"]);
+    // A request that presents an API key may be allowed a private playbook,
+    // so it is decided after loading the row.
+    if (!user && !keyPresented) query = query.in("visibility", ["public", "unlisted"]);
 
     const { data: playbook, error } = await query.single();
 
@@ -81,15 +93,33 @@ export async function GET(
     }
 
     // Check access: Public/Unlisted OR Owner
-    const accessRole = user ? await getPlaybookAccessRole(user.id, playbook.id) : null;
+    let accessRole = user ? await getPlaybookAccessRole(user.id, playbook.id) : null;
     const isPublicOrUnlisted = playbook.visibility === 'public' || playbook.visibility === 'unlisted';
 
-    if (!isPublicOrUnlisted && !accessRole) {
+    // A private playbook can also be read with an API key, so an agent can
+    // sync it without the playbook being shared by link: a user key of a
+    // collaborator (playbooks:read), or a key of this playbook that may read
+    // every part of the payload. The MCP endpoint already serves the same data
+    // to the same keys; this is the same check, applied to the whole payload.
+    let readByPlaybookKey = false;
+    if (!isPublicOrUnlisted && !accessRole && keyPresented) {
+        const actor = await resolvePrivatePlaybookActor(request, playbook.id);
+        if (actor?.kind === "member") {
+            accessRole = actor.role ?? null;
+        } else if (actor && WHOLE_PLAYBOOK_READ.every((permission) => actorMayRead(actor, permission))) {
+            readByPlaybookKey = true;
+        }
+    }
+
+    if (!isPublicOrUnlisted && !accessRole && !readByPlaybookKey) {
         return Response.json({ error: "Playbook not found" }, { status: 404 });
     }
 
+    // A private playbook's payload is for its reader only: never cache it.
+    const headers = isPublicOrUnlisted ? undefined : { "Cache-Control": "private, no-store" };
+
     if (accessRole === "auditor") {
-        return Response.json(playbookViewForRole({ ...playbook, current_user_role: "auditor" }, "auditor"));
+        return Response.json(playbookViewForRole({ ...playbook, current_user_role: "auditor" }, "auditor"), { headers });
     }
 
     // Get related data. The attachments come along with the skills because a
@@ -133,17 +163,17 @@ export async function GET(
     // Format output
     switch (format) {
         case "openapi":
-            return Response.json(formatAsOpenAPI(fullPlaybook));
+            return Response.json(formatAsOpenAPI(fullPlaybook), { headers });
         case "mcp":
-            return Response.json(formatAsMCP(fullPlaybook));
+            return Response.json(formatAsMCP(fullPlaybook), { headers });
         case "anthropic":
-            return Response.json(formatAsAnthropic(fullPlaybook));
+            return Response.json(formatAsAnthropic(fullPlaybook), { headers });
         case "markdown":
             return new Response(formatAsMarkdown(fullPlaybook), {
-                headers: { "Content-Type": "text/markdown" },
+                headers: { "Content-Type": "text/markdown", ...headers },
             });
         default:
-            return Response.json({ ...fullPlaybook, skills: skillsWithFiles });
+            return Response.json({ ...fullPlaybook, skills: skillsWithFiles }, { headers });
     }
 }
 
