@@ -4,6 +4,11 @@ import { findPlaybookSkill } from "./skills";
 
 export const SKILL_SUMMARY_COLUMNS = "id, name, description, licence, publisher_id, priority, created_at";
 const ATTACHMENT_SUMMARY_COLUMNS = "id, skill_id, filename, file_type, language, description, size_bytes, created_at, updated_at";
+export const SKILL_REFERENCE_BATCH_LIMIT = 5;
+export const SKILL_REFERENCE_BATCH_DEFAULT_CHARS = 4000;
+export const SKILL_REFERENCE_BATCH_MAX_CHARS = 6000;
+
+class SkillReferenceError extends Error {}
 
 export async function listSkillSummaries(database: SupabaseClient, playbookId: string, includeContent = false) {
   const { data, error } = await database.from("skills")
@@ -32,18 +37,18 @@ export async function getSkillDefinition(database: SupabaseClient, playbookId: s
 
 /** Resolve the parent through the authorized playbook before reading its file. */
 export async function getSkillReference(database: SupabaseClient, playbookId: string, skillId: string, filename: string) {
-  if (typeof skillId !== "string" || !skillId.trim()) throw new Error("skill_id is required");
-  if (typeof filename !== "string" || !filename || filename.length > 100) throw new Error("filename is required (maximum 100 characters)");
+  if (typeof skillId !== "string" || !skillId.trim()) throw new SkillReferenceError("skill_id is required");
+  if (typeof filename !== "string" || !filename || filename.length > 100) throw new SkillReferenceError("filename is required (maximum 100 characters)");
   const skill = await findPlaybookSkill<Pick<SkillsRow, "id" | "name" | "content">>(
     database, playbookId, skillId, filename === "SKILL.md" ? "id, name, content" : "id, name",
   );
-  if (!skill) throw new Error("Skill not found");
+  if (!skill) throw new SkillReferenceError("Skill not found");
   if (filename === "SKILL.md") return { skill_id: skill.id, filename, content: skill.content || "" };
   const { data, error } = await database.from("skill_attachments")
     .select("id, filename, content, size_bytes, updated_at")
     .eq("skill_id", skill.id).eq("filename", filename).maybeSingle();
   if (error) throw error;
-  if (!data) throw new Error("Skill reference not found");
+  if (!data) throw new SkillReferenceError("Skill reference not found");
   return { skill_id: skill.id, ...data };
 }
 
@@ -52,7 +57,7 @@ export function skillReferenceWindow(content: string, args: Record<string, unkno
   const integer = (name: string, fallback: number, min: number, max: number) => {
     const value = args[name] ?? fallback;
     if (typeof value !== "number" || !Number.isInteger(value) || value < min || value > max) {
-      throw new Error(`${name} must be an integer between ${min} and ${max}`);
+      throw new SkillReferenceError(`${name} must be an integer between ${min} and ${max}`);
     }
     return value;
   };
@@ -61,7 +66,7 @@ export function skillReferenceWindow(content: string, args: Record<string, unkno
   let selected = content;
   let sectionStartLine = 1;
   if (args.section !== undefined) {
-    if (typeof args.section !== "string" || !args.section.trim()) throw new Error("section must be a nonempty heading");
+    if (typeof args.section !== "string" || !args.section.trim()) throw new SkillReferenceError("section must be a nonempty heading");
     const lines = content.split("\n");
     let fence: { character: string; length: number } | undefined;
     let start = -1;
@@ -83,21 +88,58 @@ export function skillReferenceWindow(content: string, args: Record<string, unkno
         start = i; level = heading[1].length;
       }
     }
-    if (start < 0) throw new Error("Section not found; use the exact Markdown heading without # prefixes");
+    if (start < 0) throw new SkillReferenceError("Section not found; use the exact Markdown heading without # prefixes");
     selected = lines.slice(start, end).join("\n");
     sectionStartLine = start + 1;
   }
-  if (offset > selected.length) throw new Error("offset exceeds the selected text length");
+  if (offset > selected.length) throw new SkillReferenceError("offset exceeds the selected text length");
   if (offset > 0 && /[\uD800-\uDBFF]/.test(selected[offset - 1]) && /[\uDC00-\uDFFF]/.test(selected[offset] || "")) {
-    throw new Error("offset must not split a UTF-16 character; use next_offset from the previous response");
+    throw new SkillReferenceError("offset must not split a UTF-16 character; use next_offset from the previous response");
   }
   let end = Math.min(selected.length, offset + maxChars);
   // Keep UTF-16 surrogate pairs intact; offsets use JavaScript string units.
   if (end < selected.length && /[\uD800-\uDBFF]/.test(selected[end - 1])) end--;
-  if (end === offset && end < selected.length) throw new Error("max_chars is too small for the next character");
+  if (end === offset && end < selected.length) throw new SkillReferenceError("max_chars is too small for the next character");
   return {
     content: selected.slice(offset, end), offset, next_offset: end < selected.length ? end : null,
     total_chars: selected.length, truncated: end < selected.length, section_start_line: sectionStartLine,
     ...(args.section !== undefined ? { section: args.section } : {}),
   };
+}
+
+export async function getSkillReferences(database: SupabaseClient, playbookId: string, references: unknown) {
+  if (!Array.isArray(references) || references.length < 1 || references.length > SKILL_REFERENCE_BATCH_LIMIT) {
+    throw new Error(`references must contain 1 to ${SKILL_REFERENCE_BATCH_LIMIT} items`);
+  }
+
+  // A single file may supply multiple headings or windows. Share its read
+  // within this batch, including while the query is still in flight.
+  const files = new Map<string, ReturnType<typeof getSkillReference>>();
+  const results = await Promise.all(references.map(async item => {
+    try {
+      if (item === null || typeof item !== "object" || Array.isArray(item)) {
+        throw new SkillReferenceError("Each reference must be an object");
+      }
+      const { skill_id, filename, max_chars = SKILL_REFERENCE_BATCH_DEFAULT_CHARS } = item;
+      if (typeof skill_id !== "string" || typeof filename !== "string") {
+        throw new SkillReferenceError("Each reference requires a skill_id and filename");
+      }
+      if (!Number.isInteger(max_chars) || max_chars < 1 || max_chars > SKILL_REFERENCE_BATCH_MAX_CHARS) {
+        throw new SkillReferenceError(`max_chars must be an integer between 1 and ${SKILL_REFERENCE_BATCH_MAX_CHARS}`);
+      }
+      const key = JSON.stringify([skill_id, filename]);
+      let fileRead = files.get(key);
+      if (!fileRead) {
+        fileRead = getSkillReference(database, playbookId, skill_id, filename);
+        files.set(key, fileRead);
+      }
+      const file = await fileRead;
+      return { ok: true, reference: { ...file, ...skillReferenceWindow(file.content, {
+        section: item.section, offset: item.offset, max_chars,
+      }) } };
+    } catch (error) {
+      return { ok: false, error: error instanceof SkillReferenceError ? error.message : "Could not read skill reference" };
+    }
+  }));
+  return { results };
 }

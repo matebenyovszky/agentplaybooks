@@ -5,7 +5,7 @@ import { resolveToolset } from "./toolsets";
 const CORE = new Set([
   "get_profile", "get_connection_info",
   "list_playbooks", "create_playbook", "get_playbook", "update_persona",
-  "list_skills", "get_skill", "get_skill_reference",
+  "list_skills", "get_skill", "get_skill_reference", "get_skill_references",
   "search_memory", "read_memory", "write_memory",
   "list_canvas", "read_canvas", "write_canvas", "list_mcp_servers", "find_tools",
   // Hosts register only advertised tools; find_tools cannot add proxy bindings.
@@ -30,7 +30,7 @@ const DIRECTORY = new Set([
   "get_profile",
   "list_playbooks", "create_playbook", "get_playbook", "update_playbook", "delete_playbook",
   "update_persona", "reset_persona",
-  "list_skills", "get_skill", "get_skill_reference", "create_skill", "update_skill", "delete_skill", "list_skill_versions", "rollback_skill",
+  "list_skills", "get_skill", "get_skill_reference", "get_skill_references", "create_skill", "update_skill", "delete_skill", "list_skill_versions", "rollback_skill",
   "read_memory", "search_memory", "get_memory_history", "write_memory", "delete_memory", "consolidate_memories", "promote_memory", "get_memory_context", "archive_memories", "get_memory_tree",
   "create_task_graph", "update_task_status",
   "list_canvas", "read_canvas", "write_canvas", "patch_canvas_section", "get_canvas_toc", "lock_canvas_section", "unlock_canvas_section",
